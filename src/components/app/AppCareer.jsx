@@ -44,7 +44,7 @@ const AllStarResult = lazy(() => import('./CareerAllStar').then(m => ({ default:
 // START IN COLLEGE: the college phase and College Football's data load only for a career that's in it
 const CareerCollege = lazy(() => import('../cfb/CareerCollege'))
 const CareerCollegeHoops = lazy(() => import('../cbb/CareerCollegeHoops'))   // (basketball's: College Basketball's data, guard and big)
-const COLLEGE_POS = ['qb', 'wr', 'rb']   // the positions College Football has rosters for
+const COLLEGE_POS = ['qb', 'wr', 'rb', 'te', 'dl', 'db']   // the positions College Football has rosters for
 const CLASS_WORD = { FR: 'Freshman', SO: 'Sophomore' }
 import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
 import { Scramble } from './MotionText'
@@ -216,7 +216,7 @@ function NewSlot({ S, onStart, onCancel }) {
     setFirst(f); setLast(l); sfx('tap')
   }
   const [games, setGames] = useState('advanced')
-  const [start, setStart] = useState('draft')   // football QB, WR, RB: straight to the draft, or college first
+  const [start, setStart] = useState('draft')   // football QB, WR, RB, TE, DL, DB: straight to the draft, or college first
   const college = (CFB_LIVE && S.id === 'nfl' && COLLEGE_POS.includes(pos)) || (CBB_LIVE && S.id === 'bucket')
   const [nation, setNation] = useState(() => (S.isSoccer ? lastNation() ?? 'ENG' : null))
   const [nationOpen, setNationOpen] = useState(false)

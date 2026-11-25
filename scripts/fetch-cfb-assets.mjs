@@ -23,6 +23,10 @@ const load = f => import(pathToFileURL(path.join(ROOT, 'src', 'data', f)).href)
 const { CFB_TEAMS } = await load('cfb-teams.js')
 const { CFB_CONFERENCES } = await load('cfb-conferences.js')
 const { CFB_QBS, CFB_WRS, CFB_RBS } = await load('cfb-players.js')
+// the defensive backs (src/data/cfb-dbs.js, built by scripts/cfb/build-dbs.mjs), when the file is there
+const CFB_DBS = fs.existsSync(path.join(ROOT, 'src', 'data', 'cfb-dbs.js')) ? (await load('cfb-dbs.js')).CFB_DBS ?? [] : []
+// the defensive linemen (src/data/cfb-dls.js, built by scripts/cfb/build-dls.mjs), when the file is there
+const CFB_DLS = fs.existsSync(path.join(ROOT, 'src', 'data', 'cfb-dls.js')) ? (await load('cfb-dls.js')).CFB_DLS ?? [] : []
 
 const CONF_SLUG = { sec: 'sec', bigten: 'big_ten', big12: 'big_12', acc: 'acc', pac12: 'pac_12', mwc: 'mountain_west', american: 'american', sunbelt: 'sun_belt', cusa: 'conference_usa', mac: 'mid_american', ind: 'fbs_independents' }
 const UA = { 'User-Agent': 'build-a-player-data-check' }
@@ -68,6 +72,8 @@ for (const c of CFB_CONFERENCES) {
 
 // headshots
 const players = [...CFB_QBS, ...CFB_WRS, ...CFB_RBS]
+players.push(...CFB_DBS)
+players.push(...CFB_DLS)
 const headshots = {}
 await pool(players, 8, async p => {
   const key = `cfb_${p.espn}`

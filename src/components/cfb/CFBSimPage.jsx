@@ -11,6 +11,8 @@ import QBAvatar from '../QBAvatar'
 import QBFigureOverlay from '../QBFigureOverlay'
 import RBFigureOverlay from '../RBFigureOverlay'
 import WRFigureOverlay from '../WRFigureOverlay'
+import DLFigureOverlay from '../DLFigureOverlay'
+import DBFigureOverlay from '../DBFigureOverlay'
 import SiteFooter from '../SiteFooter'
 import { valToGrade } from '../../utils/simulation'
 import { createDirector, registerDirector } from '../../lib/seasonDirector'
@@ -20,7 +22,7 @@ import { userScrolling } from '../../lib/userScroll'
 import { useRailOn } from '../../lib/ads'
 import { IS_APP } from '../../lib/platform'
 import { sfx } from '../../lib/juice'
-import { cfbLogo, cfbLogoDark, CFB_POS, pickOf, projText } from './cfbShared'
+import { cfbLogo, cfbLogoDark, CFB_POS, SPOT_LABEL, pickOf, projText } from './cfbShared'
 
 // ── College Football: the season ────────────────────────────────────────────
 // A college season, a page a stage. The flow is football's season page (SimPage.jsx: the dot pager, the team card,
@@ -47,8 +49,14 @@ const reduced = () => document.documentElement.classList.contains('bap-reduce-mo
 const n = v => (v == null || Number.isNaN(+v) ? '–' : Math.round(+v).toLocaleString())
 const f1 = v => (v == null || Number.isNaN(+v) ? '–' : (+v).toFixed(1))
 const ordinal = k => `${k}${(k % 100 > 10 && k % 100 < 14) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[k % 10] ?? 'th'}`
-const POS_AWARD = { qb: 'daveyOBrien', wr: 'biletnikoff', rb: 'doakWalker' }
-const POS_GROUP = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS' }
+const POS_AWARD = { qb: ['daveyOBrien'], wr: ['biletnikoff'], rb: ['doakWalker'], te: ['mackey'] }
+// (a defender's: the best defender's two, then his spot's own; the Outland is a tackle's, the Hendricks an end's, the Thorpe a back's)
+const DEF_AWARDS = { edge: ['bednarik', 'nagurski', 'hendricks'], dt: ['bednarik', 'nagurski', 'outland'], cb: ['bednarik', 'nagurski', 'thorpe'], s: ['bednarik', 'nagurski', 'thorpe'] }
+const posAwards = (pos, sub) => (sub ? DEF_AWARDS[sub] : POS_AWARD[pos]) ?? []
+const POS_GROUP = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS', dl: 'DEFENSIVE LINEMEN', db: 'DEFENSIVE BACKS' }
+const isDef = pos => pos === 'dl' || pos === 'db'
+// half sacks print as halves (1.5), everything else as a whole number
+const h = v => (v == null || Number.isNaN(+v) ? '–' : Number.isInteger(+v) ? (+v).toLocaleString() : (+v).toFixed(1))
 
 // The regular season plays out on football's season director (lib/seasonDirector.js), the season exactly as
 // simulated (locked: the polls, the Playoff and the awards come from these games). College's own: no NFL record
@@ -57,12 +65,22 @@ const CFB_COUNTS = {
   qb: { seasonPassYds: 'passYds', seasonTDs: 'tds', seasonINTs: 'ints', seasonRushYds: 'rushYds', seasonRushTDs: 'rushTDs', seasonSacks: 'sacks' },
   rb: { seasonRushYds: 'rushYds', seasonRushTDs: 'rushTDs', seasonCarries: 'carries', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonRecs: 'recs', seasonFumbles: 'fumbles' },
   wr: { seasonRecs: 'rec', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonTargets: 'targets' },
+  te: { seasonRecs: 'rec', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonTargets: 'targets' },
+  // (a defender's games reach the director with the NFL names beside the college box score's: dirGame below)
+  dl: { seasonSacks: 'sacks', seasonTFL: 'tfl', seasonTackles: 'tackles', seasonQBHits: 'qbHits', seasonFF: 'ff', seasonFR: 'fr', seasonPBUs: 'pbus' },
+  db: { seasonINTs: 'ints', seasonPBUs: 'pbus', seasonTackles: 'tackles', seasonTFL: 'tfl', seasonFF: 'ff', seasonPickSixes: 'pickSixes' },
 }
+// the director's headlines and milestones read football's game keys (lib/seasonDirector.js BIG_GAME, GAME_LINE,
+// seasonFacts MILESTONES): a defender's college line carries them too, for the director only (pbus there is his
+// passes defended, the count a milestone names)
+const dirGame = (pos, g) => (isDef(pos) ? { ...g, sacks: g.sck ?? 0, tackles: g.tk ?? 0, qbHits: g.qbh ?? 0, pbus: g.pd ?? 0, ints: g.int ?? 0, pickSixes: g.int ? g.td ?? 0 : 0, safeties: 0 } : g)
 registerDirector('cfb', { counts: CFB_COUNTS, lines: { clinch: 99, out: -99 }, nick: t => t?.mascot ?? t?.school ?? t?.name, totals: () => {} })
 const weekNo = label => (/^pre/i.test(label) ? 0 : /^final/i.test(label) ? 99 : Number(String(label).replace(/\D+/g, '')) || 0)
 const pollShort = label => (/^pre/i.test(label) ? 'PRE' : /^final/i.test(label) ? 'FINAL' : `W${weekNo(label)}`)
 const isCfp = g => !!g.round && g.round !== 'Bowl' && g.round !== 'Conference Championship'
-const yardsOf = (g, pos) => (pos === 'qb' ? (g.passYds ?? 0) + (g.rushYds ?? 0) : pos === 'rb' ? (g.rushYds ?? 0) + (g.recYds ?? 0) : (g.recYds ?? 0))
+const yardsOf = (g, pos) => (pos === 'qb' ? (g.passYds ?? 0) + (g.rushYds ?? 0) : pos === 'rb' ? (g.rushYds ?? 0) + (g.recYds ?? 0) : isDef(pos) ? defScore(g) : (g.recYds ?? 0))
+// a defender's day, as a coordinator grades the tape: the sacks and the takeaways first
+const defScore = g => (g.sck ?? 0) * 5 + (g.int ?? 0) * 5 + (g.td ?? 0) * 7 + (g.ff ?? 0) * 3.5 + (g.fr ?? 0) * 2 + (g.tfl ?? 0) * 1.2 + (g.qbh ?? 0) * 0.6 + Math.max(0, (g.pd ?? 0) - (g.int ?? 0)) * 1.2 + (g.tk ?? 0) * 0.3
 
 // the result, in the shape these pages draw
 function view(r, teams) {
@@ -99,9 +117,16 @@ const Logo = ({ short, size = 28, light = false }) => (
     onError={e => { if (!light && !e.currentTarget.dataset.f) { e.currentTarget.dataset.f = 1; e.currentTarget.src = cfbLogo(short) } else e.currentTarget.style.visibility = 'hidden' }} />
 )
 
+// a defender's box score line: "2 sacks, 6 tackles, 2.5 TFL, FF" (a quiet day: his tackles)
+const defLine = g => {
+  const bits = [g.sck ? `${h(g.sck)} sack${g.sck === 1 ? '' : 's'}` : null, g.int ? `${g.int} INT${g.td ? `, ${g.td} TD` : ''}` : null, `${g.tk} tackle${g.tk === 1 ? '' : 's'}`,
+    g.tfl && g.tfl > (g.sck ?? 0) ? `${h(g.tfl)} TFL` : null, (g.pd ?? 0) - (g.int ?? 0) > 0 ? `${g.pd - g.int} PBU` : null, g.ff ? `${g.ff > 1 ? `${g.ff} ` : ''}FF` : null, g.fr ? 'FR' : null, !g.int && g.td ? 'TD' : null]
+  return bits.filter(Boolean).join(', ')
+}
 const gameLine = (g, pos) => {
   if (pos === 'qb' && g.att === 0 && !g.rushAtt) return 'Did not play'
-  if (pos === 'wr' && g.targets === 0) return 'No targets'
+  if ((pos === 'wr' || pos === 'te') && g.targets === 0) return 'No targets'
+  if (isDef(pos)) return g.tk != null ? defLine(g) : ''
   if (pos === 'qb') return g.att != null ? `${g.comp}/${g.att}, ${n(g.passYds)} yds, ${g.tds ?? 0} TD${g.ints ? `, ${g.ints} INT` : ''}${g.rushTDs ? ` · ${g.rushTDs} rush TD` : ''}` : ''
   if (pos === 'rb') return g.carries != null ? `${g.carries} car, ${n(g.rushYds)} yds, ${(g.rushTDs ?? 0) + (g.recTDs ?? 0)} TD${g.recYds ? ` · ${n(g.recYds)} rec yds` : ''}` : ''
   return g.rec != null ? `${g.rec} rec, ${n(g.recYds)} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}` : ''
@@ -179,6 +204,8 @@ function statLine(t, pos) {
   if (!t) return []
   if (pos === 'qb') return [['PASS YDS', n(t.seasonPassYds)], ['TD', n(t.seasonTDs)], ['INT', n(t.seasonINTs)], ['CMP%', f1(t.seasonCompPct)], ['RUSH YDS', n(t.seasonRushYds)]]
   if (pos === 'rb') return [['RUSH YDS', n(t.seasonRushYds)], ['TD', n((t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0))], ['YPC', f1(t.seasonYPC)], ['REC', n(t.seasonRecs)], ['REC YDS', n(t.seasonRecYds)]]
+  if (pos === 'dl') return [['SACKS', h(t.seasonSacks)], ['TFL', h(t.seasonTFL)], ['TACKLES', n(t.seasonTackles)], ['QB HURRIES', n(t.seasonQBHits)], ['FF', n(t.seasonFF)]]
+  if (pos === 'db') return [['INT', n(t.seasonINTs)], ['PD', n(t.seasonPD)], ['TACKLES', n(t.seasonTackles)], ['TFL', h(t.seasonTFL)], ['FF', n(t.seasonFF)]]
   return [['REC', n(t.seasonRecs)], ['YDS', n(t.seasonRecYds)], ['TD', n(t.seasonRecTDs)], ['YPR', f1(t.seasonYPR)], ['LONG', n(t.seasonLong)]]
 }
 function SeasonLine({ totals, pos, sub }) {
@@ -272,11 +299,16 @@ const LOG = {
   qb: [['C/ATT', g => (g.att != null ? `${g.comp}/${g.att}` : '–')], ['YDS', g => n(g.passYds)], ['TD', g => n(g.tds)], ['INT', g => n(g.ints)], ['RUSH', g => n(g.rushYds)], ['RTD', g => n(g.rushTDs)]],
   rb: [['CAR', g => n(g.carries)], ['YDS', g => n(g.rushYds)], ['TD', g => n(g.rushTDs)], ['REC', g => n(g.recs)], ['RYDS', g => n(g.recYds)], ['LONG', g => n(g.long)]],
   wr: [['TGT', g => n(g.targets)], ['REC', g => n(g.rec)], ['YDS', g => n(g.recYds)], ['TD', g => n(g.recTDs)], ['LONG', g => n(g.long)]],
+  te: [['TGT', g => n(g.targets)], ['REC', g => n(g.rec)], ['YDS', g => n(g.recYds)], ['TD', g => n(g.recTDs)], ['LONG', g => n(g.long)]],
+  dl: [['TK', g => n(g.tk)], ['SOLO', g => n(g.solo)], ['SCK', g => h(g.sck)], ['TFL', g => h(g.tfl)], ['QBH', g => n(g.qbh)], ['FF', g => n(g.ff)]],
+  db: [['TK', g => n(g.tk)], ['SOLO', g => n(g.solo)], ['INT', g => n(g.int)], ['PD', g => n(g.pd)], ['TFL', g => h(g.tfl)], ['FF', g => n(g.ff)]],
 }
 function BoxLog({ games, v, pos, totals, userName, sub = null }) {
   const cols = LOG[pos]
   const tot = pos === 'qb' ? [`${n(totals?.seasonCompletions)}/${n(totals?.seasonAttempts)}`, n(totals?.seasonPassYds), n(totals?.seasonTDs), n(totals?.seasonINTs), n(totals?.seasonRushYds), n(totals?.seasonRushTDs)]
     : pos === 'rb' ? [n(totals?.seasonCarries), n(totals?.seasonRushYds), n(totals?.seasonRushTDs), n(totals?.seasonRecs), n(totals?.seasonRecYds), n(totals?.seasonLong)]
+    : pos === 'dl' ? [n(totals?.seasonTackles), n(totals?.seasonSolo), h(totals?.seasonSacks), h(totals?.seasonTFL), n(totals?.seasonQBHits), n(totals?.seasonFF)]
+    : pos === 'db' ? [n(totals?.seasonTackles), n(totals?.seasonSolo), n(totals?.seasonINTs), n(totals?.seasonPD), h(totals?.seasonTFL), n(totals?.seasonFF)]
     : [n(totals?.seasonTargets), n(totals?.seasonRecs), n(totals?.seasonRecYds), n(totals?.seasonRecTDs), n(totals?.seasonLong)]
   return (
     <section className="cfbp-sec">
@@ -448,7 +480,22 @@ function LiveGame({ v, g, onDone }) {
 function Figure({ pos, build, team }) {
   if (!build || !team) return null
   const mono = Object.fromEntries(Object.entries(build).map(([k, x]) => [k, x ? { ...x, teamColor: team.color, teamColor2: team.color2, team: `cfb/${team.short}`, jerseyWord: String(team.school ?? team.short).toUpperCase() } : x]))
-  if (pos === 'wr') return (
+  // (the defenders: the NFL season page's own figures, DL's and DB's, in school colours)
+  if (pos === 'dl') return (
+    <div className="simp-team-model" style={{ aspectRatio: '912 / 1496', width: 230 }}>
+      <div className="simp-team-model-glow" />
+      <img src="/dl-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
+      <DLFigureOverlay build={mono} />
+    </div>
+  )
+  if (pos === 'db') return (
+    <div className="simp-team-model simp-team-model--db">
+      <div className="simp-team-model-glow" />
+      <img src="/db-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.35) drop-shadow(0 0 3px rgba(255,255,255,0.35))' }} />
+      <DBFigureOverlay build={mono} />
+    </div>
+  )
+  if (pos === 'wr' || pos === 'te') return (
     <div className="simp-team-model simp-team-model--rb">
       <div className="simp-team-model-glow" />
       <img src="/wr-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} style={{ filter: 'brightness(0.55)' }} />
@@ -517,7 +564,7 @@ function PrePage({ r, pos, build, types, attrMap, archetype, team, onNext }) {
 function RegPage({ r, v, pos, userName, live, nextLabel, onNext, onWeeks, onStory }) {
   // the season plays out a week at a time when it's new (Reduce Motion, or coming back to it: all at once)
   const [director] = useState(() => (live && !reduced()
-    ? createDirector({ sport: 'cfb', pos, build: {}, team: v.team, simFn: () => r, base: { ...r, games: v.reg }, locked: true, seed: String(r.seed ?? 'cfb'), name: userName })
+    ? createDirector({ sport: 'cfb', pos, build: {}, team: v.team, simFn: () => r, base: { ...r, games: v.reg.map(g => dirGame(pos, g)) }, locked: true, seed: String(r.seed ?? 'cfb'), name: userName })
     : null))
   const dr = useDirectedReveal({ director, pace: 300, onFinal: f => onStory?.(f?.story ?? null) })
   const [loading, setLoading] = useState(!!director)
@@ -550,10 +597,11 @@ function RegPage({ r, v, pos, userName, live, nextLabel, onNext, onWeeks, onStor
       {done && (
         <>
           <SeasonLine totals={v.c.totals?.regular ?? r} pos={pos} sub={`${userName} · REGULAR SEASON`} />
-          {L?.rows?.length > 0 && (
-            <LeadersBoard title="FBS LEADERS" label={L.label} rank={L.rank} who={userName}
-              rows={L.rows.slice(0, 6).map((x, i) => ({ rank: i + 1, me: x.isUser, name: x.isUser ? <NameTag name={userName} self /> : x.name, team: x.team, value: n(x.value) }))} />
-          )}
+          {/* (a defender's page has a board a stat: sacks and TFL, or interceptions, passes defended and tackles) */}
+          {(L?.boards ?? (L ? [L] : [])).filter(B => B.rows?.length > 0).map(B => (
+            <LeadersBoard key={B.key} title="FBS LEADERS" label={B.label} rank={B.rank} who={userName}
+              rows={B.rows.slice(0, 6).map((x, i) => ({ rank: i + 1, me: x.isUser, name: x.isUser ? <NameTag name={userName} self /> : x.name, team: x.team, value: h(x.value) }))} />
+          ))}
           <KeyGames games={v.reg} v={v} pos={pos} />
           <BoxLog games={v.reg} v={v} pos={pos} totals={v.c.totals?.regular} userName={userName} />
           <button className="simp-cta simp-cta-in simp-cta--pin" onClick={onNext}>{nextLabel}</button>
@@ -864,13 +912,14 @@ function awardRows(v, pos, userName, heisman = false) {
   const rows = []
   const h = a.heisman
   if (heisman && h?.winner) rows.push({ name: 'Heisman Trophy', state: h.userWon ? 'WINNER' : h.userFinalist ? 'FINALIST' : h.userPlace ? `${ordinal(h.userPlace).toUpperCase()} IN THE VOTE` : null, won: !!h.userWon, sub: h.userWon ? null : `Won by ${who(h.winner)}` })
-  for (const k of [POS_AWARD[pos], 'maxwell', 'walterCamp']) {
+  for (const k of [...posAwards(pos, v.c.user?.sub), 'maxwell', 'walterCamp']) {
     const x = a[k]
     if (x?.winner) rows.push({ name: x.award, state: x.userWon ? 'WINNER' : x.userFinalist ? 'FINALIST' : null, won: !!x.userWon, sub: x.userWon ? null : `Won by ${who(x.winner)}` })
   }
   const ac = a.allConference
   rows.push({ name: 'All-American', state: a.allAmerica?.user ? `${a.allAmerica.user.toUpperCase()} TEAM` : null, won: a.allAmerica?.user === 'first' })
-  if (ac) rows.push({ name: `All-${ac.conf ?? v.conf?.short ?? 'Conference'}`, state: ac.user ? `${ac.user.toUpperCase()} TEAM` : null, won: ac.user === 'first' })
+  // (the American's all-conference team is the All-AAC: "All-American" is the national one)
+  if (ac) rows.push({ name: `All-${(c => (c === 'American' ? 'AAC' : c))(ac.conf ?? v.conf?.short ?? 'Conference')}`, state: ac.user ? `${ac.user.toUpperCase()} TEAM` : null, won: ac.user === 'first' })
   if (a.confPOY?.winner) rows.push({ name: a.confPOY.award, state: a.confPOY.userWon ? 'WINNER' : null, won: !!a.confPOY.userWon, sub: a.confPOY.userWon ? null : `Won by ${who(a.confPOY.winner)}` })
   return rows
 }
@@ -936,6 +985,39 @@ const SCOUT = {
     size: ['A big target with a wide catch radius', 'A smaller target who can be outmuscled at the catch point'],
     afterCatch: ['Turns a slant into a big play', 'Goes down where he catches it'],
   },
+  te: {
+    speed: ['Runs away from linebackers up the seam', 'A linebacker can carry him down the field'],
+    blocking: ['Seals the edge in the run game and holds up in pass protection', 'Gets pushed back at the point of attack'],
+    vertical: ['Climbs the ladder for the ball in the red zone', 'Will not win many jump balls'],
+    routeRunning: ['Gets open against man coverage from the slot and in line', 'Telegraphs his routes; safeties sit on them'],
+    strength: ['Moves defensive ends off the ball', 'Gets jolted by bigger edge defenders'],
+    hands: ['Catches it in traffic and holds on through the hit', 'Too many drops over the middle'],
+    awareness: ['Finds the hole in the zone and sits down in it', 'Drifts into coverage instead of settling in the window'],
+    size: ['An in-line frame with a wide catch radius', 'Undersized for an in-line tight end'],
+    afterCatch: ['Breaks the first tackle and turns short catches into first downs', 'Goes down where he catches it'],
+  },
+  dl: {
+    getOff: ['Explosive first step: he is in the backfield before the tackle is out of his stance', 'Late off the ball; the snap count beats him'],
+    speed: ['Closes on the quarterback and runs plays down from the back side', 'Does not have the closing speed to finish plays'],
+    size: ['A frame built for the spot, with length to keep blockers off his pads', 'Undersized for the spot; double teams wash him out'],
+    powerMoves: ['A real bull rush and long arm: walks blockers back into the quarterback', 'No power counter when his first move is stopped'],
+    finesseMoves: ['Quick, violent hands: the swipe and the rip win clean', 'His hands are slow; blockers get their hands on him first'],
+    strength: ['Anchors at the point of attack and holds up against the double team', 'Gets moved off the ball in the run game'],
+    playRecognition: ['Reads the run quickly and finds the ball', 'Bites on play action and misdirection'],
+    bend: ['Bends the corner at the top of the rush and flattens to the quarterback', 'Rushes upright; tackles push him past the pocket'],
+    blockShed: ['Gets off blocks and makes the tackle at the line', 'Stays blocked too long against the run'],
+  },
+  db: {
+    speed: ['Recovery speed to stay on top of vertical routes', 'Gets beaten over the top by speed receivers'],
+    size: ['Length to contest at the catch point and to tackle bigger backs', 'Smaller frame: bigger receivers box him out'],
+    fluidity: ['Fluid hips: mirrors receivers out of their breaks', 'Stiff in transition; double moves get him'],
+    press: ['Jams receivers at the line and disrupts the timing', 'Receivers get a clean release off the line against him'],
+    hands: ['Ball skills: he finishes the play with the interception', 'Gets his hands on balls he does not catch'],
+    zoneIQ: ['Reads the quarterback in zone and breaks on the throw', 'Loses his landmarks in zone coverage'],
+    manCoverage: ['Stays in the pocket of receivers in man coverage', 'Gives up separation in man coverage'],
+    playRecognition: ['Diagnoses quickly and triggers downhill', 'Slow to read run and pass'],
+    runSupport: ['A physical tackler in run support; fills the alley', 'Avoids contact in the run game; misses tackles in space'],
+  },
 }
 function scouting(r, v, pos, attrMap) {
   const u = v.c.user ?? {}
@@ -958,6 +1040,23 @@ function scouting(r, v, pos, attrMap) {
     if ((t.seasonRushYds ?? 0) >= 1300) like.push({ k: 'PRODUCTION', text: `${n(t.seasonRushYds)} rushing yards at ${f1(t.seasonYPC)} a carry` })
     if ((t.seasonFumbles ?? 0) >= 4) ask.push({ k: 'BALL SECURITY', text: `${n(t.seasonFumbles)} fumbles` })
     if ((t.seasonYPC ?? 9) < 4.3 && (t.seasonCarries ?? 0) >= 100) ask.push({ k: 'EFFICIENCY', text: `${f1(t.seasonYPC)} yards a carry` })
+  } else if (pos === 'te') {
+    if ((t.seasonRecYds ?? 0) >= 700) like.push({ k: 'PRODUCTION', text: `${n(t.seasonRecs)} catches for ${n(t.seasonRecYds)} yards and ${n(t.seasonRecTDs)} touchdowns` })
+    else if ((t.seasonRecs ?? 99) < 20 && (t.gp ?? 0) >= 10) ask.push({ k: 'PRODUCTION', text: `${n(t.seasonRecs)} catches: a blocker first in that offense` })
+    if ((t.catchRate ?? 100) < 60 && (t.seasonTargets ?? 0) >= 40) ask.push({ k: 'EFFICIENCY', text: `Caught ${f1(t.catchRate)}% of his targets` })
+  } else if (pos === 'dl') {
+    const dt = v.c.user?.sub === 'dt'
+    if ((t.seasonSacks ?? 0) >= (dt ? 6 : 9)) like.push({ k: 'PRODUCTION', text: `${h(t.seasonSacks)} sacks and ${h(t.seasonTFL)} tackles for loss` })
+    else if ((t.seasonTFL ?? 0) >= (dt ? 10 : 13)) like.push({ k: 'PRODUCTION', text: `${h(t.seasonTFL)} tackles for loss: he lives in the backfield` })
+    else if ((t.seasonSacks ?? 0) < (dt ? 2 : 4) && (t.gp ?? 0) >= 10) ask.push({ k: 'PRODUCTION', text: `${h(t.seasonSacks)} sacks: ${dt ? 'he collapses the pocket more than he finishes' : 'the pressure has to turn into sacks'}` })
+    if ((t.seasonFF ?? 0) >= 3) like.push({ k: 'TAKEAWAYS', text: `${n(t.seasonFF)} forced fumbles` })
+  } else if (pos === 'db') {
+    const sf = v.c.user?.sub === 's'
+    if ((t.seasonINTs ?? 0) >= 5) like.push({ k: 'PRODUCTION', text: `${n(t.seasonINTs)} interceptions and ${n(t.seasonPD)} passes defended` })
+    else if ((t.seasonPD ?? 0) >= 13) like.push({ k: 'PRODUCTION', text: `${n(t.seasonPD)} passes defended` })
+    if (sf && (t.seasonTackles ?? 0) >= 90) like.push({ k: 'RUN SUPPORT', text: `${n(t.seasonTackles)} tackles` })
+    if ((t.seasonINTs ?? 0) === 0 && (t.gp ?? 0) >= 10) ask.push({ k: 'BALL SKILLS', text: 'No interceptions: he has to finish plays on the ball' })
+    if ((t.seasonDefTDs ?? 0) >= 1) like.push({ k: 'TAKEAWAYS', text: `${n(t.seasonDefTDs)} defensive ${t.seasonDefTDs === 1 ? 'touchdown' : 'touchdowns'}` })
   } else {
     if ((t.seasonRecYds ?? 0) >= 1100) like.push({ k: 'PRODUCTION', text: `${n(t.seasonRecs)} catches for ${n(t.seasonRecYds)} yards and ${n(t.seasonRecTDs)} touchdowns` })
     if ((t.catchRate ?? 100) < 56 && (t.seasonTargets ?? 0) >= 60) ask.push({ k: 'EFFICIENCY', text: `Caught ${f1(t.catchRate)}% of his targets` })
@@ -969,8 +1068,9 @@ function scouting(r, v, pos, attrMap) {
   const a = v.c.awards ?? {}
   if (a.heisman?.userWon) like.push({ k: 'HARDWARE', text: 'Heisman Trophy winner' })
   else if (a.heisman?.userFinalist) like.push({ k: 'HARDWARE', text: 'Heisman finalist' })
+  else if ((isDef(pos) || pos === 'te') && posAwards(pos, v.c.user?.sub).some(k => a[k]?.userWon)) like.push({ k: 'HARDWARE', text: `${posAwards(pos, v.c.user?.sub).filter(k => a[k]?.userWon).map(k => a[k].award).join(', ')} winner` })
   else if (a.allAmerica?.user === 'first') like.push({ k: 'HARDWARE', text: 'First-team All-American' })
-  if (v.team.tier === 'G5') ask.push({ k: 'COMPETITION', text: `Did it against ${v.conf?.short ?? 'Group of Six'} defenses, not the Power Four` })
+  if (v.team.tier === 'G5') ask.push({ k: 'COMPETITION', text: `Did it against ${v.conf?.short ?? 'Group of Six'} ${isDef(pos) ? 'offenses' : 'defenses'}, not the Power Four` })
   if (!ask.length) ask.push({ k: 'CLEAN REPORT', text: 'Scouts had to look hard for a hole in his game' })
   return { like: like.slice(0, 5), ask: ask.slice(0, 4) }
 }
@@ -993,20 +1093,23 @@ function DraftPage({ r, v, pos, userName, userYear, attrMap, onNext }) {
     <tr className={x.isUser ? 'is-me' : undefined}>
       <td className="is-n">{k}</td>
       <td className="is-who"><Logo short={x.team} size={20} /><span><b>{x.isUser ? <NameTag name={userName} self /> : x.name}</b><small>{v.school(x.team)}{x.year ? ` · ${x.year}` : ''}</small></span></td>
-      <td>{x.yds != null ? n(x.yds) : '–'}</td>
-      <td>{x.td != null ? n(x.td) : '–'}</td>
+      <td>{x.yds != null ? h(x.yds) : '–'}</td>
+      <td>{x.td != null ? h(x.td) : '–'}</td>
       <td className="is-proj">{TIER_SHORT[x.tier] ?? '–'}</td>
     </tr>
   )
   const t = v.c.totals?.throughCCG ?? {}
-  const mine = pos === 'qb' ? { yds: t.seasonPassYds, td: (t.seasonTDs ?? 0) + (t.seasonRushTDs ?? 0) } : pos === 'rb' ? { yds: t.seasonRushYds, td: (t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0) } : { yds: t.seasonRecYds, td: t.seasonRecTDs }
+  const mine = pos === 'qb' ? { yds: t.seasonPassYds, td: (t.seasonTDs ?? 0) + (t.seasonRushTDs ?? 0) } : pos === 'rb' ? { yds: t.seasonRushYds, td: (t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0) }
+    : pos === 'dl' ? { yds: t.seasonSacks, td: t.seasonTFL } : pos === 'db' ? { yds: t.seasonINTs, td: t.seasonPD } : { yds: t.seasonRecYds, td: t.seasonRecTDs }
+  // (the board's two numbers: a lineman's sacks and TFL, a back's interceptions and passes defended)
+  const [c1, c2] = pos === 'dl' ? ['SCK', 'TFL'] : pos === 'db' ? ['INT', 'PD'] : ['YDS', 'TD']
   return (
     <div className="simp-screen cfbp-draft">
       <section className="cfbp-sec">
         <Hd sub="SCOUTING REPORT">NFL DRAFT STOCK</Hd>
         <div className="cfbs-draft">
           <div className="cfbs-draft-top">
-            <small>{userName} · {label} · {v.school(v.team.short)}{userYear ? ` · ${userYear}` : ''}</small>
+            <small>{userName} · {SPOT_LABEL[v.c.user?.sub] ?? label} · {v.school(v.team.short)}{userYear ? ` · ${userYear}` : ''}</small>
             <b>{String(headline).toUpperCase()}</b>
             <em>{d.eligible === false ? noYear(d.note) : pick ? projText(d) : 'Not projected to be drafted'}{d.eligible !== false && d.note ? ` · ${noYear(d.note)}` : ''}</em>
           </div>
@@ -1032,7 +1135,7 @@ function DraftPage({ r, v, pos, userName, userYear, attrMap, onNext }) {
         <section className="cfbp-sec">
           <Hd sub={POS_GROUP[pos]}>THE BOARD</Hd>
           <table className="cfbp-board">
-            <thead><tr><th>RK</th><th className="is-who">PROSPECT</th><th>YDS</th><th>TD</th><th>PROJ</th></tr></thead>
+            <thead><tr><th>RK</th><th className="is-who">PROSPECT</th><th>{c1}</th><th>{c2}</th><th>PROJ</th></tr></thead>
             <tbody>
               {rows.map((x, i) => <Row key={i} x={x.isUser ? { ...x, ...mine } : x} k={i + 1} />)}
               {rank != null && rank > rows.length && (
@@ -1063,10 +1166,12 @@ function FinalPage({ r, v, pos, build, types, attrMap, archetype, userName, stor
     const t = c.totals?.full ?? {}
     const stats = pos === 'qb' ? [[n(t.seasonPassYds), 'YDS'], [n(t.seasonTDs), 'TD'], [n(t.seasonINTs), 'INT']]
       : pos === 'rb' ? [[n(t.seasonRushYds), 'RUSH YDS'], [n((t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0)), 'TD'], [f1(t.seasonYPC), 'YPC']]
+      : pos === 'dl' ? [[h(t.seasonSacks), 'SACKS'], [h(t.seasonTFL), 'TFL'], [n(t.seasonTackles), 'TKL']]
+      : pos === 'db' ? [[n(t.seasonINTs), 'INT'], [n(t.seasonPD), 'PD'], [n(t.seasonTackles), 'TKL']]
       : [[n(t.seasonRecs), 'REC'], [n(t.seasonRecYds), 'YDS'], [n(t.seasonRecTDs), 'TD']]
     return {
       sport: 'nfl', name: userName || 'Guest',
-      tag: [CFB_POS[pos].label, 'COLLEGE FOOTBALL'].join('  ·  '),
+      tag: [SPOT_LABEL[c.user?.sub] ?? CFB_POS[pos].label, 'COLLEGE FOOTBALL'].join('  ·  '),
       hero: { value: r.ovr ?? '–', label: 'OVR' },
       sub: archetype && !/remaining$/.test(archetype) ? archetype : null,
       record: v.record, headline: v.headline.toUpperCase().replace(/ — /, ' · '),
@@ -1201,7 +1306,7 @@ export default function CFBSimPage({ result: r, pos, userName, teams, archetype,
   const confShort = v.conf?.short ?? ''
   const team = v.team
   const regNext = pages.includes('ccg') ? (v.ccg ? `${confShort} Championship` : 'Championship Week') : 'Selection Day'
-  const who = page === 'pre' ? seasonNote : [userName, CFB_POS[pos].label, roleNote ?? archetype ?? r.archetype].filter(Boolean).join(' · ')
+  const who = page === 'pre' ? seasonNote : [userName, SPOT_LABEL[v.c.user?.sub] ?? CFB_POS[pos].label, roleNote ?? archetype ?? r.archetype].filter(Boolean).join(' · ')
 
   let el
   if (page === 'pre') el = <PrePage r={r} pos={pos} build={build} types={types} attrMap={attrMap} archetype={archetype} team={team} onNext={() => go('reg')} />

@@ -1,11 +1,11 @@
-// #leaderboards on Discord: the Daily Challenge board every night at midnight New York time, and the Weekly Cup's
+// #leaderboards on Discord: the day's Players of the Day every night at midnight New York time, and the Weekly Cup's
 // final standings every Monday at midnight (the Cup's week runs Monday to Sunday, New York: supabase/weekly_cup.sql).
 // Run by the Worker's cron (wrangler.toml [triggers]): Cloudflare's cron is in UTC, so it fires just after both
 // possible midnights (4 AM UTC in summer time, 5 AM in winter) and a few times after, and the post goes out on the
 // first run that finds it past midnight in New York (before 2 AM there).
 // Secret: LEADERBOARD_DISCORD_WEBHOOK (#leaderboards → Edit Channel → Integrations → Webhooks → New Webhook → Copy
 // Webhook URL; then `npx wrangler secret put LEADERBOARD_DISCORD_WEBHOOK`). Not set: nothing is posted.
-// Each post is claimed first in board_cache (kind 'discord-daily' / 'discord-cup', the day or the week's Monday), so
+// Each post is claimed first in board_cache (kind 'discord-potd' / 'discord-cup', the day or the week's Monday), so
 // it goes out once; a failed post gives its claim back and the next run tries again.
 
 const CUP_START = '2026-10-29'   // keep in step with CUP_START in src/lib/progress.js
@@ -33,20 +33,21 @@ export const restOf = (url, key) => (path, init = {}) => fetch(`${url}/rest/v1/$
   ...init, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
 })
 
-export async function dailyEmbed(rest, day) {
-  const r = await rest(`daily_challenge_results?day=eq.${day}&select=username,ovr,position,mode,created_at&order=ovr.desc,created_at.asc&limit=${TOP}`, { headers: { Prefer: 'count=exact' } })
-  if (!r.ok) throw new Error(`daily read ${r.status}`)
-  const rows = await r.json()
-  const count = Number((r.headers.get('content-range') ?? '').split('/')[1]) || rows.length
-  const pos = rows[0]?.position, mode = rows[0]?.mode
-  const what = pos ? `${SPORT[pos] ?? 'Football'} · ${POS[pos] ?? pos.toUpperCase()} · ${mode === 'all-time' ? 'All-Time' : 'Current'}` : null
+// Players of the Day: the five who earned the most XP that day (New York), as the game shows and pays them
+// (src/lib/progress.js POTD_COINS; the list is supabase/board_cache.sql's, worked out every five minutes)
+const POTD_COINS = [1000, 750, 500, 350, 200]   // keep in step with POTD_COINS in src/lib/progress.js
+export async function potdEmbed(rest, day) {
+  const r = await rest(`board_cache?kind=eq.potd&day=eq.${day}&select=rows`)
+  if (!r.ok) throw new Error(`potd read ${r.status}`)
+  const rows = ((await r.json())[0]?.rows ?? []).slice(0, POTD_COINS.length)
   return {
     color: TEAL,
-    title: `DAILY CHALLENGE · ${dateLine(day, { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase()}`,
+    title: `PLAYERS OF THE DAY · ${dateLine(day, { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase()}`,
     description: rows.length
-      ? `${what ? `${what}\n` : ''}${fmt(count)} build${count === 1 ? '' : 's'} posted\n\n${rows.map((x, i) => place(i, `**${esc(nameOf(x))}** · ${x.ovr} OVR`)).join('\n')}`
-      : 'No builds were posted.',
-    footer: { text: 'Today\'s Daily is up now at build-a-player.com' },
+      ? `The most XP earned on the day. The top ${POTD_COINS.length} are paid.\n\n${rows.map((x, i) =>
+        place(i, `**${esc(nameOf(x))}** · ${fmt(x.day?.xp ?? 0)} XP · ${fmt(x.day?.g ?? 0)} games · ${fmt(POTD_COINS[i])} coins`)).join('\n')}`
+      : 'Nobody earned XP that day.',
+    footer: { text: 'A new day is up now at build-a-player.com' },
   }
 }
 
@@ -88,7 +89,7 @@ export async function postLeaderboards(env, at = new Date()) {
   if (now.hour >= 2) return
   const rest = restOf(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
   const yesterday = addDays(now.day, -1)
-  await postOnce(rest, hook, 'discord-daily', yesterday, () => dailyEmbed(rest, yesterday))
+  await postOnce(rest, hook, 'discord-potd', yesterday, () => potdEmbed(rest, yesterday))
   if (now.weekday === 'Mon') {
     const monday = addDays(now.day, -7)
     if (addDays(monday, 6) >= CUP_START) await postOnce(rest, hook, 'discord-cup', monday, () => cupEmbed(rest, monday))

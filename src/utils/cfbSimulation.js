@@ -1,13 +1,13 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// College Football mode: the season engine (mode id 'cfb', positions 'qb' | 'rb' | 'wr')
+// College Football mode: the season engine (mode id 'cfb', positions 'qb' | 'rb' | 'wr' | 'te' | 'dl' | 'db')
 // ══════════════════════════════════════════════════════════════════════════════
 //
 // runCFBSimulation(build, types, team, position, rngSeed, gameMode, script, opts) → result
 //
 //   build     football's build shape: { [traitKey]: { type, val (0-11), qbFull, team } } with the NFL trait keys
-//   types     the trait list (TYPES / RB_TYPES / WR_TYPES or a LITE list); defaults by position
+//   types     the trait list (TYPES / RB_TYPES / WR_TYPES / TE_TYPES / DL_TYPES / DB_TYPES or a LITE list); defaults by position
 //   team      a CFB_TEAMS row (or its short). The season director's team mods (team.off / team.def moved) count.
-//   position  'qb' | 'rb' | 'wr'
+//   position  'qb' | 'rb' | 'wr' | 'te' | 'dl' | 'db' (a defender's spot, edge or dt, cb or s, is his Size chip's man's: subpos)
 //   rngSeed   any string/number. Same seed + same inputs = the same season, to the box score (no Math.random).
 //   gameMode  stored on the result (the OVR/sim don't change by mode)
 //   script    null, a scriptCFBSeason() result (the team's results are forced, the build only makes its line),
@@ -16,7 +16,7 @@
 //             changes (the director re-runs a season many times); year = the build's class ('FR'…'RS-SR'), 'JR' default
 //             noClass: the build has no class (College Football mode: a season is a year, he's always draft-eligible,
 //             cfb.draft.year is null and it always declares); career: his earlier college seasons (the draft board)
-//             pools: { qb, rb, wr } rosters in place of the data's (College Football mode's later seasons: cfbShared seasonData)
+//             pools: { qb, rb, wr, te, dl, db } rosters in place of the data's (College Football mode's later seasons: cfbShared seasonData)
 //             season: the year it's played (2026 default; the draft line's year follows it); choice: the class is the build's own
 //             and going or staying is the player's call (College Football mode's class years: components/cfb/cfbClass.js)
 //
@@ -27,7 +27,9 @@
 //     wk (1-12), opponent (name), oppShort, home (bool), neutral (bool), confGame (bool), fcs (bool), won, mySc, oppSc, ot,
 //     QB: comp, att, passYds, tds, ints, rushAtt, rushYds (sacks count as runs, the college way), rushTDs, sacks, rating (NFL), eff (NCAA)
 //     RB: carries, rushYds, rushTDs, ypc, recs, recYds, recTDs, fumbles, long
-//     WR: targets, rec, recYds, recTDs, long
+//     WR, TE: targets, rec, recYds, recTDs, long
+//     DL, DB: tk (total tackles), solo, sck (half sacks happen), tfl (halves too), pd (passes defended: breakups plus
+//             interceptions, the NCAA's count), qbh (QB hurries), int, ff, fr, td (a defensive touchdown)
 //     meta: { week (calendar 0-13), label ('Week 3'), date ('Sep 19'), myRank, oppRank (AP before kickoff, null = unranked), oppRec, oppConf }
 //   }],
 //   highlights, bestGame,
@@ -35,7 +37,9 @@
 //     QB: seasonPassYds, seasonTDs, seasonINTs, seasonRushYds, seasonRushTDs, seasonSacks, seasonAttempts, seasonCompletions,
 //         seasonCompPct, seasonRating (NFL formula, for football's UI), seasonEff (NCAA passer efficiency)
 //     RB: seasonRushYds, seasonRushTDs, seasonCarries, seasonYPC, seasonFumbles, seasonRecYds, seasonRecTDs, seasonRecs, seasonLong, hundredYardGames
-//     WR: seasonRecs, seasonRecYds, seasonRecTDs, seasonTargets, seasonYPR, seasonLong, hundredYardGames, catchRate
+//     WR, TE: seasonRecs, seasonRecYds, seasonRecTDs, seasonTargets, seasonYPR, seasonLong, hundredYardGames, catchRate
+//     DL, DB: seasonTackles, seasonSolo, seasonSacks, seasonTFL, seasonPD, seasonQBHits, seasonINTs, seasonFF, seasonFR,
+//             seasonDefTDs, sub ('edge' | 'dt' | 'cb' | 's')
 //   playoffs (made the CFP), hasBye (a top-4 seed), playoffRounds (CFP games: { round: 'First Round' | 'Quarterfinal' |
 //     'Semifinal' | 'National Championship', bowl, label, site, date, opponent, oppShort, oppSeed, mySeed, home, neutral, won,
 //     mySc, oppSc, ot, overtime, ...line }), sbResult ({ won: true, ...line } national champion | { won: false, round, pwins }),
@@ -58,17 +62,20 @@
 //     bowls: [{ bowl, site, date, a, b, aSc, bSc, winner }],
 //     awards: {
 //       heisman: { winner, finalists, ballot: [{ name, team, pos, pts, first, second, third, line, isUser }], userPlace, userFinalist, userWon },
-//       daveyOBrien / doakWalker / biletnikoff / maxwell / walterCamp: { award, winner, finalists, userWon, userFinalist },
-//       allAmerica: { first: { qb, rb, wr }, second: { qb, rb, wr }, user: 'first' | 'second' | null },
-//       allConference: { conf, first, second, user }, confPOY: { award, winner, userWon },
+//       daveyOBrien / doakWalker / biletnikoff / mackey / maxwell / walterCamp: { award, winner, finalists, userWon, userFinalist },
+//       bednarik / nagurski (the best defender) / outland (a defensive tackle here) / hendricks (an edge) / thorpe (a DB): the same shape,
+//       allAmerica: { first: { qb, rb, wr, te, dl (2 edge, 2 DT), db (2 CB, 2 S) }, second: { the same }, user: 'first' | 'second' | null },
+//       allConference: { conf, first, second, user }, confPOY: { award, winner, userWon } (a defender's is the conference's Defensive Player of the Year),
 //     },
 //     leaders: null | { key, label, rows: [{ name, team, year, isUser, value }] (top 10), rank, of }   (regular season, every FBS starter at his position)
+//              a defender's also has boards: [the same, a board a stat] (DL: sacks, TFL · DB: interceptions, passes defended, tackles)
 //     draft: { year (null: no class), eligible, declares, tier ('top10' | 'r1' | 'day2' | 'day3' | 'pfa' | 'udfa'), label, round, pick ([lo, hi] overall
 //              picks of 224, null undrafted), overall (his place on the big board), note, draftYear, boardRank, boardOf,
-//              board (the top 25 at his position: { name, team, year, ovr, isUser, tier, yds, td }) }
+//              board (the top 25 at his position: { name, team, year, ovr, isUser, tier, yds, td }: a DL's yds/td are sacks and TFL,
+//              a DB's interceptions and passes defended) }
 //   }
 // }
-// Players in award lists: { name, team (short), teamName, pos ('QB'|'RB'|'WR'), conf, year, isUser, line: 'season line text', stats }
+// Players in award lists: { name, team (short), teamName, pos ('QB'|'RB'|'WR'|'TE'|'EDGE'|'DT'|'CB'|'S'), conf, year, isUser, line: 'season line text', stats }
 //
 // Exports: runCFBSimulation, scriptCFBSeason, finalizeCFBSeason, cfbSeasonTotals, cfbLeague, calcCFBOVR, cfbPasserEfficiency,
 //          CFB_GAME_LINE, CFB_RESEARCH, CFB_TYPES_BY_POS
@@ -104,6 +111,24 @@
 // • WR tiers: elite (Biletnikoff) 1,300-1,900 yds, 85-115 rec, 12-20 TD (Nabers '23 89-1,569-14; Addison '21
 //   100-1,593-17; Chase '19 84-1,780-20); good 900-1,200 yds 60-80 rec 7-10 TD; average WR1 650-850 yds
 //   50-60 rec 5-6 TD; poor 350-500.
+// • TE tiers (2026-11-13): elite (Mackey) 55-105 rec, 700-1,250 yds, 6-12 TD (Warren '24 104-1,233-8; Bowers '22
+//   63-942-7; Pitts '20 43-770-12 in 8 games; McBride '21 90-1,121-1; Mayer '22 67-809-9); good 40-55 rec 450-650 yds
+//   4-6 TD; an average TE1 35-45 rec, 400-500 yds, 3-4 TD; the national TE leader 70-90 rec, 900-1,100 yds. The John
+//   Mackey Award is the position's; All-America teams carry one tight end. NFL Drafts 2021-25: 12-16 TEs a year, 0-2
+//   in round 1 (Pitts 4th in 2021, Bowers 13th in 2024, Loveland 10th and Warren 14th in 2025).
+// • DEFENSE (2026-11-25; ESPN's 2025 FBS box scores, every team-game: 1,895): a defense makes 65 tackles a game (35
+//   solo), 2.0 sacks, 5.4 TFL (sacks in it), 0.8 interceptions and about 3 more pass breakups, 2.7 QB hurries, 0.75
+//   forced fumbles. Starters, a 13-game season (the 2025 box scores, each team's two edges, best DT, two corners and
+//   best safety): EDGE median 4 sacks / 7 TFL / 33 tackles (a good EDGE1 7-10 sacks; the national leader 13-17:
+//   Tucker 14.5 and Bailey 14.5 in 2025), DT median 1.5 sacks / 4 TFL / 33 tackles (a good one 3-6 sacks, 8-12 TFL),
+//   CB median 1 INT / 5 breakups / 45 tackles (a CB1 2-4 INT and 8-14 passes defended; the INT leader 6-8: Foster 8 in
+//   2025), S1 median 70 tackles (60-90; the best 100+), 1-3 INT. A box score: a 3-sack game is under 1% of an edge's
+//   games, a 2-INT game about 1% of a corner's, a 3-INT game almost never; about one sack in ten is a half.
+//   Awards: the Bednarik (Maxwell Club) and the Nagurski (FWAA) go to the best defender, mostly pass rushers; the
+//   Outland (interior linemen: here its defensive tackles), the Ted Hendricks (defensive ends), the Jim Thorpe (DBs). A
+//   defender has won the Heisman once (Charles Woodson, 1997). All-America teams list four linemen (two ends, two
+//   tackles) and four backs (two corners, two safeties). NFL Drafts 2021-25: about 35 DL (5-8 in round 1) and 45 DBs
+//   (5-7 in round 1) a year. (The Lott IMPACT Trophy isn't here: half its vote is character, which no box score has.)
 // • Heisman ballots: 3-2-1, about 930 (870 media, the living winners, one fan vote). 2025: Mendoza 2,362 pts,
 //   Pavia 1,435, Love 719, Sayin 432: four finalists, as most years (heisman.com 2025 press packet).
 // • THE 2026 CFP (12 teams; the CFP kept 12 for 2026 on Jan. 23, 2026): automatic bids to the SEC, Big Ten,
@@ -122,17 +147,29 @@
 //   (true sophomore) can't declare.
 // ══════════════════════════════════════════════════════════════════════════════
 
-import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR } from './simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDL, calcOVRDB, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDL, getArchetypeDB } from './simulation'
 import { collegeOVR } from './cfbOvr'
 import { TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
 import { WR_TYPES } from '../data/wrs'
+import { TE_TYPES } from '../data/tes'
+import { DL_TYPES } from '../data/dls'
+import { DB_TYPES } from '../data/dbs'
 import { CFB_CONFERENCES } from '../data/cfb-conferences'
 import { CFB_TEAMS } from '../data/cfb-teams'
 import { CFB_QBS, CFB_RBS, CFB_WRS } from '../data/cfb-players'
+import { CFB_TES } from '../data/cfb-tes'
+import { CFB_DLS } from '../data/cfb-dls'
+import { CFB_DBS } from '../data/cfb-dbs'
 import { seeded } from '../lib/rng'
 
-export const CFB_TYPES_BY_POS = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES }
+export const CFB_TYPES_BY_POS = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, dl: DL_TYPES, db: DB_TYPES }
+const POSITIONS = ['qb', 'rb', 'wr', 'te', 'dl', 'db']
+const DEF = new Set(['dl', 'db'])
+// a defender's spot: his row's subpos, or (a build) his Size chip's man's, the NFL builders' rule (simulation.js
+// dlBuildSpot, the DB sim's anchor): a lineman is an edge unless the man is a tackle, a back a corner unless a safety
+export const subOf = (pos, x) => (pos === 'dl' ? (String(x ?? '').toLowerCase() === 'dt' ? 'dt' : 'edge') : pos === 'db' ? (String(x ?? '').toLowerCase() === 's' ? 's' : 'cb') : null)
+export const buildSub = (pos, build) => subOf(pos, build?.size?.subpos)
 
 export const CFB_RESEARCH = {
   ppg: 27.5, homeEdge: 2.6, scoreSD: 11, marginSD: 15.6,
@@ -311,7 +348,7 @@ const corr = (xs, ys) => {
 }
 const PTS_PER_Z = 7.2   // one SD of offense (or defense) is worth ~7 points a game (SP+'s unit spreads)
 const toBuild = (attrs, types) => Object.fromEntries(types.map(t => [t, { type: t, val: attrs?.[t] ?? 5 }]))
-const OVR_FN = { qb: calcOVR, rb: calcOVRRB, wr: calcOVRWR }
+const OVR_FN = { qb: calcOVR, rb: calcOVRRB, wr: calcOVRWR, te: calcOVRTE, dl: calcOVRDL, db: calcOVRDB }
 export function calcCFBOVR(build, types, position) { const p = position ?? 'qb'; return collegeOVR(OVR_FN[p](build, types ?? CFB_TYPES_BY_POS[p])) }
 
 function buildLeague() {
@@ -359,7 +396,7 @@ function buildLeague() {
   const byShort = Object.fromEntries(teams.map(t => [t.short, t]))
   const scale = { offM: so.m, offSD: so.sd, defM: sd.m, defSD: sd.sd, flip, useFPI, k }
 
-  const L = { confs: Object.values(conf), confList: confs, teams, byShort, scale, ...leaguePlayers({ qb: CFB_QBS, rb: CFB_RBS, wr: CFB_WRS }, byShort) }
+  const L = { confs: Object.values(conf), confList: confs, teams, byShort, scale, ...leaguePlayers({ qb: CFB_QBS, rb: CFB_RBS, wr: CFB_WRS, te: CFB_TES, dl: CFB_DLS, db: CFB_DBS }, byShort) }
   L.schedule = buildSchedule(L)
   // strength of schedule: the average opponent's FPI-style rating (FCS opponents at their own)
   L.sos = teams.map(t => {
@@ -371,16 +408,21 @@ function buildLeague() {
 
 // the players: OVR on the football formulas, the depth chart a team, and the teams of the country's best players
 // by grade (the award fields come from these, the build's conference and the top 25)
+// (a defender's depth is inside his spot: EDGE1 and EDGE2, DT1; CB1 and CB2, S1. The starters at each spot: STARTS)
+const STARTS = { edge: 2, dt: 1, cb: 2, s: 1 }
+const isStarter = (p, pos) => (pos === 'wr' ? (p.depth ?? 1) <= 3 : DEF.has(pos) ? (p.depth ?? 1) <= (STARTS[p.sub] ?? 1) : (p.depth ?? 1) <= 1)
 function leaguePlayers(lists, byShort) {
-  const prep = (list, pos) => (list ?? []).filter(p => p && p.team && p.attrs).map(p => ({ ...p, pos, ovr: OVR_FN[pos](toBuild(p.attrs, CFB_TYPES_BY_POS[pos]), CFB_TYPES_BY_POS[pos]) ?? 70 }))
-  const players = { qb: prep(lists.qb, 'qb'), rb: prep(lists.rb, 'rb'), wr: prep(lists.wr, 'wr') }
+  const prep = (list, pos) => (list ?? []).filter(p => p && p.team && p.attrs).map(p => ({ ...p, pos, ...(DEF.has(pos) ? { sub: subOf(pos, p.subpos) } : {}), ovr: OVR_FN[pos](toBuild(p.attrs, CFB_TYPES_BY_POS[pos]), CFB_TYPES_BY_POS[pos]) ?? 70 }))
+  const players = Object.fromEntries(POSITIONS.map(pos => [pos, prep(lists[pos], pos)]))
   const depth = {}
-  for (const pos of ['qb', 'rb', 'wr']) {
-    for (const p of players[pos]) (depth[p.team] ??= { qb: [], rb: [], wr: [] })[pos].push(p)
-  }
-  for (const d of Object.values(depth)) for (const pos of ['qb', 'rb', 'wr']) d[pos].sort((a, b) => (a.depth ?? 99) - (b.depth ?? 99) || (b.starter ? 1 : 0) - (a.starter ? 1 : 0) || b.ovr - a.ovr)
-  const topBy = (pos, n) => players[pos].filter(p => (p.depth ?? 1) <= (pos === 'wr' ? 3 : 1)).sort((a, b) => b.ovr - a.ovr).slice(0, n)
-  const awardTeams = [...new Set([...topBy('qb', 30), ...topBy('rb', 30), ...topBy('wr', 45)].map(p => byShort[p.team]?.idx).filter(i => i != null))]
+  const empty = () => Object.fromEntries(POSITIONS.map(pos => [pos, []]))
+  for (const pos of POSITIONS) for (const p of players[pos]) (depth[p.team] ??= empty())[pos].push(p)
+  // (a defender: his spot first, then his depth there)
+  const SUB_ORDER = { edge: 0, dt: 1, cb: 0, s: 1 }
+  for (const d of Object.values(depth)) for (const pos of POSITIONS) d[pos].sort((a, b) => (DEF.has(pos) ? SUB_ORDER[a.sub] - SUB_ORDER[b.sub] : 0) || (a.depth ?? 99) - (b.depth ?? 99) || (b.starter ? 1 : 0) - (a.starter ? 1 : 0) || b.ovr - a.ovr)
+  const topBy = (pos, n, sub = null) => players[pos].filter(p => isStarter(p, pos) && (!sub || p.sub === sub)).sort((a, b) => b.ovr - a.ovr).slice(0, n)
+  const awardTeams = [...new Set([...topBy('qb', 30), ...topBy('rb', 30), ...topBy('wr', 45), ...topBy('te', 20),
+    ...topBy('dl', 30, 'edge'), ...topBy('dl', 15, 'dt'), ...topBy('db', 25, 'cb'), ...topBy('db', 15, 's')].map(p => byShort[p.team]?.idx).filter(i => i != null))]
   return { players, depth, awardTeams }
 }
 
@@ -703,9 +745,95 @@ function wrRates(v, ovr) {
     ovr,
   }
 }
-const RATES = { qb: qbRates, rb: rbRates, wr: wrRates }
-// a team with no player in the data at a spot: a player as good as its offense
-const genericAttrs = (types, team) => Object.fromEntries(types.map(t => [t, clamp(1, 11, 5 + (team.o / PTS_PER_Z) * 1.3)]))
+// A tight end: a smaller share of the targets than a receiver (an average TE1 about 3 catches a game, the best
+// six or seven), a shorter throw, and the red zone (his frame and his catch radius are the touchdown edge). A blocker
+// first (Blocking over his Route Running) is thrown to less
+function teRates(v, ovr) {
+  const spd = v('speed'), vrt = v('vertical'), rte = v('routeRunning'), hnd = v('hands'), awr = v('awareness')
+  const sz = v('size'), yac = v('afterCatch'), blk = v('blocking')
+  // (the overall carries most of it: a B+ tight end is a target, an A+ one the offense's first read, Brock Bowers' 2022)
+  const share = clamp(0.06, 0.32, 0.085 + rte * 0.05 + hnd * 0.03 + awr * 0.02 + ovrBoost(ovr) * 0.85 - Math.max(0, blk - rte) * 0.03)
+  return {
+    share,
+    catch: clamp(0.5, 0.84, 0.6 + hnd * 0.16 + rte * 0.05 + awr * 0.03 - spd * 0.02),
+    ypr: 8.4 + spd * 3.0 + yac * 2.2 + vrt * 0.8 + rte * 0.5,
+    tdW: (0.9 + sz * 0.4 + vrt * 0.35 + rte * 0.15) * (1 + ovrBoost(ovr) * 1.2),
+    big: 0.12 + spd * 0.35 + yac * 0.1, spd,
+    ovr,
+  }
+}
+
+// ── Defenders: ratings → what a game's defensive plays bring him ──
+// A defense's game comes from the offense it faced (its sacks, interceptions, incompletions, plays: defBox). Each
+// starter's rates are what he'd make of an average defense's game (DEF_TEAM: the 2025 FBS team-game, ESPN's box
+// scores), and his share of each play is his rate over the defense's (the linebackers, the nickel and the backups are
+// the rest). The skills are the NFL builders' own blends (simulation.js runDLSimulation / runDBSimulation): an edge
+// wins on the arc (get-off, bend, the hands), a tackle with power and the first step, a corner's picks come from his
+// ball skills and his read, a safety's tackles from run support and range.
+// (sck and int: what this engine's offenses give up a game, 1.55 sacks and 0.53 interceptions, its quarterbacks' own
+// lines; the real 2025 game's 2.0 and 0.8 count the backups' snaps and the linebackers' blitzes the starters share here)
+const DEF_TEAM = { sck: 1.55, rtfl: 3.45, tk: 65, pbu: 3.3, int: 0.53, qbh: 2.74, ff: 0.75, fr: 0.45 }
+// (what's left for the rest of the defense at the least: nobody takes every sack or every tackle)
+const DEF_REST = { sck: 0.25, rtfl: 0.3, tk: 0.55, pbu: 0.3, int: 0.3, qbh: 0.3, ff: 0.35, fr: 0.4 }
+// an average college starter's traits (B+, 7) read 0.636 on the 0-1 scale: the rates are set against him
+const AVG_N = 7 / 11
+const pw = (x, k) => Math.pow(Math.max(0.05, x) / AVG_N, k)
+const soft = (x, knee, slope = 0.35) => (x <= knee ? x : knee + (x - knee) * slope)
+function dlRates(v, ovr, sub) {
+  const get = v('getOff'), spd = v('speed'), pwr = v('powerMoves'), fin = v('finesseMoves'), str = v('strength')
+  const rec = v('playRecognition'), bnd = v('bend'), shd = v('blockShed'), sz = v('size')
+  const edge = sub !== 'dt'
+  const rush = edge
+    ? get * 0.26 + bnd * 0.22 + fin * 0.18 + pwr * 0.12 + spd * 0.12 + shd * 0.05 + rec * 0.03 + str * 0.02
+    : pwr * 0.26 + get * 0.24 + fin * 0.14 + str * 0.10 + sz * 0.04 + shd * 0.10 + bnd * 0.06 + rec * 0.04 + spd * 0.02
+  const tkl = edge
+    ? shd * 0.28 + rec * 0.22 + spd * 0.18 + str * 0.10 + sz * 0.04 + get * 0.08 + bnd * 0.04 + pwr * 0.04 + fin * 0.02
+    : shd * 0.30 + str * 0.18 + sz * 0.08 + rec * 0.22 + get * 0.08 + pwr * 0.08 + spd * 0.04 + bnd * 0.01 + fin * 0.01
+  const tfl = get * 0.28 + shd * 0.24 + rec * 0.18 + pwr * 0.10 + str * 0.05 + sz * 0.03 + fin * 0.05 + spd * 0.04 + bnd * 0.03
+  const ffS = fin * 0.25 + get * 0.20 + spd * 0.20 + shd * 0.15 + bnd * 0.08 + rec * 0.05 + pwr * 0.05 + str * 0.02
+  const frS = rec * 0.45 + spd * 0.20 + get * 0.15 + shd * 0.10 + bnd * 0.04 + str * 0.03 + pwr * 0.02 + fin * 0.01
+  const bat = rec * 0.36 + shd * 0.16 + get * 0.14 + str * 0.10 + pwr * 0.08 + fin * 0.06 + bnd * 0.05 + spd * 0.05
+  // (an edge: about 4.5 sacks, 8 TFL and 34 tackles an average starter's season; a tackle 3 sacks, 7.5 TFL, 35)
+  return {
+    sub: edge ? 'edge' : 'dt', ovr, rush,
+    // (the very best draw the chips, the slides and the double teams: past about 10 sacks' worth a season (an edge) or
+    // 6 (a tackle) every step up is worth less, so an all-A+ edge lands near the 16-20 of the best real years, not past them)
+    sck: soft((edge ? 0.40 : 0.27) * pw(rush, edge ? 2.8 : 2.4), edge ? 0.75 : 0.45),
+    rtfl: (edge ? 0.28 : 0.36) * pw(tfl, 2.0),
+    tk: (edge ? 2.55 : 2.6) * pw(tkl, 1.2), solo: edge ? 0.5 : 0.44,
+    pbu: (edge ? 0.07 : 0.06) * pw(bat, 1.1),
+    int: 0.006,
+    qbh: (edge ? 0.36 : 0.21) * pw(rush, 1.8),
+    ff: (edge ? 0.10 : 0.06) * pw(ffS, 1.4),
+    fr: (edge ? 0.028 : 0.024) * pw(frS, 1.2),
+  }
+}
+function dbRates(v, ovr, sub) {
+  const spd = v('speed'), sz = v('size'), flu = v('fluidity'), prs = v('press'), hnd = v('hands')
+  const ziq = v('zoneIQ'), man = v('manCoverage'), prk = v('playRecognition'), rus = v('runSupport')
+  const s = sub === 's'
+  const intS = hnd * 0.30 + ziq * 0.25 + prk * 0.20 + man * 0.12 + flu * 0.08 + prs * 0.03 + spd * 0.02
+  const pbuS = flu * 0.28 + man * 0.25 + prs * 0.18 + hnd * 0.12 + ziq * 0.10 + spd * 0.05 + prk * 0.02
+  const tkl = rus * 0.36 + prk * 0.18 + spd * 0.16 + sz * 0.10 + ziq * 0.09 + flu * 0.05 + prs * 0.03 + man * 0.03
+  const tfl = rus * 0.35 + sz * 0.25 + prk * 0.25 + spd * 0.10 + prs * 0.05
+  const ffS = rus * 0.30 + hnd * 0.20 + prk * 0.15 + sz * 0.15 + spd * 0.10 + prs * 0.10
+  // (a corner: about 1.7 interceptions, 6 breakups and 45 tackles an average starter's season; a safety 1.6, 4 and 70)
+  return {
+    sub: s ? 's' : 'cb', ovr, cover: s ? (intS + tkl) / 2 : (intS + pbuS) / 2,
+    sck: (s ? 0.04 : 0.025) * pw(tfl, 1.5),
+    rtfl: (s ? 0.19 : 0.11) * pw(tfl, 2.0),
+    // (a safety's tackles flatten at the top: the best make 80-105, not 120; past about 6.3 a game every step is worth less)
+    tk: s ? soft(5.3 * pw(tkl, 1.5), 6.6, 0.3) : 3.4 * pw(tkl, 0.7), solo: s ? 0.57 : 0.64,
+    pbu: (s ? 0.30 : 0.47) * pw(pbuS, 2.3),
+    int: (s ? 0.12 : 0.13) * pw(intS, s ? 2.6 : 3.2),
+    qbh: (s ? 0.05 : 0.03) * pw(tfl, 1.2),
+    ff: (s ? 0.07 : 0.05) * pw(ffS, 1.8),
+    fr: (s ? 0.04 : 0.028) * pw(prk, 1.2),
+  }
+}
+const RATES = { qb: qbRates, rb: rbRates, wr: wrRates, te: teRates, dl: dlRates, db: dbRates }
+// a team with no player in the data at a spot: a player as good as its offense (a defender: its defense)
+const genericAttrs = (types, team, side = 'o') => Object.fromEntries(types.map(t => [t, clamp(1, 11, 5 + ((side === 'd' ? team.d : team.o) / PTS_PER_Z) * 1.3)]))
 
 // A real player's 2026 line (s26, through Week 10) as a prior on his ROLE: how often he runs (a QB), how many
 // carries he gets, how much of the passing game goes his way. Up to half the weight, by games played.
@@ -717,16 +845,28 @@ function usage(pos, rates, s26) {
   if (pos === 'qb') return { ...rates, rushAtt: mix(rates.rushAtt, Math.max(0, ((s26.car ?? 0) - (s26.sacks ?? 0)) / gp)) }
   if (pos === 'rb') return { ...rates, share: clamp(0.15, 0.78, mix(rates.share, (s26.car ?? 0) / gp / 31)) }
   if (pos === 'wr') return { ...rates, share: clamp(0.08, 0.38, mix(rates.share, (s26.rec ?? 0) / gp / 0.64 / 30)) }
+  if (pos === 'te') return { ...rates, share: clamp(0.04, 0.30, mix(rates.share, (s26.rec ?? 0) / gp / 0.7 / 30)) }
   return rates
 }
+// a defender's 2026 line (s26: g, tk, sck, tfl, pd, int, …) as the same prior on his role: how often he gets home, how
+// much of the run comes at him, how often the ball does. Up to half the weight, by games (a stat in the box score)
+function defUsage(rates, s26) {
+  const gp = s26?.g ?? s26?.gp ?? 0
+  if (gp < 3) return rates
+  const w = Math.min(0.45, gp / 18)
+  const mix = (m, real) => m * (1 - w) + real * w
+  const pg = k => Math.max(0, s26[k] ?? 0) / gp
+  const pbu = Math.max(0, (s26.pd ?? 0) - (s26.int ?? 0)) / gp
+  return { ...rates, sck: mix(rates.sck, pg('sck')), rtfl: mix(rates.rtfl, Math.max(0, pg('tfl') - pg('sck') * 0.9)), tk: mix(rates.tk, pg('tk')), pbu: mix(rates.pbu, pbu), int: mix(rates.int, pg('int')), qbh: mix(rates.qbh, pg('qbh')) }
+}
 
-// The offense a team takes into a game: who plays QB, RB1 and the top three receivers
+// The offense a team takes into a game: who plays QB, RB1, the top three receivers and the tight end
+const refOf = (p, pos) => ({ key: `${pos}:${p.team}:${p.name}`, name: p.name, short: p.short ?? p.name, team: p.team, year: p.year ?? null, espn: p.espn ?? null, pos, ovr: p.ovr, ...(p.sub ? { sub: p.sub } : {}) })
 function unitFor(L, team, user) {
-  const d = L.depth[team.short] ?? { qb: [], rb: [], wr: [] }
-  const ref = (p, pos) => ({ key: `${pos}:${p.team}:${p.name}`, name: p.name, short: p.short ?? p.name, team: p.team, year: p.year ?? null, espn: p.espn ?? null, pos, ovr: p.ovr })
+  const d = L.depth[team.short] ?? {}
   const side = pos => {
-    const list = d[pos]
-    const real = list.map(p => ({ who: ref(p, pos), rates: usage(pos, RATES[pos](nfrom(p.attrs), p.ovr), p.s26) }))
+    const list = d[pos] ?? []
+    const real = list.map(p => ({ who: refOf(p, pos), rates: usage(pos, RATES[pos](nfrom(p.attrs), p.ovr), p.s26) }))
     if (!real.length) {
       const a = genericAttrs(CFB_TYPES_BY_POS[pos], team)
       const ovr = OVR_FN[pos](toBuild(a, CFB_TYPES_BY_POS[pos]), CFB_TYPES_BY_POS[pos])
@@ -734,39 +874,66 @@ function unitFor(L, team, user) {
     }
     return real
   }
-  let qbs = side('qb'), rbs = side('rb'), wrs = side('wr')
+  let qbs = side('qb'), rbs = side('rb'), wrs = side('wr'), tes = side('te')
   if (user?.team === team.short) {
     const me = { who: { key: 'USER', name: user.name, team: team.short, pos: user.pos, ovr: user.ovr, year: user.year, isUser: true }, rates: user.rates }
     if (user.pos === 'qb') qbs = [me, ...qbs.slice(1)]
     if (user.pos === 'rb') rbs = [me, ...rbs.slice(1)]
+    if (user.pos === 'te') tes = [me, ...tes.slice(1)]
     if (user.pos === 'wr') {
       wrs = [me, ...wrs.slice(1)].sort((a, b) => (b.rates.ovr ?? 0) - (a.rates.ovr ?? 0))
       if (wrs.indexOf(me) > 2) wrs = [...wrs.slice(0, 2), me]
     }
   }
-  return { qb: qbs[0], rb: rbs[0], wrs: wrs.slice(0, 3) }
+  return { qb: qbs[0], rb: rbs[0], wrs: wrs.slice(0, 3), te: tes[0] }
+}
+// The defense a team takes into a game: its two edges and its best tackle, its two corners and its safety. A spot the
+// data has nobody at is a player as good as the defense. The build takes the No. 1 job at his spot (an edge or a
+// corner sorted in with the other starter, as a receiver is with the other two)
+const DEF_SLOTS = [['dl', 'edge', 2], ['dl', 'dt', 1], ['db', 'cb', 2], ['db', 's', 1]]
+function defFor(L, team, user) {
+  const d = L.depth[team.short] ?? {}
+  const out = {}
+  for (const [pos, sub, n] of DEF_SLOTS) {
+    let list = (d[pos] ?? []).filter(p => p.sub === sub).map(p => ({ who: refOf(p, pos), rates: defUsage(RATES[pos](nfrom(p.attrs), p.ovr, sub), p.s26) }))
+    while (list.length < n) {
+      const a = genericAttrs(CFB_TYPES_BY_POS[pos], team, 'd')
+      const ovr = OVR_FN[pos](toBuild(a, CFB_TYPES_BY_POS[pos]), CFB_TYPES_BY_POS[pos])
+      list.push({ who: null, rates: RATES[pos](nfrom(a), ovr, sub) })
+    }
+    if (user?.team === team.short && user.pos === pos && user.sub === sub) {
+      const me = { who: { key: 'USER', name: user.name, team: team.short, pos, sub, ovr: user.ovr, year: user.year, isUser: true }, rates: user.rates }
+      list = [me, ...list.slice(1)]
+      if (n > 1) list = list.slice(0, n).sort((a, b) => (b.rates.ovr ?? 0) - (a.rates.ovr ?? 0)).concat(list.slice(n))
+    }
+    out[sub] = list.slice(0, n)
+  }
+  // (the order a box score lists them: the line, then the secondary)
+  return [...out.edge, ...out.dt, ...out.cb, ...out.s]
 }
 
 // One team's box score in one game, built from the score so the lines fit the result:
 // team passing from its QB, the touchdowns split from the offense's actual TDs, the receivers sharing
 // the team's targets, yards and passing TDs. Starters sit in blowouts (the college way).
-function teamBox(r, unit, g, oppD) {
+// press: the build's defense, when he's on it (defPress): his pass rush gets home more, his coverage takes the ball away
+// more. tm: the offense's whole game (the backups' snaps in a rout included), what the defense across from it faced
+function teamBox(r, unit, g, oppD, press = null) {
   const q = unit.qb.rates, rb = unit.rb.rates
   const margin = g.pts - g.oppPts
   const pull = margin >= 28 ? 0.74 : margin >= 21 ? 0.87 : 1
   const dz = oppD / PTS_PER_Z
   const att = Math.round(clamp(14, 60, 32 + q.lean * 7 - margin * 0.12 + gauss(r) * 4.5))
-  const sacks = Math.max(0, Math.round(att * q.sackRate * (1 + dz * 0.15) + gauss(r) * 1.0))
+  const sacks = Math.max(0, Math.round(att * q.sackRate * (1 + dz * 0.15) * (press?.sack ?? 1) + gauss(r) * 1.0))
   // the receivers' hands and routes move the passing game a little
   const wsum = unit.wrs.reduce((s, w) => s + w.rates.share, 0) || 1
   const wCatch = unit.wrs.reduce((s, w) => s + w.rates.catch * w.rates.share, 0) / wsum
   const wYpr = unit.wrs.reduce((s, w) => s + w.rates.ypr * w.rates.share, 0) / wsum
-  const cp = clamp(0.3, 0.9, q.comp + (wCatch - 0.62) * 0.25 - dz * 0.03 + gauss(r) * 0.07)
+  const cp = clamp(0.3, 0.9, q.comp + (wCatch - 0.62) * 0.25 - dz * 0.03 - (press?.cmp ?? 0) + gauss(r) * 0.07)
   const comp = Math.min(att, Math.round(att * cp))
   const yf = clamp(0.6, 1.45, 0.76 + 0.24 * g.pts / BASE_PPG)
   const ypa = Math.max(2.5, (q.ypa + (wYpr - 12.8) * 0.12) * yf - dz * 0.75 + gauss(r) * 1.3)
   const passYds = Math.max(0, Math.round(att * ypa))
-  const ints = poisson(r, att * q.intRate * (1 + dz * 0.2))
+  const ints = poisson(r, att * q.intRate * (1 + dz * 0.2) * (press?.int ?? 1))
   const passShare = clamp(0.2, 0.85, q.passShare + (att - 31) * 0.008 - (rb.share - 0.46) * 0.6)   // (a workhorse back gets the goal-line carries: Henry, Jeanty)
   const passTD = binom(r, g.offTD, passShare), rushTD = g.offTD - passTD
   const qbRushAtt = Math.max(0, Math.round(q.rushAtt + gauss(r) * 2.2))
@@ -791,21 +958,42 @@ function teamBox(r, unit, g, oppD) {
     long = Math.min(long, Math.max(rushYds, 1))
   }
   const rbRushTD = binom(r, rushTD - qbRushTD, rb.tdShare * pull)
-  // the targets: RB1, the top three receivers, the rest (tight ends, other backs and receivers)
+  // the targets: RB1, the top three receivers, the tight end, the rest (other backs, receivers and tight ends).
+  // (the tight end's share comes out of the rest, so the backs' and receivers' targets are what they were before
+  // tight ends were in the data)
   const targets = Math.round(att * 0.93)
+  const te = unit.te?.rates ?? null
   const shares = [rb.tgt, ...unit.wrs.map((w, i) => w.rates.share * [1, 0.72, 0.52][i])]
-  const rest = Math.max(0.22, 1 - shares.reduce((a, b) => a + b, 0))
-  const tot = shares.reduce((a, b) => a + b, 0) + rest
+  let rest = Math.max(0.22, 1 - shares.reduce((a, b) => a + b, 0))
+  const teShare = te ? te.share : 0
+  // (a tight end the offense runs through, more than the rest leaves: the receivers give up the difference, Bowers' way)
+  const room = rest - 0.05
+  if (teShare > room) {
+    const ws = shares.slice(1).reduce((a, b) => a + b, 0)
+    const k = ws > 0 ? Math.max(0.6, (ws - (teShare - room)) / ws) : 1
+    for (let i = 1; i < shares.length; i++) shares[i] *= k
+  }
+  rest -= Math.min(teShare, room)
+  const all = [...shares, teShare]
+  const tot = all.reduce((a, b) => a + b, 0) + rest
   let left = targets, mass = tot
-  const tg = shares.map(s => { const n = binom(r, left, s / mass); left -= n; mass -= s; return n })
-  const catchOf = [rb.catch, ...unit.wrs.map(w => w.rates.catch)]
-  const yprOf = [rb.ypr, ...unit.wrs.map(w => w.rates.ypr)]
+  const tg = all.map(s => { const n = binom(r, left, s / mass); left -= n; mass -= s; return n })
+  const catchOf = [rb.catch, ...unit.wrs.map(w => w.rates.catch), te?.catch ?? 0.6]
+  const yprOf = [rb.ypr, ...unit.wrs.map(w => w.rates.ypr), te?.ypr ?? 10]
   const recs = tg.map((n, i) => binom(r, n, clamp(0.3, 0.92, catchOf[i] + gauss(r) * 0.07)))
   let ry = recs.map((n, i) => (n ? Math.max(0, Math.round(n * Math.max(3, yprOf[i] * (0.85 + 0.15 * yf) - dz * 1.1 + gauss(r) * 3.2))) : 0))
-  const cap = passYds * 0.95, sum = ry.reduce((a, b) => a + b, 0)
-  if (sum > cap && sum > 0) ry = ry.map(y => Math.round(y * cap / sum))
+  // (the backs and receivers share the passing yards as they always did; the tight end's come out of what they leave)
+  const nT = te ? ry.length - 1 : ry.length
+  const cap = passYds * 0.95, sum = ry.slice(0, nT).reduce((a, b) => a + b, 0)
+  if (sum > cap && sum > 0) ry = ry.map((y, i) => (i < nT ? Math.round(y * cap / sum) : y))
+  // (and never so few that his catches read as nothing: at least 5 a catch, or what he drew, the others giving way)
+  if (te) {
+    const room = Math.round(passYds * 0.97), others = ry.slice(0, nT).reduce((a, b) => a + b, 0)
+    ry[nT] = Math.min(ry[nT], Math.max(Math.min(ry[nT], recs[nT] * 5), room - others))
+    if (others + ry[nT] > room && others > 0) { const k = Math.max(0, room - ry[nT]) / others; ry = ry.map((y, i) => (i < nT ? Math.round(y * k) : y)) }
+  }
   // passing TDs go to whoever catches them, weighted by catches and a red-zone edge
-  const tdw = [0.5 * (recs[0] + 0.3), ...unit.wrs.map((w, i) => w.rates.tdW * (recs[i + 1] + 0.3))]
+  const tdw = [0.5 * (recs[0] + 0.3), ...unit.wrs.map((w, i) => w.rates.tdW * (recs[i + 1] + 0.3)), te ? te.tdW * (recs[recs.length - 1] + 0.3) : 0]
   const restW = Math.max(0.5, (comp - recs.reduce((a, b) => a + b, 0)) * 1.0 + 0.5)
   const rtd = tdw.map(() => 0)
   for (let i = 0; i < passTD; i++) {
@@ -829,7 +1017,116 @@ function teamBox(r, unit, g, oppD) {
     }
     return { targets: t2, rec, recYds: yds, recTDs: pl(rtd[j], 1), long: Math.max(0, lg) }
   })
-  return { qb, rb: rbLine, wrs: wrLines }
+  let teLine = null
+  if (te) {
+    const j = tg.length - 1
+    const t2 = Math.round(tg[j] * pull), rec = Math.min(t2, Math.round(recs[j] * pull)), yds = Math.round(ry[j] * pull)
+    let lg = 0
+    if (rec > 0) {
+      const big = r() < te.big * 0.5
+      lg = big ? Math.round(22 + te.spd * 30 + r() * 18) : Math.round(6 + r() * 9 + te.spd * 5)
+      lg = Math.min(lg, yds)
+      if (rec === 1) lg = yds
+    }
+    teLine = { targets: t2, rec, recYds: yds, recTDs: pl(rtd[j], 1), long: Math.max(0, lg) }
+  }
+  // (rush: every running play, the sacks and the backups' carries included)
+  const tm = { att, comp, sacks, ints, rush: qbRushAtt + sacks + Math.round(designed) }
+  return { qb, rb: rbLine, wrs: wrLines, te: teLine, tm }
+}
+
+// One defense's box score in one game, from the offense it faced (ob: that offense's teamBox, its tm the whole game):
+// the defense's sacks are the quarterback's sacks taken, its interceptions his interceptions, its breakups come out of
+// his incompletions, its tackles out of the plays it was on the field for, and a non-offensive touchdown on its own
+// scoreboard (my: genPoints' td - offTD) is, most of the time, a defender's. Each of those is handed out a play at a
+// time by the starters' rates (defFor; the linebackers and the rest take what's left: DEF_REST at the least), so the
+// lines add up to the team's: never more sacks than the quarterback took. Starters sit late in a rout (pull).
+// roles: each starter's season-long factors (roleOf), the same every game of his season.
+// A sack or a tackle for loss shared by two men is a half each (about one sack in ten, the box scores' rate).
+function defBox(r, unit, ob, my, op, roles) {
+  const tm = ob?.tm ?? { att: 31, comp: 19, sacks: 2, ints: 1, rush: 38 }
+  const margin = (my?.pts ?? 0) - (op?.pts ?? 0)
+  const pull = margin >= 28 ? 0.8 : margin >= 21 ? 0.9 : 1
+  const n = unit.length
+  const lines = unit.map(() => ({ tk: 0, solo: 0, sck: 0, tfl: 0, pd: 0, qbh: 0, int: 0, ff: 0, fr: 0, td: 0 }))
+  const rate = (k, i) => (unit[i].rates[k] ?? 0) * (roles?.[i]?.[k] ?? 1) * pull
+  // one category's plays, handed out: each play to a starter by his rate over the defense's (or to the rest)
+  const deal = (k, count, add, half = 0) => {
+    if (count <= 0) return
+    const w = unit.map((_, i) => rate(k, i))
+    const sum = w.reduce((a, b) => a + b, 0)
+    const den = Math.max(DEF_TEAM[k], sum / (1 - DEF_REST[k]))
+    const pickOne = () => { let x = r() * den; for (let i = 0; i < n; i++) { x -= w[i]; if (x < 0) return i } return -1 }
+    for (let c = 0; c < count; c++) {
+      const i = pickOne()
+      if (half && r() < half) {
+        // a shared one: a half to him and a half to another man (or to the rest)
+        let j = pickOne()
+        if (j === i) j = pickOne()
+        if (i >= 0) add(i, 0.5)
+        if (j >= 0 && j !== i) add(j, 0.5)
+        continue
+      }
+      if (i >= 0) add(i, 1)
+    }
+  }
+  // sacks: the quarterback's (a tackle, a tackle for loss: most are both)
+  deal('sck', tm.sacks, (i, x) => { lines[i].sck += x; lines[i].tfl += x }, 0.1)
+  // tackles for loss on running plays: penetration, more against a run-heavy day
+  const rtfl = poisson(r, DEF_TEAM.rtfl * clamp(0.6, 1.5, tm.rush / 38))
+  deal('rtfl', rtfl, (i, x) => { lines[i].tfl += x }, 0.18)
+  // interceptions and breakups (passes defended: both, the NCAA's count)
+  deal('int', tm.ints, (i) => { lines[i].int += 1; lines[i].pd += 1 })
+  const inc = Math.max(0, tm.att - tm.comp - tm.ints)
+  deal('pbu', binom(r, inc, 0.29), (i) => { lines[i].pd += 1 })
+  deal('qbh', poisson(r, DEF_TEAM.qbh * clamp(0.6, 1.6, tm.att / 31)), (i) => { lines[i].qbh += 1 })
+  // fumbles: forced, and the ones that end up in his hands
+  const ff = poisson(r, DEF_TEAM.ff)
+  deal('ff', ff, (i) => { lines[i].ff += 1 })
+  deal('fr', binom(r, ff, 0.55) + poisson(r, 0.05), (i) => { lines[i].fr += 1 })
+  // tackles: the plays it was on the field for (the completions and the runs, a few assisted), about 65 a game
+  const plays = tm.comp + tm.rush
+  const tk = Math.max(20, Math.round(plays * 1.12 + gauss(r) * 5))
+  deal('tk', tk, (i) => { lines[i].tk += 1 })
+  for (let i = 0; i < n; i++) {
+    const L = lines[i]
+    // (his sacks and tackles for loss are tackles too: a half is an assisted one)
+    L.tk = Math.max(L.tk, Math.ceil(L.tfl))
+    L.solo = Math.min(L.tk, binom(r, L.tk, unit[i].rates.solo ?? 0.55))
+    L.sck = Math.round(L.sck * 2) / 2; L.tfl = Math.round(L.tfl * 2) / 2
+  }
+  // a touchdown his defense scored: an interception or a fumble he came up with, taken back
+  const defTD = Math.max(0, (my?.td ?? 0) - (my?.offTD ?? my?.td ?? 0))
+  for (let k = 0; k < defTD; k++) {
+    if (r() > 0.7) continue   // (a kick or punt return: special teams)
+    const w = lines.map((L, i) => (L.int + L.fr) * (0.6 + (unit[i].rates.ovr ?? 80) / 200))
+    const sum = w.reduce((a, b) => a + b, 0) + 0.8   // (or a linebacker's)
+    let x = r() * sum
+    for (let i = 0; i < n; i++) { x -= w[i]; if (x < 0) { if (lines[i].td < lines[i].int + lines[i].fr) lines[i].td++; break } }
+  }
+  return lines
+}
+// A defender's season: the scheme and the luck that stay with him all year (how often he's sent after the
+// quarterback, how much of the run comes his way, the balls that find him: a ball hawk's picks swing most)
+function roleOf(r, rates) {
+  const n1 = clamp(0.82, 1.2, 1 + gauss(r) * 0.11), n2 = clamp(0.8, 1.25, 1 + gauss(r) * 0.12)
+  const luck = clamp(0.5, 1.6, Math.exp(gauss(r) * 0.3 - 0.045))
+  return { sck: n1, qbh: n1, rtfl: n2, tk: n2, pbu: clamp(0.75, 1.3, 1 + gauss(r) * 0.15), int: luck, ff: 1, fr: 1 }
+}
+// The build on defense moves what the offense across from him does (teamBox's press), against the man he replaced:
+// an elite edge gets home on plays a lesser one doesn't, a lockdown corner takes balls away. In points it's already in
+// his team's defense (TEAM_SHIFT): this is where those points show up in the box score
+function defPress(user, replaced) {
+  if (!user || !DEF.has(user.pos) || !user.rates) return null
+  const u = user.rates, b = replaced ?? u
+  return {
+    // (a pass rusher is measured against the lesser of the man he replaced and an average starter at his spot: an elite
+    // edge gets home where any edge would, on a team that had a good one too. 2026-11-25: an A+ edge at a mid-SEC
+    // school had seasons of 4 sacks behind a team that took few)
+    sack: clamp(0.85, 1.4, 1 + ((u.sck ?? 0) - Math.min(b.sck ?? 0, u.sub === 'dt' ? 0.27 : u.sub === 'edge' ? 0.40 : 0.03)) * 0.3 / DEF_TEAM.sck),
+    int: clamp(0.85, 1.35, 1 + ((u.int ?? 0) - (b.int ?? 0)) * 0.6 / DEF_TEAM.int),
+    cmp: clamp(-0.02, 0.025, ((u.pbu ?? 0) - (b.pbu ?? 0)) * 0.02),
+  }
 }
 
 // ── Rankings ─────────────────────────────────────────────────────────────────
@@ -911,7 +1208,11 @@ const publicPoll = p => ({ label: p.label, week: p.week, date: p.date, top25: p.
 // points a game per OVR point over the starter he replaces (2026-11-23, a player: Penn State lost three or more every
 // year even with a 98 quarterback. A quarterback was 0.32 and at most 8: a 99 over a 90 starter was under 3 points a
 // game, 67 to 99 moved Penn State 5.7 wins to 8.1. Now 0.5 and at most 10)
-const TEAM_SHIFT = { qb: 0.5, rb: 0.10, wr: 0.12 }
+// (TE 0.08, 2026-11-13. A defender, 2026-11-25: one of eleven, on his team's defense. An edge rusher moves it most (the
+// pass rush is the defense's premium spot, as the draft pays it), a corner next, then a tackle and a safety; at most
+// 4 points a game, against a quarterback's 10. A 99 edge over an 85 starter is about two points a game)
+const TEAM_SHIFT = { qb: 0.5, rb: 0.10, wr: 0.12, te: 0.08, edge: 0.15, cb: 0.13, dt: 0.12, s: 0.10 }
+const SHIFT_CAP = { qb: 10, rb: 10, wr: 10, te: 10, dl: 4, db: 4 }
 const ELIGIBLE = new Set(['JR', 'SR', 'GR', 'RS-SO', 'RS-JR', 'RS-SR', 'RS-GR', '5TH', 'RS-5TH'])
 const CLASS_ORDER = ['FR', 'RS-FR', 'SO', 'RS-SO', 'JR', 'RS-JR', 'SR', 'RS-SR', 'GR']
 
@@ -922,10 +1223,14 @@ function userFrom(L, build, types, team, position, opts) {
   // traits the lite list leaves out play at the build's average (football's lite rule)
   for (const t of CFB_TYPES_BY_POS[pos]) if (attrs[t] == null) attrs[t] = filledAvg
   const ovr = OVR_FN[pos](build, types) ?? 70
+  // (a defender's spot: his Size chip's man's, an edge or a tackle, a corner or a safety)
+  const sub = DEF.has(pos) ? buildSub(pos, build) : null
   // (the man he replaces sets how much better or worse the team gets with him. A later season (L.baseDepth): the
   // starter the team's strength was rated with, so a school that lost its starter isn't stronger for it)
-  const d = (L.baseDepth ?? L.depth)[team.short]?.[pos] ?? []
+  const d = ((L.baseDepth ?? L.depth)[team.short]?.[pos] ?? []).filter(p => !sub || p.sub === sub)
   const replaced = d[0]?.ovr ?? 78
+  const rates = RATES[pos](nfrom(attrs), ovr, sub)
+  const was = d[0] ? defUsage(RATES[pos](nfrom(d[0].attrs), d[0].ovr, sub), d[0].s26) : null
   // (opts.noClass, College Football mode: the build has no class. A season is just a year, he's always
   // draft-eligible and the choice to go or stay is the player's. Career's Start in College passes his class)
   let year = opts?.noClass ? null : opts?.year ?? null
@@ -937,7 +1242,10 @@ function userFrom(L, build, types, team, position, opts) {
     for (const y of yrs) counts[y] = (counts[y] ?? 0) + 1
     year = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'JR'
   }
-  return { pos, team: team.short, name: opts?.name ?? 'Guest', ovr, rates: RATES[pos](nfrom(attrs), ovr), shift: clamp(-10, 10, (ovr - replaced) * TEAM_SHIFT[pos]), year, replaced, noClass: !!opts?.noClass }
+  const cap = SHIFT_CAP[pos] ?? 10
+  const user = { pos, sub, team: team.short, name: opts?.name ?? 'Guest', ovr, rates, shift: clamp(-cap, cap, (ovr - replaced) * TEAM_SHIFT[sub ?? pos]), side: sub ? 'd' : 'o', year, replaced, noClass: !!opts?.noClass }
+  user.press = defPress(user, was)
+  return user
 }
 
 // ── The season ───────────────────────────────────────────────────────────────
@@ -949,7 +1257,7 @@ function simulateSeason(L, { seed, leagueSeed, user, teamAdj, forced, lite = fal
   // this season's true strength: the data's, a season's own swing, the build, the director's team mods
   const T = L.teams.map((t, i) => {
     let so = t.o + gauss(rL) * 2.0, sd = t.d + gauss(rL) * 2.0
-    if (i === me) { so += user.shift + (teamAdj?.o ?? 0); sd += teamAdj?.d ?? 0 }
+    if (i === me) { so += (user.side === 'd' ? 0 : user.shift) + (teamAdj?.o ?? 0); sd += (user.side === 'd' ? user.shift : 0) + (teamAdj?.d ?? 0) }
     return { so, sd }
   })
   const S = {
@@ -1147,16 +1455,26 @@ const LINE_KEYS = {
   qb: ['comp', 'att', 'passYds', 'tds', 'ints', 'rushAtt', 'rushYds', 'rushTDs', 'sacks'],
   rb: ['carries', 'rushYds', 'rushTDs', 'recs', 'recYds', 'recTDs', 'fumbles'],
   wr: ['targets', 'rec', 'recYds', 'recTDs'],
+  te: ['targets', 'rec', 'recYds', 'recTDs'],
+  dl: ['tk', 'solo', 'sck', 'tfl', 'pd', 'qbh', 'int', 'ff', 'fr', 'td'],
+  db: ['tk', 'solo', 'sck', 'tfl', 'pd', 'qbh', 'int', 'ff', 'fr', 'td'],
 }
-function lineFor(pos, box, wrSlot = 0) { return pos === 'qb' ? box.qb : pos === 'rb' ? box.rb : box.wrs[wrSlot] }
+function lineFor(pos, box, wrSlot = 0) { return pos === 'qb' ? box.qb : pos === 'rb' ? box.rb : pos === 'te' ? box.te : box.wrs[wrSlot] }
 function decorate(pos, line) {
   if (pos === 'qb') return { ...line, rating: Math.round(nflRating(line.comp, line.att, line.passYds, line.tds, line.ints)), eff: cfbPasserEfficiency(line.comp, line.att, line.passYds, line.tds, line.ints) }
   if (pos === 'rb') return { ...line, ypc: line.carries ? Math.round((line.rushYds / line.carries) * 10) / 10 : 0 }
   return line
 }
 // season totals in football's season* keys, from any list of game lines
-export function cfbSeasonTotals(pos, games) {
+// (a defender's: sub, his spot, rides along so production() reads the line against his own spot)
+export function cfbSeasonTotals(pos, games, sub = null) {
   const sum = k => games.reduce((s, g) => s + (g?.[k] ?? 0), 0)
+  if (DEF.has(pos)) {
+    return {
+      seasonTackles: sum('tk'), seasonSolo: sum('solo'), seasonSacks: sum('sck'), seasonTFL: sum('tfl'), seasonPD: sum('pd'), seasonQBHits: sum('qbh'),
+      seasonINTs: sum('int'), seasonFF: sum('ff'), seasonFR: sum('fr'), seasonDefTDs: sum('td'), gp: games.length, sub: subOf(pos, sub),
+    }
+  }
   if (pos === 'qb') {
     const c = sum('comp'), a = sum('att'), y = sum('passYds'), t = sum('tds'), i = sum('ints')
     return {
@@ -1184,36 +1502,66 @@ const fmt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 function lineText(pos, t) {
   if (pos === 'qb') return `${fmt(t.seasonPassYds)} pass yds, ${t.seasonTDs} TD, ${t.seasonINTs} INT${t.seasonRushYds >= 250 ? `; ${fmt(t.seasonRushYds)} rush yds, ${t.seasonRushTDs} TD` : t.seasonRushTDs >= 3 ? `; ${t.seasonRushTDs} rush TD` : ''}`
   if (pos === 'rb') return `${fmt(t.seasonRushYds)} rush yds, ${t.seasonRushTDs} TD, ${t.seasonYPC.toFixed(1)} a carry${t.seasonRecYds >= 150 ? `; ${t.seasonRecs} rec, ${t.seasonRecYds} yds` : ''}`
+  if (pos === 'dl') return `${t.seasonSacks} sacks, ${t.seasonTFL} TFL, ${t.seasonTackles} tackles${t.seasonFF >= 2 ? `, ${t.seasonFF} forced fumbles` : ''}`
+  if (pos === 'db') return `${t.seasonINTs} INT, ${t.seasonPD} passes defended, ${t.seasonTackles} tackles${t.seasonDefTDs ? `, ${t.seasonDefTDs} TD` : ''}`
   return `${t.seasonRecs} rec, ${fmt(t.seasonRecYds)} yds, ${t.seasonRecTDs} TD`
 }
+const sk = x => `${x} sack${x === 1 ? '' : 's'}`
+const defGame = g => [g.sck ? sk(g.sck) : null, g.int ? `${g.int} INT` : null, `${g.tk} tackle${g.tk === 1 ? '' : 's'}`, g.tfl && g.tfl !== g.sck ? `${g.tfl} TFL` : null, g.pd - g.int > 0 ? `${g.pd - g.int} PBU` : null, g.ff ? `${g.ff} FF` : null, g.td ? `${g.td} TD` : null].filter(Boolean).join(', ')
 export const CFB_GAME_LINE = {
   qb: g => `${g.comp}/${g.att}, ${g.passYds} yds, ${g.tds} TD${g.ints ? `, ${g.ints} INT` : ''}${g.rushYds >= 40 ? `; ${g.rushYds} rush` : ''}`,
   rb: g => `${g.carries} car, ${g.rushYds} yds, ${g.rushTDs} TD${g.recs ? `; ${g.recs} rec, ${g.recYds} yds` : ''}`,
   wr: g => `${g.rec} rec (${g.targets} tgt), ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`,
+  te: g => `${g.rec} rec (${g.targets} tgt), ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`,
+  dl: defGame, db: defGame,
 }
 
 // ── Awards ───────────────────────────────────────────────────────────────────
 function production(pos, t) {
   if (pos === 'qb') return (t.seasonPassYds + Math.max(0, t.seasonRushYds)) / 100 * 1.15 + (t.seasonTDs + t.seasonRushTDs) * 2.4 - t.seasonINTs * 2.0 + (t.seasonEff - 150) * 0.12
   if (pos === 'rb') return (t.seasonRushYds + t.seasonRecYds) / 100 * 3.0 + (t.seasonRushTDs + t.seasonRecTDs) * 2.6 + (t.seasonYPC - 5) * 2
+  if (DEF.has(pos)) return defProduction(t)
   return t.seasonRecYds / 100 * 4.0 + t.seasonRecTDs * 2.6 + t.seasonRecs * 0.08
+}
+// A defender's season in one number, read against his own spot (each spot's line scaled so a solid starter's year is
+// about 50: an edge's 6 sacks and 10 TFL, a tackle's 3.5 and 8, a corner's 2.5 INT and 10 passes defended, a safety's
+// 75 tackles and 2 INT). What a voter counts: the sacks and the TFL up front, the takeaways in the back, the tackles
+// for a safety; a defensive touchdown or a forced fumble is a game-changing play anywhere
+function defProduction(t) {
+  const n = k => t?.[k] ?? 0
+  const sub = t?.sub ?? 'edge'
+  const big = n('seasonFF') * 3 + n('seasonFR') * 1.5 + n('seasonDefTDs') * 6
+  if (sub === 'edge') return n('seasonSacks') * 4 + n('seasonTFL') * 1.5 + n('seasonQBHits') * 0.4 + n('seasonTackles') * 0.12 + n('seasonPD') * 0.6 + big
+  if (sub === 'dt') return (n('seasonSacks') * 4 + n('seasonTFL') * 2 + n('seasonQBHits') * 0.5 + n('seasonTackles') * 0.2 + n('seasonPD') * 0.8 + big) * 1.15
+  if (sub === 'cb') return (n('seasonINTs') * 6 + n('seasonPD') * 1.6 + n('seasonTackles') * 0.15 + n('seasonTFL') * 1 + big) * 1.22
+  return (n('seasonINTs') * 6 + n('seasonPD') * 1.4 + n('seasonTackles') * 0.22 + n('seasonTFL') * 1.2 + n('seasonSacks') * 2 + big) * 1.12
+}
+// a defender's case for the best-defender awards: the drive-changing plays (a sack, a tackle for loss, a takeaway, a
+// touchdown), a tackle a little, a pass breakup least
+function defCase(t) {
+  const n = k => t?.[k] ?? 0
+  const pbu = Math.max(0, n('seasonPD') - n('seasonINTs'))
+  return n('seasonSacks') * 4 + n('seasonTFL') * 1.5 + n('seasonINTs') * 4 + n('seasonFF') * 3 + n('seasonFR') * 1.5 + n('seasonDefTDs') * 6 + pbu * 0.4 + n('seasonTackles') * 0.1
 }
 function teamFactor(L, R, i) {
   const rk = R.final.rank.get(i) ?? 99
   return R.recCCG.w[i] * 4 - R.recCCG.l[i] * 1.5 + (rk <= 4 ? 8 : rk <= 12 ? 4 : rk <= 25 ? 1 : -5) + (R.champs.has(i) ? 3 : 0) + (L.teams[i].tier === 'G5' ? -10 : 0)
 }
-const POS_UP = { qb: 'QB', rb: 'RB', wr: 'WR' }
-function voteOut(c) { return { name: c.name, team: c.team, teamName: c.teamName, pos: POS_UP[c.pos], conf: c.conf, year: c.year, isUser: !!c.isUser, line: c.line ?? (c.line = lineText(c.pos, c.t)), stats: c.t } }
+const POS_UP = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', edge: 'EDGE', dt: 'DT', cb: 'CB', s: 'S' }
+function voteOut(c) { return { name: c.name, team: c.team, teamName: c.teamName, pos: POS_UP[c.sub ?? c.pos], conf: c.conf, year: c.year, isUser: !!c.isUser, line: c.line ?? (c.line = lineText(c.pos, c.t)), stats: c.t } }
+const zRef = list => { const v = list.map(c => c.prod).sort((a, b) => b - a).slice(0, 10); const m = v.reduce((a, b) => a + b, 0) / (v.length || 1); return { m, sd: Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length || 1)) || 1 } }
 
-function runAwards(L, R, cands, rA, user) {
-  const all = cands.filter(c => c.t.gp >= 8)
-  for (const c of all) { c.prod = production(c.pos, c.t); c.team_ = teamFactor(L, R, c.ti) }
+function runAwards(L, R, cands, rA, user, rD = rA) {
+  const every = cands.filter(c => c.t.gp >= 8)
+  for (const c of every) { c.prod = production(c.pos, c.t); c.team_ = teamFactor(L, R, c.ti) }
+  // (the defenders are voted on with their own draws, rD: the offense's races read the same as before they were here)
+  const all = every.filter(c => !DEF.has(c.pos)), defs = every.filter(c => DEF.has(c.pos))
   // Heisman voters compare a back's or a receiver's year with the other backs' and receivers', not with a
   // quarterback's yardage: each position's production is put on the QB scale through the top ten at that
   // position this season (a receiver's 1,500 yards reads like a QB's 4,000). production() alone left WRs about
   // 40 points behind, so a 99 Jeremiah Smith was a finalist 3% of the time and the non-QB winner never came.
-  const top10 = pos => { const v = all.filter(c => c.pos === pos).map(c => c.prod).sort((a, b) => b - a).slice(0, 10); const m = v.reduce((a, b) => a + b, 0) / (v.length || 1); return { m, sd: Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length || 1)) || 1 } }
-  const ref = { qb: top10('qb'), rb: top10('rb'), wr: top10('wr') }
+  const top10 = pos => zRef(all.filter(c => c.pos === pos))
+  const ref = { qb: top10('qb'), rb: top10('rb'), wr: top10('wr'), te: top10('te') }
   const onQB = c => (c.pos === 'qb' ? c.prod : ref.qb.m + (c.prod - ref[c.pos].m) / ref[c.pos].sd * ref.qb.sd)
   for (const c of all) {
     // (2026-11-12, the owner: a back with more yards on the No. 6 team lost to another back and wasn't on the ballot.
@@ -1224,10 +1572,34 @@ function runAwards(L, R, cands, rA, user) {
     // (QBs win about 4 in 5: a back or receiver needs the bigger year. Henry '15, Smith '20, Hunter '24 did)
     // (the marquee names: voters come in knowing the country's best players, and a star on a contender is on
     // every preseason watch list; the build's rating counts the same way)
-    c.heis = onQB(c) + c.team_ + c.hype + clamp(-3, 5, ((c.ovr ?? 80) - 88) * 0.6) + (c.pos === 'rb' ? -10 : c.pos === 'wr' ? -19 : 0) - (L.teams[c.ti].tier === 'G5' ? 30 : 0)
+    c.heis = onQB(c) + c.team_ + c.hype + clamp(-3, 5, ((c.ovr ?? 80) - 88) * 0.6) + (c.pos === 'rb' ? -10 : c.pos === 'wr' ? -19 : c.pos === 'te' ? -26 : 0) - (L.teams[c.ti].tier === 'G5' ? 30 : 0)
+  }
+  // THE DEFENDERS: each spot's year on one scale (its top ten this season, put on the edges'), the way the Bednarik and
+  // Nagurski voters weigh a corner's seven picks against an end's fifteen sacks. Their case is the plays that change a
+  // drive: sacks, tackles for loss, takeaways (defCase: a breakup counts for little), and the voters lean to the men who
+  // get after the quarterback (the winners are mostly pass rushers and linebackers; a back about one year in five)
+  const zRefOf = (list, f) => { const v = list.map(f).sort((a, b) => b - a).slice(0, 10); const m = v.reduce((a, b) => a + b, 0) / (v.length || 1); return { m, sd: Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length || 1)) || 1 } }
+  const dref = Object.fromEntries(['edge', 'dt', 'cb', 's'].map(k => [k, zRef(defs.filter(c => c.sub === k))]))
+  const cref = Object.fromEntries(['edge', 'dt', 'cb', 's'].map(k => [k, zRefOf(defs.filter(c => c.sub === k), c => defCase(c.t))]))
+  // (each spot's case on the edges' scale by the ratio of the spot's top ten to the edges' top ten, so a year twice his
+  // spot's best reads twice as big wherever he plays. LEAN and BIG, set 2026-11-25 against new-pos-check: across the
+  // country an edge wins about 55-60%, then a safety, a corner, a tackle; an A+ build wins it most as an edge, then as a
+  // tackle, a corner, a safety. Before, a z-score a spot let a corner's 24 passes defended outrank a 17-sack edge)
+  const LEAN = { edge: 0.86, dt: 0.85, cb: 0.99, s: 0.95 }, BIG = { edge: 3.8, dt: 0.4 }
+  for (const c of defs) {
+    const r = dref[c.sub] ?? dref.edge
+    c.dz = (c.prod - r.m) / r.sd
+    const cr = cref[c.sub] ?? cref.edge
+    // (and a pass rusher's year well past the best of his spot's carries furthest: a 17-sack season is a Bednarik season)
+    const x = defCase(c.t) / (cr.m || 1)
+    c.dscore = x * cref.edge.m * (LEAN[c.sub] ?? 1) * (1 + (BIG[c.sub] ?? 0) * Math.max(0, x - 1.1))
+    c.hype = gauss(rD) * 3.5
+    // (the Heisman: a defender almost never. Charles Woodson in 1997, the one time, with picks, punt returns and snaps at
+    // receiver on a national champion. It takes a historic year on a contender to get him a trip to New York)
+    c.heis = ref.qb.m + (c.dz - 1.2) * ref.qb.sd + c.team_ + c.hype + clamp(-3, 5, ((c.ovr ?? 80) - 88) * 0.6) - 28 - (L.teams[c.ti].tier === 'G5' ? 30 : 0)
   }
   // the Heisman: ~930 ballots, 3-2-1 (each voter sees the race a little differently)
-  const field = [...all].sort((a, b) => b.heis - a.heis).slice(0, 14)
+  const field = [...all, ...defs].sort((a, b) => b.heis - a.heis).slice(0, 14)
   for (const c of field) { c.pts = 0; c.v1 = 0; c.v2 = 0; c.v3 = 0 }
   for (let v = 0; v < 930; v++) {
     const b = field.map(c => [c.heis + bell(rA) * 9, c]).sort((x, y) => y[0] - x[0])
@@ -1244,44 +1616,67 @@ function runAwards(L, R, cands, rA, user) {
     userPlace: userIdx >= 0 && field[userIdx].pts > 0 ? userIdx + 1 : null, userFinalist: userIdx >= 0 && userIdx < nf, userWon: userIdx === 0,
   }
   // the position and player-of-the-year awards: their own voters, their own weights
-  const award = (name, pool, score, nFin = 3) => {
-    const ranked = pool.map(c => [score(c) + gauss(rA) * 4, c]).sort((a, b) => b[0] - a[0]).map(x => x[1])
+  const award = (name, pool, score, nFin = 3, r = rA) => {
+    const ranked = pool.map(c => [score(c) + gauss(r) * 4, c]).sort((a, b) => b[0] - a[0]).map(x => x[1])
     const fin = ranked.slice(0, nFin)
     return { award: name, winner: fin[0] ? voteOut(fin[0]) : null, finalists: fin.map(voteOut), userWon: !!fin[0]?.isUser, userFinalist: fin.some(c => c.isUser) }
   }
-  const qbs = all.filter(c => c.pos === 'qb'), rbs = all.filter(c => c.pos === 'rb'), wrs = all.filter(c => c.pos === 'wr')
+  const qbs = all.filter(c => c.pos === 'qb'), rbs = all.filter(c => c.pos === 'rb'), wrs = all.filter(c => c.pos === 'wr'), tes = all.filter(c => c.pos === 'te')
   const daveyOBrien = award("Davey O'Brien Award", qbs, c => c.prod + c.team_ * 0.6)
   const doakWalker = award('Doak Walker Award', rbs, c => c.prod + c.team_ * 0.4)
   const biletnikoff = award('Biletnikoff Award', wrs, c => c.prod + c.team_ * 0.3)
-  const maxwell = award('Maxwell Award', all, c => c.heis + gauss(rA) * 4)
-  const walterCamp = award('Walter Camp Award', all, c => c.heis + gauss(rA) * 3, 5)
-  // All-America and all-conference teams: 1 QB, 2 RBs, 3 WRs a team
-  const teamsOf = (pool, w) => {
-    const by = pos => pool.filter(c => c.pos === pos).map(c => [c.prod + c.team_ * w + gauss(rA) * 3, c]).sort((a, b) => b[0] - a[0]).map(x => x[1])
-    const q = by('qb'), rr = by('rb'), ww = by('wr')
-    const first = { qb: q.slice(0, 1), rb: rr.slice(0, 2), wr: ww.slice(0, 3) }
-    const second = { qb: q.slice(1, 2), rb: rr.slice(2, 4), wr: ww.slice(3, 6) }
+  // (the John Mackey Award: the best tight end, the production first; a winner's tight end gets noticed)
+  const mackey = award('John Mackey Award', tes, c => c.prod + c.team_ * 0.3)
+  // (the Maxwell and the Walter Camp: the Heisman's field, a defender only when he's in it, Manti Te'o's way in 2012)
+  const pyField = [...all, ...defs.filter(c => field.includes(c))]
+  const maxwell = award('Maxwell Award', pyField, c => c.heis + gauss(rA) * 4)
+  const walterCamp = award('Walter Camp Award', pyField, c => c.heis + gauss(rA) * 3, 5)
+  // the defense's awards: the best defender twice (the Maxwell Club's Bednarik, the writers' Nagurski: two votes, two
+  // draws), the interior lineman (the Outland: its defensive tackles here), the end (the Ted Hendricks), the back (the Thorpe)
+  const best = c => c.dscore + c.team_ * 0.3
+  const bednarik = award('Chuck Bednarik Award', defs, best, 3, rD)
+  const nagurski = award('Bronko Nagurski Trophy', defs, best, 5, rD)
+  const outland = award('Outland Trophy', defs.filter(c => c.sub === 'dt'), c => c.prod + c.team_ * 0.3, 3, rD)
+  const hendricks = award('Ted Hendricks Award', defs.filter(c => c.sub === 'edge'), c => c.prod + c.team_ * 0.2, 3, rD)
+  const backs = defs.filter(c => c.sub === 'cb' || c.sub === 's')
+  const bref = zRef(backs.filter(c => c.sub === 'cb'))
+  const thorpe = award('Jim Thorpe Award', backs, c => (c.sub === 'cb' ? c.prod : bref.m + c.dz * bref.sd - 2) + c.team_ * 0.2, 3, rD)
+  // All-America and all-conference teams: 1 QB, 2 RBs, 3 WRs and 1 TE a team; on defense two ends, two tackles, two
+  // corners and two safeties (the way the AP and the Walter Camp teams list them)
+  // (a tight end's production runs on a smaller scale: his voters' noise is half a receiver's)
+  const teamsOf = (pool, dpool, w) => {
+    const by = pos => pool.filter(c => c.pos === pos).map(c => [c.prod + c.team_ * w + gauss(rA) * (pos === 'te' ? 1.5 : 3), c]).sort((a, b) => b[0] - a[0]).map(x => x[1])
+    const dby = sub => dpool.filter(c => c.sub === sub).map(c => [c.prod + c.team_ * w + gauss(rD) * 3, c]).sort((a, b) => b[0] - a[0]).map(x => x[1])
+    const q = by('qb'), rr = by('rb'), ww = by('wr'), tt = by('te'), ee = dby('edge'), dd = dby('dt'), cc = dby('cb'), ss = dby('s')
+    const first = { qb: q.slice(0, 1), rb: rr.slice(0, 2), wr: ww.slice(0, 3), te: tt.slice(0, 1), dl: [...ee.slice(0, 2), ...dd.slice(0, 2)], db: [...cc.slice(0, 2), ...ss.slice(0, 2)] }
+    const second = { qb: q.slice(1, 2), rb: rr.slice(2, 4), wr: ww.slice(3, 6), te: tt.slice(1, 2), dl: [...ee.slice(2, 4), ...dd.slice(2, 4)], db: [...cc.slice(2, 4), ...ss.slice(2, 4)] }
     const has = t => Object.values(t).flat().some(c => c.isUser)
-    const out = t => ({ qb: t.qb.map(voteOut), rb: t.rb.map(voteOut), wr: t.wr.map(voteOut) })
+    const out = t => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v.map(voteOut)]))
     return { first: out(first), second: out(second), user: has(first) ? 'first' : has(second) ? 'second' : null }
   }
-  const allAmerica = teamsOf(all, 0.3)
+  const allAmerica = teamsOf(all, defs, 0.3)
   let allConference = null, confPOY = null
   if (user) {
     const meT = L.byShort[user.team]
     if (meT.kind !== 'IND') {
-      const confPool = all.filter(c => L.teams[c.ti].confId === meT.confId)
-      allConference = { conf: meT.confShort, ...teamsOf(confPool, 0.2) }
-      const poy = award(`${meT.confShort} Offensive Player of the Year`, confPool, c => c.prod + c.team_ * 0.5, 1)
+      const inConf = c => L.teams[c.ti].confId === meT.confId
+      const confPool = all.filter(inConf), confDefs = defs.filter(inConf)
+      allConference = { conf: meT.confShort, ...teamsOf(confPool, confDefs, 0.2) }
+      // (a defender's is the conference's Defensive Player of the Year)
+      const poy = DEF.has(user.pos)
+        ? award(`${meT.confShort} Defensive Player of the Year`, confDefs, c => c.dscore + c.team_ * 0.4, 1, rD)
+        : award(`${meT.confShort} Offensive Player of the Year`, confPool, c => c.prod + c.team_ * 0.5, 1)
       confPOY = { award: poy.award, winner: poy.winner, userWon: poy.userWon }
     }
   }
-  return { heisman, daveyOBrien, doakWalker, biletnikoff, maxwell, walterCamp, allAmerica, allConference, confPOY }
+  return { heisman, daveyOBrien, doakWalker, biletnikoff, mackey, maxwell, walterCamp, bednarik, nagurski, outland, hendricks, thorpe, allAmerica, allConference, confPOY }
 }
 
 const NO_AWARD = { winner: null, finalists: [], userWon: false, userFinalist: false }
-const LITE_AWARDS = { lite: true, heisman: { ...NO_AWARD, award: 'Heisman Trophy', ballot: [], userPlace: null }, daveyOBrien: NO_AWARD, doakWalker: NO_AWARD, biletnikoff: NO_AWARD, maxwell: NO_AWARD, walterCamp: NO_AWARD,
-  allAmerica: { first: { qb: [], rb: [], wr: [] }, second: { qb: [], rb: [], wr: [] }, user: null }, allConference: null, confPOY: null }
+const NO_TEAM = { qb: [], rb: [], wr: [], te: [], dl: [], db: [] }
+const LITE_AWARDS = { lite: true, heisman: { ...NO_AWARD, award: 'Heisman Trophy', ballot: [], userPlace: null }, daveyOBrien: NO_AWARD, doakWalker: NO_AWARD, biletnikoff: NO_AWARD, mackey: NO_AWARD, maxwell: NO_AWARD, walterCamp: NO_AWARD,
+  bednarik: NO_AWARD, nagurski: NO_AWARD, outland: NO_AWARD, hendricks: NO_AWARD, thorpe: NO_AWARD,
+  allAmerica: { first: NO_TEAM, second: NO_TEAM, user: null }, allConference: null, confPOY: null }
 
 // ── NFL draft stock ──────────────────────────────────────────────────────────
 // Talent (the OVR) plus how the season went, against what that position's teams draft on.
@@ -1289,11 +1684,13 @@ const LITE_AWARDS = { lite: true, heisman: { ...NO_AWARD, award: 'Heisman Trophy
 // starter at the position (QB1/RB1, WR1-3), with k = how many a draft takes from the top of a class divided by
 // ~0.6, the share of starters who are draft-eligible in a given year. A typical draft: ~2 top-10 QBs, 4 in
 // round 1, 8 by the end of Day 2, 14 by Day 3; RBs 1 / 2 / 10 / 22; WRs 2 / 6 / 20 / 36; priority free agents next.
-const DRAFT_K = { qb: [3, 7, 13, 23, 48], rb: [2, 3, 17, 37, 70], wr: [3, 10, 33, 60, 100] }
+// (TEs: about 14 drafted a year, 1 in round 1, 6 by the end of Day 2. DL: about 35, 6 in round 1, 16 by Day 2's end;
+// DBs: about 45, 6 in round 1, 19 by Day 2's end: NFL Drafts 2021-25)
+const DRAFT_K = { qb: [3, 7, 13, 23, 48], rb: [2, 3, 17, 37, 70], wr: [3, 10, 33, 60, 100], te: [2, 3, 11, 25, 45], dl: [3, 10, 27, 58, 92], db: [3, 10, 32, 75, 115] }
 function draftCuts(pos) {
   const L = cfbLeague()
   if (L.draftCuts?.[pos]) return L.draftCuts[pos]
-  const pool = L.players[pos].filter(p => (p.depth ?? 1) <= (pos === 'wr' ? 3 : 1)).map(p => p.ovr).sort((a, b) => b - a)
+  const pool = L.players[pos].filter(p => isStarter(p, pos)).map(p => p.ovr).sort((a, b) => b - a)
   const at = k => pool[Math.min(pool.length - 1, k - 1)] ?? 70
   const cuts = DRAFT_K[pos].map(at)
   // (a cut never sits on top of the next one: each tier is at least one OVR point)
@@ -1301,7 +1698,7 @@ function draftCuts(pos) {
   ;(L.draftCuts ??= {})[pos] = cuts
   return cuts
 }
-const PROD_PAR = { qb: 95, rb: 75, wr: 70 }   // production() of a solid starter's season
+const PROD_PAR = { qb: 95, rb: 75, wr: 70, te: 34, dl: 50, db: 50 }   // production() of a solid starter's season
 // ── The draft board ──
 // The build is ranked against this season's draft-eligible real players at his position (the ones the award
 // races simulated: the country's best, the top 25's and his conference's). Every one of them gets the same
@@ -1318,10 +1715,13 @@ const PROD_PAR = { qb: 95, rb: 75, wr: 70 }   // production() of a solid starter
 // His rank on that board is his slot in a real class. Volume (NFL Drafts 2021-2025, Pro Football Reference /
 // ESPN draft results): about 10-14 QBs, 20-25 RBs and 30-35 WRs a year; QBs ~3-4 in round 1, RBs ~1-2, WRs ~5-6.
 // Rank → tier: QB 1-2 top-10, 3-4 R1, 5-8 Day 2, 9-18 Day 3, 19-32 PFA; RB 1 top-10 (a clear No. 1), 2 R1,
-// 3-9 Day 2, 10-23 Day 3, 24-40 PFA; WR 1-2 top-10, 3-6 R1, 7-16 Day 2, 17-33 Day 3, 34-55 PFA.
+// 3-9 Day 2, 10-23 Day 3, 24-40 PFA; WR 1-2 top-10, 3-6 R1, 7-16 Day 2, 17-33 Day 3, 34-55 PFA; TE 1 top-10 (a
+// Pitts or a Bowers), 2 R1, 3-7 Day 2, 8-17 Day 3, 18-30 PFA. DL (edges and tackles on one board, as a draft class
+// reads): 1-2 top-10, 3-6 R1, 7-17 Day 2, 18-36 Day 3, 37-56 PFA; DB (corners and safeties): 1-2 top-10, 3-6 R1, 7-20
+// Day 2, 21-46 Day 3, 47-70 PFA.
 // (QB: the real class this game simulates is deeper at the top than a real year's, so the Day 2 and Day 3
 // lines sit lower than the 2021-25 average: 18 drafted)
-const BOARD_SLOTS = { qb: [2, 5, 10, 21, 36], rb: [1, 3, 11, 26, 45], wr: [3, 7, 19, 38, 62] }   // (eased a touch, the owner's call: each tier reaches a few spots further down the board)
+const BOARD_SLOTS = { qb: [2, 5, 10, 21, 36], rb: [1, 3, 11, 26, 45], wr: [3, 7, 19, 38, 62], te: [1, 2, 7, 17, 30], dl: [2, 6, 17, 36, 56], db: [2, 6, 20, 46, 70] }   // (eased a touch, the owner's call: each tier reaches a few spots further down the board)
 const BOARD_W = { prod: 2.2, team: 0.7 }   // OVR points a standard deviation
 const MARK_PTS = 5                          // OVR points a mark (a Heisman winner +3, a finalist +1.5)
 const COMP_K = 0.09                         // production a game: the share a standard deviation (7.2 pts) of the defenses faced is worth
@@ -1341,17 +1741,20 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
   if (pool.length < 8 || !pool.some(c => c.isUser)) return null
   const marks = new Map()
   const mark = (who, v) => { if (!who) return; const k = `${who.name}|${who.team}`; marks.set(k, (marks.get(k) ?? 0) + v) }
-  const posAward = { qb: awards.daveyOBrien, rb: awards.doakWalker, wr: awards.biletnikoff }[pos]
+  const posAward = { qb: awards.daveyOBrien, rb: awards.doakWalker, wr: awards.biletnikoff, te: awards.mackey, dl: awards.nagurski, db: awards.thorpe }[pos]
   mark(awards.heisman.winner, 0.6); for (const f of awards.heisman.finalists) mark(f, 0.3)
   mark(posAward?.winner, 0.35); for (const f of posAward?.finalists ?? []) mark(f, 0.15)
+  // (a defender's spot awards count the way the position award does: the Bednarik, the Outland and the Hendricks too)
+  if (DEF.has(pos)) for (const a of [awards.bednarik, pos === 'dl' ? awards.outland : null, pos === 'dl' ? awards.hendricks : null]) { mark(a?.winner, 0.25); for (const f of a?.finalists ?? []) mark(f, 0.08) }
   for (const f of awards.allAmerica.first[pos] ?? []) mark(f, 0.25)
   for (const f of awards.allAmerica.second[pos] ?? []) mark(f, 0.1)
   const me = pool.find(c => c.isUser)
-  const oppD = c => R.oppDef?.[c.ti] ?? 0
+  // (the schedule a line was made against: a passer's or a runner's the defenses he saw, a defender's the offenses)
+  const oppD = c => (DEF.has(pos) ? R.oppOff : R.oppDef)?.[c.ti] ?? 0
   const prodOf = c => {
     const now = prodPG(pos, c.t, oppD(c))
     if (!c.isUser || !career?.totals?.length) return now
-    const all = [now, ...career.totals.map(t => prodPG(pos, { seasonEff: 150, seasonYPC: 5, gp: 13, ...t }, oppD(c)))]
+    const all = [now, ...career.totals.map(t => prodPG(pos, { seasonEff: 150, seasonYPC: 5, gp: 13, sub: c.t?.sub, ...t }, oppD(c)))]
     return Math.max(now, all.reduce((a, b) => a + b, 0) / all.length)
   }
   if (career) mark(me, (CAREER_MARK[career.heisman] ?? 0) + (CAREER_MARK[career.allAmerica] ?? 0) + CAREER_MARK.season * (career.seasons ?? 0))
@@ -1377,7 +1780,7 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
   // (each row: the tier its slot on the board carries, BOARD_SLOTS, and the season's headline numbers)
   const sl = BOARD_SLOTS[pos]
   const tierAt = k => (k <= sl[0] ? 'top10' : k <= sl[1] ? 'r1' : k <= sl[2] ? 'day2' : k <= sl[3] ? 'day3' : k <= sl[4] ? 'pfa' : 'udfa')
-  const nums = c => (pos === 'qb' ? { yds: c.t.seasonPassYds, td: c.t.seasonTDs + c.t.seasonRushTDs } : pos === 'rb' ? { yds: c.t.seasonRushYds, td: c.t.seasonRushTDs + c.t.seasonRecTDs } : { yds: c.t.seasonRecYds, td: c.t.seasonRecTDs })
+  const nums = c => boardNums(pos, c.t)
   const view = list => {
     const rank = list.findIndex(x => x.c.isUser) + 1
     return { rank, of: list.length, eligible: rows.length, score: list[rank - 1].score, tierAt, place,
@@ -1392,8 +1795,18 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
   return view(cls)
 }
 
+// a board row's two numbers: yards and touchdowns, a lineman's sacks and TFL, a back's interceptions and passes defended
+export function boardNums(pos, t) {
+  if (!t) return { yds: null, td: null }
+  if (pos === 'qb') return { yds: t.seasonPassYds, td: t.seasonTDs + t.seasonRushTDs }
+  if (pos === 'rb') return { yds: t.seasonRushYds, td: t.seasonRushTDs + t.seasonRecTDs }
+  if (pos === 'dl') return { yds: t.seasonSacks, td: t.seasonTFL }
+  if (pos === 'db') return { yds: t.seasonINTs, td: t.seasonPD }
+  return { yds: t.seasonRecYds, td: t.seasonRecTDs }
+}
 // Where a tier's picks fall in a 7-round, 224-pick draft (32 a round, the draft Career runs), and how wide a
 // projection is there: a top-10 grade is a few picks either way, a Day 3 grade most of a round
+const TOP10_GATE = { s: 11.3, te: 10.5, dt: 11 }
 const TIER_PICKS = { top10: [1, 10], r1: [11, 32], day2: [33, 96], day3: [97, 224] }
 const TIER_HALF = { top10: 2, r1: 5, day2: 12, day3: 22 }
 const TIER_ORDER = ['top10', 'r1', 'day2', 'day3', 'pfa', 'udfa']
@@ -1428,6 +1841,11 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null, noCl
     // (a top-10 pick needs a clear grade, not only the top of a thin board: at least the OVR of the
     // position's best few starters, draftCuts)
     if (tier === 'top10' && board.score < c[0]) tier = 'r1'
+    // (position value: the NFL takes a safety or a tight end in the top ten only for the rare one, a tackle a little
+    // less often than an edge. Kyle Hamilton went 14th, Brock Bowers 13th; Kyle Pitts 4th was the exception: TOP10_GATE,
+    // board points over the position's top-10 cut)
+    const gate = TOP10_GATE[t?.sub ?? pos] ?? 0
+    if (tier === 'top10' && board.score < c[0] + gate) tier = 'r1'
   }
   // elite tools go early whatever the team did, once he has produced: 96+ is a 1st-rounder, 92+ goes by Day 2
   const ORDER = TIER_ORDER
@@ -1447,7 +1865,7 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null, noCl
   // class, the other positions, isn't simulated: a prospect's big-board number sits about where he's picked)
   const pick = pickWindow(pos, tier, board)
   const overall = pick ? Math.round((pick[0] + pick[1]) / 2) : null
-  const shared = { tier, label: LABEL[tier], round: ROUND[tier], pick, overall, boardRank: board?.rank ?? null, boardOf: board?.of ?? null, board: board?.top ?? null }
+  const shared = { tier, label: LABEL[tier], round: ROUND[tier], pick, overall, boardRank: board?.rank ?? null, boardOf: board?.of ?? null, board: board?.top ?? null, ...(board ? { boardScore: Math.round(board.score * 10) / 10, cut: c[0] } : {}) }
   // (no class, College Football mode: always eligible, always a projection; going or staying is the player's call)
   if (noClass) return { year: null, eligible: true, declares: true, ...shared, draftYear: dy, note: null }
   const eligible = ELIGIBLE.has(yr)
@@ -1496,7 +1914,7 @@ function fixWon(g) {
 // ══════════════════════════════════════════════════════════════════════════════
 export function runCFBSimulation(build, types = null, team = null, position = 'qb', rngSeed = null, gameMode = 'classic', script = null, opts = {}) {
   const L = cfbLeague(opts?.pools ?? null)
-  const pos = ['qb', 'rb', 'wr'].includes(position) ? position : 'qb'
+  const pos = POSITIONS.includes(position) ? position : 'qb'
   types = types?.length ? types : CFB_TYPES_BY_POS[pos]
   const seed = String(rngSeed ?? script?.seed ?? Math.floor(Math.random() * 1e9).toString(36))
   const leagueSeed = String(opts?.leagueSeed ?? script?.leagueSeed ?? seed)
@@ -1518,18 +1936,46 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
   const cands = new Map()
   const addLine = (who, ti, line, p, gameKey) => {
     if (!who) return
-    const c = cands.get(who.key) ?? { key: who.key, name: who.name, team: L.teams[ti].short, teamName: L.teams[ti].name, conf: L.teams[ti].confShort, ti, pos: p, year: who.year, ovr: who.ovr, isUser: !!who.isUser, games: [], reg: [] }
+    const c = cands.get(who.key) ?? { key: who.key, name: who.name, team: L.teams[ti].short, teamName: L.teams[ti].name, conf: L.teams[ti].confShort, ti, pos: p, sub: who.sub ?? null, year: who.year, ovr: who.ovr, isUser: !!who.isUser, games: [], reg: [] }
     c.games.push(line)
     if (/^g/.test(gameKey)) c.reg.push(line)   // (regular-season games: the leaders below)
     cands.set(who.key, c)
   }
   const units = L.teams.map(t => unitFor(L, t, user))
+  const dunits = L.teams.map(t => defFor(L, t, user))
+  // (an FCS opponent's offense: a unit as good as its strength, no names)
+  const fcsUnits = new Map()
+  const fcsUnit = short => { if (!fcsUnits.has(short)) fcsUnits.set(short, unitFor(L, FCS_BY[short], null)); return fcsUnits.get(short) }
+  // (the build on defense: what his pass rush and his coverage do to the offenses he plays, in their box scores)
+  const press = DEF.has(pos) ? user.press : null
+  const boxes = new Map()
   const boxOf = (ti, key, my, op, oppIdx, oppD) => {
+    const k = `${ti}|${key}`
+    if (boxes.has(k)) return boxes.get(k)
     const mine = ti === me
     const r = seeded(`${mine ? seed : leagueSeed}|box|${L.teams[ti].short}|${key}`)
-    return teamBox(r, units[ti], { pts: my.pts, oppPts: op.pts, offTD: Math.max(0, my.offTD) }, oppD)
+    const b = teamBox(r, units[ti], { pts: my.pts, oppPts: op.pts, offTD: Math.max(0, my.offTD) }, oppD, oppIdx === me && me >= 0 ? press : null)
+    boxes.set(k, b)
+    return b
+  }
+  // the offense a defense faced: the other team's own box score of the game (an FCS team's made here)
+  const oppBoxOf = (ti, x) => {
+    if (x.oi >= 0) return boxOf(x.oi, x.key, x.op, x.my, ti, R.T[ti].sd)
+    const r = seeded(`${leagueSeed}|box|${x.fcs}|${x.key}`)
+    return teamBox(r, fcsUnit(x.fcs), { pts: x.op.pts, oppPts: x.my.pts, offTD: Math.max(0, x.op.offTD) }, R.T[ti].sd, ti === me ? press : null)
+  }
+  // each defender's season factors (roleOf), seeded by who he is and whose season it is
+  const roles = new Map()
+  const rolesOf = ti => {
+    if (!roles.has(ti)) roles.set(ti, dunits[ti].map((d, k) => roleOf(seeded(`${ti === me && d.who?.isUser ? seed : leagueSeed}|role|${L.teams[ti].short}|${k}|${d.who?.name ?? ''}`), d.rates)))
+    return roles.get(ti)
+  }
+  const dboxOf = (ti, x) => {
+    const r = seeded(`${ti === me ? seed : leagueSeed}|dbox|${L.teams[ti].short}|${x.key}`)
+    return defBox(r, dunits[ti], oppBoxOf(ti, x), x.my, x.op, rolesOf(ti))
   }
   const userGames = []   // the build's own lines: regular season, then postseason
+  const myDef = DEF.has(pos) ? dunits[me]?.findIndex(d => d.who?.isUser) ?? -1 : -1
   const runTeamGames = (ti, list) => {
     for (const x of list) {
       const box = boxOf(ti, x.key, x.my, x.op, x.oi, x.oppD)
@@ -1537,9 +1983,15 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
       addLine(u.qb.who, ti, box.qb, 'qb', x.key)
       addLine(u.rb.who, ti, box.rb, 'rb', x.key)
       u.wrs.forEach((w, k) => addLine(w.who, ti, box.wrs[k], 'wr', x.key))
+      if (u.te && box.te) addLine(u.te.who, ti, box.te, 'te', x.key)
+      const dl = dboxOf(ti, x)
+      dunits[ti].forEach((d, k) => addLine(d.who, ti, dl[k], d.who?.pos ?? (k < 3 ? 'dl' : 'db'), x.key))
       if (ti === me) {
-        const slot = pos === 'wr' ? Math.max(0, u.wrs.findIndex(w => w.who?.isUser)) : 0
-        userGames.push({ x, line: decorate(pos, lineFor(pos, box, slot)) })
+        if (DEF.has(pos)) userGames.push({ x, line: dl[Math.max(0, myDef)] })
+        else {
+          const slot = pos === 'wr' ? Math.max(0, u.wrs.findIndex(w => w.who?.isUser)) : 0
+          userGames.push({ x, line: decorate(pos, lineFor(pos, box, slot)) })
+        }
       }
     }
   }
@@ -1549,7 +2001,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
     const st = R.res.get(`g${g.id}`)
     if (!st) continue
     const { i, j, res } = st
-    perTeam[i].push({ key: `g${g.id}`, oi: j, oppD: j >= 0 ? R.T[j].sd : FCS_BY[g.b].d, my: res.a, op: res.b })
+    perTeam[i].push({ key: `g${g.id}`, oi: j, oppD: j >= 0 ? R.T[j].sd : FCS_BY[g.b].d, my: res.a, op: res.b, ...(j < 0 ? { fcs: g.b } : {}) })
     if (j >= 0) perTeam[j].push({ key: `g${g.id}`, oi: i, oppD: R.T[i].sd, my: res.b, op: res.a })
   }
   // the title games count for the award races (voted on after them)
@@ -1561,7 +2013,9 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
     perTeam[j].push({ key: `ccg|${c.id}`, oi: i, oppD: R.T[i].sd, my: res.b, op: res.a })
   }
   // the defenses each team saw (points a game, + = tougher): the draft board weighs a line by its schedule
+  // (a defender's board weighs the offenses he saw: the same number the other way round)
   R.oppDef = perTeam.map(list => (list.length ? list.reduce((a, x) => a + x.oppD, 0) / list.length : 0))
+  R.oppOff = perTeam.map(list => (list.length ? list.reduce((a, x) => a + (x.oi >= 0 ? R.T[x.oi].so : FCS_BY[x.fcs]?.o ?? -12), 0) / list.length : 0))
   // (lite: only the build's team, no award races; the director's many re-runs only need the record)
   // the award races are the build's conference (all-conference), the country's best players by grade and the
   // committee's top 25 (team success): only their teams need box scores
@@ -1574,7 +2028,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
   for (let ti = 0; ti < L.teams.length; ti++) if (boxTeams.has(ti)) runTeamGames(ti, perTeam[ti])
   const awardLines = new Map([...cands.values()].map(c => [c.key, c]))
   // award candidates: totals through the title games (the Heisman is voted on before the bowls)
-  const candList = [...awardLines.values()].map(c => ({ ...c, t: cfbSeasonTotals(c.pos, c.games) }))
+  const candList = [...awardLines.values()].map(c => ({ ...c, t: cfbSeasonTotals(c.pos, c.games, c.sub) }))
 
   // the build's postseason after the title game
   const userAwardCount = userGames.length
@@ -1612,42 +2066,65 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
   if (R.myBowl) { bowl = postGame(R.myBowl, postLines[pi++], { round: 'Bowl', bowl: R.myBowl.bowl, site: R.myBowl.site, date: R.myBowl.date, label: R.myBowl.bowl }); postseason.push(bowl) }
 
   const wins = games.filter(g => g.won).length, losses = games.length - wins
-  const reg = cfbSeasonTotals(pos, games)
-  const throughCCG = cfbSeasonTotals(pos, [...games, ...(confChampionship ? [confChampionship] : [])])
-  const full = cfbSeasonTotals(pos, [...games, ...postseason])
+  const sub = user.sub
+  const reg = cfbSeasonTotals(pos, games, sub)
+  const throughCCG = cfbSeasonTotals(pos, [...games, ...(confChampionship ? [confChampionship] : [])], sub)
+  const full = cfbSeasonTotals(pos, [...games, ...postseason], sub)
   // (the build's award line is his games as played: the director's, when it passed them)
   const meCand = candList.find(c => c.isUser)
   if (meCand) { meCand.t = throughCCG; meCand.line = lineText(pos, throughCCG) }
-  const awards = lite ? LITE_AWARDS : runAwards(L, R, candList, seeded(`${seed}|awards`), user)
+  const awards = lite ? LITE_AWARDS : runAwards(L, R, candList, seeded(`${seed}|awards`), user, seeded(`${seed}|awards-def`))
   // the regular season's FBS leaders at his position: every team's starters (the teams the award races skipped get
   // their box scores here, for this list only: each box has its own seeded draw, so nothing above changes). His
   // line is his games as played
-  const LEAD = { qb: ['seasonPassYds', 'PASS YDS'], rb: ['seasonRushYds', 'RUSH YDS'], wr: ['seasonRecYds', 'REC YDS'] }
+  // (a defender: a board a stat, every FBS starter at his position: a lineman's sacks and TFL, a back's picks, passes
+  // defended and tackles. The first is the one his page leads with)
+  const LEAD = { qb: [['seasonPassYds', 'PASS YDS']], rb: [['seasonRushYds', 'RUSH YDS']], wr: [['seasonRecYds', 'REC YDS']], te: [['seasonRecYds', 'REC YDS']],
+    dl: [['seasonSacks', 'SACKS'], ['seasonTFL', 'TACKLES FOR LOSS']], db: [['seasonINTs', 'INTERCEPTIONS'], ['seasonPD', 'PASSES DEFENDED'], ['seasonTackles', 'TACKLES']] }
   let leaders = null
   if (!lite) {
-    const [lk, label] = LEAD[pos]
     const rest = new Map()
     for (let ti = 0; ti < L.teams.length; ti++) {
       if (boxTeams.has(ti)) continue
+      if (DEF.has(pos)) {
+        const whos = dunits[ti].map((d, k) => [d, k]).filter(([d]) => d.who && d.who.pos === pos)
+        if (!whos.length) continue
+        for (const x of perTeam[ti]) {
+          if (!/^g/.test(x.key)) continue
+          const dl = dboxOf(ti, x)
+          for (const [d, k] of whos) {
+            const c = rest.get(d.who.key) ?? { name: d.who.name, team: L.teams[ti].short, year: d.who.year, pos, sub: d.who.sub, ovr: d.who.ovr, isUser: false, reg: [] }
+            c.reg.push(dl[k])
+            rest.set(d.who.key, c)
+          }
+        }
+        continue
+      }
       const u = units[ti]
-      const whos = pos === 'qb' ? [u.qb] : pos === 'rb' ? [u.rb] : u.wrs
+      const whos = pos === 'qb' ? [u.qb] : pos === 'rb' ? [u.rb] : pos === 'te' ? [u.te] : u.wrs
       if (!whos.some(w => w?.who)) continue
       for (const x of perTeam[ti]) {
         if (!/^g/.test(x.key)) continue
         const box = boxOf(ti, x.key, x.my, x.op, x.oi, x.oppD)
         whos.forEach((w, k) => {
           if (!w?.who) return
-          const c = rest.get(w.who.key) ?? { name: w.who.name, team: L.teams[ti].short, year: w.who.year, pos, isUser: false, reg: [] }
+          const c = rest.get(w.who.key) ?? { name: w.who.name, team: L.teams[ti].short, year: w.who.year, pos, ovr: w.who.ovr, isUser: false, reg: [] }
           c.reg.push(lineFor(pos, box, k))
           rest.set(w.who.key, c)
         })
       }
     }
-    const rows = [...cands.values(), ...rest.values()].filter(c => c.pos === pos && (c.isUser || c.reg.length >= 6))
-      .map(c => ({ name: c.name, team: c.team, year: c.year ?? null, isUser: !!c.isUser, value: c.isUser ? (reg[lk] ?? 0) : (cfbSeasonTotals(pos, c.reg)[lk] ?? 0) }))
-      .sort((a, b) => b.value - a.value || (a.isUser ? -1 : 1))
-    const at = rows.findIndex(x => x.isUser)
-    leaders = { key: lk, label, rows: rows.slice(0, 10), rank: at >= 0 ? at + 1 : null, of: rows.length }
+    const pool = [...cands.values(), ...rest.values()].filter(c => c.pos === pos && (c.isUser || c.reg.length >= 6))
+    const tots = new Map(pool.map(c => [c, c.isUser ? reg : cfbSeasonTotals(pos, c.reg, c.sub)]))
+    const boards = LEAD[pos].map(([lk, label]) => {
+      const rows = pool.map(c => ({ name: c.name, team: c.team, year: c.year ?? null, isUser: !!c.isUser, ...(c.sub ? { pos: POS_UP[c.sub] } : {}), value: tots.get(c)[lk] ?? 0 }))
+        .sort((a, b) => b.value - a.value || (a.isUser ? -1 : 1))
+      const at = rows.findIndex(x => x.isUser)
+      return { key: lk, label, rows: rows.slice(0, 10), rank: at >= 0 ? at + 1 : null, of: rows.length }
+    })
+    leaders = boards.length > 1 ? { ...boards[0], boards } : boards[0]
+    // (the checks: every FBS starter's regular season at his position, scripts/cfb/new-pos-check.mjs)
+    if (opts?.debug) Object.defineProperty(leaders, '_pool', { enumerable: false, value: pool.map(c => ({ name: c.name, team: c.team, sub: c.sub ?? null, isUser: !!c.isUser, reg: c.reg, t: tots.get(c), ovr: c.ovr ?? null })) })
   }
   const draft = draftStock(pos, ovr, throughCCG, awards, user.year, lite ? null : draftBoard(L, R, pos, candList, awards, opts?.career ?? null), opts?.career ?? null, user.noClass, opts?.season || opts?.choice ? { season: opts.season, choice: !!opts.choice } : null)
 
@@ -1659,9 +2136,10 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
     const last = playoffRounds[playoffRounds.length - 1]
     sbResult = champion ? { won: true, ...pickLine(pos, last) } : { won: false, round: last?.round ?? 'First Round', pwins: playoffRounds.filter(g => g.won).length }
   }
-  const BEST = { qb: g => g.passYds * 0.15 + g.tds * 12 + (g.ints === 0 ? 4 : 0) + (g.rating ?? 0) * 0.1 + Math.max(0, g.rushYds) * 0.1, rb: g => g.rushYds * 0.14 + (g.rushTDs + g.recTDs) * 15 + g.recYds * 0.08 - g.fumbles * 8, wr: g => g.recYds * 0.16 + g.recTDs * 14 + g.rec * 1.5 }
+  const defBest = g => (g.sck ?? 0) * 5 + (g.int ?? 0) * 5 + (g.td ?? 0) * 7 + (g.ff ?? 0) * 3.5 + (g.fr ?? 0) * 2 + (g.tfl ?? 0) * 1.2 + (g.qbh ?? 0) * 0.6 + Math.max(0, (g.pd ?? 0) - (g.int ?? 0)) * 1.2 + (g.tk ?? 0) * 0.3
+  const BEST = { qb: g => g.passYds * 0.15 + g.tds * 12 + (g.ints === 0 ? 4 : 0) + (g.rating ?? 0) * 0.1 + Math.max(0, g.rushYds) * 0.1, rb: g => g.rushYds * 0.14 + (g.rushTDs + g.recTDs) * 15 + g.recYds * 0.08 - g.fumbles * 8, wr: g => g.recYds * 0.16 + g.recTDs * 14 + g.rec * 1.5, te: g => g.recYds * 0.16 + g.recTDs * 14 + g.rec * 1.5, dl: defBest, db: defBest }
   const bestGame = [...games].sort((a, b) => BEST[pos](b) - BEST[pos](a))[0]
-  const arch = pos === 'qb' ? getArchetype(ovr, build, types) : pos === 'rb' ? getArchetypeRB(ovr, build, types) : getArchetypeWR(ovr, build, types)
+  const arch = pos === 'qb' ? getArchetype(ovr, build, types) : pos === 'rb' ? getArchetypeRB(ovr, build, types) : pos === 'te' ? getArchetypeTE(ovr, build, types) : pos === 'dl' ? getArchetypeDL(ovr, build, types) : pos === 'db' ? getArchetypeDB(ovr, build, types) : getArchetypeWR(ovr, build, types)
   const conf = { id: base.confId, short: base.confShort, name: base.confName }
   const standings = R.standings.map(st => ({
     id: st.id, short: st.short, name: st.name, champion: st.champion, title: st.title,
@@ -1702,7 +2180,8 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
       awards,
       leaders,
       draft,
-      user: { name: user.name, year: user.year, noClass: user.noClass, ...(opts?.season ? { season: opts.season } : {}), ...(opts?.choice ? { choice: true } : {}), replaced: L.depth[base.short]?.[pos]?.[0]?.name ?? null, teamShift: Math.round(user.shift * 10) / 10,
+      user: { name: user.name, year: user.year, noClass: user.noClass, ...(opts?.season ? { season: opts.season } : {}), ...(opts?.choice ? { choice: true } : {}), replaced: (L.depth[base.short]?.[pos] ?? []).find(p => !sub || p.sub === sub)?.name ?? null, teamShift: Math.round(user.shift * 10) / 10,
+        ...(sub ? { sub, side: 'defense' } : {}),
         attrs: Object.fromEntries(types.map(t => [t, build?.[t]?.val ?? null])), types },
       awardGames: userAwardCount,
     },
@@ -1710,7 +2189,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
   if (opts?.debug) { Object.defineProperty(out, '_R', { value: R, enumerable: false }); Object.defineProperty(out, '_cands', { value: candList, enumerable: false }) }
   return out
 }
-const pickLine = (pos, g) => Object.fromEntries([...LINE_KEYS[pos], ...(pos === 'qb' ? ['rating', 'eff'] : pos === 'rb' ? ['ypc', 'long'] : ['long'])].filter(k => g?.[k] != null).map(k => [k, g[k]]))
+const pickLine = (pos, g) => Object.fromEntries([...(LINE_KEYS[pos] ?? []), ...(pos === 'qb' ? ['rating', 'eff'] : pos === 'rb' ? ['ypc', 'long'] : DEF.has(pos) ? [] : ['long'])].filter(k => g?.[k] != null).map(k => [k, g[k]]))
 
 // ── scriptCFBSeason: football's scriptNFLSeason, the college way ─────────────
 // One season for a team, decided once from its strength (team.off/def, the data's units, moved however the
@@ -1747,7 +2226,8 @@ export function finalizeCFBSeason(result, games = result?.games, build = null, t
   if (!result || !games?.length) return result
   const u = result.cfb?.user
   const tl = types ?? u?.types ?? CFB_TYPES_BY_POS[result.position]
-  const b = build ?? Object.fromEntries(tl.filter(t => u?.attrs?.[t] != null).map(t => [t, { type: t, val: u.attrs[t] }]))
+  // (a defender's spot rides on his Size chip: the saved spot puts it back)
+  const b = build ?? Object.fromEntries(tl.filter(t => u?.attrs?.[t] != null).map(t => [t, { type: t, val: u.attrs[t], ...(t === 'size' && u?.sub ? { subpos: u.sub } : {}) }]))
   const script = { games, keepLines: true }
   const next = runCFBSimulation(b, tl, result.team, result.position, result.seed, result.gameMode, script, { leagueSeed: result.leagueSeed, year: u?.year ?? result.cfb?.draft?.year, name: u?.name, noClass: !!u?.noClass, ...(u?.season ? { season: u.season } : {}), ...(u?.choice ? { choice: true } : {}) })
   // the build's OVR and archetype come from the build the director started with
