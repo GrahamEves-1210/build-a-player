@@ -558,5 +558,11 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
   :is(.fk-root, .fk) .fh-top-txt small { flex-wrap: wrap; row-gap: 1px; white-space: normal; line-height: 1.15; }
   /* Light's games to watch: TIMBERWOLVES whole */
   :is(.fk-root, .fk) .lt-opp-t b { font-size: 16px; letter-spacing: 0; }
+  :is(.fk-root, .fk) .nl-opps .lt-opp { grid-template-columns: 48px minmax(0, 1fr) auto; column-gap: 6px; }
+  :is(.fk-root, .fk) .lt-opp-t { gap: 5px; }
+  /* the staff strip's chips: a narrower face, so SHEPPARD fits at 360 */
+  :is(.fk-root, .fk) .fst-chip { gap: 5px; padding-right: 4px; }
+  :is(.fk-root, .fk) .fst-chip-face { width: 30px; }
+  :is(.fk-root, .fk) .fst-chip-txt b { letter-spacing: 0; }
 }
 
