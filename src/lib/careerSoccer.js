@@ -66,7 +66,7 @@ const SOCCER = {
     const usage = clamp(0.9 + (Math.min(o, 92) - 85) * 0.01 - Math.max(0, o - 92) * USAGE_TOP, 0.75, 1) * (age <= 19 ? 0.86 : age <= 21 ? 0.94 : age >= 31 ? 1 - (age - 30) * 0.03 : 1) * (role === 'Starter' ? 1 : role === 'Rotation' ? 0.8 : 0.9)
     // (a relegated club he stayed with plays the second tier, and nothing in Europe: c.down)
     const down = c.down?.team === t.short
-    return { short: t.short, name: t.name, league: t.league, career: true, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, ...(down ? { tier2: true, europe: null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
+    return { short: t.short, name: t.name, league: t.league, career: true, sched: `${c.seed}-y${(c.year ?? 0) + 1}`, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, ...(down ? { tier2: true, europe: null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
   },
   // the attack around him: the forwards beside him (wingers and a No. 10 count) and the club itself
   // (years on, the real ones age: past 30 they fade, at 35 they're gone)
@@ -229,11 +229,12 @@ export const wageText = (perYear, short) => {
 export const feeText = (fee, short) => { const v = inCur(fee, short); return `${soccerCur(short)}${v >= 10 ? Math.round(v) : r10(v)}M` }
 // What a club can spend, from what it earns (data/soccer-clubs.js `rev`, € millions a year): the most it pays a player
 // a year and the biggest fee it pays. Real Madrid about €33M a year (€635k a week) and €209M; Manchester City £425k a
-// week and €168M; Arsenal and Liverpool about £360k and €143M; Brighton £125k and €51M; Ipswich £75k and €32M;
+// week and €201M; Arsenal and Liverpool about £360k and €172M; Brighton £125k and €62M; Ipswich £75k and €38M;
 // Elversberg €15k a week and €6M. (Before 2026-11-24 the purse followed the Opta rating: Brighton paid £400k a week.)
 const clubPurse = short => {
   const rev = CLUB_BY.get(short)?.rev ?? 60
-  return { wage: r10(clamp(0.0223 * Math.pow(rev, 1.05), 0.5, 34)), fee: Math.max(2, Math.round(rev * 0.2)) }
+  // (a Premier League club puts more of what it earns into fees: Chelsea, Newcastle and Brighton outbid richer clubs abroad)
+  return { wage: r10(clamp(0.0223 * Math.pow(rev, 1.05), 0.5, 34)), fee: Math.max(2, Math.round(rev * (CLUB_BY.get(short)?.league === 'eng.1' ? 0.24 : 0.2))) }
 }
 // ── What he's worth ──
 // his last league season against what a striker of his level scores, and how much of it he played
@@ -279,8 +280,9 @@ const inSpain = short => CLUB_BY.get(short)?.league === 'esp.1'
 function clausesFor(c, o, value) {
   const asked = !!o.noTrade
   const release = asked ? Math.max(5, Math.round(value * 1.5)) : inSpain(o.team) ? Math.max(20, Math.round(value * (standing(o.team) < 0.1 ? 6 : 3))) : null
-  // (a star at a small club: his level is well past what the club usually signs, or the club is one of its league's last)
-  const rel = (c.ovr ?? 70) >= clubNeed(o.team) + 3 || leaguePlace(o.team) >= 0.7
+  // (a star at a small club: a club in the lower half of its league, and a player past the level it usually signs.
+  // Nobody at Real Madrid or Chelsea has one)
+  const rel = leaguePlace(o.team) >= 0.5 && (c.ovr ?? 70) >= clubNeed(o.team) + 2
   return { release, relClause: rel && o.kind !== 'loan' }
 }
 // the fee in his release clause (null: none). A deal signed before 2026-11-24 with one has no figure: it's read now
@@ -471,16 +473,18 @@ export function soccerFinishLeague(c, f) {
 // one. (Before 2026-11-24 the scores came off a fixed list whatever the sides: City, with a 99 striker, out 1-4 at home.)
 const pois = (r, lam) => { const L = Math.exp(-lam); let k = 0, x = 1; do { k++; x *= r() } while (x > L); return k - 1 }
 function autoLegs(r, two, won, p = 0.5) {
-  const q = clamp(p, 0.1, 0.9), d = Math.log(q / (1 - q)) * 0.28
-  const mine = 1.35 * Math.exp(d), theirs = 1.35 * Math.exp(-d)
+  const q = clamp(p, 0.1, 0.9), d = Math.log(q / (1 - q)) * 0.2
+  const mine = 1.3 * Math.exp(d), theirs = 1.3 * Math.exp(-d)
   const edge = two ? 2 : 1
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 120; i++) {
     const legs = (two ? [0, 1] : [0]).map(() => [pois(r, mine), pois(r, theirs)])
     const my = legs.reduce((a, l) => a + l[0], 0), opp = legs.reduce((a, l) => a + l[1], 0)
     if (my === opp || (my > opp) !== won) continue
     if (!won && q >= 0.5 && opp - my > edge) continue      // (the better side isn't taken apart)
     if (won && q < 0.45 && my - opp > edge) continue
-    if (legs.some(l => l[0] > 5 || l[1] > 5)) continue
+    // (a rout is rare: four clear over two legs, three in one match, about one tie in twenty-five)
+    if (Math.abs(my - opp) > (two ? 3 : 2) && r() < 0.85) continue
+    if (legs.some(l => l[0] > 4 || l[1] > 4)) continue
     return legs
   }
   const legs = two ? [[1, 0], [1, 1]] : [[1, 0]]
@@ -560,7 +564,9 @@ export function soccerCallUp(c, lg = null) {
   const line = seasonLine(c, lg)
   const mins = line ? line.mins : null
   const g90 = mins != null && mins >= 450 ? line.goals / (mins / 90) * (line.tier === 2 ? 0.6 : 1) : null
-  const form = g90 == null ? 0 : clamp((g90 - 0.45) * 14, -5, 5)
+  // (his goals against what a striker of his level scores: half of it costs him six points with the selectors)
+  const want = clamp(0.2 + ((c.ovr ?? 75) - 75) * 0.025, 0.12, 0.85)
+  const form = g90 == null ? 0 : clamp((g90 / want - 1) * 10, -8, 5)
   const play = mins == null ? 0 : mins < 450 ? -8 : mins < 900 ? -5 : mins < 1500 ? -2 : 0
   const score = (c.ovr ?? 70) + form + play - (line?.tier === 2 ? 3 : 0)
   const rivals = peckingOrder(c.nation, intlYear(c), c.seed).filter(p => p.name !== c.name)
@@ -725,7 +731,7 @@ function soccerSeason(c, f, po) {
     // (soccer's "playoffs" for the legacy: a Champions League season)
     playoffs: comp === 'ucl', champion, trophies, cupName: f.cup?.name ?? null, cupResult, cupWon,
     europe: comp ? { comp, name: f.europe.name, result: euroResult } : null, uclWon: euroWon && comp === 'ucl', uelWon: euroWon && comp === 'uel', ueclWon: euroWon && comp === 'uecl',
-    rounds: line.map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, legs: x.legs, pens: x.pens, track: x.track, sat: !!x.sat })),
+    rounds: line.map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, legs: x.legs, pens: x.pens, track: x.track, sat: !!x.sat, ...(x.auto ? { auto: true } : {}) })),
     sb: null, stats, adv: seasonRaw('st', f, (f.games ?? []).filter(g => !g.sat && g.app)),
     award, awardName: S.awardName.st, bdo,
     proBowl: tots && !tier2, allPro: boot && !tier2, poty: poty && !tier2, shoe: shoe && !tier2, potyName: f.playerOfSeason?.name ?? null, bootName: f.goldenBoot?.name ?? 'Golden Boot',
@@ -876,7 +882,10 @@ function windowState(c) {
   // bids
   const backup = c.lastRole === 'Backup'
   let heat = clamp(0.12 + perf * 0.65 - (c.age >= 30 ? 0.2 : 0) - (c.age >= 33 ? 0.2 : 0), 0.03, 0.75)
-  heat *= here <= 1 ? 0.12 : here === 2 ? 0.5 : 1
+  // (the summers after a club paid for him: it isn't selling, and nobody asks. A player who came through the academy
+  // has no such year: a breakout season brings the bids at once)
+  const bought = c.contract.kind === 'transfer' || c.contract.kind === 'fa' || c.seasons.some(x => x.team !== c.team)
+  heat *= bought ? (here <= 1 ? 0.12 : here === 2 ? 0.5 : 1) : 1
   heat *= c.contract.left >= 4 ? 0.6 : c.contract.left <= 2 ? 1.2 : 1
   if (standing(c.team) < 0.08) heat *= 0.5
   if (clause != null && clause <= value * 1.15) heat = Math.min(0.9, heat * 1.6)   // (a clause at his value or under it: clubs line up to trigger it)
@@ -891,7 +900,7 @@ function windowState(c) {
       // (a bid that reaches his release clause triggers it: the fee is the clause, and his club can't refuse)
       const meets = clause != null && x.purse.fee >= clause && fee >= clause * 0.92
       if (meets) fee = clause
-      const no = meets ? 0 : clamp((x.step > 0.05 ? 0.15 : 0.55) + (c.contract.left >= 4 ? 0.15 : 0) + (here <= 1 ? 0.2 : 0) - (backup ? 0.4 : 0) - (c.contract.left <= 1 ? 0.3 : 0), 0, 0.85)
+      const no = meets ? 0 : clamp((x.step > 0.05 ? 0.15 : 0.55) + (c.contract.left >= 4 ? 0.15 : 0) + (bought && here <= 1 ? 0.2 : 0) - (backup ? 0.4 : 0) - (c.contract.left <= 1 ? 0.3 : 0), 0, 0.85)
       if (r() < no) { rejected.push({ team: x.t, name: soccerClub(x.t).name, fee }); continue }
       offers.push(bid(x, fee, meets ? { clause: 'release', pitch: x.st.starter ? 'They have met his release clause. The No. 9 shirt is his if he wants it.' : 'They have met his release clause. A fight for the shirt, if he wants the move.' } : {}))
     }

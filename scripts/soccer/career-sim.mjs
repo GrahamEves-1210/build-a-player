@@ -26,6 +26,7 @@ const mkBuild = vals => Object.fromEntries(T.map((t, i) => [t, { type: t, val: v
 const N = +(process.env.N || 6), LVL = (process.env.LVL || '9,7,5').split(',').map(Number)
 const VERB = !!process.env.VERB
 const agg = []
+const tally = { breaks: 0, breakGains: 0, jan: 0, janWith: 0, janMoves: 0, tables: 0, tableBad: 0, summers: 0, bidSummers: 0, bidders: {}, relegations: 0, tier2: 0, promoted: 0 }
 function season(c) {
   let D; [c, D] = C.startSeason(c)
   for (let g = 0; g < 500; g++) {
@@ -33,6 +34,16 @@ function season(c) {
     if (a.moment) { const opts = a.moment.options; ;[c] = C.chooseMoment(c, D, opts[Math.floor(Math.random() * opts.length)]); continue }
     if (a.injury) { c = C.resolveInjury(c, D, false); if (Array.isArray(c)) c = c[0]; continue }
     if (a.k >= D.total) break
+    // the international break (train or rest) and the January window (JAN=1: he takes a bid or a loan when one comes)
+    if (C.breakNow(c)) { const g = C.breakDrill(c); c = g && Math.random() < 0.6 ? C.breakTrain(c, D, g, Math.random(), Math.random() < 0.6, true) : C.breakRest(c, D); tally.breaks++; if (c.active.brk?.done?.gain) tally.breakGains++ }
+    if (C.januaryNow(c)) {
+      const offers = C.januaryOffers(c); tally.jan++
+      if (offers.length) { tally.janWith++; if (VERB) console.log(`   january: ${offers.map(o => `${o.kind}:${o.team}(${C.wageText(o.perYear, o.team)}${o.fee ? `, fee ${C.feeText(o.fee, c.team)}` : ''})`).join(' ')}`) }
+      if (offers.length && process.env.JAN) { const from = c.team; [c, D] = C.januaryMove(c, D, offers[0]); tally.janMoves++; if (VERB) console.log(`   january move: ${from} -> ${c.team} (${c.active.moved?.cross ? 'another league' : 'same league'}), ${D.total} matches`) }
+      else c = C.januaryStay(c, D)
+    }
+    // (the table as it stands: 20 rows that add up, his club in it)
+    if (a.k > 0 && a.k % 8 === 0) { const t = C.SPORT.soccer.x.table(c, D); if (!t || !t.some(r => r.isUs) || t.some(r => r.played > a.k)) { console.log('TABLE BAD at', a.k, t?.length); tally.tableBad++ } else tally.tables++ }
     const [n] = C.advanceWeek(c, D); if (n === c) { console.log('STUCK'); break } c = n
   }
   c = C.finishRegular(c, D)
@@ -57,7 +68,7 @@ for (let i = 0; i < N; i++) {
     const st = s.stats
     const eu = s.europe ? `${s.europe.comp}:${s.europe.result}` : '-'
     const wc = s.wc ? (s.wc.called ? `WC${s.wc.year}:${s.wc.finish}/${s.wc.goals}g/${s.wc.apps}a` : `WC${s.wc.year}:not called`) : ''
-    const line = `${s.season}-${String((s.season + 1) % 100).padStart(2, '0')} age ${s.age} ${s.team}(${CLUB.get(s.team)?.league}) ovr ${s.ovr} ${s.role} | lg ${st.lgGoals}g/${st.lgAssists}a in ${st.lgApps} (starts ${st.starts}) | all ${st.goals}g ${st.assists}a ${st.apps}apps cup ${st.cupGoals} eu ${st.euroGoals} | pos ${s.pos}/${s.size} ${s.wins}-${s.draws}-${s.losses} ${s.points}pts | cup ${s.cupName}:${s.cupResult} | ${eu} | BdO ${s.bdo?.rank}${s.award ? '*WIN*' : ''} boot ${s.allPro ? 'Y' : '-'} poty ${s.poty ? 'Y' : '-'} tots ${s.proBowl ? 'Y' : '-'} shoe ${s.shoe ? 'Y' : '-'} kopa ${s.roy ? 'Y' : '-'} | caps ${s.caps}/${s.intlGoals} ${s.intlRole ?? ''} ${wc} | rec ${s.records.join(';')} | rel ${s.relegated ? 'Y' : '-'} q ${s.qualified} | rounds ${s.rounds.map(r => `${r.round}:${r.won ? 'W' : 'L'}${r.mySc}-${r.oppSc} v ${r.opponent}`).join(', ')}`
+    const line = `${s.season}-${String((s.season + 1) % 100).padStart(2, '0')} age ${s.age} ${s.team}(${CLUB.get(s.team)?.league}) ovr ${s.ovr} ${s.role} | lg ${st.lgGoals}g/${st.lgAssists}a in ${st.lgApps} (starts ${st.starts}) | all ${st.goals}g ${st.assists}a ${st.apps}apps cup ${st.cupGoals} eu ${st.euroGoals} | pos ${s.pos}/${s.size} ${s.wins}-${s.draws}-${s.losses} ${s.points}pts | cup ${s.cupName}:${s.cupResult} | ${eu} | BdO ${s.bdo?.rank}${s.award ? '*WIN*' : ''} boot ${s.allPro ? 'Y' : '-'} poty ${s.poty ? 'Y' : '-'} tots ${s.proBowl ? 'Y' : '-'} shoe ${s.shoe ? 'Y' : '-'} kopa ${s.roy ? 'Y' : '-'} | caps ${s.caps}/${s.intlGoals} ${s.intlRole ?? ''} ${wc} | rec ${s.records.join(';')} | rel ${s.relegated ? 'Y' : '-'}${s.tier === 2 ? ` T2${s.promoted ? ' UP' : ''}` : ''}${s.moved ? ` JAN<-${s.moved.from}` : ''} q ${s.qualified} | intl #${s.intlRank ?? '-'} ${s.cont ? `${s.cont.short}${s.cont.year}:${s.cont.qualified === false ? 'dnq' : s.cont.called ? `${s.cont.finish}/${s.cont.goals}g` : 'not called'}` : ''} | rounds ${s.rounds.map(r => `${r.round}:${r.won ? 'W' : 'L'}${r.mySc}-${r.oppSc} v ${r.opponent}`).join(', ')}`
     console.log(line)
     agg.push({ lv, age: s.age, ovr: s.ovr, lg: st.lgGoals, all: st.goals, apps: st.apps, lgApps: st.lgApps, as: st.assists, bdo: s.award, boot: s.allPro, role: s.role, league: CLUB.get(s.team)?.league, eu: s.europe?.comp, euRes: s.europe?.result, ucl: s.uclWon, champ: s.champion, cupWon: s.cupWon, wc: s.wc, caps: s.caps, trophies: s.trophies, sat: s.missed })
     // offseason
@@ -66,15 +77,20 @@ for (let i = 0; i < N; i++) {
     if (VERB && ev.length) console.log('   events:', ev.join(' || '))
     if (VERB && c.aging?.length) console.log('   aging:', c.aging.join('; '))
     if (C.mustRetire(c)) { const why = C.retireReason(c); c = C.retire(c); console.log(`   RETIRED (${why}) at ${c.age}`); break }
+    tally.summers++; if (s.relegated) tally.relegations++; if (s.tier === 2) { tally.tier2++; if (s.promoted) tally.promoted++ }
+    if ((c.offers ?? []).some(o => o.kind === 'bid')) tally.bidSummers++
+    for (const o of c.offers ?? []) if (o.kind === 'bid') tally.bidders[o.team] = (tally.bidders[o.team] ?? 0) + 1
+    for (const x of c.off?.rejected ?? []) tally.bidders[x.team] = (tally.bidders[x.team] ?? 0) + 1
     if (c.offers?.length) {
       const list = c.offers.map(o => `${o.kind}:${o.team}(${CLUB.get(o.team)?.league},${C.wageText(o.perYear, o.team)},${o.years}y${o.fee ? `,fee ${C.feeText(o.fee, c.team)}` : ''},${o.stand?.starter ? 'start' : o.stand?.role ?? '?'})`).join(' ')
       // kid: the biggest club that bids, else renew, else stay
       const bids = c.offers.filter(o => o.kind !== 'renew' && o.kind !== 'stay')
-      const pick = bids.sort((a, b) => b.perYear - a.perYear)[0] ?? c.offers[0]
+      const pick = process.env.PICK === 'stay' ? (c.offers.find(o => o.kind === 'renew' || o.kind === 'stay') ?? null) : bids.sort((a, b) => b.perYear - a.perYear)[0] ?? c.offers[0]
+      if (!pick) { c = C.stayPut(c); console.log(`   window: ${list} => stays`); } else {
       const before = c.team
       c = C.acceptTalks(C.openTalks(c, pick))
       console.log(`   window (${c.contract ? '' : ''}left ${c.contract.left}): ${list}  => ${pick.kind} ${pick.team}; now ${c.team} ${C.wageText(c.contract.perYear, c.team)} ${c.contract.years}y`)
-      console.log('   decision:', c.decisions.at(-1)?.text)
+      console.log('   decision:', c.decisions.at(-1)?.text) }
     } else if (Array.isArray(c.offers) && !c.offers.length) { console.log('   no offers'); }
     else console.log(`   no window (contract left ${c.contract.left}, team ${c.team})`)
     // spend dev points
@@ -91,3 +107,5 @@ const avg = (l, k) => (l.reduce((s, a) => s + (a[k] ?? 0), 0) / l.length).toFixe
 console.log('\nBY OVR BAND (starter seasons):')
 for (const [k, l] of Object.entries(by(a => (a.role === 'Starter' ? Math.floor(a.ovr / 4) * 4 : 'non-start')))) console.log(`  ${k}: n ${l.length} lg ${avg(l, 'lg')} all ${avg(l, 'all')} apps ${avg(l, 'apps')} lgApps ${avg(l, 'lgApps')} assists ${avg(l, 'as')} bdo ${l.filter(a => a.bdo).length} boot ${l.filter(a => a.boot).length}`)
 console.log('max lg goals', Math.max(...agg.map(a => a.lg)), 'max all', Math.max(...agg.map(a => a.all)), 'max apps', Math.max(...agg.map(a => a.apps)))
+console.log('TALLY', JSON.stringify({ ...tally, bidders: undefined }), 'bid summers', (tally.bidSummers / Math.max(1, tally.summers)).toFixed(2))
+console.log('BIDDERS', Object.entries(tally.bidders).sort((a, b) => b[1] - a[1]).map(x => x.join(':')).join(' '))

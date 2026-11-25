@@ -87,7 +87,10 @@
 //   team.offMod / team.defMod: the season director's moments (±1 on the 1-10 scale each).
 //   team.career + team.off / team.def (1-10): Career's own team; team.usage (0-1): his share of the chances
 //   (Career, Squad Builder); team.bench: a backup (few starts); team.age: Best Young Player eligibility;
-//   team.europe ('ucl' | 'uel' | null) or team.lastPos (1-20): where he plays in Europe this season.
+//   team.europe ('ucl' | 'uel' | 'uecl' | null) or team.lastPos (1-20): where he plays in Europe this season.
+//   team.sched (Career): a seed for his league's fixture list, the same through every re-run of one season.
+//   team.tier2 (Career): his club plays its country's second tier this season (result.league.tier 2, promoted).
+//   team.field (mode 'alltime', Career): a tournament field of its own (soccerNationField).
 // rngSeed: a number or a string. The same build, team, mode and seed always play the same season.
 //
 // ── The result (mode 'current', a club season) ────────────────────────────────
@@ -419,8 +422,8 @@ export function soccerTableAt(form, upto, mine = null) {
   const opp = mine ? form.opp?.[mine.short] ?? null : null
   for (let k = 0; k < n; k++) {
     const g = mine?.games?.[k] ?? null
-    // (his club's match this matchweek, as played: both sides of it)
-    const them = g ? (g.opponent ?? opp?.[k] ?? null) : null
+    // (his club's match this matchweek, as played: both sides of it. The other side is the fixture list's)
+    const them = g ? (opp?.[k] ?? g.opponent ?? null) : null
     for (const [short, [gf, ga]] of Object.entries(form.by)) {
       const f = gf[k], a = ga[k]
       if (f === undefined || f === '-') continue
@@ -1145,7 +1148,9 @@ function otherCupWinner(L, rand) {
 
 // The whole season around one club: all five leagues, both European competitions, the cup
 // tier2: his club plays its country's second tier this season (a promoted side has its place in the top flight)
-function clubWorld({ U, uRate, uComp, uPlace, hook, rand, tier2 = false }) {
+// sched: a seed for his league's fixture list (Career: the season's own, so every re-run of the season by the season
+// director plays the same fixtures: each club home and away, once each)
+function clubWorld({ U, uRate, uComp, uPlace, hook, rand, tier2 = false, sched = null }) {
   const out = []
   const lowerRates = new Map()
   const uL = leagueOfClub(CLUB_BY.get(U))
@@ -1156,22 +1161,23 @@ function clubWorld({ U, uRate, uComp, uPlace, hook, rand, tier2 = false }) {
   const playLeague = (id, key, cs, lb, keep) => {
     const W = makeWorld({ rand, hook, U, rate, base: lb.base, mA: lb.mA, mD: lb.mD, kA: K_ATT, kD: K_DEF, H: H_DOM, out })
     const rows = Object.fromEntries(cs.map(c => [c.short, rowOf(c, rand)]))
-    const sched = roundRobin(cs.map(c => c.short), rand)
-    const scale = 38 / Math.max(1, sched.length)
+    const fixtures = roundRobin(cs.map(c => c.short), keep && schedSeed != null ? seeded(`sched|${schedSeed}|${id}`) : rand)
+    const scale = 38 / Math.max(1, fixtures.length)
     const fm = keep ? Object.fromEntries(cs.map(c => [c.short, [[], []]])) : null
     const note = (ri, h, a, hs, as) => { if (!fm) return; fm[h][0][ri] = hs; fm[h][1][ri] = as; fm[a][0][ri] = as; fm[a][1][ri] = hs }
     const uOpp = []
-    sched.forEach((round, ri) => {
+    fixtures.forEach((round, ri) => {
       for (const [h, a] of round) {
         if (h !== U && a !== U) { const [hs, as] = quickScore(W, h, a); addResult(rows, h, a, hs, as); note(ri, h, a, hs, as); continue }
         const m = playFx(W, { comp: 'league', wk: (ri + 1) * scale, home: h, away: a, meta: { round: `Matchweek ${ri + 1}`, mw: ri + 1 } })
         addResult(rows, h, a, m.hs, m.as); note(ri, h, a, m.hs, m.as); uOpp[ri] = h === U ? a : h
       }
     })
-    const digits = list => Array.from({ length: sched.length }, (_, i) => (list[i] == null ? '-' : String(Math.min(9, list[i])))).join('')
-    const form = fm ? { rounds: sched.length, by: Object.fromEntries(Object.entries(fm).map(([k, [f, a]]) => [k, [digits(f), digits(a)]])), names: Object.fromEntries(cs.map(c => [c.short, c.name])), opp: { [U]: uOpp } } : null
-    leagues[id] = { id, key, table: tableOut(sortRows(Object.values(rows)), U), games: sched.length, ...(form ? { form } : {}) }
+    const digits = list => Array.from({ length: fixtures.length }, (_, i) => (list[i] == null ? '-' : String(Math.min(9, list[i])))).join('')
+    const form = fm ? { rounds: fixtures.length, by: Object.fromEntries(Object.entries(fm).map(([k, [f, a]]) => [k, [digits(f), digits(a)]])), names: Object.fromEntries(cs.map(c => [c.short, c.name])), opp: { [U]: uOpp } } : null
+    leagues[id] = { id, key, table: tableOut(sortRows(Object.values(rows)), U), games: fixtures.length, ...(form ? { form } : {}) }
   }
+  const schedSeed = sched
   for (const L of LEAGUES) {
     const mine = L.id === uL.id
     playLeague(L.id, L.key, mine && t2 ? clubsOf(L.id).map(c => (c.short === U ? t2.sub : c)) : clubsOf(L.id), LEAGUE_BASE.get(L.id), mine && !t2)
@@ -1630,7 +1636,7 @@ function clubSeason(build, types, team, base, gameMode, script) {
   if (!world) {
     const place = team?.lastPos ?? lastPlace(club)
     const uComp = T2 ? null : team?.europe !== undefined ? team.europe : place <= meta.ucl ? 'ucl' : place <= meta.ucl + meta.uel ? 'uel' : null
-    world = clubWorld({ U, uRate, uComp, uPlace: place, hook: hookFor(S, base), rand: stream(base, 'world'), tier2: !!T2 })
+    world = clubWorld({ U, uRate, uComp, uPlace: place, hook: hookFor(S, base), rand: stream(base, 'world'), tier2: !!T2, sched: team?.sched ?? null })
   } else {
     // a script's season: his minutes are planned now, from his own streams, match by match in each competition
     const plan = hookFor(S, base)

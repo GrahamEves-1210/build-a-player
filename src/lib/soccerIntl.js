@@ -80,16 +80,28 @@ const REGION = {
 }
 const REGION_OF = new Map(Object.entries(REGION).flatMap(([k, v]) => v.split(' ').map(s => [s, k])))
 const genName = (short, r) => { const [f, l] = NAMES[REGION_OF.get(short) ?? 'anglo']; return `${f[Math.floor(r() * f.length)]} ${l[Math.floor(r() * l.length)]}` }
-// how good a country's next player is: around its level (Spain's mid-80s, England's low 80s, Qatar's about 70), the
-// odd one far better: every generation has its star
-const genMean = n => 70 + ((n?.ovr ?? 75) - 67) * 0.5
+// how good a country's next player is: around its level (Spain's high 80s, England's mid-80s, Qatar's high 60s), the
+// odd one far better: every generation has its star. (Set against 2026: a country's best No. 9 is about its own
+// level, a few points either way, the second five behind him, the third nine.)
+// Half of it is the country's level, half its strikers today (Nigeria and Sweden produce better No. 9s than their
+// results say; Spain's are behind its wingers)
+const GEN_MEAN = new Map()
+function genMean(n) {
+  if (!n) return 75
+  if (GEN_MEAN.has(n.short)) return GEN_MEAN.get(n.short)
+  const lvl = 68.5 + ((n.ovr ?? 75) - 67) * 0.6
+  const nines = realPool(n.short).filter(isNine).map(p => p.ovr0).sort((a, b) => b - a).slice(0, 3)
+  const v = nines.length ? (lvl + nines.reduce((a, b) => a + b, 0) / nines.length - 3) / 2 : lvl
+  GEN_MEAN.set(n.short, v)
+  return v
+}
 const GEN_ROLES = [['ST', 0.36], ['SS', 0.08], ['LW', 0.14], ['RW', 0.14], ['AM', 0.1], ['CM', 0.1], ['DM', 0.08]]
 const ROLE_TILT = { ST: { finishing: 1, positioning: 1, passing: -1 }, SS: { finishing: 0.5, dribbling: 0.5 }, LW: { pace: 1, dribbling: 1, heading: -1.5 }, RW: { pace: 1, dribbling: 1, heading: -1.5 }, AM: { passing: 1.5, composure: 0.5, heading: -1.5 }, CM: { passing: 1.5, finishing: -1 }, DM: { passing: 1, size: 1, finishing: -1.5, pace: -0.5 } }
-// the ones who came through in `year` (0-2 a year, about one), each with his own ceiling
+// the ones who came through in `year` (0-2 a year, one and a quarter on average), each with his own ceiling
 function cohort(seed, short, year) {
   const r = seeded(`gen|${seed}|${short}|${year}`)
   const nat = NATION.get(short)
-  const n = (r() < 0.75 ? 1 : 0) + (r() < 0.3 ? 1 : 0)
+  const n = (r() < 0.85 ? 1 : 0) + (r() < 0.4 ? 1 : 0)
   const out = []
   for (let i = 0; i < n; i++) {
     let roll = r(), role = 'ST'
@@ -125,8 +137,18 @@ export function nationPool(short, year, seed) {
     out.push({ name: p.name, short: p.short, role: p.role, age, attrs, ovr: ovrOf(attrs), espn: p.espn, gen: false })
   }
   for (let y = INTL_BASE + 1; y <= year; y++) for (const g of cohort(seed, short, y)) { if (year - g.born < 34) out.push(genAt(g, year)) }
-  // (a country with nobody left up front still fields a No. 9: the level its football says)
-  if (!out.some(isNine)) { const g = cohort(`${seed}|floor`, short, year - 4)[0] ?? { name: genName(short, seeded(`floor|${seed}|${short}|${year}`)), born: year - 26, peak: genMean(NATION.get(short)), noise: Object.fromEntries(SOCCER_TRAITS.map(t => [t, 0])) }; out.push(genAt({ ...g, role: 'ST', born: Math.min(g.born, year - 22) }, year)) }
+  // The depth the data doesn't carry (it has a country's first few, not its squad): a second and a third striker at
+  // the level its football says (about its mean, and three under), and enough players for a squad. Each is a man in
+  // his prime for six years, then the next one.
+  const mean = genMean(NATION.get(short)), era = Math.floor(year / 6)
+  const filler = (j, role, peak) => {
+    const r = seeded(`fill|${seed}|${short}|${era}|${j}`)
+    const tilt = ROLE_TILT[role] ?? {}
+    return genAt({ name: genName(short, r), role, born: era * 6 - 21 - Math.floor(r() * 4), peak, noise: Object.fromEntries(SOCCER_TRAITS.map(t => [t, (tilt[t] ?? 0) + (r() - 0.5)])), gen: true }, year)
+  }
+  const nines = out.filter(isNine).map(p => p.ovr).sort((a, b) => b - a)
+  ;[mean + 2, mean - 1, mean - 4].forEach((want, i) => { if ((nines[i] ?? 0) < want - 1.5) out.push(filler(i, 'ST', want + 2.5)) })
+  for (let j = 3; out.length < 7 && j < 12; j++) out.push(filler(j, GEN_ROLES[1 + (j % (GEN_ROLES.length - 1))][0], mean - 3 + (j % 3)))
   out.sort((a, b) => b.ovr - a.ovr || (a.name < b.name ? -1 : 1))
   if (POOLS.size > 600) POOLS.clear()
   POOLS.set(id, out)
@@ -148,8 +170,8 @@ export function peckingOrder(short, year, seed) {
 // ── A nation's strength in a year: today's, drifting (a slow walk that pulls back to where it is now) ──
 function driftOf(short, year, seed) {
   let d = 0
-  for (let b = 1; b <= Math.floor(Math.max(0, year - INTL_BASE) / 2); b++) d = 0.75 * d + 1.5 * gauss(seeded(`drift|${seed}|${short}|${b}`))
-  return clamp(d, -6, 6)
+  for (let b = 1; b <= Math.floor(Math.max(0, year - INTL_BASE) / 2); b++) d = 0.8 * d + 0.8 * gauss(seeded(`drift|${seed}|${short}|${b}`))
+  return clamp(d, -4, 4)
 }
 export function nationIn(short, year, seed) {
   const n = NATION.get(short)
