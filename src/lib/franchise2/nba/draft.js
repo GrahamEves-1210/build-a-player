@@ -132,7 +132,8 @@ export function makeClass(F) {
 }
 // What a full report says of him, beside his true ceiling:
 //   BUST   he won't develop: his ceiling is about what he is now (two points or less above it) while the board read
-//          one well above (five or more). About three in ten of the top ten, one in seven after: the rate they bust at.
+//          one well above (five or more). About one in five of the board's top ten and one in nine after: the rate
+//          they really bust at (aging.js prospect makes them; scripts/franchise2/nba-classcheck.mjs counts both).
 //   GEM    a ceiling far past the board's read (eight or more): the late bloomer nobody saw
 //   SOLID  everyone else. A man the board had a few points high is SOLID: a 90 ceiling read as a 94 is no bust.
 // (read off the man, not stored: a class from an older save carries the old tag, which called anyone the board had

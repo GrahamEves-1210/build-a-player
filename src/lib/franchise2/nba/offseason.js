@@ -275,7 +275,7 @@ export function faNext(F) {
 // as it does for any roster under the league's minimum.
 export function campCheck(F) {
   const r = X.legalRoster(F, F.team, { season: true })
-  if (r.ok || !(r.st < 14) || (r.tw ?? 0) > 3) return r
+  if (r.ok || F.off?.step !== 'camp' || !(r.st < 14) || (r.tw ?? 0) > 3) return r
   if (minPool(F, 1).length || campInviteOk(F).ok) return r
   return { ok: true, short: 1, st: r.st, tw: r.tw, why: `No room under the hard cap for another minimum deal: the ${nick(F.team)} open the season with ${r.st} standard contracts` }
 }
@@ -308,9 +308,10 @@ export function pruneStreet(F) {
   for (const p of fa.slice(55)) {
     // (the GM's own build, unsigned and out of the league: his card keeps the year, the wire says so)
     if (p.b != null) {
+      const yrs = p.ys ?? (p.car ?? []).length
       if (F.builds?.[p.b]) F.builds[p.b].done = F.year
-      F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], yrs: p.ys ?? (p.car ?? []).length, s: p.was ?? p.fr ?? null, gm: 1 })]
-      addNews(F, { k: 'retire', tag: 'RETIRES', i: p.i, text: `${p.n}, unsigned through the summer, has retired at ${p.ag} after ${p.ys ?? (p.car ?? []).length} ${(p.ys ?? (p.car ?? []).length) === 1 ? 'season' : 'seasons'}` })
+      F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], yrs, s: p.was ?? p.fr ?? null, gm: 1 })]
+      addNews(F, { k: 'retire', tag: 'RETIRES', i: p.i, text: `${p.n}, unsigned through the summer, has retired at ${p.ag} after ${yrs} ${yrs === 1 ? 'season' : 'seasons'}` })
       continue
     }
     if (p.gn || !(p.car ?? []).some(c => c.gp > 0)) continue
