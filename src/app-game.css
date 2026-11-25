@@ -8082,3 +8082,8 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
 .ag-cards.ag-cards--soccer { grid-template-columns: 1fr 1fr !important; }
 .ag-cards.ag-cards--soccer > .ag-mc--career, .ag-cards.ag-cards--soccer > :first-child { grid-column: 1 / -1 !important; }
 .ag-more:empty { display: none; }
+/* Phone Home: the sport bar and the stage (the figure and the position bar) sit in the same side gaps as the cards
+   under them, not edge to edge (owner 11-25) */
+@media (max-width: 1023px) {
+  .ag-home .ag-sport-wrap > .ag-sport, .ag-home .ag-stage { margin-left: 14px; margin-right: 14px; border-radius: var(--hm-r); overflow: hidden; }
+}
