@@ -25,13 +25,12 @@
 //   team     his side of the ball plays +0.5 better this season (the locker room heard it)
 //   bold     on the record: a big season after it is reputation +1, a poor one −1 (lib/career.js bookSeason)
 //   brash    reputation −1
-import { NFL_LORE } from '../data/team-lore-nfl'
-import { NBA_LORE } from '../data/team-lore-nba'
-import { SUPER_BOWLS, OLD_TITLES } from './franchise2/realHistory.js'
-
-const LORE = { nfl: NFL_LORE, bucket: NBA_LORE }
-let LEAGUES = {}
-export function registerLore(sport, lore, leagues = null) { LORE[sport] = lore; if (leagues) LEAGUES = leagues }
+// (The lore is not imported here: each sport's file loads on its own, with the first Career of that sport, and
+// registers itself, lib/career.js LORE_LOADERS. A football career never downloads the NBA's or soccer's.)
+const LORE = {}
+let LEAGUES = {}, SB = { won: [], old: {} }
+// more: { leagues: soccer's LEAGUE_LORE, titles: football's { won: [[season, winner]], old: { SHORT: [years] } } }
+export function registerLore(sport, lore, more = null) { LORE[sport] = lore; if (more?.leagues) LEAGUES = more.leagues; if (more?.titles) SB = more.titles }
 export const loreOf = (sport, short) => LORE[sport]?.[short] ?? null
 export const hasLore = sport => !!LORE[sport]
 
@@ -75,14 +74,14 @@ const WHO = {
 }
 
 // ── The titles: how many, the last one, how long it has been ──────────────────
-// Football reads the game's own table (lib/franchise2/realHistory.js), by season. Basketball and soccer: the lore's
+// Football reads the game's own table (lib/franchise2/realHistory.js, registered with the lore), by season. Basketball and soccer: the lore's
 // years (the year the season ended). mine: the years he won it there himself, on the same count.
 const AFL = new Set(['TEN', 'KC', 'LAC', 'BUF'])   // (their titles before the Super Bowl were the AFL's)
 export function titleFacts(x) {
   const lore = loreOf(x.sport, x.team), mine = x.titlesHere ?? []
   if (!lore) return null
   let years, old = [], now = x.year
-  if (x.sport === 'nfl') { years = SUPER_BOWLS.filter(g => g[1] === x.team).map(g => g[0]); old = OLD_TITLES[x.team] ?? [] }
+  if (x.sport === 'nfl') { years = SB.won.filter(g => g[1] === x.team).map(g => g[0]); old = SB.old[x.team] ?? [] }
   else if (x.sport === 'bucket') years = [...(lore.t ?? [])]
   else years = lore.lg?.[0] ? [lore.lg[1]] : []
   const real = x.sport === 'soccer' ? (lore.lg?.[0] ?? 0) : years.length
@@ -264,7 +263,7 @@ function legacyQs(x, { draft = false } = {}) {
     const first = l.name === x.lead   // (a team's lists lead with the man the position is measured by: he is asked about most)
     out.push(Q(`knew|${l.name}`, 'legacy', first || !major(l) ? 2 : 1.5, `${line(x, l)} You play ${plays} for the same ${x.W.here} now. How much of that history did you know before ${howWord(x)}?`, [l.name], 'mark'))
     if (!major(l)) { if (!x.away(l)) out.push(Q(`talk|${l.name}`, 'legacy', 2, `${line(x, l)} ${cap(fansOf(x))} still talk about him. What would you like them to say about you when you are done?`, [l.name], 'remember')); continue }
-    out.push(Q(`reach|${l.name}`, 'legacy', first ? 10 : 1.5, `${line(x, l)} Do you think you can reach that legacy ${lg ? 'at this club' : 'here'}?`, [l.name], 'legacy', l.name))
+    out.push(Q(`reach|${l.name}`, 'legacy', first ? 10 : 1.5, `${line(x, l)} Do you think you can reach that legacy${/\b(here|club)\b/.test(l.did) ? '' : lg ? ' at this club' : ' here'}?`, [l.name], 'legacy', l.name))
     if (!x.away(l)) out.push(Q(`measure|${l.name}`, 'legacy', first ? 5 : 1.5, lg ? `${line(x, l)} Every ${P} who has worn this shirt since has been compared with him. Is that fair on a new signing?` : `${line(x, l)} Every ${P} who has played here since has been measured against him. Is that fair to you?`, [l.name], 'legacy', l.name))
     if (l.ret && l.n != null && x.us) out.push(Q(`number|${l.name}`, 'legacy', 2, x.sport === 'bucket' ? `${x.The} hung No. ${l.n} in the rafters for ${l.name}. What goes through your mind when you look up at it?` : `${x.The} retired No. ${l.n} for ${l.name}. What goes through your mind when you see it?`, [l.name], 'number'))
     if (draft && l.dr && x.us) out.push(Q(`drafted|${l.name}`, 'legacy', 3, `${x.The} drafted ${l.name} ${l.dr}, and he ${l.did}. Now they have drafted you. What does that history ask of a rookie?`, [l.name], 'legacy', l.name))

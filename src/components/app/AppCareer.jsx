@@ -13,7 +13,7 @@ import {
   jerseyOf, numberRule, takenNumbers, numberClash, canChangeNumber, setNumber,
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, byeTarget, stepCost, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
-  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord, loadDraftClass, draftCall, SKIP_TALK, talkSkipped, raceNow, pressFor, answerPress, pressSaid } from '../../lib/career'
+  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord, loadDraftClass, draftCall, SKIP_TALK, talkSkipped, raceNow, pressFor, answerPress, pressSaid, ensureLore, loreReady } from '../../lib/career'
 import { RACE_SHORT, RACE_NAME } from '../../lib/careerAwards'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
@@ -65,10 +65,11 @@ const sx = () => SPORT.soccer?.x ?? {}
 const wageText = (n, short) => sx().wageText(n, short), soccerCur = short => sx().soccerCur(short), nationName = n => sx().nationName?.(n) ?? n, nationFlag = n => sx().nationFlag(n)
 const signAcademy = (c, o) => sx().signAcademy(c, o), soccerRole = c => sx().role(c), rememberNation = n => sx().rememberNation?.(n), lastNation = () => sx().lastNation?.()
 // a sport whose module loads on its own (soccer): the screen waits for it
+// (and for the sport's team lore, its own small download: what each team's writers ask him, lib/careerPress.js)
 function useSport(sport) {
   const [, bump] = useState(0)
-  const ready = sportReady(sport)
-  useEffect(() => { if (!ready) ensureSport(sport).then(() => bump(n => n + 1)) }, [sport, ready])
+  const ready = sportReady(sport) && loreReady(sport)
+  useEffect(() => { if (!ready) (sportReady(sport) ? ensureLore(sport) : ensureSport(sport)).then(() => bump(n => n + 1)) }, [sport, ready])
   return ready
 }
 // a contract's pay in the sport's own words: football and basketball a year in dollars, soccer a week in pounds or euros

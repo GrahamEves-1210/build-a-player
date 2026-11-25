@@ -4562,11 +4562,19 @@ export function careerCard(c) {
 // module registers itself here: SPORT.soccer, its lookups, its greats, its offseason and interview banks.
 const NAMERS = {}
 const LOADERS = { soccer: () => import('./careerSoccer.js'), baseball: () => import('./careerBaseball.js') }
-// (a sport's team lore rides with its engine: soccer's 96 clubs, data/team-lore-soccer.js, for lib/careerPress.js.
-// It starts loading whenever the sport registers, whichever way its engine arrived)
-const LORE_LOADERS = { soccer: () => import('../data/team-lore-soccer.js').then(m => registerLore('soccer', m.SOCCER_LORE, m.LEAGUE_LORE)) }
-const loreLoading = {}
-export const ensureLore = id => (!LORE_LOADERS[id] || hasLore(id) ? Promise.resolve() : (loreLoading[id] ??= LORE_LOADERS[id]().catch(() => {})))
+// A sport's team lore (lib/careerPress.js: what each team's writers ask him) is its own download, one a sport, so a
+// football career never fetches the NBA's or soccer's. The Career screens ask for it and wait (AppCareer useSport);
+// soccer's also starts whenever its engine registers. Until it is in, and if it never arrives, the questions are
+// the generic ones and there is no press conference: nothing else depends on it.
+const LORE_LOADERS = {
+  nfl: () => import('../data/team-lore-nfl.js').then(m => registerLore('nfl', m.NFL_LORE, { titles: m.NFL_TITLES })),
+  bucket: () => import('../data/team-lore-nba.js').then(m => registerLore('bucket', m.NBA_LORE)),
+  soccer: () => import('../data/team-lore-soccer.js').then(m => registerLore('soccer', m.SOCCER_LORE, { leagues: m.LEAGUE_LORE })),
+}
+const loreLoading = {}, loreTried = {}
+export const ensureLore = id => (!LORE_LOADERS[id] || hasLore(id) ? Promise.resolve() : (loreLoading[id] ??= LORE_LOADERS[id]().catch(() => {}).then(() => { loreTried[id] = true })))
+// in, or tried and not coming (offline): the screens stop waiting either way
+export const loreReady = id => !LORE_LOADERS[id] || hasLore(id) || !!loreTried[id]
 const loading = {}
 export const sportReady = id => !!SPORT[id] || !LOADERS[id]
 export const ensureSport = id => (sportReady(id) ? ensureLore(id).then(() => SPORT[id] ?? null) : (loading[id] ??= Promise.all([LOADERS[id](), ensureLore(id)]).then(() => SPORT[id])))

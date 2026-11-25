@@ -18,6 +18,7 @@ const P = await server.ssrLoadModule('/src/lib/careerPress.js')
 const { seeded } = await server.ssrLoadModule('/src/lib/rng.js')
 const SX = { soccer: await server.ssrLoadModule('/src/lib/careerSoccer.js') }
 await C.ensureSport('soccer')
+for (const sp of ['nfl', 'bucket', 'soccer']) await C.ensureLore(sp)
 const ALL = process.argv.includes('--all')
 const SEASONS = Number(process.argv.find(a => /^--seasons=/.test(a))?.split('=')[1] ?? 9)
 

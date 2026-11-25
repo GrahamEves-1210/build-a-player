@@ -20,7 +20,11 @@
 //   rec      the franchise's career leader in the stat a position is judged by: [name, total], only where the
 //            man is retired or long gone and nobody now on the team is within reach of him (totals as of the
 //            end of the 2025 season: pro-football-reference.com franchise pages, checked 2026-11-25)
+import { SUPER_BOWLS, OLD_TITLES } from '../lib/franchise2/realHistory.js'
+
 const L = (name, did, x = {}) => ({ name, did, ...x })
+// the titles, from the game's own table: every Super Bowl's season and winner, and the league titles before it
+export const NFL_TITLES = { won: SUPER_BOWLS.map(g => [g[0], g[1]]), old: OLD_TITLES }
 
 export const NFL_LORE = {
   // ── AFC East ──────────────────────────────────────────────────────────────
