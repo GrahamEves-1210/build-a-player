@@ -8124,4 +8124,4 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 @media (max-width: 520px) { .ag-cfb-l2 { display: block; } .ag-cfb-l2 i { display: none; } }
 .ag-cfb-l2 i { font-style: normal; }
 /* NEW / POPULAR on Home's cards: the sport's own colour, not gold (owner 11-25) */
-.ag-home .ag-mc-tag:not(.ag-mc-tag--soon) { background: var(--hm-a); color: var(--hm-on); }
+.ag-home .ag-mc-tag:not(.ag-mc-tag--soon) { background: rgba(0,0,0,.55); color: var(--hm-a); box-shadow: inset 0 0 0 1.5px var(--hm-a); padding: 3px 7px 1px; }
