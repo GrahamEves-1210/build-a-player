@@ -387,7 +387,7 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
    buttons eased down about a tenth. Display type only: sentences and labels keep their 13 px and up. Scoped to the
    mode's root so it wins over each screen's own sheet without touching a desktop. */
 @media (max-width: 560px) {
-  .fk, .fk-root { --fk-gut: clamp(16px, 5vw, 20px); }
+  .fk, .fk-root { --fk-gut: clamp(26px, 8vw, 34px); }   /* (owner 11-25: more room at the sides) */
   /* the hub's frame: the top bar, the tabs, the gaps between sections */
   :is(.fk-root, .fk) .fh-top { height: 52px; gap: 10px; }
   :is(.fk-root, .fk) .fh-top-logo { width: 38px; height: 38px; }
