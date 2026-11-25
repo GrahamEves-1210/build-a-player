@@ -14,7 +14,7 @@ import { addNews, signText, millions } from './news'
 import * as X from './seams'
 import { growBuilds } from './builds'
 import { coachOfYear, coachCarousel, fillStaff } from './coach'
-import { notable } from './aging'
+import { notable, retireText, retiredFacts } from './aging'
 import { rngOf } from '../rng'
 import { numberAll } from './numbers'
 import * as MK from './market'
@@ -160,7 +160,7 @@ function enter(F, step) {
     // (ageLeague files the retired men in F.retired and writes their news; the wall keeps a man's totals, not his rows)
     for (const x of A.news ?? []) addNews(F, { tag: 'RETIRES', ...x })
     // the GM's men who retired: the re-sign stop tells him (F.off.ret), his builds first
-    F.off.ret = (A.retired ?? []).filter(p => p.b != null || F.retired.some(r => r.i === p.i && r.s === F.team)).map(p => ({ i: p.i, n: p.n, ag: p.ag, yrs: p.ys ?? 0, o: p.o, ...(p.b != null && { b: p.b }) }))
+    F.off.ret = (A.retired ?? []).filter(p => p.b != null || F.retired.some(r => r.i === p.i && r.s === F.team)).map(p => ({ i: p.i, n: p.n, ag: p.ag, yrs: F.retired.find(r => r.i === p.i)?.yrs ?? p.ys ?? 0, o: p.o, ...(p.b != null && { b: p.b }) }))
     for (const g of A.builds ?? []) addNews(F, { k: 'grow', tag: 'DEVELOPMENT', s: F.team, text: `${g.n} has lost a step: down from a ${g.from} to a ${g.to} this summer` })
     for (const g of growBuilds(F)) if (g.to > g.from) addNews(F, { k: 'grow', tag: 'DEVELOPMENT', s: F.team, text: `${g.n} worked his way from a ${g.from} to a ${g.to} this summer` })
     keepRetired(F)
@@ -269,14 +269,18 @@ export function faNext(F) {
 export const campCheck = F => X.legalRoster(F, F.team, { season: true })
 
 // a retired man, kept for the history page: his name, team, age, seasons, totals and honours (not every season's row)
+// (rc: his real career before the save [gp, pts, reb, ast], aging.js retiredFacts: the totals are then his whole
+// career, and the row says so with rc: 1. num: his number, for the rafters.)
 export function retiredRow(r) {
   if (!r.car) return r
   const t = { gp: 0, pts: 0, reb: 0, ast: 0 }
   for (const c of r.car) for (const k in t) t[k] += c[k] ?? 0
+  const real = Array.isArray(r.rc)
+  if (real) { t.gp += r.rc[0] ?? 0; t.pts += r.rc[1] ?? 0; t.reb += r.rc[2] ?? 0; t.ast += r.rc[3] ?? 0 }
   const aw = (r.aw ?? []).filter(a => !['AS', 'CHAMP'].includes(a.k)).map(a => `${a.y}${a.k}`)
   const as = (r.aw ?? []).filter(a => a.k === 'AS').length, ch = (r.aw ?? []).filter(a => a.k === 'CHAMP').length
   const keep = r.gm || r.b != null || r.aw?.some(a => ['MVP', 'DPOY', 'FMVP', 'ALL1', 'ALL2', 'ALL3', 'ROY'].includes(a.k)) || as >= 2 || t.pts >= 15000 || (r.yrs ?? 0) >= 16
-  return { i: r.i, n: r.n, ag: r.ag, s: r.s ?? null, yrs: r.yrs ?? r.car.length, o: r.o, y: r.car.at(-1)?.y ?? null, t: [t.gp, t.pts, t.reb, t.ast], ...(aw.length && { aw }), ...(as && { as }), ...(ch && { ch }), ...(r.b != null && { b: r.b }), ...(r.gm && { gm: 1 }), ...(keep && { k: 1 }) }
+  return { i: r.i, n: r.n, ag: r.ag, s: r.s ?? null, yrs: r.yrs ?? r.car.length, o: r.o, y: r.car.at(-1)?.y ?? null, t: [t.gp, t.pts, t.reb, t.ast], ...(aw.length && { aw }), ...(as && { as }), ...(ch && { ch }), ...(r.b != null && { b: r.b }), ...(r.gm && { gm: 1 }), ...(keep && { k: 1 }), ...(real && { rc: 1 }), ...(r.num != null && { num: r.num }) }
 }
 // the retired list: every notable career forever (k: the big awards, two-time All-Stars, 15,000 points, 16 seasons,
 // the men who retired off the GM's roster or played three seasons for him, his builds), the last 120 of the rest. (A save from before kept the last 150 only.)
@@ -296,8 +300,8 @@ export function pruneStreet(F) {
   for (const p of fa.slice(55)) {
     if (p.gn || !(p.car ?? []).some(c => c.gp > 0)) continue
     const gm = new Set((p.car ?? []).filter(c => c.s === F.team).map(c => c.y)).size >= 3
-    F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], yrs: p.ys, s: p.was ?? p.fr ?? null, ...(gm && { gm: 1 }) })]
-    if (notable(p)) addNews(F, { k: 'retire', tag: 'RETIRES', i: p.i, text: `${p.n}, unsigned through the summer, has retired at ${p.ag} after ${p.ys ?? (p.car ?? []).length} seasons` })
+    F.retired = [...(F.retired ?? []), retiredRow({ ...p, car: p.car ?? [], ...retiredFacts(p, { aged: true }), s: p.was ?? p.fr ?? null, ...(gm && { gm: 1 }) })]
+    if (notable(p)) addNews(F, { k: 'retire', tag: 'RETIRES', i: p.i, text: retireText(p, { street: true }) })
   }
   F.fa = fa.slice(0, 55)
   keepRetired(F)
