@@ -49,7 +49,7 @@ function season(c) {
     const [n] = C.advanceWeek(c, D); if (n === c) { console.log('STUCK'); break } c = n
   }
   c = C.finishRegular(c, D)
-  for (let g = 0; g < 20 && c.active?.po && c.active.po.stage !== 'done'; g++) { const s = Math.random(); c = C.playoffRound(c, s, null, s >= 0.5); if (Array.isArray(c)) c = c[0] }
+  for (let g = 0; g < 20 && c.active?.po && c.active.po.stage !== 'done'; g++) { const s = Math.random(); c = C.playoffRound(c, s, null, s >= 0.5); if (Array.isArray(c)) c = c[0]; const x = c.active?.po?.line?.at(-1); if (x && process.env.TIES) console.log(`TIE p ${x.p} ${x.auto ? 'auto' : 'played'} ${x.hit ? 'hit' : 'miss'} legs ${JSON.stringify(x.legs)} ${x.won ? 'W' : 'L'} ${x.stage} home ${x.home}`) }
   if (c.phase !== 'offseason') c = C.bookSeason(c)
   return c
 }

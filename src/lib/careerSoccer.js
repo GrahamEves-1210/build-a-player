@@ -3,6 +3,10 @@
 // loads this with ensureSport('soccer') and this file registers SPORT.soccer (registerSport) when it runs.
 // The academy (trials, the scouts and coaches, the first contract), the club season (the league through the season
 // director, then the big nights), the transfer window, international duty and the World Cup, the awards and legacy.
+// Since 2026-11-24: all five leagues; the clubs' money by what they earn and a player's by what he's worth; a window
+// with every big club in it, release and relegation clauses, a January window; a league table through the season and
+// each league's real European places (the Conference League among them); relegation into a second tier he can stay
+// in; national teams that age, qualify and play the continental championships (lib/soccerIntl.js).
 import {
   SPORT, registerSport, depthChart, teamFit, makeRoster, seasonScore, bookSeason, closeChance, playoffPlan,
   countedHonors, earnLegacy, HOF_LEGACY, CAREER_X,
@@ -952,10 +956,14 @@ function soccerMarket(c, fresh = false, left = null) {
   const list = []
   const mine = standAt(c, c.team)
   if (!c.loan && (perf >= 0.25 || mine.starter)) list.push(mk(c.team, 0.95, years, fresh ? 'Back where he left off. One more season here.' : 'A new contract. They want him to stay.', 'stay'))
-  const bigger = pool.filter(x => x.step > 0.03 || standing(x.t) < 0.15)
-  const contender = pickSome(r, bigger.map(x => ({ ...x, w: x.w * (1.2 - standing(x.t)) })), 1)[0] ?? null
+  // two clubs that would sign him: the bigger of them is the step up (lower wages, the trophies), the other pays the
+  // most it can to make him its No. 9
+  const first = pickSome(r, pool.filter(x => x.st.role !== 'Bench'), 1)[0] ?? pickSome(r, pool, 1)[0] ?? null
+  const second = first ? pickSome(r, pool.filter(x => x.t !== first.t && x.st.starter), 1)[0] ?? pickSome(r, pool.filter(x => x.t !== first.t), 1)[0] ?? null : null
+  const two = [first, second].filter(Boolean).sort((a, b) => standing(a.t) - standing(b.t))
+  const contender = two.length === 2 || (two[0] && two[0].step > 0) ? two[0] : null
+  const payer = two.length === 2 ? two[1] : contender ? null : two[0] ?? null
   if (contender) list.push(mk(contender.t, 0.85, years - 1, fresh ? 'A year at a big club. One more shot at a trophy.' : contender.st.starter ? 'Lower wages. A real shot at the title.' : 'Lower wages, a place in the squad, a real shot at the title.', 'contender'))
-  const payer = pickSome(r, pool.filter(x => x.t !== contender?.t && x.st.starter).map(x => ({ ...x, w: x.w * x.purse.wage })), 1)[0] ?? pickSome(r, pool.filter(x => x.t !== contender?.t), 1)[0] ?? null
   if (payer) list.push(mk(payer.t, 1.15, years + (c.age < 29 ? 1 : 0), fresh ? 'The best money on the table for one more season.' : 'The top wages on offer. A club that wants a big name up front.', 'payer'))
   return list
 }

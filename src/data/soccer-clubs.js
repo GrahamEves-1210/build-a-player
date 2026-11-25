@@ -2,8 +2,9 @@
 // Champions League clubs from outside those five leagues (UCL_ONLY below).
 // Two lists come out of it (the owner, 2026-11-16):
 //   UCL_CLUBS     the wheel and the card binder: the 36 clubs of the 2026-27 Champions League league phase.
-//   SOCCER_CLUBS  Career (and Squad Builder): the domestic leagues it plays in, SOCCER_LIVE_LEAGUES below. Unchanged.
+//   SOCCER_CLUBS  Squad Builder and the practice lab: the three leagues of SOCCER_LIVE_LEAGUES below. Unchanged.
 //   SOCCER_SIM_CLUBS  every club the season engine plays a league season for (all five leagues).
+//   SOCCER_CAREER_CLUBS  Career's (since 2026-11-24): all five leagues' 96 clubs, each with its revenue (`rev`).
 // Club list, ESPN team ids (espn) and logos: ESPN soccer API (site.api.espn.com .../soccer/{league}/teams), 2026-27.
 // short: a 3-character code unique across all 96 clubs (and not a World Cup nation code). Bundesliga's own codes keep
 //   their digits for Leverkusen (B04), Mainz (M05) and Schalke (S04); Espanyol is RCD, Parma PRM, Monza MNZ, Brest BST,
@@ -158,9 +159,10 @@ const ALL_CLUBS = [
   { short: 'SAB', name: "Sabah", league: 'aze.1', color: '#000000', color2: '#E4007C', espn: 21922, att: 84, def: 82, ovr: 83 },
 ]
 
-// What Career deals from (the owner, 2026-11-11): the Premier League, La Liga and the Bundesliga. Serie A and Ligue 1
-// stay in the lists above, switched off: add their ids here to bring them back (their players come back with them,
-// data/soccer-strikers.js). Since 11-16 the wheel and the cards deal from UCL_CLUBS below instead.
+// What Squad Builder deals from (the owner, 2026-11-11): the Premier League, La Liga and the Bundesliga. Serie A and
+// Ligue 1 stay in the lists above, switched off here: add their ids to bring them back (their players come back with
+// them, data/soccer-strikers.js). Since 11-16 the wheel and the cards deal from UCL_CLUBS below instead, and since
+// 11-24 Career plays all five (SOCCER_CAREER_CLUBS).
 export const SOCCER_LIVE_LEAGUES = ['eng.1', 'esp.1', 'ger.1']
 // Spin weight (w): the wheel favours the Premier League and La Liga's good sides (87 and up: Barcelona, Real Madrid,
 // Atletico, Betis, Villarreal, Real Sociedad). Three times a Bundesliga club's or a lesser La Liga club's chance:
