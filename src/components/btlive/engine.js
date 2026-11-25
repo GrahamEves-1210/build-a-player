@@ -751,7 +751,7 @@ export function createEngine({ setup, els, on, net = null }) {
       const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][meter.read] ?? ''
       if (read) chip(read, bx + bw / 2, overY, [GREEN, AMBER, RED][meter.read])
       // pulled up on the move: it costs him a little (referee: setFeet)
-      if ((p.shot?.kind === 'jumper') && (p.shot.run ?? 0) > 0.45) chip('ON THE MOVE', bx + bw / 2, by + bh + fs * 0.95, AMBER)
+      if ((p.shot?.kind === 'jumper') && (p.shot.run ?? 0) > 0.45) chip('ON THE MOVE', bx + bw / 2, overY - fs * 1.45, AMBER)
     }
     if (clutch && spec.win > base.win) chip('CLUTCH', bx + bw / 2, by + bh + fs * 0.95, GREEN)
     ctx.globalAlpha = 1
@@ -841,10 +841,10 @@ export function createEngine({ setup, els, on, net = null }) {
         }
       }
     }
-    // the dribble legs (stamina) of the man with the ball, while they aren't full: a thin arc round the bottom of his
-    // spot on the floor, white, amber when they're low
+    // the dribble legs (stamina) of the man with the ball, while they aren't full: a thin arc up the left of his spot on
+    // the floor (clear of his name under him and the tags over him), white, amber when they're low
     if (holder >= 0 && live && !cut(holder) && (P[holder].sta ?? 1) < 0.985) {
-      const f = FIG[holder], st = clamp(P[holder].sta ?? 1, 0, 1), rr0 = ringR + 4, a0 = Math.PI * 0.5 + 0.9, span = 1.8
+      const f = FIG[holder], st = clamp(P[holder].sta ?? 1, 0, 1), rr0 = ringR + 4, a0 = Math.PI + 0.95, span = 1.9
       ctx.lineCap = 'butt'
       ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(5,7,10,.7)'; ctx.beginPath(); ctx.arc(f.x, f.y, rr0, a0 - span, a0); ctx.stroke()
       ctx.lineWidth = 2.5; ctx.strokeStyle = st < 0.35 ? AMBER : 'rgba(243,246,248,.9)'; ctx.beginPath(); ctx.arc(f.x, f.y, rr0, a0 - span * st, a0); ctx.stroke()

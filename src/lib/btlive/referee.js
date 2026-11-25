@@ -29,7 +29,7 @@ export const inBounds = (x, y, pad = 0) => x >= COURT.minX - pad && x <= COURT.m
 // up to 8-10 ft for a great leaper, more with size; no farther than the normal range for a man who can't get up
 export function dunkFrom(R) {
   const bnc = R.bncRaw ?? R.bnc
-  return T.dunkRange + T.dunkFar * clamp((bnc - 0.3) / 0.7, 0, 1) + T.dunkFarSize * R.size * (bnc > T.dunkBounce ? 1 : 0)
+  return T.dunkRange + T.dunkFar * clamp((bnc - 0.25) / 0.6, 0, 1) + T.dunkFarSize * R.size * (bnc > T.dunkBounce ? 1 : 0)
 }
 // A shot from here by him: a layup or a dunk near the rim, a jumper anywhere else. roll: one roll (the dunk).
 // open: the lane to the rim is his (no one in it, going downhill): an able dunker goes up for it from farther out
@@ -149,7 +149,7 @@ export function judgeShot(shooter, defenders, shot, rolls) {
     const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : T.blockLate
     const kind = shot.kind === 'jumper' ? T.blockJumper : shot.kind === 'dunk' ? T.blockDunk : 1
     const p = clamp(T.blockBase * onTime * (0.55 + T.blockInt * d.R.int) * (1 + T.blockSize * (d.R.size - shooter.R.size))
-      * (1 + T.blockBnc * (d.R.bnc - 0.75)) * kind * (1 - 0.4 * dd / reach), 0, T.blockMax)
+      * (1 + T.blockBnc * (d.R.bnc - 0.75)) * kind * (1 - T.blockFar * dd / reach), 0, T.blockMax)
     if (roll < p) {
       const dot = sd > 2 && dd > 0.01 ? ((d.x - shooter.x) * (RIM.x - shooter.x) + (d.y - shooter.y) * (RIM.y - shooter.y)) / (dd * sd) : 1
       return { blocked: d.id, chase: dot < -T.chaseAngle && Math.hypot(shooter.vx, shooter.vy) > 3, made: false, pts: 0, c: 1, p: 0 }

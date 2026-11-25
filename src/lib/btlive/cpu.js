@@ -23,12 +23,12 @@ const JUMP_LEAD = 6                              // a hand goes up this many tic
 // ticks: a level is as quick against the game at any pace; a person's own reaction is real time: balance.mjs HUMANS).
 // contest: how often he gets a hand up on a shot. steal: swipes a second with the ball in reach. help: how often
 // he comes over when a teammate is beaten. ev: how far off his judgment of a shot is. move: how often he uses
-// a dribble move on a set defender. gap: extra feet he gives his man.
+// a dribble move on a set defender. gap: extra feet he gives his man. jumpSd: ticks off on the timing of a hand up.
 export const LEVELS = {
-  rookie:  { label: 'ROOKIE',   meterSd: 130, react: 14, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8 },
-  pro:     { label: 'PRO',      meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0 },
-  allstar: { label: 'ALL-STAR', meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4 },
-  legend:  { label: 'LEGEND',   meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1 },
+  rookie:  { label: 'ROOKIE',   jumpSd: 5, meterSd: 130, react: 14, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8 },
+  pro:     { label: 'PRO',      jumpSd: 3.5, meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0 },
+  allstar: { label: 'ALL-STAR', jumpSd: 2.5, meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4 },
+  legend:  { label: 'LEGEND',   jumpSd: 1.5, meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1 },
 }
 
 const roll = s => rollAt(s.seed ^ 0x5bd1e995, s.cn++)
@@ -426,7 +426,8 @@ function defend(s, p, m, lvl, out) {
       if (man.actT >= Math.min(lvl.react, 6) && m.cKey !== key) {
         m.cKey = key
         const ideal = Math.round(man.shot.spec.ideal / MS)
-        m.cAt = roll(s) < lvl.contest ? Math.max(man.actT, ideal - JUMP_LEAD + Math.floor(roll(s) * 4)) : -1
+        // (his timing is as good as his level: off by a few ticks either way, late or early)
+        m.cAt = roll(s) < lvl.contest ? Math.max(man.actT, ideal - JUMP_LEAD + Math.round(gauss(roll(s), roll(s)) * (lvl.jumpSd ?? 3))) : -1
       }
       if (m.cKey === key && m.cAt >= 0 && man.actT >= m.cAt && dd <= 5.8 && p.act === 'free') { out.jump = true; m.cAt = -1 }
     } else if (p.stealCd <= 0 && dd <= T.stealReach - 0.3 && man.burst <= 0 && p.act === 'free' && man.noAct <= 0) {

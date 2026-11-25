@@ -106,7 +106,7 @@ export const T = {
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
   layFar: 0.045,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 18% less)
   dunkRange: 5.2,                    // a dunk starts inside this
-  dunkFar: 3.6, dunkFarSize: 0.9,    // an open lane: he takes off from farther out, up to this more at Bounce 11 (+ this at Size 11)
+  dunkFar: 4.5, dunkFarSize: 0.9,    // an open lane: he takes off from farther out, up to this more at Bounce 11 (+ this at Size 11)
   laneW: 3.6,                        // ...open: no one who can guard within this of the line from him to the rim
   dunkBounce: 0.25,                  // Bounce (the plain grade, 0-1) under this: never dunks (a Bounce 3 or lower never does)
   dunkChance: 0.9,                   // how often an able dunker dunks: (plain Bounce - dunkBounce) x this (x a touch more with Finishing)
@@ -166,14 +166,15 @@ export const T = {
   jumpLand: 0.10,                    // ...then this long to land before he can move again
   blockReach: 3.6,                   // within this of the shooter at the release (plus Bounce and Size)...
   blockReachBnc: 0.9, blockReachSize: 0.7,
-  blockIn: 0.14, blockOut: 0.76,     // ...and between these fractions of his jump: on time. Else a quarter the chance
-  blockBase: 0.24,                   // on-time chance at average everything
+  blockIn: 0.2, blockOut: 0.68,       // ...and between these fractions of his jump: on time. Else a quarter the chance
+  blockBase: 0.26,                   // on-time chance at average everything
   blockInt: 0.9,                     // x (0.55 + this * Interior D)
   blockSize: 0.45,                   // x (1 + this * (his Size n - the shooter's))
   blockBnc: 0.9,                     // x (1 + this * (his Bounce n - 0.75))
-  blockJumper: 0.42, blockDunk: 0.5, // jumpers and dunks are harder to get than layups
+  blockJumper: 0.55, blockDunk: 0.5, // jumpers and dunks are harder to get than layups
   blockMax: 0.7,
   blockLate: 0.2,                    // off time (up too early, too late): this share of the chance
+  blockFar: 0.25,                    // at the edge of his reach he gets this much less of it
 
   // ── Steals (a swipe with a cooldown; a miss costs a beat) ───────────────────────────────────────
   stealReach: 3.9,                   // the ball has to be this close
@@ -258,7 +259,7 @@ export const T = {
   remoteStep: 0.35,                  // ...plus this many feet a tick (jitter: two updates landing at once)
 
   // ── Rare moments (what the screen makes something of) ───────────────────────────────────────────
-  posterContest: 0.72,               // a dunk made through this much contest is a poster
+  posterContest: 0.97,               // a dunk made through this much contest is a poster
   deepWord: 29.5,                    // a made three from here is a deep three
   chaseAngle: 0.2,                   // a block from behind the shooter (his back to the blocker) is a chase-down
 }

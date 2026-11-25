@@ -431,6 +431,50 @@ head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the
     ok(run() === run(), 'same seed, same inputs with flicks in them: the same game to the last number')
   }
 }
+head('Dribble legs: every move costs some, a chained one more; tired legs make a shorter, weaker move; they come back')
+{
+  const s = toLive(duo('sta')), P = s.players, h = P[s.ball.holder], d = P.find(p => p.team !== h.team)
+  put(h, 28, 30); put(d, 28, 24)
+  const fl = (dx, dy) => { const q = idle(s); q[h.i] = { mx: 0, my: 0, dx, dy }; step(s, q) }
+  const sta0 = h.sta
+  fl(-1, -0.3); const bk1 = h.bk, after1 = h.sta
+  for (let n = 0; n < 40 && (h.burst > 0 || h.moveCd > 0); n++) step(s, idle(s))
+  fl(1, -0.3); const after2 = h.sta, bk2 = h.bk
+  ok(sta0 === 1 && after1 < 1 && sta0 - after1 > 0.15, `a move costs legs (${sta0.toFixed(2)} to ${after1.toFixed(2)})`)
+  ok(after1 - after2 > sta0 - after1, `...one chained straight off it costs more (${(after1 - after2).toFixed(2)})`)
+  for (let i = 0; i < 4; i++) { for (let n = 0; n < 40 && (h.burst > 0 || h.moveCd > 0); n++) step(s, idle(s)); fl(i % 2 ? 1 : -1, -0.3) }
+  ok(h.sta < 0.15 && h.bk < bk1 * 0.7 && h.bk >= T.staFloor * T.chainSlow - 1e-9, `spammed: the legs run out (${h.sta.toFixed(2)}) and the move goes at ${(100 * h.bk).toFixed(0)}% (never nothing)`)
+  void bk2
+  const tired = h.sta
+  for (let n = 0; n < Math.round(3.2 * 30); n++) step(s, idle(s))
+  ok(h.sta > tired + 0.6, `...and they come back with simple dribbling (${tired.toFixed(2)} to ${h.sta.toFixed(2)} in about 3 s)`)
+  const fz = sta => ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta }, { x: 28, y: 26, vx: 0, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, 0.12, 1).freeze
+  let a = 0, b = 0
+  for (let i = 0; i < 100; i++) { const r = i / 100; if (ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta: 1 }, { x: 28, y: 26, vx: d.R.topDef, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, r, 1).freeze) a++; if (ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta: 0 }, { x: 28, y: 26, vx: d.R.topDef, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, r, 1).freeze) b++ }
+  void fz
+  ok(b < a, `tired legs freeze his man less (${a} fresh, ${b} tired in 100)`)
+}
+{
+  // the CPU plays under the same legs: no CPU move ever starts with more legs than it has, and it can't spam
+  let n = 0, low = 0
+  for (let g = 0; g < 20; g++) {
+    const s = duo(`sta-cpu-${g}`), inp = []
+    while (s.phase !== 'over' && s.tick < 30 * 60 * HZ) { for (let i = 0; i < 2; i++) inp[i] = cpuInput(s, i, 'legend'); step(s, inp); for (const e of s.events) if (e.e === 'move') { n++; if (s.players[e.pid].sta < 0.2) low++ } }
+  }
+  ok(n > 0 && low / n < 0.25, `the CPU's moves pay the same: ${n} moves in 20 games, ${(100 * low / n).toFixed(0)}% of them on tired legs`)
+}
+head('Defense: SHOOT without the ball is the jump (BLOCK); there is no other jump button')
+{
+  const s = toLive(duo('blk')), P = s.players, h = P[s.ball.holder], d = P.find(p => p.team !== h.team)
+  const q = idle(s); q[d.i] = { mx: 0, my: 0, shoot: true }
+  step(s, q)
+  ok(d.act === 'jump', 'on defense, SHOOT goes up (a hand up, a block)')
+  const s2 = toLive(duo('blk2')), O = s2.players[s2.ball.holder], mate = null
+  void mate
+  const q2 = idle(s2); q2[O.i] = { mx: 0, my: 0, shoot: true }; step(s2, q2)
+  ok(O.act === 'gather', '...with the ball it shoots')
+}
+
 head(`The pace: the game ${PACE}x quicker, the things a person does in real time`)
 {
   const R = derive(flatBuild('guard', gradeFor(80)), 'guard')

@@ -906,7 +906,7 @@ function tick(s, inputs) {
   for (let k = 0; k < P.length; k++) { const p = P[(k + s.tick) % P.length]; if (s.phase !== 'live') return s; if (!p.out) act(s, p, inputs?.[p.i] || IDLE) }
   if (s.phase !== 'live') return s
   // (the man sitting out stands at the side and watches)
-  for (const p of P) { if (p.out) { p.vx = p.vy = 0; p.pb = 0; continue } move(s, p, inputs?.[p.i] || IDLE) }
+  for (const p of P) { if (p.out) { p.pb = 0; p.sx = T.bench.x; p.sy = T.bench.y; walkToSpot(s, p, false, true); continue } move(s, p, inputs?.[p.i] || IDLE) }
   collide(s)
   ballStep(s)
   if (s.phase !== 'live') return s
