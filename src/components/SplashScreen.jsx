@@ -342,8 +342,8 @@ function useRevealOnMount(ready) {
 const STACK_MASK = {
   qb: { src: '/qb-silhouette.webp', scale: 1 },
   rb: { src: '/rb-silhouette.webp', scale: 1 },
-  wr: { src: '/wr-silhouette.png',  scale: 1 },
-  te: { src: '/wr-silhouette.png',  scale: 1 },
+  wr: { src: '/wr-silhouette.png',  scale: 1.2 },   // (grown from his feet: Home's CSS sets the origin)
+  te: { src: '/wr-silhouette.png',  scale: 1.2 },
   db: { src: '/db-silhouette.png',  scale: 1.05 },
   dl: { src: '/dl-silhouette.webp',  scale: 1 },
   lb: { src: '/lb-silhouette.webp',  scale: 1 },
@@ -372,8 +372,8 @@ export function pieceStyle({ src, flexes, i, visible }) {
     clipPath: `inset(${Math.max(0, top - 0.15)}% 0 ${Math.max(0, 100 - top - h - 0.15)}% 0)`,
     opacity: visible ? 1 : 0,
     transform: visible ? 'translateY(0)' : `translateY(-${(top + 28).toFixed(1)}%)`,
-    // (it fades in as it nears its place: the fade runs on the fall's own clock and curve)
-    transition: `opacity ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1), transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
+    // (it fades in as it nears its place: on the fall's clock, but held faint until the last stretch)
+    transition: `opacity ${BAND_STEP}ms cubic-bezier(0.75,0,0.95,0.6), transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
     transitionDelay: visible ? `${(flexes.length - 1 - i) * BAND_STEP}ms` : '0ms',
   }
 }

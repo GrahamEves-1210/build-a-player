@@ -7902,3 +7902,6 @@ html.low-power .sil-wrap .st-fx { display: none; }
 /* (the ghost's see-through is the whole figure's, the pieces solid under it: where two pieces meet there's no line) */
 .splash-stack-figure--pieces { opacity: .4; }
 .splash-stack-figure--pieces .splash-stack-band { background: rgb(236,240,238) !important; }
+/* WR / TE: the catch reaches up to the stage's top edge, his feet staying on the circle (scaled from the bottom) */
+:is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform-origin: center bottom; }
+@media (min-width: 1024px) { :is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform: scale(1.09) !important; } }   /* (the desktop stage is shorter for its width) */
