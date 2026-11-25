@@ -17,7 +17,7 @@ import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 
 // the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
-const BAND_STEP = 140   // (a piece starts as the one before it is settling: one after another, with no stop between)
+const BAND_STEP = 130   // (each piece lands before the next one starts: its fall lasts one step)
 
 export const POS_OPTIONS = [
   {
@@ -371,9 +371,8 @@ export function pieceStyle({ src, flexes, i, visible }) {
     // (a hair of overlap at each cut, so no seam shows between pieces)
     clipPath: `inset(${Math.max(0, top - 0.15)}% 0 ${Math.max(0, 100 - top - h - 0.15)}% 0)`,
     opacity: visible ? 1 : 0,
-    transform: visible ? 'translateY(0)' : 'translateY(-16%)',   // (a short, even drop for every piece)
-    willChange: 'transform, opacity',
-    transition: `opacity ${BAND_STEP * 1.4}ms ease-out, transform ${BAND_STEP * 1.8}ms cubic-bezier(0.25,0.8,0.3,1)`,
+    transform: visible ? 'translateY(0)' : `translateY(-${(top + 28).toFixed(1)}%)`,
+    transition: `opacity ${BAND_STEP * 0.6}ms ease, transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
     transitionDelay: visible ? `${(flexes.length - 1 - i) * BAND_STEP}ms` : '0ms',
   }
 }
