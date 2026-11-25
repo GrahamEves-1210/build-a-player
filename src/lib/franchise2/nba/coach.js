@@ -99,8 +99,15 @@ export const STAFF_TEAMS = SHORTS.filter(s => BY_TEAM[s])
 // the real league's average on each line (a rating is measured against it)
 const MID = Object.fromEntries(CTYPES.map(t => [t, NBA_COACHES.reduce((a, c) => a + c.attrs[t], 0) / NBA_COACHES.length]))
 const AMID = 6   // (a made-up assistant's line he was hired for: genAssistant's middle)
-// (c.shot: the file, '<espn>.png' or '<espn>.jpg'; a save from before: the bare id, a .jpg)
-export const coachShot = c => (c?.shot ? `${HEADSHOT_BASE}/nba-coaches/${/\./.test(String(c.shot)) ? c.shot : `${c.shot}.jpg`}` : null)
+// (c.shot: the file, '<espn>.png' or '<espn>.jpg'; a save from before: the bare id, a .jpg). A .png is ESPN's
+// full-size headshot, cut out the way the players' are; a .jpg (ESPN's 65px coach file, on its grey studio
+// background) shows as its cut-out in the players' frame, nba-coaches/cut/<espn>.png (scripts/franchise2/nba/cut.py:
+// the background taken off, the head sized and placed as a player headshot's, the shoulders faded out at the bottom)
+export const coachShot = c => {
+  if (!c?.shot) return null
+  const f = /\./.test(String(c.shot)) ? String(c.shot) : `${c.shot}.jpg`
+  return `${HEADSHOT_BASE}/nba-coaches/${f.endsWith('.jpg') ? `cut/${f.slice(0, -4)}.png` : f}`
+}
 const realMan = (F, c, team) => ({ i: F.cid++, n: c.name, ag: c.age ?? 50, r: toArr(c.attrs), st: c.since ?? F.year, real: 1, ...(c.shot && { shot: `${c.espn}.${c.shot === 'png' ? 'png' : 'jpg'}` }), ...(team == null && c.cv && { cv: c.cv }), ...(team == null && { hy: 1 }) })
 
 // ── Made-up assistants ───────────────────────────────────────────────────────

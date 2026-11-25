@@ -63,23 +63,27 @@ const tierOf = (F, p) => (rankOf(F, p) <= 60 || (p.o ?? 0) >= 85 ? 2 : rankOf(F,
 // the ask the next round weighs offers against; before the first round day 1, once the days are done the last)
 let playing = 0
 export const marketDay = F => playing || clamp(1, FA_DAYS, faDayOf(F) + 1)
-export function askFor(F, p) {
+// (keep false: a look, the screens' askOf: the ask as it stands, worked out but not kept on him, so a screen opened
+// before the market reads him never fixes his ask at that moment's market: the same save plays the same)
+export function askFor(F, p, keep = true) {
   const year = capYear(F)
   const day = marketDay(F)
   const mn = minOf(p.ys ?? 0, year)
-  if (!p.ask || p.ask.yr !== year || p.ask.b == null) {
+  let ask = p.ask
+  if (!ask || ask.yr !== year || ask.b == null) {
     const R = rngOf(`${F.seed}-${year}-fa-${p.i}`)
     const mv = Math.min(marketValue(F, p, year), Math.max(outsideBest(F, p), mn))
     const $ = r1(clamp(mn, maxOf(p.ys ?? 0, year), mv * (1 + R.n() * 0.05)))
-    p.ask = { yr: year, b: $, $, y: termOf(F, p), d: 0 }
+    ask = { yr: year, b: $, $, y: termOf(F, p), d: 0 }
   }
-  if (p.ask.d !== day) {
-    const t = p.ask.b * DECAY[day - 1]
+  if (ask.d !== day) {
+    const t = ask.b * DECAY[day - 1]
     const hold = [0, 0.35, 0.6][tierOf(F, p)]
-    const $ = r1(Math.max(mn, Math.min(t, Math.max(outsideBest(F, p) * 1.05, p.ask.b * hold))))
-    p.ask = { ...p.ask, $, d: day }
+    const $ = r1(Math.max(mn, Math.min(t, Math.max(outsideBest(F, p) * 1.05, ask.b * hold))))
+    ask = { ...ask, $, d: day }
   }
-  return p.ask
+  if (keep) p.ask = ask
+  return ask
 }
 export function wantsOf(p) {
   const h = hash(`want-${p.i}-${p.n}`)
@@ -366,7 +370,7 @@ export function faDay(F, day = faDayOf(F) + 1) {
   return news
 }
 // what a free agent asks on the open market today: { $, y }
-export const askOf = (F, p) => { const a = askFor(F, p); return { $: a.$, y: a.y, r: a.$ >= 15 ? 0.05 : 0 } }
+export const askOf = (F, p) => { const a = askFor(F, p, false); return { $: a.$, y: a.y, r: a.$ >= 15 ? 0.05 : 0 } }
 // the offer sheets from the round before, answered: the GM's RFAs' sheets he didn't answer (matched when his team
 // can, on the wire), and the sheets the GM's team signed other teams' RFAs to (their teams match or let them go)
 function settleSheets(F, news) {
