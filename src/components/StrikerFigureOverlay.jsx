@@ -91,13 +91,13 @@ const ART = '/st-silhouette.webp'
 // far eye only a short one past the bridge of the nose (x 740). The brows are short, tapered and low-contrast, on
 // the brow ridge. The softness comes from gradients and low opacity (the brows' slight blur is the one filter, and
 // html.low-power only loses that blur).
-const SOCKETS = [[716, 239, 20, 8.5, 8], [753, 242, 8, 5, -12]]   // [cx, cy, rx, ry, rotate]: the shadow round each eye
+const SOCKETS = [[715, 239.5, 26, 11, 8], [752, 242.5, 10, 6.5, -12]]   // [cx, cy, rx, ry, rotate]: the shadow round each eye
 const LASHES = [
-  // [the lowered upper lid's lash line, as a tapered fill; its opacity]
-  ['M702.4 240 Q716 243.2 731.6 242.2 L732 244 Q716 248.6 702.8 242.6 Z', 0.92],
-  ['M745.6 244.8 Q751 245.8 756.2 243.6 L756.2 245.2 Q751 248.4 745.8 246.6 Z', 0.78],
+  // [each eye as a dark almond, the upper lid heavy and lowered over it (he looks down at the ball); its opacity]
+  ['M701.6 240.4 Q715 235.6 731.8 242 Q717 247.8 701.6 240.4 Z', 0.82],
+  ['M745.4 245 Q750.6 242.4 756.4 243.4 Q751 247.6 745.4 245 Z', 0.7],
 ]
-const IRISES = [[719.5, 246.4, 3.9, 1.7], [751.5, 247.3, 1.9, 0.95]]   // the sliver of iris under each lid
+const IRISES = [[719, 242.6, 3.6, 2.1], [751, 244.6, 1.7, 1.2]]   // the sliver of iris under each lid
 // the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
 // path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
 // before turning back to the point of the sideburn
@@ -185,6 +185,8 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           {Object.entries(SHADE).filter(([k]) => tones[k]).map(([k, [m, b]]) => (
             <filter key={k} id={id(`f-${k}`)} colorInterpolationFilters="sRGB" x="0" y="0" width="1" height="1">
               <feColorMatrix type="saturate" values="0" />
+              {/* (face and neck: the art's thin ink lines softened, its broad light and shade kept) */}
+              {(k === 'face' || k === 'neck') && <feGaussianBlur stdDeviation="0.9" />}
               <feComponentTransfer result="shade"><feFuncR type="linear" slope={m} intercept={b} /><feFuncG type="linear" slope={m} intercept={b} /><feFuncB type="linear" slope={m} intercept={b} /><feFuncA type="identity" /></feComponentTransfer>
               <feFlood floodColor={tones[k]} result="tone" />
               <feComponentTransfer in="shade" result="shade2">{['R', 'G', 'B'].map(c => { const F = `feFunc${c}`; return <F key={c} type="table" tableValues={SHADE_CURVE} /> })}</feComponentTransfer>
@@ -220,8 +222,8 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           {head && (
             <g clipPath={url('c-face')}>
               <radialGradient id={id('sock')}>
-                <stop offset="0" stopColor={featureOf(face)} stopOpacity="0.55" />
-                <stop offset="0.6" stopColor={featureOf(face)} stopOpacity="0.18" />
+                <stop offset="0" stopColor={featureOf(face)} stopOpacity="0.78" />
+                <stop offset="0.6" stopColor={featureOf(face)} stopOpacity="0.32" />
                 <stop offset="1" stopColor={featureOf(face)} stopOpacity="0" />
               </radialGradient>
               {SOCKETS.map(([cx, cy, rx, ry, rot]) => (
