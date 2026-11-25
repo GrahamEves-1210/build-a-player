@@ -243,7 +243,7 @@ export const NBA_LORE = {
     },
     g: {
       guard: [L('Dwyane Wade', 'won three championships and was the MVP of the 2006 Finals', { n: 3, ret: true, rings: 3 }), L('Tim Hardaway', 'made the All-NBA first team in 1997', { n: 10, ret: true })],
-      wing: [L('LeBron James', 'won two championships and two MVP awards in four seasons here', { n: 6, rings: 2 }), L('Jimmy Butler', 'took the Heat to the Finals in 2020 and 2023')],
+      wing: [L('LeBron James', 'won two championships and two MVP awards in four seasons here', { n: 6, rings: 2, on: 'has won two championships and two MVP awards here' }), L('Jimmy Butler', 'took the Heat to the Finals in 2020 and 2023')],
       big: [L('Alonzo Mourning', 'was the Defensive Player of the Year twice', { n: 33, ret: true, rings: 1 }), L('Chris Bosh', 'won two championships here', { n: 1, ret: true, rings: 2 }), L('Udonis Haslem', 'played 20 seasons, every one for the Heat', { n: 40, ret: true, rings: 3 }), L('Shaquille O\'Neal', 'won the 2006 championship here', { n: 32, ret: true, rings: 1 })],
     },
     rec: { pts: ['Dwyane Wade', 21556] },
@@ -416,7 +416,7 @@ export const NBA_LORE = {
     },
     g: {
       guard: [L('Kyle Lowry', 'made six straight All-Star teams and won the 2019 title', { n: 7, rings: 1 }), L('DeMar DeRozan', 'made four All-Star teams here', { n: 10 }), L('Vince Carter', 'was the Rookie of the Year in 1999 and won the 2000 Slam Dunk Contest', { n: 15, ret: true })],
-      wing: [L('Kawhi Leonard', 'was the MVP of the 2019 Finals in his one season here', { rings: 1 }), L('Tracy McGrady', 'was drafted here out of high school in 1997')],
+      wing: [L('Kawhi Leonard', 'was the MVP of the 2019 Finals', { rings: 1, on: 'was the MVP of the 2019 Finals here' }), L('Tracy McGrady', 'was drafted here out of high school in 1997')],
       big: [L('Chris Bosh', 'made five All-Star teams as a Raptor', { n: 4 }), L('Pascal Siakam', 'was the Most Improved Player in 2019', { rings: 1 })],
     },
     rec: { pts: ['DeMar DeRozan', 13296] },

@@ -53,7 +53,10 @@ const POS_WORD = {
   db: ['defensive back', 'defensive backs'], k: ['kicker', 'kickers'],
   guard: ['guard', 'guards'], wing: ['forward', 'forwards'], big: ['big man', 'big men'], st: ['striker', 'strikers'],
 }
+// "You play <...> for the same franchise now", "both played <...> for this franchise"
+const PLAYS = { qb: 'quarterback', rb: 'running back', wr: 'receiver', te: 'tight end', ol: 'on the offensive line', dl: 'on the defensive line', lb: 'linebacker', db: 'in the secondary', k: 'kicker', guard: 'guard', wing: 'forward', big: 'in the frontcourt', st: 'up front' }
 // where he lines up with a teammate at his spot
+const ROOM_IN = { ol: 'on', dl: 'on', st: 'in' }
 const ROOM_WORD = { wr: 'receiver room', db: 'secondary', dl: 'defensive line', lb: 'linebacker room', ol: 'offensive line', rb: 'backfield', te: 'tight end room', guard: 'backcourt', wing: 'frontcourt', big: 'frontcourt', st: 'forward line' }
 // one man plays (a job to win), or several do (a man to play beside)
 const ONE_JOB = new Set(['qb', 'rb', 'te', 'k', 'st'])
@@ -100,7 +103,8 @@ function waitLine(x, T = titleFacts(x)) {
     return T.wait >= 15 ? `${x.The} last won the Super Bowl in the ${T.last} season.` : null
   }
   if (x.sport === 'bucket') return T.never ? `${x.The} have never won a championship.` : T.wait >= 15 ? `${x.The} last won a championship in ${T.last}.` : null
-  return T.never ? `${x.The} have never won the ${W.title}.` : T.wait >= 15 ? `${x.The} last won the ${W.title} in ${T.last}.` : null
+  // (soccer: a club that has been champions more than once and has waited. Nobody asks Brentford's striker when the title is coming)
+  return T.n >= 2 && T.wait >= 15 ? `${x.The} last won the ${W.title} in ${T.last}.` : null
 }
 
 // ── The view of a team for a man at a position ────────────────────────────────
@@ -112,7 +116,7 @@ function frame(x0) {
   if (!lore) return null
   const us = x0.sport !== 'soccer'
   const key = loreKey(x0.sport, x0.pos, x0.spot)
-  const roster = new Set(x0.roster ?? [])
+  const roster = new Set(x0.roster ?? []), active = new Set(x0.active ?? [])
   const mine = lore.g?.[key] ?? []
   // (basketball: a guard's list falls back to the wings and the other way round, never to the bigs)
   const near = x0.sport === 'bucket' && !mine.length ? (key === 'guard' ? lore.g?.wing : key === 'wing' ? lore.g?.guard : null) ?? [] : []
@@ -125,11 +129,18 @@ function frame(x0) {
     past: legs.filter(l => !roster.has(l.name)), now: legs.filter(l => roster.has(l.name)),
     icons: any.filter(l => !roster.has(l.name)),
     league: LEAGUES[x0.league] ?? null,
+    // still playing, somewhere else in the league (nobody has been "measured against him since": he only just left)
+    away: l => !roster.has(l.name) && active.has(l.name),
   }
   x.T = titleFacts(x)
   x.wait = waitLine(x, x.T)
   return x
 }
+// A great the franchise measures a position by (a retired number, a title, an MVP, a record) is asked about as a
+// legacy. A good player its fans remember (two Pro Bowls, 167 starts) is asked about as history: nobody asks a
+// new tight end whether he can "reach the legacy" of a man who made two Pro Bowls.
+const MAJOR = /MVP|Hall of Fame|Player of the Year|Rookie of the Year|record|all-time|Ballon d'Or|Golden (Boot|Shoe)|(scoring|rushing) titles?|championships?|Super Bowls?|titles?\b|led the league|top scorer|Pichichi|European Cup|Champions League|World Cup|\b\d{3} (league |Bundesliga )?goals|2,0\d\d yards|Finals|statue|stadium/i
+const major = l => l.icon ?? (!!l.ret || (l.rings ?? 0) >= 1 || MAJOR.test(l.did))
 // a man's line: "Tom Brady won six Super Bowls here." (on the roster: what he has done, in the present)
 const did = (x, l) => (x.on(l) ? l.on ?? l.did : l.did)
 const line = (x, l) => `${l.name} ${did(x, l)}.`
@@ -139,7 +150,7 @@ const line = (x, l) => `${l.name} ${did(x, l)}.`
 const h = t => ({ t, tone: 'humble' }), t = s => ({ t: s, tone: 'team' }), b = s => ({ t: s, tone: 'bold' }), z = s => ({ t: s, tone: 'brash' })
 const ANSWERS = {
   legacy: (x, L) => [
-    [h(`Nobody replaces ${L}. I have to earn my own place in this ${x.W.room} first.`), b(`That's the standard here. I came to ${x.town} to chase it.`), z('He had his time. This is mine.')],
+    [h(`Nobody replaces ${L}. I have to earn my own place in this ${x.W.room} first.`), b('That\'s the standard here. I came here to chase it.'), z('He had his time. This is mine.')],
     [t(`${L} had good players around him. My job is to help make this team one of those.`), b('If I do my job, people here will be having that conversation in ten years.'), z('Ask me again when I\'ve passed him.')],
     [h(`I know what ${L} means here. I'm not comparing myself to him on my first day.`), t(`One name doesn't win ${x.W.game === 'match' ? 'matches' : 'games'}. This ${x.W.room} does.`), b('I want that pressure. It\'s why you play in a place like this.')],
   ],
@@ -179,11 +190,14 @@ const ANSWERS = {
     [h(`That history belongs to the ${x.W.fans}. Our job is the next ${x.W.game}.`), b('I want to be the one who\'s here when it ends. That\'s the plan.'), t(`It ends when this whole ${x.W.room} is good enough. That's what we work on every day.`)],
   ],
   ache: x => [
-    [h(`The ${x.W.fans} have earned the right to bring it up. All we can do is give them something new to talk about.`), t(`Nobody in this ${x.W.room} played in that ${x.W.game}. We have our own work to do.`), z('I\'m tired of hearing about it, honestly.')],
+    [h(`The ${x.W.fans} have earned the right to bring it up. All we can do is give them something new to talk about.`), t(`Nobody in this ${x.W.room} was part of that. We have our own work to do.`), z('I\'m tired of hearing about it, honestly.')],
   ],
   repeat: x => [
     [h(`The ${x.us ? 'banner' : 'trophy'} is ${x.us ? 'up' : 'in the cabinet'}. We start at zero like everybody else.`), b('We\'re the champions until somebody beats us. I expect to do it again.'), z('We\'re better than everybody. I don\'t see who stops us.')],
     [t('Ask the men who did the work nobody saw last year. They\'re why it happened, and they\'re all back at it.'), h('Last year is over. Nobody is handing us anything.'), b(`One isn't enough. Not for me, and not for this ${x.W.room}.`)],
+  ],
+  dynasty: x => [
+    [h('No. That\'s a word for when it\'s over.'), b('Not yet. Ask me after the next one.'), z('Yes. I don\'t see who\'s stopping it.')],
   ],
   catchUp: x => [
     [h('He did that over a whole career. I\'m trying to win the next one.'), b('Yes. That\'s the number I\'m chasing.'), z('I\'ll pass him. It\'s a matter of time.')],
@@ -203,6 +217,10 @@ const ANSWERS = {
   ],
   passed: (x, H) => [
     [h(`It meant a lot. ${H} set that mark, and I know what it took.`), t(`It meant the people around me did their jobs for a long time. It's their record too.`), b('It meant something. I\'m not done adding to it.')],
+  ],
+  remember: x => [
+    [h('That I showed up every day and was a good teammate.'), b('That I was the best to ever do it here.'), t('That we won while I was here. The rest takes care of itself.')],
+    [h('That I earned it. Nothing more than that.'), b('That nobody here did it better.'), z('They\'ll have plenty to say. I\'m not worried about that.')],
   ],
   league: x => [
     [h('It will be harder. I\'ll have to earn every one of them.'), b('I\'ve scored everywhere I\'ve played. I expect to score here.'), z('Defenders are defenders. I score against all of them.')],
@@ -226,28 +244,33 @@ const ROOM_ANSWERS = {
 const ROOM_WHO = {
   nfl: { gm: 'General manager', coach: 'Head coach', owner: 'Owner' },
   bucket: { gm: 'General manager', coach: 'Head coach', owner: 'Owner' },
-  soccer: { gm: 'Sporting director', coach: 'First-team manager', owner: 'Chief scout' },
+  soccer: { gm: 'Sporting director', coach: 'First-team manager', owner: 'Sporting director', club: 'Academy director' },
 }
 
 // ── The questions ─────────────────────────────────────────────────────────────
 // A candidate: { id, kind, w (how often it is picked), q, names (every man it names), set (its answers), arg }
-const Q = (id, kind, w, q, names, set, arg = null) => ({ id, kind, w, q, names: names.filter(Boolean), set, arg })
-const howWord = x => (x.how === 'draft' ? 'the draft' : x.how === 'trade' ? 'the trade' : 'you signed')
+// (a name that ends in a period, at the end of a sentence: one period)
+const tidy = s => String(s).replace(/\b(Jr|Sr)\.\./g, '$1.')
+const tidyAll = list => list.map(a => ({ ...a, t: tidy(a.t) }))
+const Q = (id, kind, w, q, names, set, arg = null) => ({ id, kind, w, q: tidy(q), names: names.filter(Boolean), set, arg })
+const howWord = x => (!x.us ? 'you signed' : x.how === 'draft' ? 'the draft' : x.how === 'trade' ? 'the trade' : 'you signed')
 
 // the men who played his position here, and he is new: the legacy questions
+const fansOf = x => (x.us ? `${x.nick} fans` : `${x.name} ${x.W.fans}`)
 function legacyQs(x, { draft = false } = {}) {
   const out = []
-  const P = x.P[0], lg = x.sport === 'soccer'
+  const P = x.P[0], lg = x.sport === 'soccer', plays = PLAYS[x.key] ?? P
   for (const l of x.past) {
-    out.push(Q(`reach|${l.name}`, 'legacy', 4, `${line(x, l)} Do you think you can reach that legacy ${lg ? 'at this club' : `in ${x.town}`}?`, [l.name], 'legacy', l.name))
-    out.push(Q(`measure|${l.name}`, 'legacy', 3, lg ? `${line(x, l)} Every ${P} who has worn this shirt since has been compared with him. Is that fair on a new signing?` : `${line(x, l)} Every ${P} who has come through ${x.town} since has been measured against him. Is that fair to you?`, [l.name], 'legacy', l.name))
-    out.push(Q(`knew|${l.name}`, 'legacy', 2, `${line(x, l)} You play ${P} for the same ${x.W.here} now. How much of that history did you know before ${howWord(x)}?`, [l.name], 'mark'))
-    if (l.ret && l.n != null) out.push(Q(`number|${l.name}`, 'legacy', 2, x.sport === 'bucket' ? `No. ${l.n} hangs in the rafters here for ${l.name}. What goes through your mind when you look up at it?` : `No. ${l.n} is retired here for ${l.name}. What goes through your mind when you see it?`, [l.name], 'number'))
+    out.push(Q(`knew|${l.name}`, 'legacy', major(l) ? 2 : 3, `${line(x, l)} You play ${plays} for the same ${x.W.here} now. How much of that history did you know before ${howWord(x)}?`, [l.name], 'mark'))
+    if (!major(l)) { if (!x.away(l)) out.push(Q(`talk|${l.name}`, 'legacy', 3, `${line(x, l)} ${cap(fansOf(x))} still talk about him. What would you like them to say about you when you are done?`, [l.name], 'remember')); continue }
+    out.push(Q(`reach|${l.name}`, 'legacy', 4, `${line(x, l)} Do you think you can reach that legacy ${lg ? 'at this club' : 'here'}?`, [l.name], 'legacy', l.name))
+    if (!x.away(l)) out.push(Q(`measure|${l.name}`, 'legacy', 3, lg ? `${line(x, l)} Every ${P} who has worn this shirt since has been compared with him. Is that fair on a new signing?` : `${line(x, l)} Every ${P} who has played here since has been measured against him. Is that fair to you?`, [l.name], 'legacy', l.name))
+    if (l.ret && l.n != null && x.us) out.push(Q(`number|${l.name}`, 'legacy', 2, x.sport === 'bucket' ? `${x.The} hung No. ${l.n} in the rafters for ${l.name}. What goes through your mind when you look up at it?` : `${x.The} retired No. ${l.n} for ${l.name}. What goes through your mind when you see it?`, [l.name], 'number'))
     if (draft && l.dr && x.us) out.push(Q(`drafted|${l.name}`, 'legacy', 3, `${x.The} drafted ${l.name} ${l.dr}, and he ${l.did}. Now they have drafted you. What does that history ask of a rookie?`, [l.name], 'legacy', l.name))
   }
   if (x.past.length >= 2) {
     const [a, b2] = x.past
-    out.push(Q(`company|${a.name}|${b2.name}`, 'legacy', 2, lg ? `${a.name} and ${b2.name} both led the line here. That is the company you are in now. Are you ready for the comparison?` : `${a.name} and ${b2.name} both played ${P} for ${x.the}. That is the company you are in now. Are you ready for the comparison?`, [a.name, b2.name], 'legacy', a.name))
+    out.push(Q(`company|${a.name}|${b2.name}`, 'legacy', 2, lg ? `${a.name} and ${b2.name} both led the line here. That is the company you are in now. Are you ready for the comparison?` : `${a.name} and ${b2.name} both played ${plays} for this franchise. That is the company you are in now. Are you ready for the comparison?`, [a.name, b2.name], 'legacy', a.name))
   }
   return out
 }
@@ -257,7 +280,7 @@ function besideQs(x) {
   for (const l of x.now) {
     out.push(Q(`learn|${l.name}`, 'beside', 3, `${l.name} ${did(x, l)}, and he is still in this ${x.W.room}. What do you want to learn from him?`, [l.name], 'beside'))
     out.push(Q(`after|${l.name}`, 'beside', 4, `${line(x, l)} One day this ${x.W.here} will need the ${x.P[0]} who comes after him. Do you think you can reach that legacy?`, [l.name], 'next', l.name))
-    if (!ONE_JOB.has(x.pos)) out.push(Q(`pair|${l.name}`, 'beside', 2, `${line(x, l)} How do the two of you fit in the same ${ROOM_WORD[x.key] ?? 'lineup'}?`, [l.name], 'fit'))
+    if (!ONE_JOB.has(x.pos)) out.push(Q(`pair|${l.name}`, 'beside', 2, `${line(x, l)} How do the two of you fit ${ROOM_IN[x.key] ?? 'in'} the same ${ROOM_WORD[x.key] ?? 'lineup'}?`, [l.name], 'fit'))
     else if (!x.starter) out.push(Q(`behind|${l.name}`, 'beside', 2, `${line(x, l)} You play the same position. Are you here to learn from him or to take his job?`, [l.name], 'job'))
   }
   return out
@@ -287,7 +310,7 @@ function leagueQs(x) {
   if (!lg) return []
   return [
     Q('lg-step', 'league', 2, `This is ${lg.name}. Plenty of strikers who scored freely somewhere else have found it harder here. Why will it be different for you?`, [], 'league'),
-    Q('lg-boot', 'league', 1, `${lg.greats} ${cap(lg.boot)} has usually gone to a striker at one of the biggest clubs. Can it be won from ${x.town}?`, [], 'league'),
+    Q('lg-boot', 'league', 1, `${lg.greats} ${cap(lg.boot)} has usually gone to a striker at one of the biggest clubs. Can ${poss(x.name)} striker win it?`, [], 'league'),
   ]
 }
 function lastQs(x) {
@@ -311,11 +334,16 @@ function pressCandidates(x, sit) {
     return out
   }
   if (sit === 'champion') {
-    const out = [Q('repeat', 'champion', 3, x.us ? `${x.The} are the defending champions. How do you get a team that just won it all to do the work again?` : `${x.The} are champions. How do you get a squad that has just won the ${W.title} to do it again?`, [], 'repeat')]
-    const T = x.T, mine = (x.titlesHere ?? []).length
-    // (his first one there: the first in franchise history, or the first since the real one before it)
-    if (mine === 1 && T) out.push(Q('first-title', 'champion', 3, `${T.before == null ? `That was the first ${x.sport === 'nfl' ? 'Super Bowl title' : x.us ? 'championship' : `${W.title} title`} in ${x.us ? 'franchise' : 'club'} history.` : T.mineLast - T.before >= 10 ? `That was ${x.theirs} first ${x.sport === 'nfl' ? 'Super Bowl title' : x.us ? 'championship' : `${W.title} title`} since ${T.before}.` : `${x.The} are champions again.`} What has ${x.us ? 'the city' : x.town} been like since?`, [], 'firstTitle'))
-    for (const l of [...x.past, ...x.icons].filter(l => (l.rings ?? 0) >= 3 && l.rings > mine).slice(0, 1)) out.push(Q(`catch|${l.name}`, 'champion', 2, `${l.name} won ${num(l.rings)} titles here. You have ${num(mine)}. Do you think about catching him?`, [l.name], 'catchUp'))
+    const T = x.T, mine = (x.titlesHere ?? []).length, what = x.sport === 'nfl' ? 'Super Bowl title' : x.us ? 'championship' : `${W.title} title`
+    const out = [
+      Q('repeat', 'champion', 3, x.us ? `${x.The} are the defending champions. How do you get a team that just won it all to do the work again?` : `${x.The} are champions. How do you get a squad that has just won the ${W.title} to do it again?`, [], 'repeat'),
+      Q('target', 'champion', 2, x.us ? `Every team in the league spent the offseason building to beat ${x.the}. What does that change for you?` : `Every club in the league has spent the summer trying to close the gap on ${x.name}. What does that change for you?`, [], 'repeat'),
+    ]
+    // his first one there: the first in the team's history, or the first in a long time
+    if (mine === 1 && T && (T.before == null || T.mineLast - T.before >= 10)) out.push(Q('first-title', 'champion', 4, `${T.before == null ? (x.us ? `That was the first ${what} in ${x.nick} history.` : `That was ${poss(x.name)} first ${what}.`) : `That was ${x.theirs} first ${what} since ${T.before}.`} What has ${x.us ? 'the city' : x.town} been like since?`, [], 'firstTitle'))
+    if (mine >= 2 && x.here <= mine * 3) out.push(Q('dynasty', 'champion', 3, `That is ${num(mine)} ${what}s in ${num(x.here)} seasons here. People are starting to use the word dynasty. Do you?`, [], 'dynasty'))
+    // a great of this team with more of them than he has (his own position first)
+    for (const l of [...x.past.filter(l => (l.rings ?? 0) >= 2), ...[...x.icons].sort((a, b2) => (b2.rings ?? 0) - (a.rings ?? 0)).filter(l => (l.rings ?? 0) >= 3)].filter(l => l.rings > mine).slice(0, 1)) out.push(Q(`catch|${l.name}`, 'champion', 2, `${l.name} won ${num(l.rings)} ${x.sport === 'nfl' ? 'championships' : 'titles'} with this ${x.W.here}. You have ${num(mine)}. Do you think about catching him?`, [l.name], 'catchUp'))
     return out
   }
   if (sit === 'record') {
@@ -327,15 +355,16 @@ function pressCandidates(x, sit) {
   if (sit === 'veteran') {
     const out = []
     for (const l of x.past) {
-      if (l.ret && l.n != null && x.us) out.push(Q(`own-number|${l.name}`, 'veteran', 3, `${x.sport === 'bucket' ? `No. ${l.n} hangs in the rafters here for ${l.name}.` : `No. ${l.n} is retired here for ${l.name}.`} You have played ${num(x.here)} seasons for ${x.the}. Do you think about your own number going up one day?`, [l.name], 'ownNumber'))
-      out.push(Q(`list|${l.name}`, 'veteran', 2, x.us ? `When people in ${x.town} list the great ${P[1]}, they start with ${l.name}. You have been here ${num(x.here)} seasons. Where do you want your name on that list?` : `When ${W.fans} here name the great ${P[1]} of this club, they start with ${l.name}. You have been here ${num(x.here)} seasons. Where do you want your name on that list?`, [l.name], 'list'))
+      if (!major(l)) { if (!x.away(l)) out.push(Q(`recall|${l.name}`, 'veteran', 1, `${cap(fansOf(x))} still talk about ${l.name}, who ${l.did}. You have been here ${num(x.here)} seasons. How do you want to be remembered here?`, [l.name], 'remember')); continue }
+      if (l.ret && l.n != null && x.us) out.push(Q(`own-number|${l.name}`, 'veteran', 3, `${x.sport === 'bucket' ? `${x.The} hung No. ${l.n} in the rafters for ${l.name}.` : `${x.The} retired No. ${l.n} for ${l.name}.`} You have played ${num(x.here)} seasons here. Do you think about your own number going up one day?`, [l.name], 'ownNumber'))
+      out.push(Q(`list|${l.name}`, 'veteran', 2, `When ${fansOf(x)} name the great ${P[1]}, they start with ${l.name}. You have been here ${num(x.here)} seasons. Where do you want your name on that list?`, [l.name], 'list'))
     }
     return out
   }
   if (sit === 'drought') {
-    const out = []
-    if (x.wait) out.push(Q('wait', 'wait', 3, `${x.wait} You are the face of this ${x.us ? 'team' : 'club'} now. Is this the ${x.us ? 'group' : 'squad'} that ends it?`, [], 'wait'))
-    if (x.lore.ache) out.push(Q('ache', 'wait', 2, `${x.lore.ache} ${x.us ? `${x.nick} fans` : 'The supporters'} still bring it up. Does that history sit in this ${W.room}, or only outside it?`, [], 'ache'))
+    if (!x.wait) return []
+    const out = [Q('wait', 'wait', 3, `${x.wait} You are the face of this ${x.us ? 'team' : 'club'} now. Is this the ${x.us ? 'group' : 'squad'} that ends it?`, [], 'wait')]
+    if (x.lore.ache) out.push(Q('ache', 'wait', 2, `${x.lore.ache} ${cap(fansOf(x))} still bring it up. Does that history sit in this ${W.room}, or only outside it?`, [], 'ache'))
     return out
   }
   return []
@@ -352,7 +381,7 @@ export function pressSituations(x0) {
   if (x.lastHere?.champion) out.push(['champion', 1])
   if (x.chase && face) out.push(['record', 1])
   if (x.here >= 6 && face && x.ovr >= 86 && x.past.length) out.push(['veteran', 0.4])
-  if (face && x.here >= 1 && (x.wait || x.lore.ache)) out.push(['drought', 0.4])
+  if (face && x.here >= 1 && x.wait) out.push(['drought', 0.4])
   return out
 }
 // One press question for this preseason, or null. r: a seeded roll; seen: the ids he has already been asked.
@@ -361,11 +390,14 @@ export function pressQuestion(x0, r, seen = []) {
   if (!x) return null
   for (const [sit, p] of pressSituations(x0)) {
     if (r() >= p) continue
-    const q = pick(x, pressCandidates(x, sit), r, seen)
+    // (a record, a number on the wall, the title wait: each question once. Asked every August, it stops being a question)
+    const list = ONCE.has(sit) ? pressCandidates(x, sit).filter(q => !seen.includes(q.id)) : pressCandidates(x, sit)
+    const q = pick(x, list, r, seen)
     if (q) return finish(x, q, sit, r)
   }
   return null
 }
+const ONCE = new Set(['record', 'veteran', 'drought'])
 const KICKER = { drafted: 'INTRODUCTORY PRESS CONFERENCE', arrive: 'INTRODUCTORY PRESS CONFERENCE', champion: 'MEDIA DAY', record: 'MEDIA DAY', veteran: 'MEDIA DAY', drought: 'MEDIA DAY' }
 // (a question that names a man on the roster as if he were gone never gets this far: the lists are split on the
 // roster, x.past and x.now. This is the last check: every name a legacy or a record question carries is off it.)
@@ -382,7 +414,7 @@ function pick(x, list, r, seen = []) {
 }
 function finish(x, q, sit, r) {
   const sets = ANSWERS[q.set](x, q.arg)
-  const a = [...sets[Math.floor(r() * sets.length)]].map(o => ({ o, k: r() })).sort((p, q2) => p.k - q2.k).map(p => p.o)
+  const a = tidyAll(sets[Math.floor(r() * sets.length)]).map(o => ({ o, k: r() })).sort((p, q2) => p.k - q2.k).map(p => p.o)
   const who = WHO[x.sport][Math.floor(r() * WHO[x.sport].length)]
   return { id: q.id, sit, kind: q.kind, kicker: KICKER[sit] ?? 'PRESS CONFERENCE', who, q: q.q, a, names: q.names }
 }
@@ -402,14 +434,14 @@ function roomCandidates(x) {
   const s = x.star
   // the man at his position there now
   if (s && ONE_JOB.has(x.pos) && x.ahead) add(who.gm, Q(`room-star|${s.name}`, 'star', 3, x.sport === 'soccer' ? `${s.name} is our first-choice striker. A year behind him, learning: happy with that?` : `We have ${s.name} at ${x.P[0]}. A year ${x.sport === 'bucket' ? 'coming off the bench' : 'of sitting'} behind him: is that a problem?`, [s.name], 'star'))
-  if (s && !ONE_JOB.has(x.pos)) add(who.coach, Q(`room-beside|${s.name}`, 'star', 2, `You would line up in the same ${ROOM_WORD[x.key] ?? 'lineup'} as ${s.name}. What does he get from having you next to him?`, [s.name], 'beside'))
+  if (s && !ONE_JOB.has(x.pos)) add(who.coach, Q(`room-beside|${s.name}`, 'star', 2, `You would line up ${ROOM_IN[x.key] ?? 'in'} the same ${ROOM_WORD[x.key] ?? 'lineup'} as ${s.name}. What does he get from having you next to him?`, [s.name], 'beside'))
   // last season, as it really went (football, a career's first draft)
   if (x.real?.w <= 6) add(who.coach, Q('room-bad', 'last', 3, `We went ${x.real.rec} last year. Why would you want to come here?`, [], 'bad'))
   if (x.real?.w >= 11) add(who.coach, Q('room-good', 'last', 2, `We went ${x.real.rec} last year. Where does a rookie fit on this team?`, [], 'good'))
   // the standard at his position (a first-round name is asked; a late pick is not)
-  if (x.top) for (const l of x.past.slice(0, 2)) add(who.gm, Q(`room-legacy|${l.name}`, 'legacy', 3, `The standard ${x.us ? 'at your position' : 'for a striker'} here is ${l.name}. He ${l.did}. Why should we believe you belong in that conversation one day?`, [l.name], 'legacy'))
+  if (x.top) for (const l of x.past.filter(major).slice(0, 2)) add(who.gm, Q(`room-legacy|${l.name}`, 'legacy', 3, `The standard ${x.us ? 'at your position' : 'for a striker'} here is ${l.name}. He ${l.did}. Why should we believe you belong in that conversation one day?`, [l.name], 'legacy'))
   if (x.wait) add(who.owner, Q('room-wait', 'wait', 2, `${x.wait} Our ${x.W.fans} have waited a long time. What do you tell them?`, [], 'wait'))
-  if (x.lore.mark) add(who.owner, Q('room-mark', 'mark', 2, `${x.lore.mark} What does this ${x.W.here} mean to you?`, [], 'mark'))
+  if (x.lore.mark) add(who.club ?? who.owner, Q('room-mark', 'mark', 2, `${x.lore.mark} What does this ${x.W.here} mean to you?`, [], 'mark'))
   const rv = Object.entries(x.lore.rivals ?? {})
   for (const [, text] of rv.slice(0, 1)) add(who.coach, Q('room-rival', 'rival', 1.5, `${text} What do you know about that ${x.us ? 'rivalry' : 'match'}?`, [], 'rival'))
   if (!x.us && x.league && !x.past.length) add(who.coach, Q('room-league', 'league', 2, `This is ${x.league.name}. Defenders here are quicker and stronger than anything in youth football. What makes you think you are ready?`, [], 'league'))
@@ -423,7 +455,7 @@ export function roomQuestion(x0, r, used = []) {
   const tot = list.reduce((s, q) => s + q.w, 0)
   let roll = r() * tot, q = list[list.length - 1]
   for (const y of list) { roll -= y.w; if (roll <= 0) { q = y; break } }
-  return { who: q.who, q: q.q, a: ROOM_ANSWERS[q.set](x), kind: q.kind, id: q.id, lore: true }
+  return { who: q.who, q: q.q, a: tidyAll(ROOM_ANSWERS[q.set](x)), kind: q.kind, id: q.id, lore: true }
 }
 
 // ── In the season: what the LIFE cards read (lib/scenarios.js, through lib/career.js lifeView) ──
@@ -458,7 +490,7 @@ export function recordChase({ sport, team, pos, totals = {}, last = null, roster
 export function everyQuestion(x0) {
   const x = frame(x0)
   if (!x) return null
-  const full = (q, sit) => ({ id: q.id, sit, kind: q.kind, q: q.q, names: q.names, sound: sound(x, q), answers: sit === 'room' ? [ROOM_ANSWERS[q.set](x)] : ANSWERS[q.set](x, q.arg), who: q.who ?? null })
+  const full = (q, sit) => ({ id: q.id, sit, kind: q.kind, q: q.q, names: q.names, sound: sound(x, q), answers: (sit === 'room' ? [ROOM_ANSWERS[q.set](x)] : ANSWERS[q.set](x, q.arg)).map(tidyAll), who: q.who ?? null })
   const out = { room: roomCandidates(x).map(q => full(q, 'room')) }
   for (const sit of ['drafted', 'arrive', 'champion', 'record', 'veteran', 'drought']) out[sit] = pressCandidates({ ...x, how: sit === 'drafted' ? 'draft' : x.how ?? 'trade' }, sit).map(q => full(q, sit))
   return out

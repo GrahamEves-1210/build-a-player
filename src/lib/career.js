@@ -2143,6 +2143,17 @@ function divRival(c) {
 // The career as one team sees it: who is on its roster, who plays his spot, how he got there, what he has done
 // there. team: his own, or one he is meeting before the draft. null: a sport with no team lore (baseball).
 const DEF_POS = new Set(['db', 'dl', 'lb'])
+// everyone on a roster somewhere in the league this year: a great who left and still plays is not asked about as if
+// his career were over. Kept for the career and the year (a league's rosters are not built on every render)
+const ACTIVE = new Map()
+function activeNames(c) {
+  const key = `${c.sport}-${c.seed}-${c.season}-${c.team ?? ''}-${c.phase}`
+  if (!ACTIVE.has(key)) {
+    if (ACTIVE.size > 12) ACTIVE.clear()
+    ACTIVE.set(key, sportOf(c).teams.flatMap(t => Object.values(rosterFor(c, t.short) ?? {}).filter(Array.isArray).flat().map(p => p?.name)).filter(Boolean))
+  }
+  return ACTIVE.get(key)
+}
 function pressView(c, team = c.team) {
   const S = sportOf(c), t = team ? S.teamOf(team) : null
   if (!t || !hasLore(c.sport)) return null
@@ -2169,7 +2180,7 @@ function pressView(c, team = c.team) {
   const real = c.sport === 'nfl' && rookie ? lastSeason(team) : null
   return {
     sport: c.sport, team, name: t.name, nick: nickOf(S, team), pos: c.pos, spot: S.isBucket ? hoopSpot(c) : null, player: c.name, league: t.league ?? null,
-    year: yr(c.season), roster: names, star: best && best.ovr >= 84 ? { name: best.name, ovr: best.ovr } : null, ahead: !dc.starter, starter: dc.starter,
+    year: yr(c.season), roster: names, active: activeNames(c), star: best && best.ovr >= 84 ? { name: best.name, ovr: best.ovr } : null, ahead: !dc.starter, starter: dc.starter,
     ovr: c.ovr, rep: c.rep ?? 5, here: here.length, proYears: (c.seasons ?? []).length, first: !here.length, how, top,
     titlesHere: here.filter(s => s.champion).map(s => yr(s.season)), alsoWon,
     lastHere: lastHere ? { wins: lastHere.wins, losses: lastHere.losses, champion: !!lastHere.champion } : null,

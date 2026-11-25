@@ -489,7 +489,7 @@ const PO_WAIT = { id: 'po-wait', at: ['playoffs'], w: 4, when: c => !!c.cr?.lore
     return { kicker: 'PLAYOFF MEDIA DAY', title: 'The question about the wait',
       body: `${L.wait} At the podium before the playoffs, a reporter asks ${c.name} whether this team feels that history.`,
       options: [
-        o('own', 'Take it on', gam(pOf(c, 0.5, ROLE[c.pos]?.nerve ?? []), { attr: c.R1('nerve', 1), team: { [c.sideKey]: 0.5 } }, `He says ${L.town} has waited long enough. The locker room likes hearing it.`,
+        o('own', 'Take it on', gam(pOf(c, 0.5, ROLE[c.pos]?.nerve ?? []), { attr: c.R1('nerve', 1), team: { [c.sideKey]: 0.5 } }, 'He says the fans have waited long enough. The locker room likes hearing it.',
           { attr: c.R1('nerve', -1) }, 'The quote leads every show. He plays tight.')),
         o('now', 'Keep it on this team', { team: { [c.otherKey]: 0.5 } }, '"Nobody in here played in those games." The room stays loose.'),
       ] }
@@ -652,7 +652,7 @@ const LIFE_ANY = [
     make: c => {
       const R = chaseNow(c), W = G(c, 3, 10)
       return { kicker: 'RECORD WATCH', title: `${fmtN(R.gap)} ${R.short} from the record`,
-        body: `${c.name} is ${fmtN(R.gap)} ${R.short} away from ${R.holder}'s franchise record of ${fmtN(R.value)}, with ${c.left} games left. A reporter asks whether he is thinking about it.`,
+        body: `${c.name} is ${fmtN(R.gap)} ${R.short} away from ${/s$/i.test(R.holder) ? `${R.holder}'` : `${R.holder}'s`} franchise record of ${fmtN(R.value)}, with ${c.left} games left. A reporter asks whether he is thinking about it.`,
         options: [
           o('chase', 'Say he wants it', { attr: c.R('make', 1), team: { [c.sideKey]: -0.5 }, window: W, tag: 'RECORD WATCH' }, `"I know the number." The game plan bends his way, and the ${c.isBucket ? 'offense' : c.side} gets easier to read.`),
           o('team', 'Wins first', { team: { [c.sideKey]: 0.5 }, window: W, tag: 'RECORD WATCH' }, '"If it comes, it comes with wins." The room plays for him.'),

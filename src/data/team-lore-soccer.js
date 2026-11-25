@@ -73,7 +73,7 @@ export const SOCCER_LORE = {
   },
   COV: {
     town: 'Coventry', lg: [0, null], eu: [0, null],
-    mark: 'Coventry won the 1987 FA Cup final 3-2 against Tottenham, the only major trophy the club had won.',
+    mark: 'Coventry won the 1987 FA Cup final 3-2 against Tottenham, after extra time.',
     rivals: {},
     g: { st: [L('Dion Dublin', 'shared the Premier League Golden Boot in 1998 as a Coventry player')] },
   },
@@ -164,7 +164,7 @@ export const SOCCER_LORE = {
     mark: 'Tottenham won the league and the FA Cup in 1961, the first English club to do the double in the twentieth century.',
     ache: 'Tottenham reached the 2019 Champions League final and lost to Liverpool.',
     rivals: { ARS: 'Arsenal moved to north London in 1913, four miles from Tottenham, and the two clubs have been rivals ever since.', CHE: 'Tottenham against Chelsea has been one of London\'s sharpest rivalries since the 1967 FA Cup final.' },
-    g: { st: [L('Harry Kane', 'scored 280 goals for Tottenham before he left for Bayern Munich in 2023'), L('Jimmy Greaves', 'scored 266 goals for Tottenham'), L('Son Heung-min', 'shared the Premier League Golden Boot in 2022')] },
+    g: { st: [L('Harry Kane', 'scored 280 goals for Tottenham before he left for Bayern Munich in 2023', { on: 'scored 280 goals for Tottenham in his first spell here' }), L('Jimmy Greaves', 'scored 266 goals for Tottenham'), L('Son Heung-min', 'shared the Premier League Golden Boot in 2022')] },
     rec: { goals: ['Harry Kane', 280] },
   },
   // ── La Liga ───────────────────────────────────────────────────────────────
@@ -628,7 +628,7 @@ export const SOCCER_LORE = {
     mark: 'Paris Saint-Germain won the 2025 Champions League final 5-0 and kept the trophy a year later.',
     ache: 'Paris led Barcelona 4-0 after the first leg in 2017 and lost the second 6-1.',
     rivals: { OLM: 'Paris against Marseille is the Classique, the biggest match in France.', PFC: 'Paris Saint-Germain and Paris FC play on the same street.' },
-    g: { st: [L('Kylian Mbappé', 'scored 256 goals for Paris before he left for Real Madrid'), L('Edinson Cavani', 'scored 200 goals for Paris'), L('Zlatan Ibrahimović', 'scored 156 goals in four seasons'), L('Ousmane Dembélé', 'won the Ballon d\'Or in 2025', { on: 'won the Ballon d\'Or here in 2025' })] },
+    g: { st: [L('Kylian Mbappé', 'scored 256 goals for Paris before he left for Real Madrid', { on: 'scored 256 goals for Paris in his first spell here' }), L('Edinson Cavani', 'scored 200 goals for Paris'), L('Zlatan Ibrahimović', 'scored 156 goals in four seasons'), L('Ousmane Dembélé', 'won the Ballon d\'Or in 2025', { on: 'won the Ballon d\'Or here in 2025' })] },
     rec: { goals: ['Kylian Mbappé', 256] },
   },
   REN: {

@@ -61,7 +61,7 @@ export const NFL_LORE = {
       lb: [L('Zach Thomas', 'made seven Pro Bowls and is in the Hall of Fame'), L('Nick Buoniconti', 'ran the defense they called the No-Name Defense')],
       db: [L('Jake Scott', 'was the MVP of Super Bowl VII'), L('Dick Anderson', 'was the Defensive Player of the Year in 1973')],
     },
-    rec: { passYds: ['Dan Marino', 61361], rushYds: ['Larry Csonka', 6737] },
+    rec: { passYds: ['Dan Marino', 61361] },
   },
   NE: {
     town: 'New England',
@@ -349,7 +349,7 @@ export const NFL_LORE = {
       lb: [L('Junior Seau', 'made 12 straight Pro Bowls with the Chargers', { n: 55, ret: true })],
       db: [L('Gill Byrd', 'intercepted 42 passes for the Chargers')],
     },
-    rec: { passYds: ['Philip Rivers', 59271], rushYds: ['LaDainian Tomlinson', 12490] },
+    rec: { rushYds: ['LaDainian Tomlinson', 12490] },
   },
   // ── NFC East ──────────────────────────────────────────────────────────────
   DAL: {
@@ -682,6 +682,6 @@ export const NFL_LORE = {
       lb: [L('Bobby Wagner', 'made eight straight Pro Bowls at middle linebacker', { rings: 1 })],
       db: [L('Kenny Easley', 'was the Defensive Player of the Year in 1984', { n: 45, ret: true }), L('Richard Sherman', 'tipped the pass that sent Seattle to Super Bowl XLVIII', { rings: 1 }), L('Earl Thomas', 'made six Pro Bowls at safety in the Legion of Boom', { rings: 1 })],
     },
-    rec: { passYds: ['Russell Wilson', 37059], rushYds: ['Shaun Alexander', 9429], recYds: ['Steve Largent', 13089] },
+    rec: { passYds: ['Russell Wilson', 37059], recYds: ['Steve Largent', 13089] },
   },
 }
