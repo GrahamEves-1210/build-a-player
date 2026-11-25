@@ -8108,3 +8108,6 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   font-size: 9px !important; letter-spacing: 0 !important; overflow-wrap: normal !important; word-break: keep-all;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+/* Phone Home: COLLEGE FOOTBALL on one line on its half-width card (owner 11-25) */
+@media (max-width: 520px) { .ag-mc--cfb .ag-mc-head b { white-space: nowrap; font-size: 27px !important; letter-spacing: 0 !important; } }
+@media (max-width: 370px) { .ag-mc--cfb .ag-mc-head b { font-size: 25px !important; } }

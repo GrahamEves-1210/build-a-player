@@ -227,7 +227,7 @@ function ModeCard({ gold = false, ucl = false, title, line, faces, on, onClick }
 }
 
 // a live mode's line: how many are in it right now, when any are
-const LiveLine = ({ n, line }) => (n > 0 ? <small className="ag-mc-live"><i aria-hidden="true" />{fmtCount(n)} playing</small> : <small>{line}</small>)
+const LiveLine = ({ n, line }) => (n > 0 ? <small className="ag-mc-live"><i aria-hidden="true" />{fmtCount(n)} playing</small> : line ? <small>{line}</small> : null)
 
 // A mode's card: its colour, its name, where it stands, and its art (public/modes)
 function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children, tag = null, soon = false }) {
@@ -248,13 +248,13 @@ const cfbLine = () => {
     const s = JSON.parse(localStorage.getItem('bap_cfb_seasons'))?.[0]
     if (s?.teamName) return `${s.teamName} ${s.record}${s.title ? ', national champs' : s.finalRank ? ` · No. ${s.finalRank}` : ''}`
   } catch {}
-  return 'Conference spin · Heisman race'
+  return ''   // (no line until there's a season: owner 11-25)
 }
 function CFBCard({ onClick, small = false }) {
   const [line] = useState(cfbLine)
   return (
     <button className={`ag-way ag-mc ag-mc--cfb${small ? ' ag-mc--cfb-sm' : ''}`} onClick={onClick}>
-      <span className="ag-mc-head"><b>COLLEGE FOOTBALL</b><small>{line}</small></span>
+      <span className="ag-mc-head"><b>COLLEGE FOOTBALL</b>{line && <small>{line}</small>}</span>
       <span className="ag-cfb-band" aria-hidden="true">
         {(small ? CFB_CARD_SCHOOLS.slice(0, 4) : CFB_CARD_SCHOOLS).map(s => <img key={s} src={`/logos/cfb/${s}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
       </span>
@@ -581,7 +581,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`
   const cpLine = cs?.played
     ? `${ol.played ? `${tierFor(ol.rating)[1]} ${ol.rating} · ` : ''}${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
-    : 'Live pools of five'
+    : ''   // (no line until he's played: owner 11-25)
   const btStatus = !btLive ? null : blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'Building' : 'Game on'
   const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, 3v3')
   const sqLine = !squad ? (isBaseball ? 'Build the lineup' : isSoccer ? 'Build the front line' : 'Build your whole team')
@@ -596,7 +596,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   // Salary Cap's card: in the card grid on football, the bottom row on basketball (beside Compete)
   const salary = (
     <button className={`ag-way ag-mc ag-mc--salary ag-way--quick${isBucket ? ' is-small' : ''}`} onClick={() => startRef.current('salarycap')}>
-      <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily grid</small></span>
+      <span className="ag-mc-head"><b>SALARY CAP</b></span>
       <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
     </button>
   )
@@ -616,7 +616,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
         {/* (soccer: Career on its own line, then Salary Cap and Compete side by side, owner 11-25) */}
         {!isSoccer && competeCard}
-        <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="Daily grid" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
+        <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
           {isBaseball ? <BaseballFees /> : <Fees />}
         </ModeArt>
         {isSoccer && competeCard}
@@ -680,7 +680,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </ModeArt>
         )}
         {!isBucket && (
-          <ModeArt small kind="quick" tone="depth" title="DEPTH CHART" line="Mini game" onClick={onDepthChart}><DepthArt /></ModeArt>
+          <ModeArt small kind="quick" tone="depth" title="DEPTH CHART" line="" onClick={onDepthChart}><DepthArt /></ModeArt>
         )}
       </div>
     </section>
