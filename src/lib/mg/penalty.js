@@ -17,7 +17,7 @@
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, particles, nudge, manOf, lightMode } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperDive, keeperLanded, keeperUp, handsOf, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperDive, keeperLanded, keeperUp, heldBall, parried, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar, padLayout } from './soccer.js'
 import { tip } from './soccerPads.js'
 
@@ -277,12 +277,6 @@ function keeperAt(g) {
   const u = keeperUp(t - Math.max(landAt, g.resAt + 300), at)
   return { x: at.x, z: KEEP_Z, lift: u.lift, pose: u.pose }
 }
-// a ball he's holding: in his hands as he lands with it, then pulled in to his chest
-function heldAt(kp, age) {
-  const h = handsOf(kp.pose, kp.lift ?? 0), r = kp.pose.rot ?? 0, hip = (kp.pose.hy ?? 53) * 0.0164 + (kp.lift ?? 0)
-  const chest = { x: Math.sin(r) * 0.42, y: hip + Math.cos(r) * 0.42 }, f = easeOut(prog(age, 120, 520))
-  return { x: kp.x + lerp(h.x, chest.x, f), y: Math.max(0.14, lerp(h.y, chest.y, f)) }
-}
 function ballNow(g) {
   const s = g.shot
   if (!s) return { x: BALL_X, y: 0.11, z: SPOT_Z, spin: 0 }
@@ -290,10 +284,7 @@ function ballNow(g) {
   if (s.save?.saved && a >= s.save.f * s.T) {
     const p = shotAt(s, s.save.f * s.T), f = clamp((a - s.save.f * s.T) / 520, 0, 1)
     if (s.save.held) return { x: p.x, y: p.y, z: KEEP_Z - 0.3, spin: 0, held: true, age: a - s.save.f * s.T }
-    const sd = Math.sign(p.x) || 1, g2 = clamp((a - s.save.f * s.T) / 700, 0, 1)
-    // palmed away: round the post from out wide (it never crosses the line between the posts), over the bar from the middle
-    if (Math.abs(p.x) > 1.3) { const x = p.x + sd * (POST + 1.6 - Math.abs(p.x)) * easeOut(g2); return { x, y: Math.max(0.11, p.y + Math.sin(g2 * Math.PI) * 0.7 - g2 * p.y * 0.8), z: KEEP_Z - 0.1 + Math.max(0, Math.abs(x) - POST - 0.25) * 2.2, spin: 9 + g2 * 6 } }
-    return { x: p.x + sd * g2 * 0.8, y: p.y + (BAR + 1 - p.y) * easeOut(Math.min(1, g2 * 2.2)) + g2 * 0.5, z: KEEP_Z - 0.1 + 3.2 * g2 * g2, spin: 9 + g2 * 6 }
+    return parried(p, a - s.save.f * s.T, KEEP_Z)
   }
   if (a < s.T) return shotAt(s, a)
   const af = a - s.T
@@ -321,7 +312,7 @@ export function draw(ctx, g, view) {
   const age = g.endAt != null ? g.t - g.endAt : 0
   const kp = keeperAt(g)
   list.push({ z: kp.z, fn: () => man(ctx, C, kp.x, kp.z, kp.pose, kp.front === false ? { ...gkLook, front: false } : gkLook, { lift: kp.lift ?? 0 }) })
-  if (b.held && b.age != null) { const h = heldAt(kp, b.age); b.x = h.x; b.y = h.y }
+  if (b.held && b.age != null) { const h = heldBall(kp, b.age); b.x = h.x; b.y = h.y }
   if (g.res === 'goal' && g.cel) {
     const sc = scorerAt(g.cel, age)
     list.push({ z: sc.z, fn: () => man(ctx, C, sc.x, sc.z, sc.pose, meLook, { lift: sc.lift, turn: sc.turn, name: g.who.me?.name }) })

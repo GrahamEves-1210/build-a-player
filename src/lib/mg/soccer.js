@@ -20,6 +20,7 @@
 //  moments  celebration(seed, o) → plan (o.sit: the score and the minute pick how big it is: goalMood) ·
 //           plan · scorerAt(plan, age) · mateAt(plan, i, age) · keeperBeaten(plan, age, at)
 //           defenderBeaten(i, age) · keeperRoar(age) · strikerDenied(kind, age) · CELEB_MS · celebMs() · skipOutro(g)
+//           keeperShot(t, o) (a keeper on his line and a shot: all of it) · heldBall(kp, age) · parried(p, age, z) ·
 //           keeperDive(ms, K, { hx, hy, at }) · keeperLanded(K, o) · keeperUp(age, from) · KEEPER_DOWN
 //  shooting shooter(v, o) → the shot in progress (power bar, aim, the timed finish) · strikeOf(k, from, o) → a shot
 //           shotAt(shot, t) → the ball in flight · keeperSave(shot, keeper, o) · shotHud(ctx, view, k, o)
@@ -1113,15 +1114,59 @@ export function handsOf(p, lift = 0) {
 export function keeperLanded(K, o = {}) { const d = keeperDive(1e6, K, o); return { dx: d.dx, rot: d.pose.rot, lift: d.lift } }
 // A keeper who's made the save, off the grass: a moment down, on to his knees, up, then the roar. from: { rot, lift }
 // where his dive left him (on his feet: straight to the roar). age: ms since the save. → { pose, lift }
-export function keeperUp(age, from = {}) {
+export function keeperUp(age, from = {}, roar = true) {
   const r0 = from.rot ?? 0, l0 = from.lift ?? 0
-  if (Math.abs(r0) < 0.5) return { pose: keeperRoar(age - 200, from.pose ?? POSE.set), lift: l0 * (1 - prog(age, 0, 200)) }
+  if (Math.abs(r0) < 0.5) return { pose: roar ? keeperRoar(age - 200, from.pose ?? POSE.set) : mix(from.pose ?? POSE.set, POSE.stand, ease(prog(age, 0, 400))), lift: l0 * (1 - prog(age, 0, 200)) }
   const lying = { ...POSE.dive, rot: r0, hlx: -12, hrx: 12, hly: -64, hry: -64 }
   const kneel = { ...KNEEL, face: 0, tilt: 0.2, hlx: -16, hrx: 16, hly: -40, hry: -40 }
   if (age < 380) return { pose: mix({ ...POSE.dive, rot: r0 }, lying, ease(prog(age, 160, 380))), lift: l0 }
   if (age < 680) { const f = ease(prog(age, 380, 680)); return { pose: mix(lying, kneel, f), lift: l0 * (1 - f) } }
   if (age < 920) return { pose: mix(kneel, POSE.stand, ease(prog(age, 680, 920))), lift: 0 }
-  return { pose: keeperRoar(age - 920 + 280, POSE.stand), lift: 0 }
+  return { pose: roar ? keeperRoar(age - 920 + 280, POSE.stand) : POSE.stand, lift: 0 }
+}
+// A keeper set on his line and a shot coming: the whole of it, from set to what he does after. One near him he takes
+// on his feet, his hands to it; one away from him he dives for (keeperDive): on to it when he saves it, short of it
+// when he's beaten, and only as far as the time he had. Then: beaten, he's down and gets the ball out of the net
+// (keeperBeaten); a save, he's up and roaring (keeperUp); off target, he just gets up.
+// o: { x0, z (where he stood), go (when he moves), cross (when the ball reaches him), ball: { x, y } (where it crosses
+// him), saved, res ('goal' 'saved' or anything else once it's over), resAt, cel (the celebration, for keeperBeaten),
+// ballIn: { x, z } (the ball in the net), base (his pose before he goes) }
+// → { x, z, lift, pose, front, holds }
+export function keeperShot(t, o) {
+  const off = o.ball.x - o.x0, K = Math.sign(off) || 1, dist = Math.abs(off), z = o.z
+  if (t < o.go) return { x: o.x0, z, lift: 0, pose: o.base ?? POSE.set, front: true }
+  let me, landAt, from
+  if (dist <= 1.15) {
+    const end = Math.max(o.go + 180, o.cross), f = ease(prog(t, o.go, end)), y = o.ball.y, low = y < 0.6
+    const shift = clamp(off, -1, 1) * 0.5, hx = clamp((off - shift) / RIG_M, -34, 34), hy = -clamp(y / RIG_M, 16, 118)
+    const pose = { ...POSE.set, hy: lerp(44, y > 1.5 ? 53 : low ? 31 : 47, f), bow: low ? 0.16 + 0.34 * f : 0.16, hlx: lerp(-22, hx - 7, f), hly: lerp(-62, hy, f), hrx: lerp(22, hx + 7, f), hry: lerp(-62, hy, f) }
+    me = { x: o.x0 + shift * f, z, lift: y > 2 ? Math.sin(f * Math.PI) * 0.25 : 0, pose, front: true }
+    landAt = end; from = { x: o.x0 + shift, rot: 0, lift: 0, pose }
+  } else {
+    const room = Math.max(0, o.cross - o.go)
+    const D = { hx: Math.min(o.saved ? dist : Math.max(0.9, dist - 0.55), o.saved ? 9 : 1.1 + room * 0.0045), hy: !o.saved && o.ball.y > 1.9 ? o.ball.y - 0.4 : o.ball.y, at: clamp(room, 280, 780) }
+    const d = keeperDive(t - o.go, K, D), L = keeperLanded(K, D)
+    me = { x: o.x0 + d.dx, z, lift: d.lift, pose: d.pose, front: true }
+    landAt = o.go + d.end + 80; from = { x: o.x0 + L.dx, rot: L.rot, lift: L.lift }
+  }
+  if (!o.res || t < landAt) return me
+  const at = { ...from, z, ball: o.ballIn }
+  if (o.res === 'goal' && o.cel) return keeperBeaten(o.cel, t - Math.max(landAt, o.resAt ?? 0), at)
+  const u = keeperUp(t - Math.max(landAt, (o.resAt ?? 0) + 300), at, o.res === 'saved')
+  return { x: at.x, z, lift: u.lift, pose: u.pose, front: true }
+}
+// A saved ball that isn't held: palmed round the post from out wide, tipped over the bar from the middle or from
+// under it. It never crosses the line between the posts. p: where he met it { x, y }; z: his line; age: ms since
+export function parried(p, age, z = -0.3) {
+  const sd = Math.sign(p.x) || 1, g = clamp(age / 700, 0, 1)
+  if (Math.abs(p.x) > 1.3 && p.y < 1.9) { const x = p.x + sd * (POST + 1.6 - Math.abs(p.x)) * ease(g); return { x, y: Math.max(0.11, p.y + Math.sin(g * Math.PI) * 0.7 - g * p.y * 0.8), z: z - 0.1 + Math.max(0, Math.abs(x) - POST - 0.25) * 2.2, spin: 9 + g * 6 } }
+  return { x: p.x + sd * g * 0.8, y: p.y + (BAR + 1 - p.y) * ease(Math.min(1, g * 2.2)) + g * 0.5, z: z - 0.1 + 3.2 * g * g, spin: 9 + g * 6 }
+}
+// a ball he's holding: in his hands as he takes it, then pulled in to his chest. kp: the keeper now ({ x, pose, lift })
+export function heldBall(kp, age) {
+  const h = handsOf(kp.pose, kp.lift ?? 0), r = kp.pose.rot ?? 0, hip = (kp.pose.hy ?? 53) * RIG_M + (kp.lift ?? 0)
+  const chest = { x: Math.sin(r) * 0.42, y: hip + Math.cos(r) * 0.42 }, f = ease(prog(age, 120, 520))
+  return { x: kp.x + lerp(h.x, chest.x, f), y: Math.max(0.14, lerp(h.y, chest.y, f)) }
 }
 // a keeper after a save: up, a roar, the fist pumping twice
 export function keeperRoar(age, base = POSE.stand) {
@@ -1208,7 +1253,7 @@ export function shooter(v, o = {}) {
 // The shot itself, struck from (x, z) at the goal at z = 0. o: { v, r (the game's random), foot (1 right, -1 left),
 // weak (on his weaker foot), speed (0-1 how fast he's going), pressure (0-1 a defender on him), dist override, y0 }
 // drawErr: a drawn shot's scatter, against the rest (a game whose goal is small in the picture, where the finger's own
-// error is already metres, asks for less)
+// error is already metres, asks for less). err: the whole scatter, scaled (a game's own difficulty)
 // Returns { type, from, to, T (ms in the air), curve, apex, power, timed, err, onTarget, over, wide, speed }
 export function strikeOf(k, from, o = {}) {
   const D = SHOT_TYPES[k.type] ?? SHOT_TYPES.driven, r = o.r ?? Math.random
@@ -1231,7 +1276,7 @@ export function strikeOf(k, from, o = {}) {
   // (a drawn one: the outside of the boot is the harder strike, and a shaky stroke a less clean one, the more so the
   // poorer the finisher)
   const drawK = dr ? (dr.outside ? DRAW.outsideErr : 1) * (1 + clamp(dr.wobble * 10, 0, 0.6) * lerp(1, 0.4, tv)) * DRAW.err * (o.drawErr ?? 1) : 1
-  const err = lerp(0.9, 0.3, tv) * range * D.acc * pw * body * press * timed * drawK
+  const err = lerp(0.9, 0.3, tv) * range * D.acc * pw * body * press * timed * drawK * (o.err ?? 1)
   let tx = ax + gaussOf(r) * err, ty = ay + gaussOf(r) * err * 0.55
   // too much on it: up and over (a chip with too much on it clears the bar, with too little drops short)
   let over = false
@@ -1264,7 +1309,8 @@ export function shotAt(s, ms) {
   return { x, y: Math.max(0.11, y), z, f, spin: g * 16 }
 }
 // Does the keeper get to it? K: { x, z, reach (m he can cover, standing to full stretch), react (ms), read (-1..1:
-// the side he's leaning), up (how high he gets: a standing keeper's 2.4 m, one on the floor's 0.5) }
+// the side he's leaning), up (how high he gets: a standing keeper's 2.4 m, one on the floor's 0.5), span (the longest
+// he's in the air, s: 0.55) }
 // Returns { saved, held (caught, not parried), x, y, f } where the ball crosses him
 export function keeperSave(s, K, r = Math.random) {
   const fk = clamp((K.z - s.from.z) / (0 - s.from.z), 0, 1)
@@ -1272,7 +1318,7 @@ export function keeperSave(s, K, r = Math.random) {
   const time = Math.max(0, fk * s.T - (K.react ?? 220)) / 1000
   const dx = at.x - K.x, side = Math.sign(dx) || 1
   const lean = (K.read ?? 0) * side   // + he's already going that way
-  const cover = (K.reach ?? 1.5) + Math.min(time, 0.55) * (K.dive ?? 4.4) + lean * 0.55
+  const cover = (K.reach ?? 1.5) + Math.min(time, K.span ?? 0.55) * (K.dive ?? 4.4) + lean * 0.55
   const up = K.up ?? 2.45
   const reachUp = up - Math.abs(dx) * 0.18
   const got = Math.abs(dx) <= cover + 0.15 && at.y <= reachUp
