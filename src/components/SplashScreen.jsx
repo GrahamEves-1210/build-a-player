@@ -372,7 +372,8 @@ export function pieceStyle({ src, flexes, i, visible }) {
     clipPath: `inset(${Math.max(0, top - 0.15)}% 0 ${Math.max(0, 100 - top - h - 0.15)}% 0)`,
     opacity: visible ? 1 : 0,
     transform: visible ? 'translateY(0)' : `translateY(-${(top + 28).toFixed(1)}%)`,
-    transition: `opacity ${BAND_STEP * 0.6}ms ease, transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
+    // (it fades in as it nears its place: the fade runs on the fall's own clock and curve)
+    transition: `opacity ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1), transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
     transitionDelay: visible ? `${(flexes.length - 1 - i) * BAND_STEP}ms` : '0ms',
   }
 }
