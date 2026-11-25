@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { track } from '../../lib/track'
 import { createRoot } from 'react-dom/client'
 import { IS_APP, APP_LOOK } from '../../lib/platform'
+import { SOCCER_LIVE } from '../../lib/soccerLive'
 import { IconArrow } from './icons'
 import './tutorial.css'
 
@@ -224,7 +225,7 @@ function tourSteps(sport) {
   return [
     // the first page: no spotlight yet, just the game in a sentence
     { id: 'welcome', sel: [], center: true, title: 'Welcome to Build-A-Player',
-      text: `Spin real football and basketball players, take the best trait from each one, and build a player nobody else has. Then play a season and see how far it goes. Here's a quick look around.` },
+      text: `Spin real ${SOCCER_LIVE ? 'football, basketball and soccer' : 'football and basketball'} players, take the best trait from each one, and build a player nobody else has. Then play a season and see how far it goes. Here's a quick look around.` },
     { id: 'sport', sel: ['.sp-nav', '.ag-sport'], title: 'Pick your sport', text: 'Tap a sport at the top of the stage to switch any time. Each one has its own modes, leaderboards and records.' },
     { id: 'pos', sel: ['.ag-positions'], title: 'Pick a position', text: nba ? 'Guard (PG · SG · SF) or Big (PF · C). Each one has its own traits.' : 'QB, RB, WR, TE or DB. Each position has its own traits and its own leaderboard.' },
     { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a team, then a real player from it, and tap the trait you want from him. Fill every slot, then play a season. Current uses today's rosters, All-Time the legends.` },

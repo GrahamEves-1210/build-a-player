@@ -118,6 +118,7 @@ export default function Wiki({ onExit }) {
             <ul>
               <li><a href="/" onClick={e => { e.preventDefault(); onExit() }}>Play Build-A-Player</a></li>
               <li><a href="/bucket">Play Build-A-Bucket</a></li>
+              {SOCCER_LIVE && <li><a href="/soccer">Play Soccer</a></li>}
               <li><a href="https://discord.gg/zdZBu2VjUD" target="_blank" rel="noopener noreferrer">Discord</a></li>
               <li><a href="https://x.com/Build_A_Player" target="_blank" rel="noopener noreferrer">@Build_A_Player on X</a></li>
             </ul>
@@ -134,7 +135,7 @@ export default function Wiki({ onExit }) {
             <page.Component go={go} query={loc.query} pool={loc.pool} />
             <footer className="wk-foot">
               <p>This page was last updated on {fmtDate(BUILD_DATE)}. Ratings as of {fmtDate(RATINGS_AS_OF)}; they refresh with every update to the game's data.</p>
-              <p>Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners. It is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university; school names and logos belong to their owners.{SOCCER_LIVE && ' It is not affiliated with FIFA, UEFA, FIFPRO, or any league or club.'}</p>
+              <p>Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners. It is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university; school names and logos belong to their owners.{SOCCER_LIVE && ' It is not affiliated with, endorsed by, or sponsored by FIFA, UEFA, any league or club, FIFPRO, or any players; club and national team names and crests belong to their owners.'}</p>
               <p><a href="/" onClick={e => { e.preventDefault(); onExit() }}>Game</a> · <a href="/?about">About</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="mailto:buildaplayer@outlook.com">Corrections</a></p>
             </footer>
           </article>

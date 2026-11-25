@@ -1,9 +1,10 @@
 import LegalShell, { Sec, P, Mail, Ext } from './LegalShell'
+import { SOCCER_LIVE } from '../lib/soccerLive'
 
 // What the game is, where to learn more, and the fine print
 const MODES = [
   ['Seasons', 'Build a player, then play a season: current rosters or the all-time greats.'],
-  ['Career', 'One player from the combine and draft to the Hall of Fame.'],
+  ['Career', SOCCER_LIVE ? 'One player from the combine and draft to the Hall of Fame, or in soccer from the academy to the Ballon d\'Or.' : 'One player from the combine and draft to the Hall of Fame.'],
   ['Squad Builder', 'Build a few players, put them on a real team and play a season together.'],
   ['Daily Challenge', 'The same spins for everyone, one run a day.'],
   ['Compete and Trait Auction', 'Build live against real players for the best overall.'],
@@ -16,7 +17,7 @@ export default function AboutPage({ onBack }) {
       <Sec id="a-what">
         <div className="lg-about-hero">
           <img src="/bap-mark.webp" alt="Build-A-Player" className="lg-about-mark" />
-          <P>Build one football or basketball player out of pieces of many real ones. Spin for a team and a player, keep one part of his game, and repeat until your player is complete. Then find out what you made.</P>
+          <P>Build one {SOCCER_LIVE ? 'football, basketball or soccer' : 'football or basketball'} player out of pieces of many real ones. Spin for a team and a player, keep one part of his game, and repeat until your player is complete. Then find out what you made.</P>
         </div>
       </Sec>
 
@@ -38,6 +39,7 @@ export default function AboutPage({ onBack }) {
         <p className="about-disclaimer">Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, NFL Properties LLC, the National Basketball Association, or any of their teams, players' associations or players.</p>
         <p className="about-disclaimer">League and team names, logos, player names and images belong to their respective owners. No commercial relationship with the NFL, the NBA or their teams is implied.</p>
         <p className="about-disclaimer">Build-A-Player is not affiliated with, endorsed by, or sponsored by the NCAA, any college conference, or any university. School names and logos belong to their owners.</p>
+        {SOCCER_LIVE && <p className="about-disclaimer">Build-A-Player is not affiliated with, endorsed by, or sponsored by FIFA, UEFA, any league or club, FIFPRO, or any players. Club and national team names and crests belong to their owners.</p>}
       </Sec>
 
       <div className="about-footer-links lg-links">
