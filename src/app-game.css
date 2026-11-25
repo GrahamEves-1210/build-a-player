@@ -7905,3 +7905,7 @@ html.low-power .sil-wrap .st-fx { display: none; }
 /* WR / TE: the catch reaches up to the stage's top edge, his feet staying on the circle (scaled from the bottom) */
 :is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform-origin: center bottom; }
 @media (min-width: 1024px) { :is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform: scale(1.09) !important; } }   /* (the desktop stage is shorter for its width) */
+/* soccer's Home: Career a whole row, Salary Cap and Compete side by side under it (no Squad Builder card) */
+.ag-cards.ag-cards--soccer { grid-template-columns: 1fr 1fr !important; }
+.ag-cards.ag-cards--soccer > .ag-mc--career, .ag-cards.ag-cards--soccer > :first-child { grid-column: 1 / -1 !important; }
+.ag-more:empty { display: none; }

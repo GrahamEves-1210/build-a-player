@@ -600,26 +600,29 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
     </button>
   )
+  const competeCard = onCompete && (
+    <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete} soon={!!soon?.compete}>
+      <Pool />
+    </ModeArt>
+  )
   const modes = useMemo(() => isSoccer || isBaseball ? (
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
-      <div className="ag-cards">
+      <div className={`ag-cards${isSoccer ? ' ag-cards--soccer' : ''}`}>
         {onCareer && (
           <ModeArt kind="career" tone="career" title="CAREER" line={crLine} color={career?.fit?.color} onClick={onCareer} soon={!!soon?.career}>
             <Rafters career={career} sport={sport} />
           </ModeArt>
         )}
-        {onCompete && (
-          <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete} soon={!!soon?.compete}>
-            <Pool />
-          </ModeArt>
-        )}
+        {/* (soccer: Career on its own line, then Salary Cap and Compete side by side, owner 11-25) */}
+        {!isSoccer && competeCard}
         <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="Daily grid" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
           {isBaseball ? <BaseballFees /> : <Fees />}
         </ModeArt>
+        {isSoccer && competeCard}
       </div>
       <div className="ag-more ag-more--one">
-        {onSquad && (
+        {onSquad && !isSoccer && (
           <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad} soon={!!soon?.squad}>
             {isBaseball ? <Diamond /> : <Formation />}
           </ModeArt>
