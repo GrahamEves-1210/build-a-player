@@ -158,12 +158,12 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         {showAuction ? (
           <div className="cp-hero ag-pop">
             <span className="ag-eyebrow">ONLINE · 1V1 · ${BUDGET} EACH{inCompete > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(inCompete)}<small>PLAYING</small></span>}</span>
-            <p className="cp-how">You against one other player, <b>${BUDGET}</b> each and Salary Cap's five rating slots, empty. You always keep $1 for each of your other empty slots, and a slot still empty at the end gets a free agent (a C). A slot card is pulled, the spinner lands on a real player, and their grade stays <b>face down</b> until the gavel. Bid <b>+$1</b> or sit out: going once, going twice, and every bid puts the clock back to <b>{RESET_SECS} seconds</b>. When every slot is filled, the <b>highest OVR</b> wins.</p>
+            <p className="cp-how">One against one, <b>${BUDGET}</b> each and Salary Cap's five rating slots, empty. Each player always keeps $1 for every other empty slot, and a slot still empty at the end gets a free agent (a C). A slot card is pulled, the spinner lands on a real player, and their grade stays <b>face down</b> until the gavel. Bid <b>+$1</b> or sit out: going once, going twice, and every bid puts the clock back to <b>{RESET_SECS} seconds</b>. When every slot is filled, the <b>highest OVR</b> wins.</p>
           </div>
         ) : (
           <div className="cp-hero ag-pop">
             <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS{inCompete > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(inCompete)}<small>PLAYING</small></span>}</span>
-            <p className="cp-how">You and four other players get <b>the same spins</b>. Respins are your own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
+            <p className="cp-how">Five players get <b>the same spins</b>. Respins are each player's own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
           </div>
         )}
         <OnlineRecord mode="compete" title="COMPETE RECORD" />

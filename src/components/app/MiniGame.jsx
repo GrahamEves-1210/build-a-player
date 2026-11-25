@@ -84,6 +84,14 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   // a test hook for the dev server only (a live build has no way to force a score)
   const doneRef = useRef(done); doneRef.current = done
   useEffect(() => { if (!import.meta.env.DEV) return; window.__bapMini = { finish: s => doneRef.current({ score: s, hit: s >= 0.5 }) }; return () => { delete window.__bapMini } }, [])
+  // the result card comes into view: the page can be left anywhere when the full-screen game closes (after a trial
+  // it sat scrolled past the card, the REDO and KEEP IT buttons off the top of the screen)
+  const root = useRef(null)
+  useEffect(() => {
+    if (stage !== 'done') return
+    const el = root.current, r = el?.getBoundingClientRect()
+    if (r && (r.top < 64 || r.bottom > window.innerHeight - 140)) el.scrollIntoView({ block: 'center' })
+  }, [stage])
   if (!def || sim) return null
   const engine = engineFor(game)
   const shown = situation ?? (NEEDS_SCORE.has(game) ? momentSituation(game, seed, { us: team?.short ?? 'HOME', them: opp?.short && opp.short !== team?.short ? opp.short : 'AWAY' }) : null)
@@ -93,7 +101,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   const owned = build ? def.traits.filter(t => build[t]) : []
   const traitNames = (owned.length ? owned : def.traits).slice(0, 2).map(t => t.replace(/([A-Z])/g, ' $1').replace('-', ' ')).join(' · ').toUpperCase()
   return (
-    <div className={`mg${result ? (result.hit ? ' is-hit' : ' is-miss') : ''}`}>
+    <div ref={root} className={`mg${result ? (result.hit ? ' is-hit' : ' is-miss') : ''}`}>
       <div className="mg-head"><span className="ag-eyebrow">{def.title}</span><span className="mg-trait">{traitNames} · {valToGrade(real)}{hard && <i className="mg-hard">CAMP · TOUGHER</i>}</span></div>
       {stage === 'intro' && (
         <div className="mg-intro">

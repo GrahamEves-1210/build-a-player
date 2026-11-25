@@ -209,3 +209,41 @@ button.cl-yr { width: 100%; color: inherit; font: inherit; cursor: pointer; }
 .cr-bye-head { font-family: var(--ag-display); font-weight: 400; font-size: 28px; line-height: 1; text-transform: uppercase; color: #fff; }
 .cr-bye-head.is-up { color: #4ade80; }
 .cr-bye .sm-option:disabled { opacity: .45; }
+
+/* ── Soccer Career (2026-11-24): the hub that leads with the season, the league table, the money and the seasons ── */
+/* a record, a season or a points total never breaks mid-number */
+.cr-nb { white-space: nowrap; }
+/* the hub: the legacy as one thin strip over the tabs (the whole meter is on the CAREER tab) */
+.cr-legacy--slim { width: 100%; padding: 8px 12px 9px; gap: 6px; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.cr-legacy--slim .cr-legacy-top b { font-size: 20px; }
+.cr-legacy--slim .cr-legacy-top b small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.cr-legacy--slim .cr-legacy-bar { height: 5px; }
+/* development points waiting: a count on the PLAYER tab, and the strip that goes there */
+.cr-tab-n { position: absolute; top: 2px; right: 5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #f5dc8a; color: #1d1503; font-family: var(--ag-font); font-style: normal; font-size: 13px; line-height: 18px; letter-spacing: 0; text-align: center; }
+button.cr-devnote--go { width: 100%; min-height: 44px; text-align: left; cursor: pointer; }
+.cr-devnote--go > span { flex: 1; min-width: 0; }
+.cr-devnote--go em { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; white-space: nowrap; }
+/* the league table (Squad Builder's rows, .sq-table): the European places and the drop marked, the key under it */
+.cr-lt { display: flex; flex-direction: column; gap: 8px; }
+.cr-lt .sq-table-head { font-size: 13px; }
+.cr-lt .sq-table-row { font-size: 14px; }
+.cr-lt-crest { width: 20px; height: 20px; object-fit: contain; flex: none; }
+.cr-lt .cr-club-init.cr-lt-crest { font-size: 9px; }
+.cr-lt .sq-table-row.is-ucl > span:first-child { box-shadow: inset 3px 0 0 #3b82f6; }
+.cr-lt .sq-table-row.is-uel > span:first-child { box-shadow: inset 3px 0 0 #f97316; }
+.cr-lt .sq-table-row.is-uecl > span:first-child { box-shadow: inset 3px 0 0 #22c55e; }
+.cr-lt .sq-table-row.is-down > span:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+.cr-lt-key { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 0 6px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--ag-muted); }
+.cr-lt-key span, .cr-lt-zone { display: inline-flex; align-items: center; gap: 6px; }
+.cr-lt-key i, .cr-lt-zone i { width: 4px; height: 13px; border-radius: 1px; background: currentColor; }
+.cr-lt-key .is-ucl i, .cr-lt-zone.is-ucl i { background: #3b82f6; }
+.cr-lt-key .is-uel i, .cr-lt-zone.is-uel i { background: #f97316; }
+.cr-lt-key .is-uecl i, .cr-lt-zone.is-uecl i { background: #22c55e; }
+.cr-lt-key .is-down i, .cr-lt-zone.is-down i { background: #ef4444; }
+.cr-lt-more { height: 40px; font-size: 14px; }
+.cr-race-bar .cr-lt-zone { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--ag-text-2, #c9d1cd); min-width: 0; white-space: nowrap; overflow: hidden; }
+.cr-lt-wrap { display: flex; flex-direction: column; }
+.cr-lt-card { display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 380px) { .cr-lt .sq-table-row { font-size: 13px; } }
+/* THE NUMBERS BY YEAR: room for a season (2026-27) in the first column */
+.crs-yr--wide { grid-template-columns: 62px repeat(3, minmax(0, 1fr)); }
