@@ -271,8 +271,8 @@ export function faNext(F) {
 // camp: the GM's roster has to be legal before the season (the CPU teams make theirs legal themselves). It can always
 // get there: short of 14 standard contracts, the minimum deals (minPool) list every man left who can sign, then camp
 // invites (campInvite). The one roster that can't add a man is a hard-capped one with no room for even a rookie's
-// minimum: it opens the season a man short (short: 1), as the league allows for two weeks (season.js rosterFloor
-// signs the fourteenth then).
+// minimum: it opens the season a man short (short: 1); season.js rosterFloor signs the fourteenth on opening night,
+// as it does for any roster under the league's minimum.
 export function campCheck(F) {
   const r = X.legalRoster(F, F.team, { season: true })
   if (r.ok || !(r.st < 14) || (r.tw ?? 0) > 3) return r

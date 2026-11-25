@@ -809,7 +809,7 @@ export function Camp({ F, act, go, owner }) {
       <Chyron team={F.team} title="Training camp" sub={`${std.length} STANDARD · ${tw.length} TWO-WAY · ${ROSTER_MAX} AND 3 ON OPENING NIGHT`} />
       <CapBar F={F} />
       {!chk.ok && <p className="nb-why">{over > 0 ? `${std.length} standard contracts: waive ${over} ${over === 1 ? 'man' : 'men'} to get to ${ROSTER_MAX}.` : chk.why}</p>}
-      {chk.short && <p className="nbo-note">{`${chk.why}. The league allows a roster under 14 for two weeks; the front office signs a man then.`}</p>}
+      {chk.short && <p className="nbo-note">{`${chk.why}. The front office fills the last spot once the season is under way.`}</p>}
       {std.length < 14 && !chk.short && <MinDeals F={F} act={act} open />}
       <div className="nbo-camp-list">
         {std.map(p => {
@@ -884,10 +884,11 @@ function MinDeals({ F, act, open = false }) {
           <button type="button" onClick={() => { const r = act(X => signMin(X, p.i)); setWhy(r?.ok ? null : r?.why ?? null); if (r?.ok) setDone(p.n); sfx(r?.ok ? 'claim' : 'deny') }}>Sign</button>
         </div>
       ))}
+      {invite && <p className="nbo-note">No free agent left can sign for the minimum. A camp invite is an undrafted man on a one-year, non-guaranteed minimum deal.</p>}
       {invite && (
         <div className="nbo-minrow">
           <span className="nbo-ovr">+</span>
-          <span className="nbo-fa-who"><b>Camp invite</b><small><span>NO FREE AGENT LEFT CAN SIGN · AN UNDRAFTED MAN, ONE YEAR, NON-GUARANTEED MINIMUM</span></small></span>
+          <span className="nbo-fa-who"><b>Camp invite</b><small><span>UNDRAFTED · NON-GUARANTEED</span></small></span>
           <button type="button" onClick={() => { const r = act(X => campInvite(X)); setWhy(r?.ok ? null : r?.why ?? null); if (r?.ok) setDone(r.man?.n ?? 'A camp invite'); sfx(r?.ok ? 'claim' : 'deny') }}>Sign</button>
         </div>
       )}

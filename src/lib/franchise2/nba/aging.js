@@ -25,7 +25,7 @@
 //                               man a year older (ag, ys, a, o, pk); builds: the GM's builds who lost a step
 //                                                       older (ag, ys, a, o, pk). Core has written car by then.
 //   careerRow(y, s, line)       a SeasonLine as a car row (the checks use it; core writes its own)
-//   ageMan(p, R, { mpg })       one man's year (mutates p); returns the OVR change
+//   ageMan(p, R, { mpg, cliff }) one man's year (mutates p); returns the OVR change (cliff false: no bad summer)
 //   retireChance(p, { under })  the chance he retires this summer (under: signed for next season)
 //   ageBuild(p, R, { mpg })     the GM's build a year older (the decline from 28; builds.js grows the young ones)
 //   notable(p)                  a career the wire and the history page keep
@@ -52,7 +52,7 @@ const RATE = { 18: 0.3, 19: 0.3, 20: 0.29, 21: 0.27, 22: 0.25, 23: 0.23, 24: 0.2
 const typesOf = g => (g === 'big' ? BIG_TYPES : GUARD_TYPES)
 const OVR_PER_GRADE = 44 / 9
 
-export function ageMan(p, R, { mpg = null, coach = 0 } = {}) {
+export function ageMan(p, R, { mpg = null, coach = 0, cliff = true } = {}) {
   const ag = p.ag, g = p.g ?? groupOfPos(p.p), types = typesOf(g), a = p.a
   const o0 = p.o ?? ovrOf(p)
   // the ceiling moves while he's young: a bust's sinks, a riser's climbs (now and then a big jump: the pick who pops)
@@ -86,7 +86,7 @@ export function ageMan(p, R, { mpg = null, coach = 0 } = {}) {
   // how he plays: more legs than jumper ages fast, a shooter with a head ages well
   const legs = ((a.speed ?? 5) + (a.bounce ?? 5)) / 2, skill = ((a.jumpShot ?? 5) + (a.basketballIQ ?? 5)) / 2
   const style = clamp(0.65, 1.5, 1 + 0.07 * (legs - skill) + (g === 'guard' ? 0.08 : -0.06))
-  const luck = Math.exp(R.n() * 0.3) * (R.u() < cliffAt(ag) ? 2.4 + R.u() * 1.2 : 1)
+  const luck = Math.exp(R.n() * 0.3) * (cliff && R.u() < cliffAt(ag) ? 2.4 + R.u() * 1.2 : 1)
   const [dA, dB, dT] = declAt(ag)
   for (let j = 0; j < types.length; j++) {
     const t = types[j], k = kindOf(t)
@@ -187,7 +187,7 @@ export function ageBuild(p, R, { mpg = null } = {}) {
   const was = p.o ?? ovrOf(p)
   if (p.ag >= 28) {
     const q = { ...p, a: { ...p.a } }
-    ageMan(q, R, { mpg })
+    ageMan(q, R, { mpg, cliff: false })   // (the league's curve, not its cliffs: the GM's own man never loses three years in a summer)
     for (const t of Object.keys(p.a)) {
       const d = (q.a[t] ?? p.a[t]) - p.a[t]
       if (d >= 0) continue

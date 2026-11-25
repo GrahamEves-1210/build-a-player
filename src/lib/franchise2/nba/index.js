@@ -6,7 +6,7 @@ import { makeSchedule } from './schedule'
 import { makePicks, makeClass } from './draft'
 import { records, recText } from './season'
 import { addNews } from './news'
-import { placeBuilds, BUILD_MAX } from './builds'
+import { placeBuilds, reseatBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
 import { numberAll, needsNumbers } from './numbers'
 import { lightInit } from './light'
@@ -142,10 +142,12 @@ export function loadNba(slot) {
   try { const s = localStorage.getItem(KEY(slot)); if (!s) return null; const F = unpackNba(s); if (!(F && F.v === NBA_SAVE_V && F.sport === 'nba' && F.teams)) return null; if (needsNumbers(F)) numberAll(F); upgradeNba(F); return F } catch { return null }
 }
 // an older save: the pace it was played at (every save before the setup's MODE step was full), the league's staffs
-// (a save from before coaches: its team keeps its real head coach, coach.js ensureStaff)
+// (a save from before coaches: its team keeps its real head coach, coach.js ensureStaff), the builds' draft picks (a
+// save from before each build had his own: builds.js reseatBuilds)
 export function upgradeNba(F) {
   if (F.pace !== 'light' && F.pace !== 'full') F.pace = 'full'
   ensureStaff(F)
+  reseatBuilds(F)
   return F
 }
 export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }

@@ -25,10 +25,12 @@ const HT = { PG: 75, SG: 77, SF: 79, PF: 81, C: 83 }, WT = { PG: 190, SG: 205, S
 export const buildSlot = o => clamp(1, 30, Math.round(1 + (90 - o) * 1.6))
 // the builds' slots together (their OVRs in the setup's order): no two share one. The better build keeps his OVR's
 // slot and the next takes the pick after it (two 90s go first and second); past No. 30 the slot before.
-export function buildSlots(os) {
-  const out = os.map(() => 0), used = new Set()
-  for (const k of os.map((o, k) => k).sort((a, b) => os[b] - os[a] || a - b)) {
-    let n = buildSlot(os[k])
+export const buildSlots = os => spread(os.map(buildSlot))
+// picks wanted -> picks held, no two the same: the earlier pick keeps his, the next man takes the one after
+function spread(want) {
+  const out = want.map(() => 0), used = new Set()
+  for (const k of want.map((n, k) => k).sort((a, b) => want[a] - want[b] || a - b)) {
+    let n = clamp(1, 30, want[k])
     while (used.has(n) && n < 30) n++
     while (used.has(n) && n > 1) n--
     used.add(n); out[k] = n
@@ -40,12 +42,12 @@ export function buildSlots(os) {
 // goes first, the real first pick reads as the second, and so on down; the real men stay in their order). With no
 // such pick left before No. 30 the men ahead move one earlier instead. Only the pick number moves: a real man's
 // team, deal and money stay his own.
-export function seatBuilds(F, men) {
-  const slots = buildSlots(men.map(p => p.o))
+export function seatBuilds(F, men, { year = F.year, want = null } = {}) {
+  const slots = want ? spread(want) : buildSlots(men.map(p => p.o))
   const B = new Set(slots)
   const all = [...Object.values(F.teams).flatMap(t => t.r), ...(F.fa ?? [])]
   const seen = new Set()
-  const real = all.filter(p => p.b == null && p.dr?.[0] === F.year && p.dr[1] === 1 && p.dr[2] >= 1 && p.dr[2] <= 30 && !seen.has(p.dr[2]) && seen.add(p.dr[2])).sort((x, y) => x.dr[2] - y.dr[2])
+  const real = all.filter(p => p.b == null && p.dr?.[0] === year && p.dr[1] === 1 && p.dr[2] >= 1 && p.dr[2] <= 30 && !seen.has(p.dr[2]) && seen.add(p.dr[2])).sort((x, y) => x.dr[2] - y.dr[2])
   // (down the round: a man keeps his pick unless a build or the man ahead of him has it; then back up it, should the
   // round have run out)
   const pos = []
@@ -56,6 +58,20 @@ export function seatBuilds(F, men) {
   real.forEach((p, k) => { if (pos[k] >= 1 && pos[k] !== p.dr[2]) p.dr = [p.dr[0], p.dr[1], pos[k], p.dr[3]] })
   men.forEach((p, k) => { p.dr = [p.dr[0], p.dr[1], slots[k], p.dr[3]] })
   return slots
+}
+// A save from before every build had his own pick (two builds on one pick, or a build on a real rookie's): seated
+// again when it loads (index.js upgradeNba), each build at the pick he has, the next one when a build already holds
+// it. A save with nothing shared is left alone. Returns whether anything moved.
+export function reseatBuilds(F) {
+  const all = [...Object.values(F.teams ?? {}).flatMap(t => t.r), ...(F.fa ?? [])]
+  const men = all.filter(p => p.b != null && p.dr?.[1] === 1).sort((a, b) => a.b - b.b)
+  if (!men.length) return false
+  const year = men[0].dr[0], held = {}
+  for (const p of all) if (p.dr?.[0] === year && p.dr[1] === 1) held[p.dr[2]] = (held[p.dr[2]] ?? 0) + 1
+  if (!men.some(p => p.dr[0] === year && held[p.dr[2]] > 1)) return false
+  const mine = men.filter(p => p.dr[0] === year)
+  seatBuilds(F, mine, { year, want: mine.map(p => p.dr[2]) })
+  return true
 }
 export const attrsOfBuild = (pos, build) => Object.fromEntries((TYPES[pos] ?? []).map(t => [t, clamp(0, 11, Math.round(build?.[t]?.val ?? 0))]))
 
