@@ -30,7 +30,7 @@ export function createPoser(N) {
   const A = Array.from({ length: N }, () => ({
     ang: -Math.PI / 2, x: null, y: 0, run: 0, sp: 0, lx: 1, ly: 0, side: 1, from: 1, drib: 0,
     inMv: 0, mvT0: 0, gT0: -1, gKind: null, gSide: 1, gAir: 0,
-    rel: null, swipe: null, pass: null, hit: null, wob: 1, cheer: false, land: 0,
+    rel: null, swipe: null, pass: null, hit: null, wob: 1, cheer: false, land: 0, gOx: 0, gOy: 0,
     // what is drawn: eased toward each frame's pose
     lh: null, rh: null, lf: null, rf: null,
   }))
@@ -314,6 +314,22 @@ export function createPoser(N) {
       set3(z.bl, 0.28 - 0.07 * r, 0.06, 3 + 5.3 * r)
       set3(TR, 0.26 - 0.08 * r, 0.12, 0.35 + 0.65 * r); set3(TL, 0.28 - 0.06 * r, -0.08, 0.35 + 0.55 * r)
       z.lf[0] = 0.04; z.rf[0] = 0.08; z.lf[1] = -0.15; z.rf[1] = 0.15
+      // pulling up on the move: a hard plant (a hop into a wide stance, his weight back to stop himself), then the
+      // body carries on a little the way he was going while he's up (the drift); the quicker he was going, the more
+      const run = sh.run ?? 0
+      if (run > 0.3) {
+        const k = c01((run - 0.3) / 0.6), plant = c01(g / 0.32)
+        const fx = Math.cos(a.ang), fy = Math.sin(a.ang), mx = sh.mx ?? 0, my = sh.my ?? 0
+        const fwd = mx * fx + my * fy, lat = -mx * fy + my * fx                  // the way he was going, in his own frame
+        z.lf[0] += 0.2 * k * fwd * (1 - 0.6 * plant); z.rf[0] += 0.1 * k * fwd * (1 - 0.6 * plant)
+        z.lf[1] -= 0.08 * k * (1 - plant * 0.5); z.rf[1] += 0.08 * k * (1 - plant * 0.5)
+        z.lf[1] += 0.12 * k * lat * (1 - plant); z.rf[1] += 0.12 * k * lat * (1 - plant)
+        z.lean = -0.07 * k * Math.sin(Math.PI * plant) * (fwd > 0 ? 1 : -0.5)
+        z.scale *= 1 - 0.03 * k * Math.sin(Math.PI * plant)
+        const drift = 0.75 * k * ease((g - 0.35) / 0.75)
+        z.ox = mx * drift; z.oy = my * drift
+        a.gOx = z.ox; a.gOy = z.oy
+      } else { a.gOx = 0; a.gOy = 0 }
     } else if (kind === 'layup') {
       // two steps with it tucked, then up off one foot, the ball out in front on one hand
       const r = ease((g - 0.4) / 0.6)
@@ -382,7 +398,11 @@ export function createPoser(N) {
     const fall = c01(t / (gticks(T.follow) * STEP * 0.8))
     z.air = Math.max(z.air, R.air * (1 - ease(fall)))
     if (R.blocked) { mix3(bh, 0.28, sd * 0.3, 0.5, hold); return true }
-    if (R.kind === 'jumper') { mix3(bh, 0.28 + 0.26 * snap, 0.08, 1, hold); mix3(oh, 0.24, -0.34, 0.6 - 0.2 * snap, hold) }
+    if (R.kind === 'jumper') {
+      mix3(bh, 0.28 + 0.26 * snap, 0.08, 1, hold); mix3(oh, 0.24, -0.34, 0.6 - 0.2 * snap, hold)
+      // a drifting jumper lands where the drift took him, and the body settles back over his feet
+      if (a.gOx || a.gOy) { const back = 1 - ease(t / 260); z.ox = a.gOx * back; z.oy = a.gOy * back; if (back <= 0) a.gOx = a.gOy = 0 }
+    }
     else { mix3(bh, 0.54 + 0.02 * snap, sd * 0.06, 1 - 0.2 * ease(t / 300), hold); mix3(oh, 0.06, -sd * 0.44, 0.3, hold) }
     return t < 200
   }

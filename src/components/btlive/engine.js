@@ -142,7 +142,12 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'release') { if (e.pid !== me || levels[me]) sfx('btrelease', 0.6) }        // his own sounds as he lets go (letGo)
       // a teammate calling for the ball: his man shows it on every screen (draw), and the man with it hears it
       else if (e.e === 'call') { if (p.team === P[me].team && e.pid !== me) { sfx('tap'); if (s.ball.holder === me) haptic('medium') } }
-      // King of the Hill: a stop, and he has to take it past the arc (CLEAR IT shows over his man until he has: draw)
+      // King of the Hill: the rotation. The one sitting out checks in; a stop crowns the defender
+      else if (e.e === 'rotate') {
+        if (e.why !== 'make') say('NEW KING', P[e.king].x, wordY(P[e.king].y), colOf(e.king), true, 1200)
+        say(`${nameOf(e.in).toUpperCase()} CHECKS IN`, COURT.rim.x, 22, 'rgba(255,255,255,.9)', false, 1400)
+        if (e.in === me || e.sit === me) haptic('light')
+      }
       else if (e.e === 'final') {
         const won = e.winner === s.players[me].team
         sfx(won ? 'award' : 'deny'); if (won) haptic('success')
@@ -231,9 +236,10 @@ export function createEngine({ setup, els, on, net = null }) {
     if (has && aBuf && p.act === 'free' && p.noAct <= 0 && !NB.local) {
       NB.aUsed = NB.n[0]
       const kind = shotKindAt(s, me), d = ref.rimDist(p)
-      const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team), kind).c
+      const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team && !o.out), kind).c
       p.act = 'gather'; p.actT = 0
-      p.shot = { kind, spec: meterSpec(kind, p.R, s.gamePoint), d, three: kind === 'jumper' && ref.isThree(p.x, p.y), read: c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2 }
+      const sp = Math.hypot(p.vx, p.vy), run = clamp(sp / p.R.topBall, 0, 1)
+      p.shot = { kind, spec: meterSpec(kind, p.R, s.gamePoint), d, three: kind === 'jumper' && ref.isThree(p.x, p.y), read: c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2, run, mx: run > 0.3 ? p.vx / sp : 0, my: run > 0.3 ? p.vy / sp : 0 }
       NB.local = { act: 'gather', shot: p.shot, sn: NB.n[0] }
     }
     // a dribble move starts here too (the step's rules: sim.js doMove); the flick itself went to the referee as it was made
@@ -367,16 +373,17 @@ export function createEngine({ setup, els, on, net = null }) {
     shown.sc.forEach((c, i) => {
       const v = sideScore(i)
       if (v !== c.v) { c.v = v; c.sc.textContent = String(v) }
-      const lit = i === on, king = K && s.king === i
-      if (lit !== c.on || king !== c.king) { c.on = lit; c.king = king; c.el.classList.toggle('is-on', lit); c.el.classList.toggle('is-king', king) }
-      // King of the Hill: the king marked, and the man who has to take it back past the arc first
-      const t = !K ? '' : i === cl ? 'TAKE IT BACK' : king ? 'KING' : ''
-      if (t !== c.t) { c.t = t; c.tag.textContent = t; c.tag.classList.toggle('is-clear', t === 'TAKE IT BACK') }
+      const lit = i === on, king = K && s.king === i, sit = K && s.sit === i
+      if (lit !== c.on || king !== c.king || sit !== c.sit) { c.on = lit; c.king = king; c.sit = sit; c.el.classList.toggle('is-on', lit); c.el.classList.toggle('is-king', king); c.el.classList.toggle('is-out', sit) }
+      // King of the Hill: the king marked, and the man sitting out (he's up next)
+      const t = !K ? '' : sit ? 'UP NEXT' : king ? 'KING' : ''
+      if (t !== c.t) { c.t = t; c.tag.textContent = t; c.tag.classList.toggle('is-clear', t === 'TAKE IT BACK'); c.tag.classList.toggle('is-next', t === 'UP NEXT') }
     })
     let note = ''
     if (s.phase !== 'over') {
       if (K) {
-        note = cl >= 0 ? `${nameOf(cl)} TAKES IT BACK` : s.king != null && s.king >= 0 ? `${nameOf(s.king)} IS KING` : on >= 0 ? `${nameOf(on)}'S BALL` : ''
+        const kg = s.phase === 'dead' && s.next?.carrier != null ? s.next.carrier : s.king
+        note = kg != null && kg >= 0 ? `${nameOf(kg)} IS KING${s.sit >= 0 ? ` · ${nameOf(s.sit)} SITS` : ''}` : ''
       } else if (team != null && team >= 0) note = s.mustClear === team && s.phase === 'live' ? `${nameOf(team)}'S BALL · TAKE IT BACK` : `${nameOf(team)}'S BALL`
     }
     const nc = K ? (cl >= 0 ? cl : s.king ?? on) : team
@@ -387,53 +394,57 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     const has = b.st === 'held' && b.holder === me, up = b.st === 'shot' || b.st === 'loose'
     // what his hands do right now: with the ball ('clear': his side still has to take it back), off it on offense, on
-    // defense (the 'board' / 'dboard' ones: a shot or a loose ball up), or nothing between plays
-    const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : has ? (s.mustClear === p.team ? 'clear' : 'ball') : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
+    // defense (the 'board' / 'dboard' ones: a shot or a loose ball up), sitting out (King of the Hill), or nothing
+    // between plays. Every control says what it does for the side of the ball he's on, and changes the moment that does
+    const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : p.out ? 'sit' : has ? (s.mustClear === p.team ? 'clear' : 'ball') : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
     const ball = mode === 'ball' || mode === 'clear'
     if (mode !== shown.mode) {
       shown.mode = mode
       const team = s.size > 1 && !koth()
-      // SHOOT: lit with the ball (under it: how it works, or that his side has to take it back first)
-      els.btn.a.classList.toggle('is-dim', !ball)
+      // A: SHOOT with the ball; BLOCK on defense (a hand up at the shot: the only way he jumps there); REBOUND with a
+      // shot or a loose ball up; off the ball on offense a SHOOT that goes on the catch
+      const A = { ball: ['SHOOT', 'HOLD, LET GO'], clear: ['SHOOT', 'TAKE IT BACK'], def: ['BLOCK', 'HAND UP'], dboard: ['REBOUND', 'GO UP'], board: ['REBOUND', 'GO UP'], off: ['SHOOT', 'ON THE CATCH'], sit: ['SHOOT', ''], none: ['SHOOT', ''] }[mode]
+      els.btn.a.classList.toggle('is-dim', mode === 'none' || mode === 'sit' || mode === 'off')
       els.btn.a.classList.toggle('is-warn', mode === 'clear')
-      els.lab.a.textContent = 'SHOOT'
-      if (els.lab.sa) els.lab.sa.textContent = mode === 'clear' ? 'TAKE IT BACK' : ball ? 'HOLD, LET GO' : ''
+      els.btn.a.classList.toggle('is-def', mode === 'def' || mode === 'dboard' || mode === 'board')
+      els.lab.a.textContent = A[0]
+      if (els.lab.sa) els.lab.sa.textContent = A[1]
       // PASS (a team game): to a teammate with the ball, a call for it without
       const bl = ball ? 'PASS' : mode === 'off' || mode === 'board' ? 'CALL\nFOR IT' : 'PASS'
       els.lab.b.textContent = bl
       els.btn.b.classList.toggle('is-off', !team)
       els.btn.b.classList.toggle('is-dim', !(ball || mode === 'off' || mode === 'board'))
       els.btn.b.classList.toggle('is-two', bl !== 'PASS')
-      // the right pad: the moves round it with the ball; without it, JUMP on top and STEAL underneath
-      const k = ball ? 'ball' : mode === 'none' ? 'none' : 'def'
-      if (els.ds) els.ds.dataset.k = k
-      if (els.half) {
-        els.half.up.textContent = k === 'def' ? 'JUMP' : ''
-        els.half.dn.textContent = mode === 'def' ? 'STEAL' : ''
-        els.half.up.classList.toggle('is-dim', mode === 'off')
-      }
-      if (els.root) { els.root.dataset.mode = ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'def' : mode === 'none' ? 'none' : 'off'; els.root.dataset.clear = mode === 'clear' ? '1' : '' }
+      // the right pad: a plain stick for the dribble moves with the ball; on defense it's the STEAL button; else idle
+      const k = ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'steal' : 'none'
+      if (els.ds) { els.ds.dataset.k = k; els.ds.classList.toggle('is-dim', mode === 'dboard') }
+      if (els.steal) els.steal.textContent = k === 'steal' ? 'STEAL' : ''
+      if (els.root) { els.root.dataset.mode = ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'def' : mode === 'none' || mode === 'sit' ? 'none' : 'off'; els.root.dataset.clear = mode === 'clear' ? '1' : '' }
       // the keys beside the court
       const K2 = els.keys?.title ? els.keys : null
       if (K2) {
-        if (K2.shootSub) { K2.shootSub.textContent = mode === 'clear' ? 'TAKE IT BACK' : 'HOLD, LET GO'; K2.shootSub.classList.toggle('is-warn', mode === 'clear') }
+        if (K2.shoot) K2.shoot.textContent = A[0]
+        if (K2.shootSub) { K2.shootSub.textContent = A[1]; K2.shootSub.classList.toggle('is-warn', mode === 'clear') }
+        if (K2.shootRow) K2.shootRow.classList.toggle('is-dim', mode === 'none' || mode === 'sit' || mode === 'off')
         if (K2.pass) K2.pass.textContent = ball ? 'PASS' : 'CALL FOR IT'
+        if (K2.passRow) K2.passRow.classList.toggle('is-off', !(ball || mode === 'off' || mode === 'board'))
+        // the arrows: the dribble moves with the ball (moveNames), STEAL on defense (any arrow), nothing else
+        const st = mode === 'def' || mode === 'dboard'
+        if (K2.stealRow) { K2.stealRow.classList.toggle('is-off', !st); K2.stealRow.classList.toggle('is-dim', mode === 'dboard') }
         if (!ball) {
-          const L = mode === 'def' ? ['JUMP', '', '', 'STEAL'] : mode === 'none' ? null : ['JUMP', '', '', '']
-          const sub = mode === 'def' ? ['CONTEST, BLOCK', '', '', 'GO FOR THE BALL'] : ['GO UP FOR THE BOARD', '', '', '']
-          if (L) { K2.title.textContent = 'ARROWS'; L.forEach((t, i) => { K2.arrows[i].textContent = t; K2.subs[i].textContent = t ? sub[i] : ''; K2.rows[i].classList.toggle('is-off', !t) }) }
+          K2.title.textContent = st ? 'ON DEFENSE' : mode === 'sit' ? 'SITTING OUT' : ''
+          K2.rows.forEach(r => r.classList.add('is-off'))
+          K2.box?.classList.toggle('is-empty', !st && mode !== 'sit')
           MV.keys = ''
-        }
+        } else K2.box?.classList.remove('is-empty')
       }
     }
     if (ball) moveNames(p)
-    // the dimmed bits: JUMP off the ball on offense only does something with a shot or a loose ball up; STEAL waits
-    // out its cooldown
+    // STEAL waits out its cooldown
     const cdS = mode === 'def' && p.stealCd > 0
-    if (els.half && els.half.dn.classList.contains('is-cd') !== cdS) els.half.dn.classList.toggle('is-cd', cdS)
-    if (els.keys?.rows?.[3]) { const r3 = els.keys.rows[3]; if (r3.classList.contains('is-cd') !== cdS) r3.classList.toggle('is-cd', cdS) }
-    const upDim = mode === 'off'
-    if (els.keys?.rows?.[0] && els.keys.rows[0].classList.contains('is-dim') !== (upDim && !ball)) els.keys.rows[0].classList.toggle('is-dim', upDim && !ball)
+    if (els.ds && els.ds.classList.contains('is-cd') !== cdS) els.ds.classList.toggle('is-cd', cdS)
+    if (els.keys?.stealRow && els.keys.stealRow.classList.contains('is-cd') !== cdS) els.keys.stealRow.classList.toggle('is-cd', cdS)
+    // his dribble legs (the stamina: a move costs some, simple dribbling gives it back): drawn by his ring (draw)
   }
   // The moves, named where they are: what a flick each way does from where he stands now (the basket is forward and
   // the hand the ball is in decides the side: referee.moveOf), on the right pad's eight ways and the four arrow keys.
@@ -449,7 +460,8 @@ export function createEngine({ setup, els, on, net = null }) {
     const key = kinds.join()
     if (key !== MV.cand) { MV.cand = key; MV.n = 0 }
     if (++MV.n < 4 && MV.pad) return
-    if (key !== MV.pad && els.slots?.[0]) {
+    // (the phone's pad is a plain stick now: the names round it are gone, the CONTROLS page teaches them)
+    if (key !== MV.pad && els.slots?.[0] && els.padNames) {
       MV.pad = key
       // one name for each run of ways that make the same move: at its middle, or the straight way in it
       const out = Array(8).fill('')
@@ -468,6 +480,7 @@ export function createEngine({ setup, els, on, net = null }) {
       MV.keys = kk
       els.keys.title.textContent = 'DRIBBLE MOVES'
       kk.split(',').forEach((kd, i) => { els.keys.arrows[i].textContent = NAME_KEY[kd]; els.keys.subs[i].textContent = ''; els.keys.rows[i].classList.remove('is-off') })
+      if (els.keys.stealRow) els.keys.stealRow.classList.add('is-off')
     }
   }
 
@@ -477,7 +490,7 @@ export function createEngine({ setup, els, on, net = null }) {
   // its size and its shadow; near the rim the lift is measured from the rim's height, so a shot meets the rim where
   // the rim is drawn, a make drops through the net and a miss leaves the rim and comes down on the floor.
   const RIM = COURT.rim
-  const LIFT = 0.2                                                   // feet up the screen per foot of height
+  const LIFT = 0.27                                                  // feet up the screen per foot of height
   const TOPY = 3.4                                                   // the backboard's front: a ball is never drawn above it
   const colOf = i => TEAM[s.players[i].team] ?? '#fff'           // (King of the Hill: each man is his own side)
   const idxOf = v => (v == null || v === false ? -1 : typeof v === 'number' ? (v >= 0 && v < N ? v : -1) : s.players.findIndex(p => p.id === v))
@@ -502,15 +515,64 @@ export function createEngine({ setup, els, on, net = null }) {
     BP[0] = x * k; BP[1] = (y - lift) * k; BP[2] = 1 + ze * 0.028; BP[3] = 0
     return BP
   }
-  function drawBall(x, y, sc, gx, gy, z) {
+  // The ball: a real basketball, seen from above. Its seams (two great circles at right angles and the two curved
+  // side seams) are drawn from how it's turned (ROT, a 3x3 rotation), and it turns the way the ball really does: it
+  // rolls forward on the dribble and on the floor, backspin on a jumper and a pass. A shadow on the floor under it,
+  // apart from it by its height (shadow: false, the ball and nothing else). r: its size
+  const SEAM = (() => {
+    const n = 40, c = [], k2 = 0.7, q = Math.sqrt(1 - k2 * k2)
+    const ring = f => { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n * 6.2832; pts.push(f(Math.cos(t), Math.sin(t))) } return pts }
+    c.push(ring((a, b) => [a, b, 0]), ring((a, b) => [a, 0, b]), ring((a, b) => [k2, q * a, q * b]), ring((a, b) => [-k2, q * a, q * b]))
+    return c
+  })()
+  const ROT = [1, 0, 0, 0, 1, 0, 0, 0, 1], SPIN = { x: 0, y: 0, ax: 0, ay: 1, w: 0, t: 0 }
+  // turn the ball: about the axis (ax, ay, 0) by th radians
+  function turnBall(ax, ay, th) {
+    const l = Math.hypot(ax, ay); if (l < 1e-6 || !th) return
+    ax /= l; ay /= l
+    const c = Math.cos(th), sn = Math.sin(th), t = 1 - c
+    const M = [t * ax * ax + c, t * ax * ay, sn * ay, t * ax * ay, t * ay * ay + c, -sn * ax, -sn * ay, sn * ax, c]
+    const o = ROT.slice()
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) ROT[i * 3 + j] = M[i * 3] * o[j] + M[i * 3 + 1] * o[3 + j] + M[i * 3 + 2] * o[6 + j]
+  }
+  // how the ball turns this frame. vx, vy: how it's moving over the floor (ft/s); mode: 'roll' (forward, as fast as it
+  // goes: the dribble, the floor), 'back' (backspin: a shot, a pass; w: turns a second), 'free' (what it had, dying off)
+  function spinBall(vx, vy, mode, dt, w = 0) {
+    const sp = Math.hypot(vx, vy), d = dt / 1000
+    if (mode === 'roll' && sp > 0.2) { SPIN.ax = -vy / sp; SPIN.ay = vx / sp; SPIN.w = sp / 0.7 }
+    else if (mode === 'back' && sp > 0.2) { SPIN.ax = vy / sp; SPIN.ay = -vx / sp; SPIN.w = w * 6.2832 }
+    else SPIN.w *= Math.exp(-d / (mode === 'hold' ? 0.08 : 0.9))
+    turnBall(SPIN.ax, SPIN.ay, SPIN.w * d)
+  }
+  function drawBall(x, y, sc, gx, gy, z, shadow = true) {
     const r = Math.max(4.5, k * 0.7) * sc
-    ctx.fillStyle = `rgba(0,0,0,${clamp(0.5 - z * 0.025, 0.14, 0.5)})`
-    ctx.beginPath(); ctx.ellipse(gx, gy + r * 0.35, r * (0.9 + z * 0.02), r * 0.4, 0, 0, 6.283); ctx.fill()
+    if (shadow) {
+      // the shadow: on the floor under it, smaller and fainter the higher it is
+      const f = clamp(1 - z * 0.035, 0.45, 1)
+      ctx.fillStyle = `rgba(0,0,0,${clamp(0.5 - z * 0.03, 0.12, 0.5)})`
+      ctx.beginPath(); ctx.ellipse(gx + r * 0.12, gy + r * 0.3, r * 0.92 * f, r * 0.42 * f, 0, 0, 6.283); ctx.fill()
+    }
     if (import.meta.env.DEV) LAY.ball = [x, y, r]
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = '#e9772c'; ctx.fill()
-    ctx.lineWidth = Math.max(1, r * 0.14); ctx.strokeStyle = '#4a1e08'
-    ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.stroke()
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.strokeStyle = '#2a1004'; ctx.stroke()
+    // leather, lit from the top left
+    const g = ctx.createRadialGradient(x - r * 0.38, y - r * 0.42, r * 0.1, x, y, r)
+    g.addColorStop(0, '#f39552'); g.addColorStop(0.55, '#de6f2a'); g.addColorStop(1, '#a9491a')
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = g; ctx.fill()
+    // the seams: the parts of each one on the side facing up
+    if (r >= 3.5) {
+      ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * 0.98, 0, 6.283); ctx.clip()
+      ctx.lineWidth = Math.max(0.9, r * 0.1); ctx.strokeStyle = '#2b1206'; ctx.lineCap = 'round'
+      ctx.beginPath()
+      for (const c of SEAM) {
+        let pen = false
+        for (const P of c) {
+          const px = ROT[0] * P[0] + ROT[1] * P[1] + ROT[2] * P[2], py = ROT[3] * P[0] + ROT[4] * P[1] + ROT[5] * P[2], pz = ROT[6] * P[0] + ROT[7] * P[1] + ROT[8] * P[2]
+          if (pz < -0.05) { pen = false; continue }
+          if (pen) ctx.lineTo(x + px * r, y + py * r); else { ctx.moveTo(x + px * r, y + py * r); pen = true }
+        }
+      }
+      ctx.stroke(); ctx.restore()
+    }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.lineWidth = Math.max(1, r * 0.09); ctx.strokeStyle = '#2a1004'; ctx.stroke()
   }
   // ── the men ──
   // Each man is a figure seen from above (figure.js) in the pose the game has him in (pose.js): his side's colour on
@@ -572,7 +634,7 @@ export function createEngine({ setup, els, on, net = null }) {
     ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.beginPath(); ctx.moveTo(ex, y - 13); ctx.lineTo(ex - off * 10, y - 13); ctx.lineTo(ex - off * 17, y); ctx.lineTo(ex - off * 10, y + 13); ctx.lineTo(ex, y + 13); ctx.fill()
     ctx.fillStyle = colOf(i); ctx.fillRect(off < 0 ? ex : ex - 4, y - 13, 4, 26)
     ctx.font = `${fs}px ${FONT}`
-    const nm = setup.looks[i].label.toUpperCase().slice(0, 9), nw = ctx.measureText(nm).width
+    const nm = setup.looks[i].label.toUpperCase().slice(0, 9) + (s.players[i].out ? ' · NEXT' : ''), nw = ctx.measureText(nm).width
     const x0 = off < 0 ? ex + 20 : ex - 20 - nw - 8
     drawTag([x0, y - fs * 0.62, x0 + nw + 8, y + fs * 0.62], nm, fs, colOf(i), i === me, i === me)
     if (has) drawBall(off < 0 ? x0 + nw + 8 + 9 : x0 - 9, y, 0.85, off < 0 ? x0 + nw + 17 : x0 - 9, y, 3)
@@ -629,11 +691,19 @@ export function createEngine({ setup, els, on, net = null }) {
       for (const d of DOTS) if (d[4] !== i) c += ovl(rc, d) * 3
       return c
     }
-    const keep = mine ? meter.side : 0, keepDy = mine ? meter.dy ?? 0 : 0
-    let side = keep || 1, dy = keepDy, bc = keep ? costOf(keep, keepDy) - 60 : Infinity
-    for (const sd of [1, -1]) for (const d of [0, -0.25, 0.25, -0.5]) { const c = costOf(sd, d); if (c < bc) { bc = c; side = sd; dy = d } }
+    // the side is picked once, as the shot starts (the side where it covers least and fits on the screen), and it
+    // stays there till the meter is gone: it never hops across him mid-shot, whatever he or the camera does
+    const shotKey = mine ? meter.t0 : s.tick - p.actT
+    const lock = MSIDE[i]
+    let side, dy
+    if (lock && lock.key === shotKey) { side = lock.side; dy = lock.dy }
+    else {
+      let bc = Infinity; side = 1; dy = 0
+      for (const sd of [1, -1]) for (const d of [0, -0.25, 0.25, -0.5]) { const c = costOf(sd, d); if (c < bc) { bc = c; side = sd; dy = d } }
+      MSIDE[i] = { key: shotKey, side, dy }
+    }
     if (mine) { meter.side = side; meter.dy = dy }
-    const bx = at(side), by = yOf(dy)
+    const bx = clamp(at(side), L, Rr - bw), by = yOf(dy)
     const yAt = v => by + bh * (1 - clamp(v / top, 0, 1))           // a time on the meter -> its height on the screen
     ctx.globalAlpha = a
     // the track
@@ -680,6 +750,8 @@ export function createEngine({ setup, els, on, net = null }) {
       // how open he is (as well as his IQ reads it)
       const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][meter.read] ?? ''
       if (read) chip(read, bx + bw / 2, overY, [GREEN, AMBER, RED][meter.read])
+      // pulled up on the move: it costs him a little (referee: setFeet)
+      if ((p.shot?.kind === 'jumper') && (p.shot.run ?? 0) > 0.45) chip('ON THE MOVE', bx + bw / 2, overY - fs * 1.45, AMBER)
     }
     if (clutch && spec.win > base.win) chip('CLUTCH', bx + bw / 2, by + bh + fs * 0.95, GREEN)
     ctx.globalAlpha = 1
@@ -715,7 +787,7 @@ export function createEngine({ setup, els, on, net = null }) {
     ctx.globalAlpha = 1
   }
   let tk0 = 30
-  const BARS = [], BAR_OF = [], DOTS = [], CHOICE = new Int8Array(N), TABY = new Int8Array(N)
+  const BARS = [], BAR_OF = [], DOTS = [], CHOICE = new Int8Array(N), TABY = new Int8Array(N), MSIDE = []
   function draw(now) {
     const a = clamp(acc / STEP, 0, 1), P = s.players
     const dt = clamp(now - lastDraw, 0, 100); lastDraw = now
@@ -769,6 +841,14 @@ export function createEngine({ setup, els, on, net = null }) {
         }
       }
     }
+    // the dribble legs (stamina) of the man with the ball, while they aren't full: a thin arc up the left of his spot on
+    // the floor (clear of his name under him and the tags over him), white, amber when they're low
+    if (holder >= 0 && live && !cut(holder) && (P[holder].sta ?? 1) < 0.985) {
+      const f = FIG[holder], st = clamp(P[holder].sta ?? 1, 0, 1), rr0 = ringR + 4, a0 = Math.PI + 0.95, span = 1.9
+      ctx.lineCap = 'butt'
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(5,7,10,.7)'; ctx.beginPath(); ctx.arc(f.x, f.y, rr0, a0 - span, a0); ctx.stroke()
+      ctx.lineWidth = 2.5; ctx.strokeStyle = st < 0.35 ? AMBER : 'rgba(243,246,248,.9)'; ctx.beginPath(); ctx.arc(f.x, f.y, rr0, a0 - span * st, a0); ctx.stroke()
+    }
     // a teammate calling for the ball: a ring on his man, on every screen, for as long as the call is fresh
     if (s.call && s.phase === 'live' && s.tick - s.call.tick < 45 && P[s.call.pid] && !cut(s.call.pid)) {
       const ci = s.call.pid, f = clamp((s.tick - s.call.tick) / 45, 0, 1)
@@ -777,18 +857,7 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     // players, the far ones first (a man in the air over the rest)
     const order = P.map((_, i) => i).sort((i, j) => (P[i].y + (P[i].act === 'jump' ? 99 : 0)) - (P[j].y + (P[j].act === 'jump' ? 99 : 0)))
-    DOTS.length = 0
-    for (const i of order) {
-      if (cut(i)) continue
-      const f = FIG[i]
-      DOTS.push([f.x - f.hs, f.cy - f.hs, f.x + f.hs, f.cy + f.hs, i])
-      if (import.meta.env.DEV) LAY.dots[i] = [f.x, f.cy, f.hs]
-      // (the ball between his legs goes under him)
-      if (f.under && holder === i && f.ball) { const q = pointAt(f, f.bl[0], f.bl[1], BQ); drawBall(q[0], q[1], 0.84, q[0], q[2], 0.4) }
-      drawFigure(ctx, f)
-    }
-    // the ball: in a hand it goes where the hand is (a dribble: up and down off the floor beside him); in the air it's
-    // where the game says. A dunk stays in the dunker's hand until it's through the rim
+    // the ball first (where it is, how it turns), then everyone and it in the order things stand off the floor (below)
     let bx, by, bsc, gx, gy, bz, key
     const carry = holder >= 0 ? holder : b.st === 'shot' && b.kind === 'dunk' && b.from >= 0 && FIG[b.from].ball ? b.from : -1
     if (carry >= 0) {
@@ -814,8 +883,57 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     const e = clamp((now - BL.t0) / BL.dur, 0, 1), ef = BL.dur > 160 ? 1 - e * (2 - e) * 0.5 - e * 0.5 : (1 - e) * (1 - e)
     const ballCut = carry >= 0 && (cut(carry) || FIG[carry].under)
-    if (!ballCut) drawBall(bx + BL.ox * ef, by + BL.oy * ef, bsc, gx + BL.ox * ef, gy + BL.oy * ef, bz)
-    BL.x = bx + BL.ox * ef; BL.y = by + BL.oy * ef
+    // how it turns: over the floor it rolls with the dribble and when it's loose on the floor; backspin on a shot and
+    // a pass; held, it settles
+    {
+      const wx = gx / k, wy = gy / k, d = Math.max(1, dt) / 1000
+      const vx = (wx - SPIN.x) / d, vy = (wy - SPIN.y) / d, jump = Math.hypot(wx - SPIN.x, wy - SPIN.y) > 6
+      SPIN.x = wx; SPIN.y = wy
+      if (!jump && dt > 0) {
+        if (carry >= 0 && FIG[carry].bounce) { const p = P[carry]; spinBall(p.vx * 1.2, p.vy * 1.2, Math.hypot(p.vx, p.vy) > 1 ? 'roll' : 'free', dt) }
+        else if (carry >= 0) spinBall(0, 0, 'hold', dt)
+        else if (b.st === 'shot') spinBall(vx, vy, 'back', dt, b.kind === 'jumper' ? 2.2 : 1.2)
+        else if (b.st === 'pass') spinBall(vx, vy, 'back', dt, 1.6)
+        else if (bz < 0.4) spinBall(vx, vy, 'roll', dt)
+        else spinBall(0, 0, 'free', dt)
+      }
+    }
+    const BX = bx + BL.ox * ef, BY = by + BL.oy * ef, GX = gx + BL.ox * ef, GY = gy + BL.oy * ef
+    BL.x = BX; BL.y = BY
+    // In the order things stand off the floor, seen from above: a man's shoulders and head are about 6 ft up (more in
+    // the air), so a ball lower than that goes under any man it's under on the screen, and over him once it's higher
+    // (a jumper over the man contesting it, a pass at the chest under the shoulders of the man it goes by). In a man's
+    // own hand it's drawn with him, over him. Its shadow is always on the floor
+    const ballZ = carry >= 0 ? (FIG[carry].ball ? FIG[carry].bl[2] : 3) : DB[2]
+    const ballR = Math.max(4.5, k * 0.7) * bsc
+    if (!ballCut) { const f = clamp(1 - bz * 0.035, 0.45, 1); ctx.fillStyle = `rgba(0,0,0,${clamp(0.5 - bz * 0.03, 0.12, 0.5)})`; ctx.beginPath(); ctx.ellipse(GX + ballR * 0.12, GY + ballR * 0.3, ballR * 0.92 * f, ballR * 0.42 * f, 0, 0, 6.283); ctx.fill() }
+    let ballDone = ballCut
+    const over = i => { const f = FIG[i]; return Math.abs(f.x - BX) < f.hs + ballR && Math.abs(f.cy - BY) < f.hs + ballR }
+    DOTS.length = 0
+    for (const i of order) {
+      if (cut(i)) continue
+      const f = FIG[i]
+      // (the ball goes in under him: lower than him, on him on the screen, and not in his own hands)
+      if (!ballDone && i !== carry && (carry < 0 || order.indexOf(carry) < order.indexOf(i)) && ballZ < 6 + 3 * f.air && over(i)) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
+      DOTS.push([f.x - f.hs, f.cy - f.hs, f.x + f.hs, f.cy + f.hs, i])
+      if (import.meta.env.DEV) LAY.dots[i] = [f.x, f.cy, f.hs]
+      // (the ball between his legs goes under him)
+      if (f.under && holder === i && f.ball) { const q = pointAt(f, f.bl[0], f.bl[1], BQ); drawBall(q[0], q[1], 0.84, q[0], q[2], 0.4) }
+      // the man sitting out (King of the Hill): at the side, a touch faded
+      if (P[i].out) ctx.globalAlpha = 0.72
+      drawFigure(ctx, f)
+      ctx.globalAlpha = 1
+    }
+    if (!ballDone) drawBall(BX, BY, bsc, GX, GY, bz, false)
+    // through the net: a make dropping under the rim has the net's strings over it
+    if (b.st === 'dead' && b.verdict?.made !== false && Math.hypot(DB[0] - RIM.x, DB[1] - RIM.y) < 0.1 && DB[2] > 4 && DB[2] < 9.6) {
+      const rx = RIM.x * k, ry = RIM.y * k, r0 = k * 0.82, nh = k * 1.5
+      ctx.strokeStyle = 'rgba(245,245,240,.85)'; ctx.lineWidth = Math.max(1, k * 0.07)
+      ctx.beginPath()
+      for (let j = -3; j <= 3; j++) { const t = j / 3; ctx.moveTo(rx + t * r0, ry); ctx.lineTo(rx + t * r0 * 0.55, ry + nh) }
+      for (let j = 1; j <= 2; j++) { const u = j / 3, hw = r0 * (1 - 0.45 * u); ctx.moveTo(rx - hw, ry + nh * u); ctx.lineTo(rx + hw, ry + nh * u) }
+      ctx.stroke()
+    }
     // a dunk on the rim: the rim dragged his way and springing back, a ring thrown off it, the hit marked round it
     for (const f of fx) {
       if (f.rim !== 'dunk') continue
@@ -859,7 +977,8 @@ export function createEngine({ setup, els, on, net = null }) {
       if (cut(i)) continue
       const cx = FIG[i].x, cy = FIG[i].cy, hs = FIG[i].hs
       const im = imgs[i], face = im && im.complete && im.naturalWidth ? i : -1
-      const nm = setup.looks[i].label.toUpperCase(), bw = ctx.measureText(nm).width + 10 + (face >= 0 ? bh : 0)
+      // (the man sitting out: UP NEXT with his name)
+      const nm = setup.looks[i].label.toUpperCase() + (P[i].out && s.phase !== 'over' ? ' · UP NEXT' : ''), bw = ctx.measureText(nm).width + 10 + (face >= 0 ? bh : 0)
       const crown = i === king ? tk * 0.36 : 0
       const C = [
         [cx - bw / 2, cy + hs + 1],                                   // under him
@@ -905,7 +1024,7 @@ export function createEngine({ setup, els, on, net = null }) {
       const off = cut(i)
       if (!off) continue
       ctx.font = `${tfs}px ${FONT}`
-      const tw = 30 + ctx.measureText(setup.looks[i].label.toUpperCase().slice(0, 9)).width + (i === holder ? 20 : 0)
+      const tw = 30 + ctx.measureText(setup.looks[i].label.toUpperCase().slice(0, 9) + (P[i].out ? ' · NEXT' : '')).width + (i === holder ? 20 : 0)
       const ex = off < 0 ? L : Rr, y0 = clamp(Y(i), 14, h - 14)
       let best = y0, bc = Infinity
       for (const st of [0, -1, 1, -2, 2, -3, 3, -4, 4]) {
@@ -1065,9 +1184,9 @@ export function createEngine({ setup, els, on, net = null }) {
   function rightFlick(ux, uy) {
     const p = s.players[me], b = s.ball
     if (b.st === 'held' && b.holder === me) { flick(ux, uy); return }
-    if (s.phase !== 'live') return
-    if (uy >= 0.6) { if (p.team !== s.poss && b.st === 'held') tap(true) }
-    else if (uy <= -0.6) tap(false)
+    if (s.phase !== 'live' || p.out) return
+    // without the ball the pad (the arrows) is STEAL on defense, any way; there's no jump on it (BLOCK is the jump)
+    if (p.team !== s.poss && b.st === 'held') tap(true)
   }
   function dribbleAt(x, y) {
     const m = Math.hypot(x, y)
@@ -1092,15 +1211,12 @@ export function createEngine({ setup, els, on, net = null }) {
     const r = els.ds.getBoundingClientRect()                        // (it's scaled with the buttons on a phone on its side)
     DS.id = e.pointerId; DS.ox = e.clientX; DS.oy = e.clientY; DS.sc = r.width / (els.ds.offsetWidth || r.width); DS.r = r.width * 0.3
     els.ds.setPointerCapture?.(e.pointerId); els.ds.classList.add('is-on')
-    // without the ball the pad is two buttons: a touch on the top half jumps, on the bottom half swipes at the ball
-    // (a flick up or down from there still works the same)
+    // without the ball the pad is one button: STEAL on defense (a touch anywhere on it)
     const b = s.ball
     if (s.phase === 'live' && !(b.st === 'held' && b.holder === me)) {
-      const top = e.clientY < r.top + r.height / 2
-      DS.on = true; DS.fx = 0; DS.fy = top ? -1 : 1
-      rightFlick(0, top ? -1 : 1)
-      const el = top ? els.half?.up : els.half?.dn
-      if (el && el.textContent) { el.classList.add('is-hit'); clearTimeout(DS.ht); DS.ht = setTimeout(() => { els.half.up.classList.remove('is-hit'); els.half.dn.classList.remove('is-hit') }, 140) }
+      DS.on = true; DS.fx = 0; DS.fy = 1
+      rightFlick(0, 1)
+      if (els.ds.dataset.k === 'steal') { els.ds.classList.add('is-hit'); clearTimeout(DS.ht); DS.ht = setTimeout(() => els.ds.classList.remove('is-hit'), 140) }
     }
   }
   const dsUp = e => {

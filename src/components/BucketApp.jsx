@@ -741,6 +741,8 @@ export default function BucketApp() {
   // own in-page units. Home runs the bottom rail only; the left rail only runs on
   // the sim page and Salary Cap. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
+    // (DEV: Blacktop Live on a phone asks for no ads at all: components/btlive/BtLive.jsx)
+    if (import.meta.env.DEV && BT_LIVE_OPEN && window.matchMedia?.('(pointer: coarse), (max-width: 899px)').matches) return
     if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/bucket', soft: true }); return }
     const here = window.location.pathname
     const path = page === 'sim' ? '/bucket/simulate'

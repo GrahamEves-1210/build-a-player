@@ -2,12 +2,14 @@
 // practice. 3v3 is gone (nobody played it): an old link or a saved choice of size 3 opens 1v1.
 //   1v1    two people, one each side
 //   2v2    four people, two a side: each one moves his own man, always (no switching)
-//   koth   KING OF THE HILL, three people, every man for himself (cutthroat). The man with the ball (the king) plays
-//          against the other two, who both defend. Ones and twos, make it take it. A stop is a live ball, as in every
-//          mode (sim.js s.mustClear): whoever secures it takes it back past the arc, and then he's the king (a make
-//          before that is waved off). Out of bounds or the shot clock: the ball goes to whichever
-//          of the other two men is closer to it, and he checks it at the top (behind the arc, so no clear). First to
-//          11, win by 2 over the next man, capped at 15. No passing.
+//   koth   KING OF THE HILL, three people, every man for himself: the park's King of the Court with three. Two
+//          play one on one while the third sits out at the side; they rotate. A make: the scorer (the king) keeps
+//          the ball (make it, take it), the man he scored on sits and the one sitting comes in to guard him. A stop
+//          (a defensive board, a steal, a block he comes up with, the king stepping out of bounds, the shot clock):
+//          the defender takes the crown and the ball, the old king sits and the one sitting comes in. Every change
+//          is checked at the top. Out of bounds off the defender: the king keeps it. An offensive board: play on.
+//          Each man keeps his own score, ones and twos; no point for taking the crown. First to 11, win by 2 over
+//          the next man, capped at 15. No passing (sim.js)
 export const MODES = {
   '1v1': { key: '1v1', label: '1V1', teams: 2, perTeam: 1, seats: 2 },
   '2v2': { key: '2v2', label: '2V2', teams: 2, perTeam: 2, seats: 4 },

@@ -4,11 +4,13 @@
 //   /bucket?btlive=1                      the practice menu
 //   &mode=1v1|2v2|koth (King of the Hill)  &level=rookie|pro|allstar|legend  &pick=<player name>  &seed=abc
 //   &go=1 (straight into a game). An old &size=1|2 still works; &size=3 (3v3, gone) opens 1v1
-// Controls: the left stick (WASD) moves; the right stick (the arrow keys) is NBA 2K's pro stick with the ball (dribble
-// moves) and without it down a steal, up a jump; SHOOT (SPACE: hold, let go on the meter); PASS (E), CALL off the ball
+// Controls: the left stick (WASD) moves. With the ball: the right stick (the arrow keys) is NBA 2K's pro stick (dribble
+// moves), SHOOT (SPACE: hold, let go on the meter), PASS (E). On defense: the right stick is STEAL (any arrow), SHOOT
+// is BLOCK (SPACE: a hand up, the only jump). Off the ball: SHOOT is REBOUND with the ball up, PASS is CALL FOR IT
 // The game itself is lib/btlive (pure code); engine.js runs and draws it. On the dev server the running game is
 // on window.__btlive (state, pause, run, auto, press, stick, flick, wait) for screenshots and tests.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { adsOffHere } from '../../lib/ads'
 import { useCourt } from '../app/BlacktopCourt'
 import { buildFromPlayer } from '../../lib/hoops'
 import { getUsername } from '../../lib/discord'
@@ -33,8 +35,7 @@ const ovrOf = (p, pos) => calcBucketOVR(buildFromPlayer(p, keysFor(pos)), keysFo
 // his three best ratings, as the build screens name them
 const best3 = (p, pos) => keysFor(pos).map(k => [k, p.attrs?.[k] ?? 0]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${BUCKET_ATTR[k]?.shortLabel ?? k} ${v}`)
 
-// the right pad's eight ways (0 up, clockwise) and the arrow keys (up, left, right, down)
-const SLOTS = [0, 1, 2, 3, 4, 5, 6, 7]
+// the arrow keys (up, left, right, down)
 const ARROWS = ['\u2191', '\u2190', '\u2192', '\u2193']
 // a key as it looks on a keyboard; WASD as the keys sit (W over A S D)
 const Key = ({ children, wide = false }) => <kbd className={`btlv-key${wide ? ' is-wide' : ''}`}>{children}</kbd>
@@ -45,8 +46,14 @@ function Face({ p, size = 38 }) {
   return <span className="btlv-face" style={{ width: size, height: size }}>{p.photo && <img src={p.photo} alt="" draggable={false} style={fc ? { objectPosition: `${fc[0]}% ${fc[1]}%` } : undefined} />}</span>
 }
 
+// a phone (a touch screen, or a narrow window): no ads anywhere on Blacktop Live, the menu or a game. On a computer the
+// bottom rail stays, and every layout here keeps clear of it (--rail)
+const phone = () => !!window.matchMedia?.('(pointer: coarse), (max-width: 899px)').matches
+
 export default function BtLive({ pools, user }) {
   const q = useMemo(() => new URLSearchParams(window.location.search), [])
+  // (a layout effect: it runs before the page's own ad call, so on a phone no unit is even asked for)
+  useLayoutEffect(() => (phone() ? adsOffHere() : undefined), [])
   const name = getUsername(user) || 'Guest'
   const presets = useMemo(() => PRESETS.map(([pos, n]) => { const p = pools[pos]?.find(x => x.name === n); return p ? { pos, p, ovr: ovrOf(p, pos) } : null }).filter(Boolean), [pools])
   const kept = useMemo(() => { try { return JSON.parse(localStorage.getItem(KEEP) || '{}') } catch { return {} } }, [])
@@ -143,7 +150,7 @@ export default function BtLive({ pools, user }) {
         </section>
       </div>
       <footer className="btlv-menu-foot">
-        <p className="btlv-rules">{mode === 'koth' ? `EVERY MAN FOR HIMSELF · TAKE IT BACK AFTER A STOP · FIRST TO ${RULES.goal}, WIN BY ${RULES.winBy}` : `FIRST TO ${RULES.goal} · WIN BY ${RULES.winBy} · ONES AND TWOS`}</p>
+        <p className="btlv-rules">{mode === 'koth' ? `TWO PLAY, ONE SITS · SCORE AND STAY · FIRST TO ${RULES.goal}, WIN BY ${RULES.winBy}` : `FIRST TO ${RULES.goal} · WIN BY ${RULES.winBy} · ONES AND TWOS`}</p>
         <button className="btlv-play" onClick={() => { sfx('lock'); start() }}>PLAY</button>
       </footer>
     </div>
@@ -174,9 +181,11 @@ function Dial({ keys = false }) {
 function Controls({ onBack }) {
   const fine = !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
   const [dev, setDev] = useState(fine ? 'keys' : 'phone')
-  const K = dev === 'keys'
+  const [side, setSide] = useState('off')
+  const K = dev === 'keys', O = side === 'off'
   const Row = ({ c, t, d }) => <div className="btlv-ctl-row"><span className="btlv-ctl-c">{c}</span><span className="btlv-ctl-t"><b>{t}</b>{d && <small>{d}</small>}</span></div>
   const pill = t => <span className="btlv-ctl-pill">{t}</span>
+  const arrows = <span className="btlv-kk is-arrows">{ARROWS.map(a => <Key key={a}>{a}</Key>)}</span>
   return (
     <div className="btlv btlv-menu btlv-ctl">
       <header className="btlv-menu-head">
@@ -186,49 +195,56 @@ function Controls({ onBack }) {
       </header>
       <div className="btlv-menu-body">
         <div className="btlv-seg btlv-ctl-seg">{[['phone', 'PHONE'], ['keys', 'KEYBOARD']].map(([k, l]) => <button key={k} className={dev === k ? 'is-on' : ''} onClick={() => { setDev(k); sfx('tap') }}>{l}</button>)}</div>
+        <div className="btlv-seg btlv-ctl-seg is-side">{[['off', 'WITH THE BALL'], ['def', 'ON DEFENSE']].map(([k, l]) => <button key={k} className={side === k ? 'is-on' : ''} onClick={() => { setSide(k); sfx('tap') }}>{l}</button>)}</div>
         {!K && (
-          <div className="btlv-ctl-pads">
-            <figure className="btlv-demo" aria-label="The controls with the ball">
-              <div className="btlv-demo-stick"><i /><span>MOVE</span></div>
-              <div className="btlv-demo-pad">{SLOTS.map(i => <span key={i} className={`btlv-ds-w is-${i}`}>{['HESI', '', 'IN &\nOUT', '', 'STEP\nBACK', 'BEHIND\nBACK', 'BETWEEN\nLEGS', 'CROSS'][i]}</span>)}<i /></div>
-              <div className="btlv-demo-a"><b>SHOOT</b><small>HOLD, LET GO</small></div>
-              <div className="btlv-demo-b">PASS</div>
-              <figcaption>WITH THE BALL</figcaption>
-            </figure>
-            <figure className="btlv-demo is-def" aria-label="The controls on defense">
-              <div className="btlv-demo-stick"><i /><span>MOVE</span></div>
-              <div className="btlv-demo-pad"><span className="btlv-demo-h is-up">JUMP</span><span className="btlv-demo-h is-dn">STEAL</span></div>
-              <div className="btlv-demo-a is-dim"><b>SHOOT</b></div>
-              <figcaption>ON DEFENSE</figcaption>
-            </figure>
-          </div>
+          <figure className={`btlv-demo${O ? '' : ' is-def'}`} aria-label={O ? 'The controls with the ball' : 'The controls on defense'}>
+            <div className="btlv-demo-stick"><i /><span>MOVE</span></div>
+            {O ? <div className="btlv-demo-pad"><i /><span>MOVES</span></div> : <div className="btlv-demo-pad is-steal"><b>STEAL</b></div>}
+            {O ? <div className="btlv-demo-a"><b>SHOOT</b><small>HOLD, LET GO</small></div> : <div className="btlv-demo-a is-def"><b>BLOCK</b><small>HAND UP</small></div>}
+            {O && <div className="btlv-demo-b">PASS</div>}
+            <figcaption>{O ? 'WITH THE BALL' : 'ON DEFENSE'}</figcaption>
+          </figure>
         )}
-        <section>
-          <h2>WITH THE BALL</h2>
-          <Row c={K ? <Wasd /> : pill('LEFT STICK')} t="MOVE" d={K ? 'Two keys together for the diagonals' : 'Drag anywhere on the left side'} />
-          <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="SHOOT" d="Hold it, let go when the meter is in the green. Close in it's a layup or a dunk" />
-          <Row c={K ? <Key>E</Key> : pill('PASS')} t="PASS (2V2)" d="To the teammate the stick points at, or the open man" />
-          <Row c={K ? <span className="btlv-wasd"><Key>{'\u2191'}</Key><span><Key>{'\u2190'}</Key><Key>{'\u2193'}</Key><Key>{'\u2192'}</Key></span></span> : pill('RIGHT PAD')} t="DRIBBLE MOVES" d={K ? 'Tap an arrow toward a move. Two arrows together make the moves in between' : 'Flick toward a move\'s name'} />
-        </section>
-        <section className="btlv-ctl-moves">
-          <h2>THE MOVES</h2>
-          <p className="btlv-ctl-p">Every move is read from the basket and the hand the ball is in. Here the ball is in the right hand; in the left hand every move flips sides. {K ? 'The panel beside the court names each arrow\'s move from where he stands.' : 'In a game the names round the pad always say what each way does right now.'}</p>
-          <Dial keys={K} />
-          {DIAL.filter(d => d[1]).map(d => <Row key={d[1]} c={<span className="btlv-ctl-mv">{d[0]}</span>} t={d[1]} d={d[2]} />)}
-          <Row c={<span className="btlv-ctl-mv">SPIN</span>} t="SPIN MOVE" d={K ? 'An arrow, then quickly one a quarter turn round from it' : 'Flick, then roll round a quarter turn while the move is on'} />
-        </section>
-        <section>
-          <h2>ON DEFENSE</h2>
-          <Row c={K ? <Key>{'↓'}</Key> : pill('BOTTOM HALF')} t="STEAL" d="Swipe at the ball. A miss leaves the defender stuck for a beat" />
-          <Row c={K ? <Key>{'↑'}</Key> : pill('TOP HALF')} t="JUMP" d="Contest the shot, block it, go up for the rebound" />
-          <Row c={K ? <Key>E</Key> : pill('PASS')} t="CALL FOR IT (2V2)" d="Off the ball on offense: ask for the pass" />
-        </section>
+        {O ? (
+          <>
+            <section>
+              <h2>WITH THE BALL</h2>
+              <Row c={K ? <Wasd /> : pill('LEFT STICK')} t="MOVE" d={K ? 'Two keys together for the diagonals' : 'Drag anywhere on the left side'} />
+              <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="SHOOT" d="Hold it, let go when the meter is in the green. Close in it's a layup or a dunk; with the lane open a good leaper takes off from farther out" />
+              <Row c={K ? <Key>E</Key> : pill('PASS')} t="PASS (2V2)" d="To the teammate the stick points at, or the open man" />
+              <Row c={K ? arrows : pill('RIGHT STICK')} t="DRIBBLE MOVES" d={K ? 'Tap an arrow toward a move. Two arrows together make the moves in between' : 'Flick the right stick toward a move'} />
+            </section>
+            <section className="btlv-ctl-moves">
+              <h2>THE MOVES</h2>
+              <p className="btlv-ctl-p">Every move is read from the basket and the hand the ball is in. Here the ball is in the right hand; in the left hand every move flips sides. {K ? 'The panel beside the court names each arrow\'s move from where he stands.' : 'The stick has no names on it in a game: learn them here.'}</p>
+              <Dial keys={K} />
+              {DIAL.filter(d => d[1]).map(d => <Row key={d[1]} c={<span className="btlv-ctl-mv">{d[0]}</span>} t={d[1]} d={d[2]} />)}
+              <Row c={<span className="btlv-ctl-mv">SPIN</span>} t="SPIN MOVE" d={K ? 'An arrow, then quickly one a quarter turn round from it' : 'Flick, then roll round a quarter turn while the move is on'} />
+              <Row c={<span className="btlv-ctl-stam"><i /></span>} t="DRIBBLE LEGS" d="Every move costs some legs, a move chained straight off another more. The arc under the man with the ball shows them while they're not full. Tired legs: a shorter, slower move that freezes nobody and is easier to strip. Simple dribbling and the time off the ball bring them back" />
+              <Row c={<span className="btlv-ctl-mv">OUT OF IT</span>} t="THE FIRST STEP" d="Out of a hesitation, a crossover, between the legs or an in-and-out he's a beat quicker. Pulling up on the move costs a little off the jumper; a step-back lands him set" />
+            </section>
+            <section>
+              <h2>OFF THE BALL</h2>
+              <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="REBOUND" d="With a shot or a loose ball up, it's the jump for the board. With a teammate on the ball, a press shoots on the catch" />
+              <Row c={K ? <Key>E</Key> : pill('PASS')} t="CALL FOR IT (2V2)" d="Ask for the pass" />
+            </section>
+          </>
+        ) : (
+          <section>
+            <h2>ON DEFENSE</h2>
+            <Row c={K ? <Wasd /> : pill('LEFT STICK')} t="MOVE" d="Square to the man: going at him is quickest, sliding is a touch slower, giving ground backwards slower still" />
+            <Row c={K ? <Key wide>SPACE</Key> : pill('BLOCK')} t="BLOCK" d="A hand up at the shot: the only way to leave the floor on defense. Time it to the release, square in front of him, and a big gets plenty of them. A hand up, even late, takes a lot off the shot; no hand is an open look" />
+            <Row c={K ? arrows : pill('STEAL')} t="STEAL" d={K ? 'Any arrow. A swipe at the ball; a miss leaves the defender stuck for a beat' : 'The right stick is the STEAL button. A miss leaves the defender stuck for a beat'} />
+            <Row c={K ? <Key wide>SPACE</Key> : pill('REBOUND')} t="REBOUND" d="With the shot up, BLOCK turns into REBOUND: the jump for the board" />
+          </section>
+        )}
         <section>
           <h2>THE RULES</h2>
           <ul className="btlv-ctl-rules">
             <li><b>CHECK BALL</b> at the top to start and after every basket. Make it, take it: score and keep the ball.</li>
-            <li><b>TAKE IT BACK</b> after a defensive rebound, a steal or a block. No check: the ball is live, but it has to go back behind the arc first (the arc lights up). A basket before that is waved off and it's the other side's ball.</li>
+            <li><b>TAKE IT BACK</b> (1V1, 2V2) after a defensive rebound, a steal or a block. No check: the ball is live, but it has to go back behind the arc first (the arc lights up). A basket before that is waved off and it's the other side's ball.</li>
             <li><b>OFFENSIVE REBOUND:</b> no need to take it back.</li>
+            <li><b>KING OF THE HILL:</b> three players, two on the floor and one sitting out at the side. Score and you're still king: the man you scored on sits and the one waiting checks in to guard you. Get a stop and the crown is yours: the old king sits. Every change is checked at the top. Everyone keeps his own score.</li>
             <li><b>FIRST TO {RULES.goal}</b>, win by {RULES.winBy}. Ones inside the arc, twos behind it.</li>
           </ul>
         </section>
@@ -317,8 +333,9 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
     const eng = createEngine({
       setup, net: link?.net ?? null,
       els: { root: r.root, canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, ds: r.ds, dk: r.dk,
-        slots: SLOTS.map(i => r[`w${i}`]), half: { up: r.hu, dn: r.hd }, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb, sa: r.sa },
-        keys: { pass: r.kpass, shootSub: r.ksub, title: r.ktitle, arrows: ARROWS.map((_, i) => r[`ka${i}`]), subs: ARROWS.map((_, i) => r[`ks${i}`]), rows: ARROWS.map((_, i) => r[`kr${i}`]) } },
+        steal: r.stl, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb, sa: r.sa },
+        keys: { pass: r.kpass, passRow: r.kpassRow, shoot: r.kshoot, shootRow: r.kshootRow, shootSub: r.ksub, title: r.ktitle, box: r.kbox, stealRow: r.kstealRow,
+          arrows: ARROWS.map((_, i) => r[`ka${i}`]), subs: ARROWS.map((_, i) => r[`ks${i}`]), rows: ARROWS.map((_, i) => r[`kr${i}`]) } },
       on: { final: res => setTimeout(() => { setAsk(false); setFinal(res) }, 900) },
     })
     link?.attach(eng)
@@ -356,27 +373,27 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
       <div className="btlv-pad" ref={set('pad')}>
         <i className="btlv-stick-home" ref={set('home')} />
         <i className="btlv-stick-base" ref={set('base')} /><i className="btlv-stick-knob" ref={set('knob')} />
-        {/* a keyboard: the left hand's keys beside the court on the left, the right hand's (the arrows) on the right;
-            only what does something right now shows (engine.js hud) */}
+        {/* a keyboard: the keys in one column on the left of the court (the bottom ad rail is under it, never on it);
+            only what does something right now shows, for the side of the ball he's on (engine.js hud) */}
         {caps && (
-          <>
+          <div className="btlv-keys-col">
             <div className="btlv-keys is-l" aria-label="Keys">
               <div className="btlv-keys-row"><Wasd /><span className="btlv-kt"><b>MOVE</b></span></div>
-              <div className="btlv-keys-row is-shoot"><span className="btlv-kk"><Key wide>SPACE</Key></span><span className="btlv-kt"><b>SHOOT</b><small ref={set('ksub')} /></span></div>
-              {setup.size > 1 && !koth && <div className="btlv-keys-row is-pass"><span className="btlv-kk"><Key>E</Key></span><span className="btlv-kt"><b ref={set('kpass')}>PASS</b></span></div>}
+              <div className="btlv-keys-row is-shoot" ref={set('kshootRow')}><span className="btlv-kk"><Key wide>SPACE</Key></span><span className="btlv-kt"><b ref={set('kshoot')}>SHOOT</b><small ref={set('ksub')} /></span></div>
+              {setup.size > 1 && !koth && <div className="btlv-keys-row is-pass" ref={set('kpassRow')}><span className="btlv-kk"><Key>E</Key></span><span className="btlv-kt"><b ref={set('kpass')}>PASS</b></span></div>}
             </div>
-            <div className="btlv-keys is-r" aria-label="Arrow keys">
+            <div className="btlv-keys is-r" aria-label="Arrow keys" ref={set('kbox')}>
               <p className="btlv-keys-title" ref={set('ktitle')} />
               {ARROWS.map((a, i) => <div key={a} className="btlv-keys-row" ref={set(`kr${i}`)}><span className="btlv-kk"><Key>{a}</Key></span><span className="btlv-kt"><b ref={set(`ka${i}`)} /><small ref={set(`ks${i}`)} /></span></div>)}
+              <div className="btlv-keys-row is-steal is-off" ref={set('kstealRow')}><span className="btlv-kk is-arrows">{ARROWS.map(a => <Key key={a}>{a}</Key>)}</span><span className="btlv-kt"><b>STEAL</b><small>ANY ARROW</small></span></div>
             </div>
-          </>
+          </div>
         )}
         <div className="btlv-btns">
-          {/* the right pad: with the ball, flick toward a move's name (the names are what each way does from where he
-              stands, with the hand the ball is in); without it, the top half jumps and the bottom half steals (engine.js) */}
+          {/* the right pad: with the ball a plain stick, flicked for a dribble move; on defense it's the STEAL button
+              (engine.js) */}
           <div className="btlv-ds" ref={set('ds')}>
-            {SLOTS.map(i => <span key={i} className={`btlv-ds-w is-${i}`} ref={set(`w${i}`)} />)}
-            <span className="btlv-ds-half is-up" ref={set('hu')} /><span className="btlv-ds-half is-dn" ref={set('hd')} />
+            <span className="btlv-ds-steal" ref={set('stl')} />
             <i className="btlv-ds-knob" ref={set('dk')} />
           </div>
           <button className="btlv-btn btlv-btn-a" ref={set('a')}><b ref={set('la')} /><small ref={set('sa')} /></button>

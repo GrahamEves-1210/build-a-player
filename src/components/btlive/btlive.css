@@ -85,11 +85,17 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-demo-stick i { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px; border-radius: 50%; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .55); }
 .btlv-demo-stick span { position: absolute; left: 50%; top: calc(100% + 7px); transform: translateX(-50%); font-size: 14px; letter-spacing: 2px; color: var(--muted); }
 .btlv-demo-pad { position: absolute; right: calc(14px + 80px + 10px); top: 50%; width: 138px; height: 138px; margin-top: -60px; border-radius: 50%; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); overflow: hidden; }
-.btlv-demo-pad .btlv-ds-w { display: block; }
-.btlv-demo-pad > i { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px; border-radius: 50%; background: rgba(243, 246, 248, .22); border: 2px solid rgba(243, 246, 248, .45); }
-.btlv-demo-h { position: absolute; left: 0; right: 0; height: 50%; display: grid; place-items: center; font-size: 18px; letter-spacing: 1.6px; }
-.btlv-demo-h.is-up { top: 0; padding-top: 10px; border-bottom: 1px solid var(--line-hi); }
-.btlv-demo-h.is-dn { bottom: 0; padding-bottom: 10px; }
+.btlv-demo-pad { overflow: visible; }
+.btlv-demo-pad > i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%; background: rgba(243, 246, 248, .22); border: 2px solid rgba(243, 246, 248, .45); }
+.btlv-demo-pad > span { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: 14px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
+.btlv-demo-pad.is-steal { display: grid; place-items: center; background: var(--panel-hi); border-color: rgba(243, 246, 248, .4); }
+.btlv-demo-pad.is-steal b { font-family: var(--num); font-weight: 400; font-size: 24px; letter-spacing: 1.4px; }
+.btlv-demo-a.is-def { background: var(--text); color: var(--ink); }
+.btlv-ctl-seg.is-side { margin-top: 8px; }
+.btlv-ctl-stam { position: relative; display: block; width: 40px; height: 40px; }
+.btlv-ctl-stam::before { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 2px solid var(--text); }
+.btlv-ctl-stam i { position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; border-bottom-color: var(--warn, #f2b33d); transform: rotate(20deg); }
+.btlv-ctl .btlv-kk.is-arrows .btlv-key { min-width: 24px; padding: 1px 3px 0; }
 .btlv-demo-a { position: absolute; right: 14px; bottom: 14px; width: 80px; height: 80px; border-radius: 50%; display: grid; place-content: center; justify-items: center; gap: 2px; background: var(--acc); color: #140a02; border: 2px solid rgba(0, 0, 0, .35); }
 .btlv-demo-a b { font-family: var(--num); font-weight: 400; font-size: 19px; letter-spacing: 1px; line-height: 1; }
 .btlv-demo-a small { font-size: 13px; letter-spacing: .5px; opacity: .78; line-height: 1; }
@@ -135,6 +141,8 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-bug-tag { display: none; flex: none; position: relative; font-style: normal; font-size: 13px; line-height: 1; letter-spacing: 1px; padding: 2px 4px 1px; border-radius: 3px; color: var(--ink); background: var(--acc); white-space: nowrap; }
 .btlv-bug-tag:not(:empty) { display: block; }
 .btlv-bug-tag.is-clear { background: var(--text); }
+.btlv-bug-tag.is-next { background: var(--panel-hi); color: var(--text); }
+.btlv-bug-side.is-out .btlv-bug-name, .btlv-bug-side.is-out .btlv-bug-score { opacity: .55; }
 .btlv-bug-sides.is-many .btlv-bug-side { display: grid; grid-template-columns: auto auto; justify-content: center; align-content: center; align-items: center; column-gap: 4px; row-gap: 1px; padding: 0 3px; overflow: hidden; }
 .btlv-bug-sides.is-many .btlv-bug-tag { letter-spacing: .4px; padding: 2px 3px 1px; }
 .btlv-bug-sides.is-many .btlv-bug-name { grid-column: 1 / -1; justify-self: center; font-size: 13px; line-height: 1.1; max-width: 100%; }
@@ -189,25 +197,23 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv .btlv-btn.is-down { background: var(--text); color: var(--ink); transform: translateY(1px); }
 .btlv .btlv-btn.is-off { display: none; }
 .btlv .btlv-btn.is-dim { opacity: .38; }
-/* the right pad: where the right thumb rests, left of SHOOT. With the ball, a flick toward a name does that move (the
-   names change with where he is and the hand the ball is in); without it, the top half is JUMP, the bottom STEAL */
+/* the right pad: where the right thumb rests, left of SHOOT. With the ball a plain stick (a flick is a dribble move);
+   on defense the whole circle is the STEAL button; otherwise it rests */
 .btlv-ds { position: absolute; right: 110px; top: 50%; width: 138px; height: 138px; margin-top: -69px; border-radius: 50%; pointer-events: auto; touch-action: none; overflow: hidden;
-  border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
-.btlv-ds-w { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--wx), var(--wy)); display: none; font-size: 13px; letter-spacing: .5px; line-height: 1.02; text-align: center; white-space: pre-line; color: rgba(243, 246, 248, .86); pointer-events: none; }
-.btlv-ds-w.is-0 { --wx: 0px; --wy: -47px; } .btlv-ds-w.is-1 { --wx: 33px; --wy: -33px; } .btlv-ds-w.is-2 { --wx: 43px; --wy: 0px; } .btlv-ds-w.is-3 { --wx: 33px; --wy: 33px; }
-.btlv-ds-w.is-4 { --wx: 0px; --wy: 47px; } .btlv-ds-w.is-5 { --wx: -33px; --wy: 33px; } .btlv-ds-w.is-6 { --wx: -43px; --wy: 0px; } .btlv-ds-w.is-7 { --wx: -33px; --wy: -33px; }
-.btlv-ds[data-k='ball'] .btlv-ds-w { display: block; }
-.btlv-ds-half { position: absolute; left: 0; right: 0; height: 50%; display: none; place-items: center; font-size: 18px; letter-spacing: 1.6px; line-height: 1; color: var(--text); pointer-events: none; transition: background-color .12s; }
-.btlv-ds-half.is-up { top: 0; padding-top: 10px; border-bottom: 1px solid var(--line-hi); }
-.btlv-ds-half.is-dn { bottom: 0; padding-bottom: 10px; }
-.btlv-ds[data-k='def'] .btlv-ds-half, .btlv-ds[data-k='none'] .btlv-ds-half { display: grid; }
-.btlv-ds-half.is-dim, .btlv-ds-half.is-cd { color: var(--faint); }
-.btlv-ds-half.is-hit { background: rgba(243, 246, 248, .14); }
-.btlv-ds[data-k='none'] { opacity: .38; }
-.btlv-ds-knob { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: rgba(243, 246, 248, .22); border: 2px solid rgba(243, 246, 248, .45); pointer-events: none; will-change: transform; }
+  border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); transition: background-color .12s; }
+.btlv-ds-steal { position: absolute; inset: 0; display: none; place-items: center; font-family: var(--num); font-size: 24px; letter-spacing: 1.4px; line-height: 1; color: var(--text); pointer-events: none; }
+.btlv-ds[data-k='steal'] { background: var(--panel-hi); border-color: rgba(243, 246, 248, .4); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); }
+.btlv-ds[data-k='steal'] .btlv-ds-steal { display: grid; }
+.btlv-ds.is-dim, .btlv-ds.is-cd { opacity: .45; }
+.btlv-ds.is-hit { background: var(--text); }
+.btlv-ds.is-hit .btlv-ds-steal { color: var(--ink); }
+.btlv-ds[data-k='none'] { opacity: .3; }
+.btlv-ds-knob { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(243, 246, 248, .22); border: 2px solid rgba(243, 246, 248, .45); pointer-events: none; will-change: transform; }
 .btlv-ds:not([data-k='ball']) .btlv-ds-knob { display: none; }
 .btlv-ds.is-on { border-color: rgba(243, 246, 248, .6); }
 .btlv-ds.is-on .btlv-ds-knob { background: rgba(243, 246, 248, .8); border-color: #fff; }
+/* SHOOT on defense is BLOCK (and REBOUND with the ball up): the same big button in the defense's colours */
+.btlv .btlv-btn-a.is-def { background: var(--text); border-color: rgba(0, 0, 0, .35); color: var(--ink); }
 /* a very narrow phone: the pad and SHOOT a touch smaller */
 @media (max-width: 360px) { .btlv-ds { right: 98px; width: 128px; height: 128px; margin-top: -64px; } .btlv .btlv-btn-a { width: 80px; height: 80px; } .btlv-game:not(.is-team) .btlv-btn-a { margin-top: -40px; } }
 
@@ -218,22 +224,21 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-game.has-keys .btlv-court { --ch: var(--chk); width: calc(var(--chk) * 4 / 3); }
 .btlv-game.has-keys .btlv-pad { position: absolute; inset: auto 0 var(--rail) 0; height: auto; background: none; border: 0; pointer-events: none; overflow: visible; }
 .btlv-game.has-keys .btlv-stick-home, .btlv-game.has-keys .btlv-stick-base, .btlv-game.has-keys .btlv-stick-knob, .btlv-game.has-keys .btlv-btns { display: none; }
-.btlv-game.has-keys .btlv-keys { display: grid; align-content: start; position: absolute; bottom: 22px; width: calc((100vw - var(--chk) * 4 / 3) / 2 - 32px); max-width: 236px; gap: 12px; margin: 0; padding: 14px 14px 15px;
+.btlv-game.has-keys .btlv-keys-col { display: flex; flex-direction: column; gap: 10px; position: absolute; left: 16px; bottom: 16px; width: min(250px, calc((100vw - var(--chk) * 4 / 3) / 2 - 28px)); }
+.btlv-game.has-keys .btlv-keys { display: grid; align-content: start; gap: 11px; margin: 0; padding: 13px 13px 14px;
   background: rgba(12, 16, 22, .9); border: 1px solid var(--line); border-radius: 8px; transition: opacity .15s; }
-.btlv-game.has-keys .btlv-keys.is-l { left: 16px; }
-.btlv-game.has-keys .btlv-keys.is-r { right: 16px; }
+.btlv-game.has-keys .btlv-keys.is-empty { display: none; }
 .btlv-game[data-mode='none'] .btlv-keys { opacity: .5; }
 .btlv .btlv-keys-title { margin: 0 0 -2px; font-size: 13px; letter-spacing: 2px; line-height: 1; color: var(--muted); }
 .btlv-keys-row { display: flex; align-items: center; gap: 10px; }
-.btlv-kt { display: grid; gap: 2px; min-width: 0; }
+.btlv-kt { display: grid; gap: 2px; min-width: 0; white-space: nowrap; }
 .btlv-keys-row b { font-weight: 400; font-size: 17px; letter-spacing: 1.2px; line-height: 1.05; color: var(--text); }
 .btlv-keys-row small { font-size: 13px; letter-spacing: .7px; line-height: 1.1; color: var(--muted); }
 .btlv-keys-row small:empty { display: none; }
 .btlv-keys-row small.is-warn { color: var(--warn); }
 .btlv-keys-row.is-off { display: none; }
 .btlv-keys-row.is-dim, .btlv-keys-row.is-cd { opacity: .4; }
-.btlv-game:not([data-mode='ball']) .btlv-keys-row.is-shoot { display: none; }
-.btlv-game[data-mode='def'] .btlv-keys-row.is-pass { display: none; }
+.btlv-kk.is-arrows .btlv-key { min-width: 24px; padding: 1px 3px 0; }
 .btlv-kk { display: flex; gap: 3px; }
 .btlv-wasd { display: grid; justify-items: center; gap: 3px; }
 .btlv-wasd > span { display: flex; gap: 3px; }

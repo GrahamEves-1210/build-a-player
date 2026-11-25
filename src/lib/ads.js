@@ -205,11 +205,12 @@ if (!IS_APP && typeof window !== 'undefined') {
 }
 let inGame = false, games = 0, cameFrom = '/', adsBack = 0, hidHere = false
 let pageWants = null, inPage = []
-export function minigameOpen() {
+// url: false keeps the address as it is (a screen that runs ad-free where it stands: adsOffHere)
+export function minigameOpen({ url = true } = {}) {
   if (IS_APP) return () => {}
   clearTimeout(adsBack)
   games++
-  if (window.location.pathname !== GAME_PATH) {
+  if (url && window.location.pathname !== GAME_PATH) {
     cameFrom = window.location.pathname + window.location.search + window.location.hash
     try { sessionStorage.setItem('bap_mg_from', cameFrom) } catch {}   // (a reload here goes back to it: openedFrom)
     window.history.replaceState(window.history.state, '', GAME_PATH + window.location.search)
@@ -231,7 +232,7 @@ export function minigameOpen() {
     closed = true
     games--
     if (games) return
-    leaveGameUrl(cameFrom)
+    if (url) leaveGameUrl(cameFrom)
     // (a wait for the ads: the next drill in a combine, or AGAIN, opens straight away)
     adsBack = setTimeout(() => {
       if (games || !inGame) return
@@ -247,3 +248,7 @@ export function minigameOpen() {
     }, 500)
   }
 }
+
+// A screen with no ads at all while it's up, on the address it's on (every unit taken down, none added, the rail's
+// room gone): the same as a mini game without the mini game's address. Returns the way back
+export const adsOffHere = () => minigameOpen({ url: false })

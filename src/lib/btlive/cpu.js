@@ -23,12 +23,12 @@ const JUMP_LEAD = 6                              // a hand goes up this many tic
 // ticks: a level is as quick against the game at any pace; a person's own reaction is real time: balance.mjs HUMANS).
 // contest: how often he gets a hand up on a shot. steal: swipes a second with the ball in reach. help: how often
 // he comes over when a teammate is beaten. ev: how far off his judgment of a shot is. move: how often he uses
-// a dribble move on a set defender. gap: extra feet he gives his man.
+// a dribble move on a set defender. gap: extra feet he gives his man. jumpSd: ticks off on the timing of a hand up.
 export const LEVELS = {
-  rookie:  { label: 'ROOKIE',   meterSd: 130, react: 14, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8 },
-  pro:     { label: 'PRO',      meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0 },
-  allstar: { label: 'ALL-STAR', meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4 },
-  legend:  { label: 'LEGEND',   meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1 },
+  rookie:  { label: 'ROOKIE',   jumpSd: 5, meterSd: 130, react: 14, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8 },
+  pro:     { label: 'PRO',      jumpSd: 3.5, meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0 },
+  allstar: { label: 'ALL-STAR', jumpSd: 2.5, meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4 },
+  legend:  { label: 'LEGEND',   jumpSd: 1.5, meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1 },
 }
 
 const roll = s => rollAt(s.seed ^ 0x5bd1e995, s.cn++)
@@ -101,7 +101,7 @@ function driveValue(s, p, D, dD, lvl) {
 function laneOpen(s, a, b, team) {
   const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1
   for (const o of s.players) {
-    if (o.team === team || o.act === 'down' || o.act === 'frozen') continue
+    if (o.team === team || o.act === 'down' || o.act === 'frozen' || o.out) continue
     const t = clamp(((o.x - a.x) * dx + (o.y - a.y) * dy) / L2, 0, 1)
     if (t < 0.12) continue
     if (Math.hypot(a.x + dx * t - o.x, a.y + dy * t - o.y) < 3.4) return false
@@ -116,7 +116,7 @@ const LOW = [{ x: 21.5, y: 7.5 }, { x: 34.5, y: 7.5 }, { x: 22.5, y: 12 }, { x: 
 
 function nearestDef(s, p) {
   let best = null, bd = 99
-  for (const o of s.players) if (o.team !== p.team) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d < bd) { bd = d; best = o } }
+  for (const o of s.players) if (o.team !== p.team && !o.out) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d < bd) { bd = d; best = o } }
   return { def: best, d: bd }
 }
 
@@ -144,7 +144,7 @@ function pickPlan(s, p, m, only = null) {
     let best = -99
     for (const sp of list) {
       let open = 99
-      for (const o of s.players) if (o.team !== p.team) open = Math.min(open, Math.hypot(o.x - sp.x, o.y - sp.y))
+      for (const o of s.players) if (o.team !== p.team && !o.out) open = Math.min(open, Math.hypot(o.x - sp.x, o.y - sp.y))
       const sc = Math.min(open, 9) - Math.hypot(sp.x - p.x, sp.y - p.y) * 0.22 + roll(s) * 3
       if (sc > best) { best = sc; m.spot = sp }
     }
@@ -160,14 +160,14 @@ function pickClear(s, p, m) {
     const ax = sp.x - COURT.arcC.x, ay = sp.y - COURT.arcC.y, a = Math.hypot(ax, ay) || 1
     const at = sp.y <= COURT.arcSideY ? { x: sp.x, y: sp.y } : { x: sp.x + ax / a * 2.5, y: sp.y + ay / a * 2.5 }
     let open = 99
-    for (const o of s.players) if (o.team !== p.team) open = Math.min(open, Math.hypot(o.x - at.x, o.y - at.y))
+    for (const o of s.players) if (o.team !== p.team && !o.out) open = Math.min(open, Math.hypot(o.x - at.x, o.y - at.y))
     const sc = Math.min(open, 12) - Math.hypot(at.x - p.x, at.y - p.y) * 0.3 + roll(s) * 2
     if (sc > best) { best = sc; m.spot = at }
   }
 }
 
 function withBall(s, p, m, lvl, out) {
-  const defs = s.players.filter(o => o.team !== p.team).map(fact)
+  const defs = s.players.filter(o => o.team !== p.team && !o.out).map(fact)
   const clockS = s.clock * DT                     // what's left of the shot clock, in the game's seconds (as his plans are)
   // going up: hold the meter, let go with his timing error
   if (p.act === 'gather') {
@@ -185,7 +185,14 @@ function withBall(s, p, m, lvl, out) {
   const clearing = s.mustClear === p.team
   if (clearing) { if (m.plan !== 'clear' || s.tick >= m.planT) pickClear(s, p, m) }
   else if (m.plan === 'clear') m.plan = null
-  if (m.plan == null) { m.gotT = s.tick; m.sag = nearestDef(s, p).d }
+  if (m.plan == null) {
+    m.gotT = s.tick; m.sag = nearestDef(s, p).d
+    // he works for his shot: sizes his man up first, a beat or more (a shooter less, a smart one as long as it takes),
+    // and doesn't settle for the first look; off a catch or a board it's quicker
+    const fresh = s.tick - p.catchT < 6
+    m.work = Math.round((fresh ? 0.25 : 0.75 + 0.9 * roll(s)) * (1.15 - 0.45 * p.R.js) * GHZ)
+    m.jab = roll(s) < 0.5 ? -1 : 1; m.jabbed = false
+  }
   if (m.plan == null) pickPlan(s, p, m)
   else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = s.tick + Math.round(2 * GHZ) } else pickPlan(s, p, m) }
   if (s.tick >= (m.thinkT ?? 0)) { m.thinkT = s.tick + THINK; m.noise = (roll(s) - 0.5) * 2 * lvl.ev; m.go = roll(s) }
@@ -208,6 +215,7 @@ function withBall(s, p, m, lvl, out) {
   // how good a shot has to be: a good one early, any shot late (a low IQ lets the clock run down further)
   const late = 1.3 + 1.0 * p.R.iq
   const held = (s.tick - (m.gotT ?? s.tick)) * DT
+  const working = !clearing && s.tick - (m.gotT ?? s.tick) < (m.work ?? 0)
   let need = clockS <= late ? -1 : clamp(T.cpuNeed - Math.max(0, 8 - clockS) * 0.05 - held * T.cpuHurry, 0.3, T.cpuNeed)
   // a contested jumper is the worst shot there is: with time left to get to the rim, he goes and gets a layup instead
   // (a smart player sees it sooner)
@@ -240,13 +248,31 @@ function withBall(s, p, m, lvl, out) {
       return
     }
   }
-  if (!clearing && p.noAct <= 0 && mine.v + m.noise >= need && (mine.kind !== 'jumper' || clockS <= late || mine.v >= 0.3)) {
+  // a jumper with a hand in his face isn't a shot unless the clock says so (a great shooter takes a little more of
+  // one); sizing his man up, only a wide-open look goes
+  const handy = mine.kind === 'jumper' && mine.c > 0.38 + 0.25 * (p.R.jsRaw ?? p.R.js) && clockS > late
+  const wide = mine.c < 0.12
+  // a layup from the edge of the paint into a man set in front of it isn't a shot: he keeps working to the rim
+  const walled = mine.kind !== 'jumper' && mine.d > 4.6 && mine.c > 0.45 && clockS > late
+  if (!clearing && p.noAct <= 0 && (!working || wide || clockS <= late) && !handy && !walled && mine.v + m.noise >= need && (mine.kind !== 'jumper' || clockS <= late || mine.v >= 0.3)) {
     // a jumper on the run with his man not on him yet: he squares up and sets his feet first (a beat to stop)
     if (mine.kind === 'jumper' && Math.hypot(p.vx, p.vy) > 0.45 * p.R.topBall && dD > 4.5 && clockS > 2.5) { out.mx = 0; out.my = 0; return }
     out.shoot = true; return
   }
   // near the rim with a step on his man, or stuck under it: go up
   if (!clearing && dRim <= (beat ? 5.4 : 4.6) && p.noAct <= 0) { out.shoot = true; return }
+  // sizing him up out top: a jab, a shimmy one way and back, the ball live; now and then a move to get him leaning
+  if (working && !clearing && D && dD < 7.5 && dRim > 15 && s.tick - (m.gotT ?? s.tick) < (m.work ?? 0) * 0.7) {
+    const dR = dRim || 1, ux = (RIM.x - p.x) / dR, uy = (RIM.y - p.y) / dR
+    if (s.tick % 14 === 0) m.jab = -m.jab
+    out.mx = -uy * m.jab * 0.4 + ux * 0.12; out.my = ux * m.jab * 0.4 + uy * 0.12
+    if (!m.jabbed && dD < 5.2 && p.moveCd <= 0 && p.frzCd <= 0 && s.tick - m.gotT > 8 && roll(s) < lvl.move * 0.05) {
+      m.jabbed = true
+      const go = { x: ux * 0.7 - uy * m.jab * 0.7, y: uy * 0.7 + ux * m.jab * 0.7 }, f = ref.flickFor(p, go)
+      if (ref.inBounds(p.x + go.x * 6.5, p.y + go.y * 6.5, -1)) { out.dx = f.x; out.dy = f.y; out.mx = go.x; out.my = go.y }
+    }
+    return
+  }
   // otherwise move: the plan's target
   let tx = RIM.x, ty = RIM.y + 1.5
   if (clearing) { tx = m.spot.x; ty = m.spot.y }
@@ -348,7 +374,7 @@ function defend(s, p, m, lvl, out) {
   // King of the Hill: two on the king. The nearer one plays him; the other one sits back between him and the rim
   // (and goes up with him when he shoots close by)
   if (s.mode === 'koth' && onBall) {
-    const o = s.players.find(q => q.team !== s.poss && q !== p)
+    const o = s.players.find(q => q.team !== s.poss && q !== p && !q.out)
     if (o && (m.roleN !== s.possN || s.tick >= (m.roleT ?? 0))) {
       m.roleN = s.possN; m.roleT = s.tick + Math.round(GHZ)
       const dp = Math.hypot(man.x - p.x, man.y - p.y), dq = Math.hypot(man.x - o.x, man.y - o.y)
@@ -400,7 +426,8 @@ function defend(s, p, m, lvl, out) {
       if (man.actT >= Math.min(lvl.react, 6) && m.cKey !== key) {
         m.cKey = key
         const ideal = Math.round(man.shot.spec.ideal / MS)
-        m.cAt = roll(s) < lvl.contest ? Math.max(man.actT, ideal - JUMP_LEAD + Math.floor(roll(s) * 4)) : -1
+        // (his timing is as good as his level: off by a few ticks either way, late or early)
+        m.cAt = roll(s) < lvl.contest ? Math.max(man.actT, ideal - JUMP_LEAD + Math.round(gauss(roll(s), roll(s)) * (lvl.jumpSd ?? 3))) : -1
       }
       if (m.cKey === key && m.cAt >= 0 && man.actT >= m.cAt && dd <= 5.8 && p.act === 'free') { out.jump = true; m.cAt = -1 }
     } else if (p.stealCd <= 0 && dd <= T.stealReach - 0.3 && man.burst <= 0 && p.act === 'free' && man.noAct <= 0) {
@@ -437,8 +464,28 @@ function offBall(s, p, m, lvl, out) {
   const b = s.ball
   const h = b.st === 'held' ? s.players[b.holder] : null
   if (b.st === 'pass' && b.to === p.i) { out.mx = 0; out.my = 0; return }
-  if (m.spot == null || s.tick >= (m.spotT ?? 0)) {
-    m.spotT = s.tick + Math.round((2 + roll(s) * 2) * GHZ)
+  // reads off the ball, before the plan: the man with it driving, his own man helping off him
+  if (h && h.team === p.team && m.read !== s.possN * 1000 + (h.i + 1) * 7 + Math.floor(s.tick / 9)) {
+    m.read = s.possN * 1000 + (h.i + 1) * 7 + Math.floor(s.tick / 9)
+    const hr = ref.rimDist(h), hv = Math.hypot(h.vx, h.vy)
+    const driving = hr < 18 && hv > 4 && (h.vx * (RIM.x - h.x) + h.vy * (RIM.y - h.y)) / (hr * hv || 1) > 0.5
+    const myD = s.players.find(o => o.team !== p.team && !o.out && o.man === p.i)
+    const helping = myD && Math.hypot(myD.x - p.x, myD.y - p.y) > 7 && Math.hypot(myD.x - h.x, myD.y - h.y) < Math.hypot(myD.x - p.x, myD.y - p.y)
+    if (driving && !m.cut && m.drift !== s.possN) {
+      // he drives: get out of the way and give him a target, the spot behind the arc farthest from the drive (the
+      // drift to the corner or the slot), so his man has to choose
+      m.drift = s.possN
+      let best = -99
+      for (const sp of ARC) { const sc = Math.hypot(sp.x - h.x, sp.y - h.y) - Math.hypot(sp.x - p.x, sp.y - p.y) * 0.35; if (sc > best) { best = sc; m.spot = sp } }
+      m.spotT = s.tick + Math.round(1.6 * GHZ); m.cut = false
+    } else if (helping && !m.cut && ref.rimDist(p) > 9 && roll(s) < 0.35 + 0.4 * p.R.iq) {
+      // his man has left him to help: cut behind him to the rim (or a big dives), else spot up where the pass can find him
+      m.spot = { x: RIM.x + (p.x < RIM.x ? -2.5 : 2.5), y: RIM.y + 3 }; m.spotT = s.tick + Math.round(1.4 * GHZ); m.cut = true
+    }
+  }
+  if (m.spot == null || s.tick >= (m.spotT ?? 0) || (!m.cut && Math.hypot(m.spot.x - p.x, m.spot.y - p.y) < 0.9 && s.tick >= (m.spotT ?? 0) - Math.round(0.9 * GHZ))) {
+    // (never long on one spot: a beat there, then a V-cut, a relocation or a cut)
+    m.spotT = s.tick + Math.round((1.3 + roll(s) * 1.4) * GHZ)
     const { d: dD } = nearestDef(s, p)
     // a cut when his man loses him or just to move the defense; a smart player cuts more
     m.cut = false
@@ -453,7 +500,8 @@ function offBall(s, p, m, lvl, out) {
           const d = Math.hypot(o.x - sp.x, o.y - sp.y)
           if (o.team === p.team) mate = Math.min(mate, d); else if (o.i !== s.players.findIndex(q => q.man === p.i && q.team !== p.team)) open = Math.min(open, d)
         }
-        const sc = Math.min(mate, 16) + Math.min(open, 8) * 0.3 - Math.hypot(sp.x - p.x, sp.y - p.y) * 0.18 + roll(s) * 3
+        // (not the spot he's on: he moves)
+        const sc = Math.min(mate, 16) + Math.min(open, 8) * 0.3 - Math.hypot(sp.x - p.x, sp.y - p.y) * 0.18 + roll(s) * 3 - (Math.hypot(sp.x - p.x, sp.y - p.y) < 2 ? 4 : 0)
         if (sc > best) { best = sc; m.spot = sp }
       }
     }
@@ -473,7 +521,7 @@ export function cpuInput(s, i, level = 'pro') {
   const p = s.players[i]
   const m = s.cpu[i] ?? (s.cpu[i] = {})
   const out = { mx: 0, my: 0, shoot: false, pass: false, dx: 0, dy: 0, steal: false, jump: false, q: null, t: s.tick }
-  if (s.phase !== 'live') { m.plan = null; m.rel = null; m.hist = null; m.spot = null; return out }
+  if (s.phase !== 'live' || p.out) { m.plan = null; m.rel = null; m.hist = null; m.spot = null; return out }
   const b = s.ball
   if (b.st === 'held' && b.holder === i) { withBall(s, p, m, lvl, out); return out }
   m.rel = null
