@@ -33,7 +33,7 @@ import { spectrumColor } from '../../lib/gradeColors'
 // Tap a trophy or a build for the stats behind it.
 // Saved seasons and award counters: lib/trophies.js. Live modes: lib/progress.js stats.
 
-const TIER_GEM = { Rookie: '#9aa7a0', Starter: '#8BD5A6', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
+const TIER_GEM = { Rookie: '#9aa7a0', Starter: '#74D8BF', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
 const ACCENT = 'var(--ag-a1, #4fd6b7)'
 const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR, lb: LB_ATTR, ol: OL_ATTR, k: K_ATTR, guard: BUCKET_ATTR, big: BUCKET_ATTR, st: SOCCER_ATTR, bat: MLB_ATTR, pit: MLB_ATTR }
 const SPORT_TINT = { nfl: '#4fd6b7', bucket: '#fb923c', soccer: '#e6e6e6', baseball: '#ef5a6c' }   // (baseball: its stitch red, lightened to read as words)

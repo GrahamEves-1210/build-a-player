@@ -9,8 +9,8 @@ import { IS_APP, shareNative } from './platform'
 import { sportOf, careerTotals, legacyOf, legacyTiers, HEADLINE_STATS, STAT_LABEL, AWARD_NAME, awardWord, POS_NAME, POS_LABEL, comebackYear } from './career'
 // each sport's look on a card: football teal, basketball orange, soccer black and white
 // (a sport that loads on its own brings its own: baseball's ball leather and red stitching, S.card)
-const accentOf = S => S.card?.accent ?? (S.isSoccer ? '#f4f4f5' : S.isBucket ? '#fdba74' : '#8BD5A6')
-const glowOf = S => S.card?.glow ?? (S.isSoccer ? '#a1a1aa' : S.isBucket ? '#fb923c' : '#4FB57A')
+const accentOf = S => S.card?.accent ?? (S.isSoccer ? '#f4f4f5' : S.isBucket ? '#fdba74' : '#74D8BF')
+const glowOf = S => S.card?.glow ?? (S.isSoccer ? '#a1a1aa' : S.isBucket ? '#fb923c' : '#37BF82')
 const siteOf = S => S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com')
 
 // soccer's big numbers, spelled out on a card (the tables' G and A are too short for a headline)
