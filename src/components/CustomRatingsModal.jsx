@@ -126,6 +126,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
       q === '' ||
       p.name.toLowerCase().includes(q) ||
       (p.team || '').toLowerCase().includes(q) ||
+      (p.teamName || '').toLowerCase().includes(q) ||   // (a nation or club by its full name too: "brazil", not only BRA)
       (p.school || '').toLowerCase().includes(q)))
   const logoDir = logoDirProp ?? (isBucket ? '/logos/nba/' : isSoccer ? '/logos/soccer/' : '/logos/')
   const openTeam = t => { setTeam(t); setExpandedKey(null); setSlotPickerPlayer(null); if (listRef.current) listRef.current.scrollTop = 0 }
