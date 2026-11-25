@@ -17,7 +17,7 @@ import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 
 // the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
-const BAND_STEP = 130   // (each piece lands before the next one starts: its fall lasts one step)
+const BAND_STEP = 110   // (each piece lands before the next one starts: its fall lasts one step)
 
 export const POS_OPTIONS = [
   {
@@ -373,7 +373,7 @@ export function pieceStyle({ src, flexes, i, visible }) {
     opacity: visible ? 1 : 0,
     transform: visible ? 'translateY(0)' : `translateY(-${(top + 28).toFixed(1)}%)`,
     // (it fades in as it nears its place: on the fall's clock, but held faint until the last stretch)
-    transition: `opacity ${BAND_STEP}ms cubic-bezier(0.75,0,0.95,0.6), transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
+    transition: `opacity ${BAND_STEP}ms cubic-bezier(0.5,0,0.75,0.9), transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
     transitionDelay: visible ? `${(flexes.length - 1 - i) * BAND_STEP}ms` : '0ms',
   }
 }
