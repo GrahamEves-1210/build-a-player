@@ -8146,12 +8146,12 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 @media (max-width: 520px) {
   .ag-home .ag-home-inner { position: relative; }
   .ag-home .ag-hud > :first-child { flex: 0 1 auto; width: auto; max-width: 38%; }
-  .ag-home .ag-brand .ag-brand-mark { position: absolute; top: 11px; left: 50%; transform: translateX(-50%) !important; height: 38px !important; width: auto; z-index: 3; }
+  .ag-home .ag-brand .ag-brand-mark { position: absolute; top: 10px; left: 50%; transform: translateX(-50%) !important; height: 40px !important; width: auto; z-index: 3; }
   .ag-home .ag-brand { position: static !important; justify-content: center; padding: 0 12px; }
   .ag-home .ag-hud .coin-pill, .ag-home .ag-hud .ag-hud-coins { margin-left: auto; }
   .ag-home .ag-wordmark { font-size: 36px !important; }
 }
-@media (max-width: 375px) { .ag-home .ag-brand .ag-brand-mark { height: 29.5px !important; top: 14px; } }
+@media (max-width: 375px) { .ag-home .ag-brand .ag-brand-mark { height: 31px !important; top: 13px; } }
 /* Phone Home's header (owner 11-25): SIGN IN without the gold coin, and the settings gear a little larger */
 @media (max-width: 520px) {
   .ag-home .ag-hud .coin-pill--signin .coin-ico { display: none; }
@@ -8197,3 +8197,5 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 
 /* Home: no light shining down on the player figures (owner 11-25) */
 .ag-home .ag-stage-beam { display: none !important; }
+/* phone soccer Home: the photo down so the pitch shows under the striker (the roof lights are painted out now) */
+@media (max-width: 1023px) { .ag-home--soccer .ag-stage-photo { background-size: auto 135% !important; background-position: center 78% !important; } }
