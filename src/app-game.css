@@ -8159,7 +8159,16 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
    the striker's ghost back to the other figures' size */
 @media (max-width: 1023px) {
   .ag-home--soccer .ag-stage-photo { background-size: auto 230% !important; background-position: center 22% !important; }
-  .ag-home--soccer .st-home-fig { left: 6%; right: 6%; top: 6%; bottom: -1%; }
+  .ag-home--soccer .st-home-fig { left: 10%; right: 10%; top: 12%; bottom: -1%; }
 }
 /* Phone Home: MORE WAYS TO PLAY's line, on its own, between the game modes and the Builder Pass (owner 11-25) */
 @media (max-width: 1023px) { .ag-home .ag-promos { position: relative; padding-top: 22px !important; margin-top: 10px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px; background: rgba(255,255,255,.28); } }
+
+/* soccer Home on desktop too: the photo cropped to the stands (no roof strip, no goal-area lines) */
+.ag-home--soccer .ag-stage-photo { background-size: auto 230% !important; background-position: center 22% !important; }
+/* desktop too: MORE WAYS TO PLAY's line between the game modes and the Builder Pass */
+@media (min-width: 1024px) { .ag-home .ag-promos { position: relative; padding-top: 24px !important; margin-top: 12px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,.28); } }
+@media (min-width: 1024px) {
+  .ag-home--soccer .ag-stage-photo { background-size: auto 320% !important; background-position: center 14% !important; }   /* (the wide stage: stands only) */
+  .ag-home .ag-sport { height: 56px !important; }   /* (the sport bar as tall as the phone's, owner 11-25) */
+}
