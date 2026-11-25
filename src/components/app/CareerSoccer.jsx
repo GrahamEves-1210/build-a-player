@@ -1,10 +1,10 @@
 // CAREER, SOCCER's own screens: the season recap (the World Cup, his country), the transfer window, the
 // season-by-season table, the Ballon d'Or banners and the big nights. Loaded only for a soccer career
 // (AppCareer.jsx lazy-loads them), so football and basketball never download them.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { sportOf, openTalks, acceptTalks, roundOdds, playoffRound, combinePos, gameCast, gamesMode } from '../../lib/career'
 import { wageText, feeText, nationName, stayPut } from '../../lib/careerSoccer'
-import { soccerLeagueInfo } from '../../utils/soccerSimulation'
+import * as SOCCER_SIM from '../../utils/soccerSimulation'
 import { sfx } from '../../lib/juice'
 import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconCheck, IconCaret } from './icons'
 import { Analytics, CareerGame, honorsOf, fmt, ClubLogo, tieText, seasonOf, ordinalOf, inLeague } from './AppCareer'
@@ -13,18 +13,28 @@ import './squad-soccer.css'   // (the league table's rows: Squad Builder's socce
 // ── The league table ─────────────────────────────────────────────────────────
 // Rows are the season engine's standings: { short, name, played, wins, draws, losses, gf, ga, gd, points, pos, isUs }.
 const byTable = (a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || (a.isUs ? -1 : b.isUs ? 1 : 0)
-// The table as it stands after his club's matches so far. The career's own when it carries one (the engine's:
-// S.x.table(c), or c.active.table); the league done, the final table (c.active.final). A career without one gets the
-// season's simulated table brought back to the matches played, his club's row from its real results.
+const soccerLeagueInfo = SOCCER_SIM.soccerLeagueInfo
+// (the engine's table at a matchweek, where the build has it: utils/soccerSimulation.js soccerTableAt(form, upto, mine).
+// Read off the module by name, so a build without it still loads)
+const tableAt = SOCCER_SIM[['soccer', 'Table', 'At'].join('')] ?? null
+// The table as it stands after his club's matches so far, the truest source first:
+//   1. the league done: the final table (c.active.final.standings)
+//   2. the career's own (the engine's): S.x.table(c), or c.active.table
+//   3. the season's matchweek-by-matchweek form (a run's `form`), read at the matches played with his club's real results
+//   4. none of those: the season's simulated final table brought back to the matches played, his club's row from its
+//      real results (an estimate: the other clubs' rows move when the season is re-simulated)
 export function tableNow(c, games = []) {
   const a = c.active
   if (!a) return null
   if (a.final?.standings?.length) return a.final.standings
-  const own = sportOf(c).x?.table?.(c) ?? a.table
+  const own = sportOf(c).x?.table?.(c, games) ?? a.table
   if (Array.isArray(own) && own.length) return own
-  const src = a.snap?.last?.standings ?? a.base?.standings
   const k = games.length
-  if (!src?.length || !k) return null
+  if (!k) return null
+  const form = a.snap?.last?.form ?? a.base?.form
+  if (tableAt && form) { try { const rows = tableAt(form, k, { short: c.team, games }); if (rows?.length) return rows } catch { /* the estimate below */ } }
+  const src = a.snap?.last?.standings ?? a.base?.standings
+  if (!src?.length) return null
   const rows = src.map(r => {
     if (r.isUs || r.short === c.team) {
       const wins = games.filter(g => g.won).length, draws = games.filter(g => g.drawn).length
@@ -246,11 +256,19 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
   const pct = x => Math.min(99, Math.max(1, Math.round(x * 100)))
   // nothing for him to play: a tie that never came down to a moment, or the key moments turned off
   const simmed = !!rd && (rd.close === false || gamesMode(c) === 'off')
+  // a tie played: its result comes into view (the page is left wherever the game's READY button was, the result card
+  // off the top of the screen)
+  const box = useRef(null)
+  useEffect(() => {
+    if (step !== 'result' && po.stage !== 'done') return
+    const r = box.current?.getBoundingClientRect()
+    if (r && (r.top < 64 || r.top > window.innerHeight - 280)) box.current.scrollIntoView({ block: 'center' })
+  }, [step, po.line.length, po.stage])
   if (po.stage === 'done' || step === 'result') {
     const x = last
     const nextOf = x => { const i = po.rounds.findIndex(r => r.name === x.name); return po.rounds.slice(i + 1).find(r => r.track === x.track && !r.skip) }
     return (
-      <div className="cr-po">
+      <div className="cr-po" ref={box}>
         {x && (
           <div className={`ag-card cr-po-result ag-pop${x.won ? ' is-w' : ' is-l'}`}>
             <span className="ag-eyebrow">{x.legs?.length > 1 ? 'AGGREGATE' : 'FULL TIME'} · {x.name.toUpperCase()}</span>

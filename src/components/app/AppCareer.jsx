@@ -82,8 +82,14 @@ const seasonText = (c, y) => (c?.sport === 'soccer' ? seasonOf(y) : y)
 // his frame in the sport's own units: feet, inches and pounds; a footballer's in centimetres and kilos
 const cmOf = inches => Math.round(inches * 2.54), kgOf = lbs => Math.round(lbs * 0.45359)
 const bodyLine = (c, sep = ' · ') => { const b = careerBody(c); return !b ? null : c.sport === 'soccer' ? `${cmOf(b.height)} cm${sep}${kgOf(b.weight)} kg` : bodyText(b, sep) }
-// a release clause's fee, where the deal carries one (€ millions: lib/careerSoccer.js sets it; a deal from before has none)
-const clauseFee = x => x?.release ?? x?.releaseFee ?? x?.clause ?? null
+// a release clause's fee, € millions, where there is one (null: none). His deal's: the engine's releaseFee(c) when it
+// has it (lib/careerSoccer.js), else the figure on the contract. The deal on the table's: talksRelease(c, t, asked)
+// (with or without asking for the clause), else the figure on the talks
+const clauseOf = x => x?.release ?? x?.releaseFee ?? x?.clause ?? null
+const dealClause = c => sx().releaseFee?.(c) ?? clauseOf(c?.contract)
+const talksClause = (c, t, asked = !!t?.noTrade) => sx().talksRelease?.(c, t, asked) ?? (asked ? clauseOf(t) : null)
+// (a Spanish buy-out can run to a billion)
+const clauseText = (fee, short) => (fee >= 1000 ? `${soccerCur(short)}${r1(fee / 1000)}bn` : feeText(fee, short))
 const RUN_DATE = { month: 'short', day: 'numeric' }
 // a roster photo: a full URL (or, in a football career saved before, the headshot id)
 const photoSrc = p => (p ? (String(p).includes('/') ? p : nflHeadshot(p)) : null)
@@ -1000,7 +1006,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             {c.aging?.length > 0 && <ul className="cr-bul">{c.aging.map((t, i) => <li key={i}>{/^(Still growing|A step forward|Experience)/.test(t) ? <IconFlame size={13} /> : /^(Offseason work|Body work|Hasn.t lost a step|The leg is still there)/.test(t) ? <IconShield size={13} /> : <IconArrow size={13} className="cr-down" />} {t.replace(/^A step slower/, 'Father Time')}</li>)}</ul>}
             <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS{S.isSoccer || S.isBaseball ? '' : ` · MEET ${GOAL_POINT_AT} FOR A DEV POINT`}</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             {!lead && preDepth}
-            <p className="cr-note">{c.loan ? `On loan from ${S.teamOf(c.loan.from).name} for the season. ` : ''}{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on the deal ({pay(c, c.contract.perYear)}{S.isSoccer && c.contract.noTrade ? `, release clause${clauseFee(c.contract) ? ` ${feeText(clauseFee(c.contract), c.team)}` : ''}` : ''}). {c.contract.left === 1 && !c.loan ? (S.isSoccer ? 'The last year of the deal: play for the next one.' : 'Contract year: play for the next one.') : ''}</p>
+            <p className="cr-note">{c.loan ? `On loan from ${S.teamOf(c.loan.from).name} for the season. ` : ''}{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on the deal ({pay(c, c.contract.perYear)}{S.isSoccer && !c.loan && (c.contract.noTrade || dealClause(c) != null) ? `, release clause${dealClause(c) != null ? ` ${clauseText(dealClause(c), c.team)}` : ''}` : ''}). {c.contract.left === 1 && !c.loan ? (S.isSoccer ? 'The last year of the deal: play for the next one.' : 'Contract year: play for the next one.') : ''}</p>
             {!lead && preGo}
           </section>
         )}
@@ -1656,7 +1662,8 @@ function GamesSwitch({ c, setCareer }) {
 const soccerDeal = c => {
   const k = c.contract
   const kind = ({ rookie: 'First professional contract', ext: 'New deal', transfer: 'Transfer', fa: 'Free transfer', loan: `On loan from ${c.loan ? sportOf(c).teamOf(c.loan.from).name : 'his club'}` })[k.kind] ?? 'Contract'
-  return `${kind}${k.noTrade ? ` · release clause${clauseFee(k) ? ` ${feeText(clauseFee(k), c.team)}` : ''}` : ''}${k.starter ? ' · first-team promise' : ''}`
+  const fee = k.kind === 'loan' ? null : dealClause(c)
+  return `${kind}${k.noTrade || fee != null ? ` · release clause${fee != null ? ` ${clauseText(fee, c.team)}` : ''}` : ''}${k.relClause ? ' · relegation clause' : ''}${k.starter ? ' · first-team promise' : ''}`
 }
 function Player({ c, setCareer }) {
   const t = careerTotals(c)
@@ -2208,7 +2215,7 @@ function Talks({ c, setCareer }) {
           ? <><span className="cr-offer-money"><b>{wageText(t.perYear, t.team).replace(' a week', '')}</b><small>A WEEK</small></span><span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span><span className="cr-offer-money"><b>{dealTotal(t)}</b><small>TOTAL</small></span></>
           : <><span className="cr-offer-money"><b>{money(t.perYear)}</b><small>A YEAR</small></span><span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span><span className="cr-offer-money"><b>{money(r1(t.perYear * t.years))}</b><small>TOTAL</small></span></>}
       </div>
-      <div className="cr-badges">{t.noTrade && <span className="cr-badge is-gold"><IconShield size={12} /> {soccer ? `RELEASE CLAUSE${clauseFee(t) ? ` · ${feeText(clauseFee(t), t.team)}` : ''}` : 'NO-TRADE'}</span>}{t.starter && <span className="cr-badge is-gold"><IconStar size={12} /> {soccer ? 'FIRST-TEAM PROMISE' : 'STARTER'}</span>}</div>
+      <div className="cr-badges">{(t.noTrade || (soccer && talksClause(c, t) != null)) && <span className="cr-badge is-gold"><IconShield size={12} /> {soccer ? `RELEASE CLAUSE${talksClause(c, t) != null ? ` · ${clauseText(talksClause(c, t), t.team)}` : ''}` : 'NO-TRADE'}</span>}{t.starter && <span className="cr-badge is-gold"><IconStar size={12} /> {soccer ? 'FIRST-TEAM PROMISE' : 'STARTER'}</span>}</div>
       <div className="cr-patience"><span className="ag-eyebrow">THEIR PATIENCE · LEVERAGE {['NONE', 'LOW', 'SOME', 'REAL', 'ALL OF IT'][lev]}</span><span className="cr-patience-dots">{Array.from({ length: t.max }, (_, i) => <i key={i} className={i < t.patience ? 'is-on' : ''} />)}</span></div>
       {t.lines.length > 0 && <p className="cr-talks-line">{t.lines[t.lines.length - 1]}</p>}
       {t.walked ? (
@@ -2223,7 +2230,7 @@ function Talks({ c, setCareer }) {
               const capped = k === 'money' && !canPushMoney(c)
               const used = k === 'money' ? moneyPushes >= 3 || capped : t.asked.includes(k)
               const o = askOdds(c, k)
-              return <button key={k} className="cr-ask" disabled={used} onClick={() => { const n = ask(c, k); setCareer(n); sfx(n.talks?.walked ? 'deny' : 'tap') }}><b>{soccer ? SOCCER_ASK[k][0] : a.label}</b><small>{capped ? 'At the top of his market' : soccer ? (k === 'notrade' && clauseFee(t) ? `${feeText(clauseFee(t), t.team)} lets him leave` : SOCCER_ASK[k][1]) : a.sub}</small><small className="cr-ask-cost">costs {o.lo} · {Math.round(o.p * 100)}% it's {o.hi}</small></button>
+              return <button key={k} className="cr-ask" disabled={used} onClick={() => { const n = ask(c, k); setCareer(n); sfx(n.talks?.walked ? 'deny' : 'tap') }}><b>{soccer ? SOCCER_ASK[k][0] : a.label}</b><small>{capped ? 'At the top of his market' : soccer ? (k === 'notrade' && talksClause(c, t, true) != null ? `${clauseText(talksClause(c, t, true), t.team)} lets him leave` : SOCCER_ASK[k][1]) : a.sub}</small><small className="cr-ask-cost">costs {o.lo} · {Math.round(o.p * 100)}% it's {o.hi}</small></button>
             })}
           </div>
           <div className="cr-actions">
