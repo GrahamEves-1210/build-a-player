@@ -164,6 +164,7 @@ const fa = F => [...F.fa].filter(p => p.fr !== 'BOS' && p.fr !== T && !p.rfa && 
 {
   const F = clone(F0)
   const mine = F.fa.find(p => p.fr === 'BOS' && p.rfa) ?? (() => { const p = fa(F)[5]; p.fr = 'BOS'; p.rfa = 1; p.qo = 5; p.hy = y; p.bird = 3; p.$l = 4; return p })()
+  setPay(F, 'BOS', C.taxOf(y) - 20)   // (room under the owner's ceiling to match: #43 is the case where there isn't)
   F.rfq = [{ i: mine.i, s: 'NYK', d: { $: 12, y: 3, r: 0.05 } }]
   const r = N.signFA(F, mine.i, { $: 20, y: 4 })
   const c = C.canSign(F, 'BOS', mine, { $: 20, y: 4, r: 0 })
