@@ -8149,3 +8149,9 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 }
 /* (no SIGN IN button in the phone header at all: the player chip on the left already says "Sign in to save") */
 @media (max-width: 520px) { .ag-home .ag-hud .coin-pill--signin { display: none; } .ag-home .ag-hud .ag-icon-btn { margin-left: auto; } }
+/* Phone Home header (owner 11-25): no coin pill at all (signed in or not), and the mute button beside the gear */
+@media (max-width: 520px) {
+  .ag-home .ag-hud .coin-pill, .ag-home .ag-hud .ag-hud-coins { display: none !important; }
+  .ag-home .ag-hud .ag-hud-sound { display: inline-grid !important; margin-left: auto; }
+  .ag-home .ag-hud .ag-hud-sound + .ag-icon-btn { margin-left: 0; }
+}

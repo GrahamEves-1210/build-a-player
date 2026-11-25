@@ -132,7 +132,7 @@ function Hud({ user }) {
     <div className="ag-hud">
       <PlayerChip user={user} onClick={() => nav('profile')} />
       <CoinPill className="ag-hud-coins" />
-      {!IS_APP && <SoundToggle className="ag-hud-sound" />}
+      <SoundToggle className="ag-hud-sound" />   {/* (the app too since 11-25: mute on the phone's Home) */}
       <button className="ag-icon-btn" onClick={openMenu} aria-label="Settings and more"><IconGear size={22} /></button>
     </div>
   )
