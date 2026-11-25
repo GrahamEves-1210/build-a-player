@@ -196,7 +196,7 @@ function withBall(s, p, m, lvl, out) {
     if (((D.x - p.x) * p.bdx + (D.y - p.y) * p.bdy) / (dD || 1) > 0.3) {
       const dR = ref.rimDist(p) || 1, ux = (RIM.x - p.x) / dR, uy = (RIM.y - p.y) / dR, k = 2 * (ux * p.bdx + uy * p.bdy)
       const rx = k * ux - p.bdx, ry = k * uy - p.bdy
-      if (ref.inBounds(p.x + rx * 6.5, p.y + ry * 6.5, -1)) { out.mx = rx; out.my = ry; out.dx = rx; out.dy = ry; m.side = -m.side; m.sideT = s.tick + Math.round(GHZ); return }
+      if (ref.inBounds(p.x + rx * 6.5, p.y + ry * 6.5, -1) && ref.spinTurn(p, { x: rx, y: ry })) { out.mx = rx; out.my = ry; out.dx = rx; out.dy = ry; m.side = -m.side; m.sideT = s.tick + Math.round(GHZ); return }
     }
   }
   const mine = shotValue(s, p, lvl, defs)
@@ -252,17 +252,17 @@ function withBall(s, p, m, lvl, out) {
     tx = m.spot.x; ty = m.spot.y
     if (Math.hypot(tx - p.x, ty - p.y) < 1.2) {
       // on his spot and still covered: make space with a move, or go
-      if (dD < 5.1 && p.moveCd <= 0 && m.go < lvl.move) {
+      if (dD < 5.1 && p.moveCd <= 0 && p.frzCd <= 0 && m.go < lvl.move) {
         // (straight back off him, a touch to one side: the step-back; now and then more across: behind the back)
         const ax = p.x - D.x, ay = p.y - D.y, a = Math.hypot(ax, ay) || 1, across = m.go < lvl.move * 0.3 ? 0.8 : 0.3
         out.mx = ax / a * (across > 0.5 ? 0.6 : 0.95) + (-ay / a) * m.side * across; out.my = ay / a * (across > 0.5 ? 0.6 : 0.95) + (ax / a) * m.side * across
         const l = Math.hypot(out.mx, out.my) || 1
         out.mx /= l; out.my /= l
-        if (ref.inBounds(p.x + out.mx * 6.5, p.y + out.my * 6.5, -1)) { out.dx = out.mx; out.dy = out.my; return }
+        if (ref.inBounds(p.x + out.mx * 6.5, p.y + out.my * 6.5, -1)) { const f = ref.flickFor(p, { x: out.mx, y: out.my }); out.dx = f.x; out.dy = f.y; return }
         m.side = -m.side
       }
       // covered on his spot and no move to make: he doesn't stand there, he goes
-      if (p.moveCd > 0 || s.tick > m.planT - GHZ || m.go >= lvl.move) m.plan = 'drive'
+      if (p.moveCd > 0 || p.frzCd > 0 || s.tick > m.planT - GHZ || m.go >= lvl.move) m.plan = 'drive'
     }
   } else if (m.plan === 'post') {
     if (m.spot && Math.hypot(m.spot.x - p.x, m.spot.y - p.y) < 2.5) m.spot = null
@@ -284,7 +284,7 @@ function withBall(s, p, m, lvl, out) {
       const ang = (dD < 4.2 ? 1.05 : 0.6) * m.side
       const cx = dirx * Math.cos(ang) - diry * Math.sin(ang), cy = dirx * Math.sin(ang) + diry * Math.cos(ang)
       dirx = cx; diry = cy
-      if (dD < 5.0 && p.moveCd <= 0 && m.go < lvl.move * 0.5 && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { out.mx = dirx; out.my = diry; out.dx = dirx; out.dy = diry; return }
+      if (dD < 5.0 && p.moveCd <= 0 && p.frzCd <= 0 && m.go < lvl.move * 0.5 && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { const f = ref.flickFor(p, { x: dirx, y: diry }); out.mx = dirx; out.my = diry; out.dx = f.x; out.dy = f.y; return }
     }
   }
   // keep it in bounds

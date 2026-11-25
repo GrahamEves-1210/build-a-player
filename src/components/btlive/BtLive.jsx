@@ -4,6 +4,8 @@
 //   /bucket?btlive=1                      the practice menu
 //   &mode=1v1|2v2|koth (King of the Hill)  &level=rookie|pro|allstar|legend  &pick=<player name>  &seed=abc
 //   &go=1 (straight into a game). An old &size=1|2 still works; &size=3 (3v3, gone) opens 1v1
+// Controls: the left stick (WASD) moves; the right stick (the arrow keys) is NBA 2K's pro stick with the ball (dribble
+// moves) and without it down a steal, up a jump; SHOOT (SPACE: hold, let go on the meter); PASS (E), CALL off the ball
 // The game itself is lib/btlive (pure code); engine.js runs and draws it. On the dev server the running game is
 // on window.__btlive (state, pause, run, auto, press, stick, flick, wait) for screenshots and tests.
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -214,7 +216,7 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
     const r = refs.current
     const eng = createEngine({
       setup, net: link?.net ?? null,
-      els: { canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, ds: r.ds, dk: r.dk, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb } },
+      els: { root: r.root, canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, ds: r.ds, dk: r.dk, rs: { up: r.rsu, dn: r.rsd, mid: r.rsm }, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb } },
       on: { final: res => setTimeout(() => { setAsk(false); setFinal(res) }, 900) },
     })
     link?.attach(eng)
@@ -236,7 +238,7 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
   const men = final && koth ? setup.looks.map((l, i) => ({ i, label: l.label, pts: final.score?.[i] ?? final.stats?.[i]?.pts ?? 0 })).sort((x, y) => (x.i === final.winner ? -1 : y.i === final.winner ? 1 : y.pts - x.pts)) : null
   const winner = final ? (koth ? setup.looks[final.winner]?.label : setup.names[final.winner]) : ''
   return (
-    <div className={`btlv btlv-game${caps ? ' has-keys' : ''}`}>
+    <div className={`btlv btlv-game${caps ? ' has-keys' : ''}${setup.size > 1 && !koth ? ' is-team' : ''}`} ref={set('root')}>
       <div className="btlv-bug">
         <button className="btlv-quit" onClick={() => { sfx('tap'); setAsk(true) }} aria-label="Leave the game">QUIT</button>
         <div className="btlv-bug-sides" ref={set('sides')} />
@@ -253,16 +255,23 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
         <i className="btlv-stick-home" ref={set('home')} />
         <i className="btlv-stick-base" ref={set('base')} /><i className="btlv-stick-knob" ref={set('knob')} />
         {caps && (
-          <div className="btlv-keys">
-            <div><b>MOVE</b><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></div>
-            <div><b>DRIBBLE MOVES</b><span><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd></span></div>
+          <div className="btlv-keys" aria-label="Keys">
+            <div className="btlv-keys-row"><span className="btlv-kk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><b>MOVE</b></div>
+            <div className="btlv-keys-row is-o"><span className="btlv-kk"><kbd className="is-wide">SPACE</kbd></span><b>SHOOT</b><small>HOLD, LET GO</small></div>
+            {setup.size > 1 && !koth && <div className="btlv-keys-row is-o"><span className="btlv-kk"><kbd>E</kbd></span><b>PASS</b><small>CALL FOR IT</small></div>}
+            <div className="btlv-keys-row is-b"><span className="btlv-kk"><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd></span><b>DRIBBLE MOVES</b></div>
+            <div className="btlv-keys-row is-d"><span className="btlv-kk"><kbd>&darr;</kbd></span><b>STEAL</b></div>
+            <div className="btlv-keys-row is-d"><span className="btlv-kk"><kbd>&uarr;</kbd></span><b>JUMP</b><small>CONTEST, BLOCK, BOARD</small></div>
           </div>
         )}
         <div className="btlv-btns">
-          {/* the small stick: a flick is a dribble move (engine.js), by the right thumb with SHOOT and PASS */}
-          <div className="btlv-ds is-off" ref={set('ds')}><span>DRIBBLE</span><i className="btlv-ds-knob" ref={set('dk')} /></div>
-          <button className="btlv-btn btlv-btn-a" ref={set('a')}>{caps && <kbd>J</kbd>}<span ref={set('la')} /></button>
-          <button className="btlv-btn btlv-btn-b" ref={set('b')}>{caps && <kbd>K</kbd>}<span ref={set('lb')} /></button>
+          {/* the right stick: dribble moves with the ball; without it, up a jump and down a swipe at the ball (engine.js) */}
+          <div className="btlv-ds" ref={set('ds')}>
+            <span className="btlv-rs-up" ref={set('rsu')} /><span className="btlv-rs-dn" ref={set('rsd')} /><span className="btlv-rs-mid" ref={set('rsm')} />
+            <i className="btlv-ds-knob" ref={set('dk')} />
+          </div>
+          <button className="btlv-btn btlv-btn-a" ref={set('a')}><span ref={set('la')} /></button>
+          <button className="btlv-btn btlv-btn-b" ref={set('b')}><span ref={set('lb')} /></button>
         </div>
       </div>
       {ask && !final && (

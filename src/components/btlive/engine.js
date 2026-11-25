@@ -2,7 +2,7 @@
 // display's rate with the positions eased between ticks, reads the stick and the buttons, times the shot meter on
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
-import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveBegin, moveSpin, shotKindAt, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks } from '../../lib/btlive/index.js'
+import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
 import { drawFigure, drawShadow, pointAt, lookOf } from './figure.js'
 import { createPoser } from './pose.js'
@@ -43,7 +43,8 @@ export function createEngine({ setup, els, on, net = null }) {
   let shown = { clock: null, idle: null, poss: null, note: null, mode: null, gp: false, bug: null, sc: [] }
   // the person's hands: the stick, the two buttons (down now / tapped since the last tick / must be let go first), and
   // the flicks of the small stick that haven't gone into a tick yet (dq: [x, y] each, a dribble move)
-  const H = { mx: 0, my: 0, a: false, b: false, ta: false, tb: false, na: false, nb: false, aT0: 0, aUp: 0, dq: [] }
+  // (ts, tj: the right stick flicked down (a swipe at the ball) or up (a jump) without the ball, since the last tick)
+  const H = { mx: 0, my: 0, a: false, b: false, ta: false, tb: false, na: false, nb: false, aT0: 0, aUp: 0, dq: [], ts: false, tj: false }
   // the shot meter, timed on this device
   // (rel: where he stopped it, kept on the screen for a moment after the release; side: which side of him it's drawn)
   const meter = { on: false, t0: 0, spec: null, read: 0, q: null, grade: null, gradeAt: 0, gradeGood: false, rel: null, side: 0 }
@@ -51,14 +52,14 @@ export function createEngine({ setup, els, on, net = null }) {
   // online: what this device has sent and heard, and what it is doing before the referee knows (local)
   const online = !!net
   // (mv: this device's own dribble move, as its own man is doing it now: the referee's word on it comes a beat later)
-  const NB = { k: 0, n: [0, 0, 0], d: [], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, mv: { burst: 0, mv: 0, bn: 0 }, lt: 0, wasLive: false, aUsed: 0, aOff: false }
+  const NB = { k: 0, n: [0, 0, 0, 0, 0], d: [], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, mv: { burst: 0, mv: 0, bn: 0 }, lt: 0, wasLive: false, aUsed: 0, aOff: false }
   const DELAY = Math.round(0.2 * HZ)               // others are drawn this many ticks behind the latest word (200 ms)
   const DX = new Float32Array(N), DY = new Float32Array(N), DB = [0, 0, 0], LP = new Float32Array(N * 2)
   const LAY = { dots: [], bars: [], ball: null, words: [], tabs: [] }   // DEV: what was drawn where on the last frame (px, world)
   const EVLOG = [], PFN = SNAP_ACT                 // (PFN: where a snapshot row keeps the act: proto.js snapOf)
   // the men as they're drawn: each one's look (his side's colour, his skin and number) and his pose (pose.js)
   const poser = createPoser(N)
-  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE' }
+  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS' }
 
   // The court is a window onto the half court: its height always shows the whole depth (baseline to half court);
   // on a narrow screen (a phone held upright) it shows about 34 of the 56 feet across and pans with the play.
@@ -148,9 +149,10 @@ export function createEngine({ setup, els, on, net = null }) {
   function myInput() {
     const p = s.players[me]
     const A = (H.a && !H.na) || H.ta, B = (H.b && !H.nb) || H.tb
-    H.ta = H.tb = false
-    const fl = H.dq.shift()                                     // a flick of the small stick: a dribble move, this tick
-    const inp = { mx: H.mx, my: H.my, shoot: A, steal: A, pass: B, jump: B, dx: fl ? fl[0] : 0, dy: fl ? fl[1] : 0, q: null, t: s.tick }
+    const st = H.ts, jp = H.tj
+    H.ta = H.tb = H.ts = H.tj = false
+    const fl = H.dq.shift()                                     // a flick of the right stick with the ball: a dribble move, this tick
+    const inp = { mx: H.mx, my: H.my, shoot: A, steal: st, pass: B, jump: jp, dx: fl ? fl[0] : 0, dy: fl ? fl[1] : 0, q: null, t: s.tick }
     if (p.act === 'gather' && meter.on) {
       // the release goes out with the quality this device judged; until then the button counts as held
       if (meter.q != null) { inp.shoot = false; inp.q = meter.q; meter.q = null } else inp.shoot = true
@@ -212,7 +214,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const p = s.players[me], b = s.ball
     NB.lt++
     prev[me * 2] = p.x; prev[me * 2 + 1] = p.y
-    H.ta = H.tb = false
+    H.ta = H.tb = H.ts = H.tj = false
     const live = s.phase === 'live'
     mvLoad(p)
     const has = live && b.st === 'held' && b.holder === me
@@ -229,10 +231,10 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     // a dribble move starts here too (the step's rules: sim.js doMove); the flick itself went to the referee as it was made
     const fl = H.dq.shift()
-    if (fl && has && p.act === 'free' && p.noAct <= 0) {
-      const dir = { x: fl[0], y: fl[1] }
-      if (p.burst > 0) { if (p.mv !== MOVES.spin.n && ref.spinTurn(p, dir)) moveSpin(p, dir) }
-      else if (p.moveCd <= 0) { moveBegin(p, dir); p.moveCd = gticks(p.R.moveCd) }
+    if (p.moveCd > 0) p.moveCd--
+    if (has && p.act === 'free' && p.noAct <= 0) {
+      if (fl) { moveInput(p, { x: fl[0], y: fl[1] }, NB.lt); NB.lastMv = NB.lt }
+      else moveQueued(p, NB.lt)
     }
     if (NB.local?.act === 'gather') p.actT++
     if (NB.local?.act === 'follow' && NB.lt >= NB.local.until) { NB.local = null; if (p.act === 'follow') p.act = 'free' }
@@ -248,8 +250,10 @@ export function createEngine({ setup, els, on, net = null }) {
     hud()
   }
   // this device's own move: kept through the referee's snapshots (they carry his word on it, a beat old)
-  function mvSave(p) { const v = NB.mv; v.burst = p.burst; v.mv = p.mv; v.bn = p.bn }
-  function mvLoad(p) { const v = NB.mv; p.burst = v.burst; p.mv = v.mv; p.bn = v.bn; if (!v.burst) p.bs = 0 }
+  // (and the hand the ball is in, the chain's clock and the flick waiting in it: all his device's own a beat early)
+  const MVF = ['burst', 'mv', 'bn', 'hand', 'moveCd', 'mqT', 'mqx', 'mqy', 'fkx', 'fky', 'bdx', 'bdy', 'bs', 'bk', 'chn']
+  function mvSave(p) { for (const f of MVF) NB.mv[f] = p[f] }
+  function mvLoad(p) { if (NB.mv.hand == null) return; for (const f of MVF) p[f] = NB.mv[f]; if (!NB.mv.burst) p.bs = 0 }
   function onSnap(m) {
     if (m.k <= NB.lastK) return
     NB.lastK = m.k
@@ -263,7 +267,9 @@ export function createEngine({ setup, els, on, net = null }) {
     const L = NB.local
     if (L?.act === 'gather') { p.act = 'gather'; p.shot = L.shot }
     else if (L?.act === 'follow' && p.act !== 'frozen' && p.act !== 'down') p.act = 'follow'
-    if (!mine) { prev[me * 2] = p.x; prev[me * 2 + 1] = p.y; NB.mv.burst = 0; NB.mv.mv = 0; if (L) NB.local = null }
+    if (!mine) { prev[me * 2] = p.x; prev[me * 2 + 1] = p.y; NB.mv.hand = null; if (L) NB.local = null }
+    // (the hand the ball is in: his device's while he's working moves; once he's been still with it a beat, the referee's)
+    else if (NB.mv.hand != null && !NB.mv.burst && NB.mv.mqT < 0 && NB.lt - (NB.lastMv ?? -99) > HZ * 0.6) NB.mv.hand = p.hand
     mvLoad(p)
     if (NB.rel && m.a?.[me] >= NB.rel.sn) NB.rel = null
     const pos = new Float32Array(N * 2)
@@ -373,20 +379,29 @@ export function createEngine({ setup, els, on, net = null }) {
       if (els.note) { els.note.textContent = note.toUpperCase(); els.note.style.color = nc != null && nc >= 0 ? setup.colors?.[nc] ?? SIDE_COL[nc] ?? '' : '' }
     }
     const has = b.st === 'held' && b.holder === me, up = b.st === 'shot' || b.st === 'loose'
-    // (between plays nothing is live: no buttons)
+    // (between plays nothing is live: the buttons rest)
     const mode = s.phase === 'dead' || s.phase === 'over' ? 'none' : has ? (s.mustClear === me ? 'clear' : 'ball') : p.team === s.poss ? (up ? 'board' : 'off') : (up ? 'dboard' : 'def')
     if (mode !== shown.mode) {
       shown.mode = mode
-      const set = (key, text) => { els.lab[key].textContent = text || ''; els.btn[key].classList.toggle('is-off', !text) }
-      set('a', mode === 'ball' ? 'SHOOT' : mode === 'def' ? 'STEAL' : '')
-      set('b', mode === 'none' || mode === 'clear' ? '' : mode === 'ball' ? (s.size > 1 ? 'PASS' : '') : mode === 'off' ? (s.size > 1 ? 'CALL' : '') : 'JUMP')
-      // the small stick: there with the ball in his hands
-      els.ds?.classList.toggle('is-off', !(mode === 'ball' || mode === 'clear'))
+      const team = s.size > 1 && !koth()
+      // SHOOT is always there (dimmed when it does nothing: on defense, a shot in the air); PASS in a team game
+      els.btn.a.classList.toggle('is-dim', !(mode === 'ball' || mode === 'off' || mode === 'board' || mode === 'check'))
+      els.lab.a.textContent = 'SHOOT'
+      const bl = mode === 'ball' ? 'PASS' : mode === 'off' ? 'CALL' : ''
+      els.lab.b.textContent = bl || 'PASS'
+      els.btn.b.classList.toggle('is-off', !team)
+      els.btn.b.classList.toggle('is-dim', !bl)
+      // the right stick: dribble moves with the ball; without it, up a jump and (on defense) down a swipe at the ball
+      if (els.rs) {
+        els.rs.up.textContent = mode === 'ball' || mode === 'clear' ? '' : mode === 'none' ? '' : 'JUMP'
+        els.rs.dn.textContent = mode === 'def' ? 'STEAL' : ''
+        els.rs.mid.textContent = mode === 'ball' || mode === 'clear' ? 'MOVES' : ''
+      }
+      els.ds?.classList.toggle('is-ball', mode === 'ball' || mode === 'clear')
+      if (els.root) els.root.dataset.mode = mode === 'ball' || mode === 'clear' ? 'ball' : mode === 'def' || mode === 'dboard' ? 'def' : mode === 'none' ? 'none' : 'off'
     }
-    // cooldowns dim their button
-    const cdA = mode === 'def' ? p.stealCd > 0 : false, cdC = mode === 'ball' || mode === 'clear' ? p.moveCd > 0 && !(p.burst > 0) : false
-    if (els.btn.a.classList.contains('is-cd') !== cdA) els.btn.a.classList.toggle('is-cd', cdA)
-    if (els.ds && els.ds.classList.contains('is-cd') !== cdC) els.ds.classList.toggle('is-cd', cdC)
+    const cdS = mode === 'def' && p.stealCd > 0
+    if (els.rs && els.rs.dn.classList.contains('is-cd') !== cdS) els.rs.dn.classList.toggle('is-cd', cdS)
   }
 
   // ── drawing ─────────────────────────────────────────────────────────────────────────────────────
@@ -445,9 +460,11 @@ export function createEngine({ setup, els, on, net = null }) {
   // the shoulders as the body the game collides, so two men in contact stand shoulder to shoulder.
   const LOOKS = setup.looks.map((l, i) => lookOf({ name: l.who || l.label || `p${i}`, skin: l.skin, num: l.num, col: colOf(i) }))
   const FIG = LOOKS.map(look => ({ x: 0, y: 0, s: 30, ang: 0, scale: 1, air: 0, lean: 0, down: 0, lh: null, rh: null, lf: null, rf: null, toeL: 0, toeR: 0, look, hs: 20, cy: 0, ball: false, bounce: false, bl: null }))
+  // (a man is drawn a little bigger than the body the game collides: from above, his arms reach past it)
+  const FIGK = T.radius * 2 * 1.16
   const ENV = { x: 0, y: 0, a: 0, dt: 0, held: 0, sFt: 3 }, BQ = [0, 0, 0]
   function figures(now, dt, a, tk) {
-    const sF = tk + 6
+    const sF = FIGK * k
     for (let i = 0; i < N; i++) {
       const p = s.players[i], f = FIG[i]
       ENV.x = DX[i]; ENV.y = DY[i]; ENV.a = a; ENV.dt = dt; ENV.sFt = sF / k
@@ -455,11 +472,11 @@ export function createEngine({ setup, els, on, net = null }) {
       ENV.held = i === me && !levels[me] && meter.on ? (meter.grade ? meter.gradeAt : now) - meter.t0 : (p.actT + a) * STEP
       const z = poser.pose(s, i, now, ENV)
       f.x = (DX[i] + z.ox) * k; f.y = (DY[i] + z.oy) * k; f.s = sF; f.ang = z.ang; f.scale = z.scale; f.air = z.air; f.lean = z.lean; f.down = z.down
-      f.lh = z.lh; f.rh = z.rh; f.lf = z.lf; f.rf = z.rf; f.toeL = z.toeL; f.toeR = z.toeR; f.ball = z.ball; f.bounce = z.bounce; f.bl = z.bl
+      f.lh = z.lh; f.rh = z.rh; f.lf = z.lf; f.rf = z.rf; f.toeL = z.toeL; f.toeR = z.toeR; f.ball = z.ball; f.bounce = z.bounce; f.bl = z.bl; f.under = z.under
       // the ball off the floor: heard on each bounce
       if (z.thud && s.phase === 'live') sfx('dribble', i === me ? 1 : 0.7)
       // (the square the names, the meters and the words keep off: where he's drawn, a man in the air a touch up the screen)
-      f.hs = sF * 0.56 * (1 + 0.2 * z.air); f.cy = f.y - z.air * sF * 0.2
+      f.hs = sF * 0.5 * (1 + 0.16 * z.air); f.cy = f.y - z.air * sF * 0.2
     }
   }
   // a crown over the king (King of the Hill)
@@ -612,7 +629,7 @@ export function createEngine({ setup, els, on, net = null }) {
   // two men in contact never stand on each other on the screen: this device's man is drawn a touch ahead of the game
   // (and online the others a beat behind), so figures closer than shoulder to shoulder are eased apart, a few px at most
   function relax(tk) {
-    const need = (tk + 6) * 0.9
+    const need = FIGK * k * 0.86
     for (let it = 0; it < 2; it++) {
       for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
         const dx = (DX[j] - DX[i]) * k, dy = (DY[j] - DY[i]) * k, d = Math.hypot(dx, dy)
@@ -652,13 +669,13 @@ export function createEngine({ setup, els, on, net = null }) {
       ctx.beginPath(); ctx.arc(rx + wob, ry + wob * 0.4, r0 * (f.rim === 'make' ? 1 - t * 0.45 : 1), 0, 6.283); ctx.stroke()
     }
     // who is cut by the edge of the screen (a tab at the edge instead of half a man)
-    const half = (tk + 6) * 0.5
+    const half = FIGK * k * 0.5
     const cut = i => (worldW <= w + 1 ? 0 : X(i) - half < L ? -1 : X(i) + half > Rr ? 1 : 0)
     // every man's shadow first (no shadow lies on a man)
     for (let i = 0; i < N; i++) if (!cut(i)) drawShadow(ctx, FIG[i])
     // under the player this device controls: a white ring on the floor (his jersey is his side's colour, so the ring
     // isn't), a faint fill of his colour inside it; under the teammate the stick points at, a dashed one
-    const ringR = (tk + 6) * 0.72
+    const ringR = FIGK * k * 0.62
     if (s.phase !== 'over' && !cut(me)) {
       const mx = FIG[me].x, my = FIG[me].y, col = colOf(me)
       ctx.beginPath(); ctx.arc(mx, my, ringR, 0, 6.283); ctx.globalAlpha = 0.16; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1
@@ -677,7 +694,7 @@ export function createEngine({ setup, els, on, net = null }) {
     if (s.call && s.phase === 'live' && s.tick - s.call.tick < 45 && P[s.call.pid] && !cut(s.call.pid)) {
       const ci = s.call.pid, f = clamp((s.tick - s.call.tick) / 45, 0, 1)
       ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,255,255,${0.95 - 0.5 * f})`
-      ctx.beginPath(); ctx.arc(FIG[ci].x, FIG[ci].y, (tk + 6) * (0.74 + 0.2 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
+      ctx.beginPath(); ctx.arc(FIG[ci].x, FIG[ci].y, FIGK * k * (0.64 + 0.2 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
     }
     // players, the far ones first (a man in the air over the rest)
     const order = P.map((_, i) => i).sort((i, j) => (P[i].y + (P[i].act === 'jump' ? 99 : 0)) - (P[j].y + (P[j].act === 'jump' ? 99 : 0)))
@@ -687,6 +704,8 @@ export function createEngine({ setup, els, on, net = null }) {
       const f = FIG[i]
       DOTS.push([f.x - f.hs, f.cy - f.hs, f.x + f.hs, f.cy + f.hs, i])
       if (import.meta.env.DEV) LAY.dots[i] = [f.x, f.cy, f.hs]
+      // (the ball between his legs goes under him)
+      if (f.under && holder === i && f.ball) { const q = pointAt(f, f.bl[0], f.bl[1], BQ); drawBall(q[0], q[1], 0.84, q[0], q[2], 0.4) }
       drawFigure(ctx, f)
     }
     // the ball: in a hand it goes where the hand is (a dribble: up and down off the floor beside him); in the air it's
@@ -715,7 +734,7 @@ export function createEngine({ setup, els, on, net = null }) {
       BL.key = key
     }
     const e = clamp((now - BL.t0) / BL.dur, 0, 1), ef = BL.dur > 160 ? 1 - e * (2 - e) * 0.5 - e * 0.5 : (1 - e) * (1 - e)
-    const ballCut = carry >= 0 && cut(carry)
+    const ballCut = carry >= 0 && (cut(carry) || FIG[carry].under)
     if (!ballCut) drawBall(bx + BL.ox * ef, by + BL.oy * ef, bsc, gx + BL.ox * ef, gy + BL.oy * ef, bz)
     BL.x = bx + BL.ox * ef; BL.y = by + BL.oy * ef
     // a dunk on the rim: the rim dragged his way and springing back, a ring thrown off it, the hit marked round it
@@ -949,15 +968,27 @@ export function createEngine({ setup, els, on, net = null }) {
     el.addEventListener('pointerdown', d); el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u)
     btnHandlers.push([el, d, u])
   }
-  // ── the small stick: dribble moves (the arrow keys are the same stick) ──────────────────────────
-  // A flick is the stick pushed past half way from where the thumb landed; still out and rolled a quarter turn or so
-  // round from there is another one (in the game the first move then turns into a spin). Which move a flick is, the
-  // game says (where it points, the basket being forward): the screen only sends the way it pointed.
+  // ── the right stick (the arrow keys are the same stick) ─────────────────────────────────────────
+  // With the ball a flick is a dribble move: the stick pushed past half way from where the thumb landed; still out and
+  // rolled a quarter turn or so round from there is another one (early in a move, the game makes it a spin). Which
+  // move a flick is, the game says (where it points, the basket being forward, and the hand the ball is in): the
+  // screen only sends the way it pointed. Without the ball: down is a swipe at it (on defense), up a jump.
   const DS = { id: null, ox: 0, oy: 0, r: 26, sc: 1, on: false, fx: 0, fy: 0, kt: 0 }
   const SPIN_COS = Math.cos(T.spinTurn * Math.PI / 180)
   const flick = (x, y) => {
     H.dq.push([x, y]); if (H.dq.length > MOVE_KEEP) H.dq.shift()
     if (online) { NB.n[2]++; NB.d.push([r2(x), r2(y)]); if (NB.d.length > MOVE_KEEP) NB.d.shift(); NB.edge = true }
+  }
+  const tap = steal => {
+    if (steal) H.ts = true; else H.tj = true
+    if (online) { NB.n[steal ? 3 : 4]++; NB.edge = true }
+  }
+  function rightFlick(ux, uy) {
+    const p = s.players[me], b = s.ball
+    if (b.st === 'held' && b.holder === me) { flick(ux, uy); return }
+    if (s.phase !== 'live') return
+    if (uy >= 0.6) { if (p.team !== s.poss && b.st === 'held') tap(true) }
+    else if (uy <= -0.6) tap(false)
   }
   function dribbleAt(x, y) {
     const m = Math.hypot(x, y)
@@ -966,7 +997,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const ux = x / m, uy = y / m
     if (DS.on && ux * DS.fx + uy * DS.fy > SPIN_COS) return
     DS.on = true; DS.fx = ux; DS.fy = uy
-    flick(ux, uy)
+    rightFlick(ux, uy)
   }
   const dsMove = e => {
     if (e.pointerId !== DS.id) return
@@ -980,14 +1011,15 @@ export function createEngine({ setup, els, on, net = null }) {
     if (DS.id != null) return
     e.preventDefault(); e.stopPropagation()
     const r = els.ds.getBoundingClientRect()                        // (it's scaled with the buttons on a phone on its side)
-    DS.id = e.pointerId; DS.ox = e.clientX; DS.oy = e.clientY; DS.sc = r.width / (els.ds.offsetWidth || r.width); DS.r = r.width * 0.31
+    DS.id = e.pointerId; DS.ox = e.clientX; DS.oy = e.clientY; DS.sc = r.width / (els.ds.offsetWidth || r.width); DS.r = r.width * 0.3
     els.ds.setPointerCapture?.(e.pointerId); els.ds.classList.add('is-on')
   }
   const dsUp = e => {
     if (e.pointerId !== DS.id) return
     DS.id = null; els.dk.style.transform = ''; els.ds.classList.remove('is-on'); dribbleAt(0, 0)
   }
-  const KEY = { j: 'a', ' ': 'a', k: 'b', e: 'b' }
+  // the keyboard: WASD the left stick, the arrows the right one, SPACE shoots, E passes (calls for it off the ball)
+  const KEY = { ' ': 'a', e: 'b' }
   const DIR = { w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }
   const ARROW = { arrowup: [0, -1], arrowdown: [0, 1], arrowleft: [-1, 0], arrowright: [1, 0] }
   const arrows = new Set(), tapped = new Set()
@@ -1009,7 +1041,7 @@ export function createEngine({ setup, els, on, net = null }) {
       // two arrows pressed together are one diagonal flick: the first waits a moment for the second. With a flick
       // already out, the next arrow is the roll round to it at once
       if (DS.on) arrowVec(arrows)
-      else if (!DS.kt) DS.kt = setTimeout(() => { DS.kt = 0; arrowVec(tapped); tapped.clear(); if (!arrows.size) dribbleAt(0, 0) }, 40)
+      else if (!DS.kt) DS.kt = setTimeout(() => { DS.kt = 0; arrowVec(tapped); tapped.clear(); if (!arrows.size) dribbleAt(0, 0) }, 35)
     } else if (KEY[kk]) { e.preventDefault(); if (!e.repeat) press(KEY[kk], true) }
   }
   const keyUp = e => {
@@ -1043,7 +1075,7 @@ export function createEngine({ setup, els, on, net = null }) {
     // online: a message from the referee (BtLive routes them here)
     onNet(m) { if (m.t === 's') onSnap(m) },
     // online: the line came back; take the referee's word for this player's spot (the CPU had him while he was gone)
-    resync() { NB.wasLive = false; NB.local = null; NB.mv.burst = 0; NB.mv.mv = 0 },
+    resync() { NB.wasLive = false; NB.local = null; NB.mv.hand = null },
     // DEV: where each player was drawn on the last frame (feet)
     get evlog() { return EVLOG },
     // DEV: the last frame's drawing (px in the world: dots [x, y, half], name bars, ball [x, y, r], words)
@@ -1057,9 +1089,11 @@ export function createEngine({ setup, els, on, net = null }) {
     run(n = 1, until = null) { let i = 0; for (; i < n; i++) { clockNow += STEP; tick(); if (until && until(s)) break } acc = 0; camera(1e6); draw(clockNow); return i },
     press, stick(x, y) { H.mx = x; H.my = y },
     // DEV: the small stick: a flick that way (a dribble move), or where it points now (dstick: 0, 0 lets it go)
-    flick, dstick: dribbleAt,
+    flick, dstick: dribbleAt, tap, right: rightFlick,
     // DEV: each man's pose on the last frame (figure.js), and his animation's notes (pose.js)
     get figs() { return FIG }, get anim() { return poser.anim },
+    // DEV: where a man is on the page (px)
+    screenOf(i) { const r = els.court.getBoundingClientRect(); return [r.left + FIG[i].x - camPx, r.top + FIG[i].y] },
     // DEV: let time pass with the game stopped (the meter runs on this device's clock)
     wait(ms) { clockNow += ms; draw(clockNow) },
     draw() { camera(1e6); draw(clockNow) },

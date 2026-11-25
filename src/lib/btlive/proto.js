@@ -7,10 +7,11 @@
 //     hello  { vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
 //                                                              take a seat (or take it back). The first one in sets the
 //                                                              mode; humans (dev): start before every seat has a person
-//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m], d: [[x, y], ...], rel: { sn, q } | null }
+//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m, st, jp], d: [[x, y], ...], rel: { sn, q } | null }
 //            k: his own count of messages (old ones are dropped). mx/my: the stick. x..vy: where his device has him.
-//            h: the buttons held now (bits: 1 A, 2 B). n: how many times each button has been pressed, ever, and
-//            (m) how many dribble moves his small stick has flicked, ever: a press or a flick is never lost to a
+//            h: the buttons held now (bits: 1 SHOOT, 2 PASS). n: how many times each button has been pressed, ever,
+//            (m) how many dribble moves his right stick has flicked, ever, and how many times it has been flicked down
+//            for a steal (st) and up for a jump (jp) without the ball: a press or a flick is never lost to a
 //            dropped or late message, the next one carries it. d: the way each of his latest flicks pointed (unit,
 //            the newest last, MOVE_KEEP of them at most; the last one is flick number m). rel: the release of his
 //            shot as his own device timed it (sn: his A-press count when that shot started, q: quality 0-1); sent
@@ -34,14 +35,14 @@ export const EVENT_KEEP = Math.round(1.5 * HZ)    // ...with the events of the l
 export const AWAY_MS = 1500                       // a player not heard from for this long is played by the CPU
 const r2 = v => Math.round(v * 100) / 100
 export const MOVE_KEEP = 3                        // a message carries his last 3 flicks (a move and the turn that made it a spin)
-const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs']
-const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn']
+const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs', 'bk']
+const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn', 'hand', 'frzCd', 'chn']
 export const SNAP_ACT = PF.length + PI.length     // where a snapshot's row for a player keeps what he's doing (act)
 
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────
 
 // A seat's input as it comes in, and the input the step gets from it each tick
-export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0], used: [0, 0, 0], d: [], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
+export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0, 0, 0], used: [0, 0, 0, 0, 0], d: [], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
 const num = (v, lo, hi, d = 0) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d)
 export function seatMsg(seat, m, now) {
   if (!Number.isInteger(m.k) || m.k <= seat.k) return false                 // old or repeated
@@ -52,7 +53,7 @@ export function seatMsg(seat, m, now) {
   if (Number.isFinite(+m.x) && Number.isFinite(+m.y)) seat.pos = { x: +m.x, y: +m.y, vx: num(m.vx, -30, 30), vy: num(m.vy, -30, 30) }
   seat.h = (m.h | 0) & 3
   const was = seat.n[2]
-  if (Array.isArray(m.n)) for (let b = 0; b < 3; b++) { const c = m.n[b] | 0; if (c > seat.n[b] && c < seat.n[b] + 50) seat.n[b] = c }
+  if (Array.isArray(m.n)) for (let b = 0; b < 5; b++) { const c = m.n[b] | 0; if (c > seat.n[b] && c < seat.n[b] + 50) seat.n[b] = c }
   // his flicks: the new ones, in order, each with the number it is (one the message no longer carries is lost: it
   // was made too long ago to be a move now anyway)
   if (seat.n[2] > was && Array.isArray(m.d)) {
@@ -83,8 +84,13 @@ export function seatInput(seat, s, i) {
   // (a shot pressed a beat before the ball got to him, or in the catch: the step starts it when he can, T.shootBuffer,
   // the same as in practice)
   const p = s.players[i]
+  // a steal and a jump (the right stick down and up, without the ball): taps, each one its own edge
+  for (const b of [3, 4]) {
+    const bit = 1 << b, was = seat.last & bit
+    if (seat.used[b] < seat.n[b] && !was) { bits |= bit; seat.used[b]++ }
+  }
   seat.last = bits
-  out.shoot = out.steal = !!(bits & 1); out.pass = out.jump = !!(bits & 2)
+  out.shoot = !!(bits & 1); out.pass = !!(bits & 2); out.steal = !!(bits & 8); out.jump = !!(bits & 16)
   // a dribble move: his next flick, one a tick (a move, then the turn that makes it a spin, go on two ticks)
   if (seat.d.length) { const f = seat.d.shift(); out.dx = f.x; out.dy = f.y; seat.used[2] = f.no } else seat.used[2] = seat.n[2]
   // his shot: the one that started with his latest A press goes with the quality his device timed

@@ -55,8 +55,7 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv .btlv-ghost { display: block; width: 100%; height: 46px; border-radius: 6px; border: 1px solid var(--line-hi); font-size: 17px; letter-spacing: 1.6px; color: var(--muted); }
 
 /* ── the game: scorebug, court, pad ────────────────────────────────────────────────────────────── */
-.btlv-game { --bug: 48px; --note: 26px; --pad-min: 236px; touch-action: none; }
-.btlv-game.has-keys { --pad-min: 112px; }
+.btlv-game { --bug: 48px; --note: 24px; touch-action: none; }
 /* the scorebug: QUIT | the sides (the one with the ball lit) | the shot clock; under it, whose ball and the game's length */
 .btlv-bug { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: var(--bug) var(--note); padding-top: var(--sat); background: var(--asphalt); border-bottom: 1px solid var(--line); position: relative; z-index: 3; }
 .btlv .btlv-quit { grid-row: 1; padding: 0 12px; font-size: 15px; letter-spacing: 1.4px; color: var(--muted); border-right: 1px solid var(--line); }
@@ -97,52 +96,64 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv .btlv-bug-note { grid-row: 2; grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; padding: 0 12px; border-top: 1px solid var(--line); background: none; box-shadow: none; font-size: 13px; letter-spacing: 1.2px; line-height: 1; color: var(--muted); white-space: nowrap; min-width: 0; }
 .btlv-bug-note > span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .btlv-bug-goal { flex: none; color: var(--muted); }
-.btlv-stage { flex: none; display: grid; place-items: center; background: #000; }
-/* the court is a window: its height shows the whole depth; a narrow screen shows at least 34 of the 56 feet across
-   (the engine pans the court picture, .btlv-world, with the play) */
-.btlv-court { --vw: calc(100vw - var(--sal) - var(--sar)); --ch: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--pad-min) - var(--rail)), calc(var(--vw) * 42 / 34)); position: relative; height: var(--ch); width: min(var(--vw), calc(var(--ch) * 4 / 3)); overflow: hidden; }
+.btlv-stage { flex: 1; min-height: 0; display: grid; place-items: center; background: #000; }
+/* the court is a window: its height shows the whole depth; a narrow screen pans it across with the play (it shows at
+   least 26 of the 56 feet across). On a phone it takes every pixel between the scorebug and the controls */
+.btlv-court { --vw: calc(100vw - var(--sal) - var(--sar)); --ch: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--pad-h) - var(--rail)), calc(var(--vw) * 42 / 26)); position: relative; height: var(--ch); width: min(var(--vw), calc(var(--ch) * 4 / 3)); overflow: hidden; }
 .btlv-world { position: absolute; left: 0; top: 0; will-change: transform; }
 .btlv-world img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 .btlv-court canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.btlv-pad { flex: 1; min-height: 0; position: relative; touch-action: none; overflow: hidden; background: var(--asphalt); border-top: 1px solid var(--line); }
-.btlv-stick-home { position: absolute; left: 26%; bottom: 118px; width: 2px; height: 2px; pointer-events: none; }
+
+/* the controls: a zone of their own under the court, sized for thumbs. Left thumb: the stick (it lands where the
+   thumb does, anywhere on the left). Right thumb: the right stick, SHOOT (big), PASS (in a team game) */
+.btlv-game { --pad-h: 206px; }
+.btlv-pad { flex: none; height: var(--pad-h); position: relative; touch-action: none; overflow: hidden; background: var(--asphalt); border-top: 1px solid var(--line); }
+.btlv-stick-home { position: absolute; left: 23%; top: 50%; width: 2px; height: 2px; pointer-events: none; }
 .btlv-stick-base, .btlv-stick-knob { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none; will-change: transform; }
-.btlv-stick-base { width: 104px; height: 104px; margin: -52px 0 0 -52px; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
-.btlv-stick-knob { width: 50px; height: 50px; margin: -25px 0 0 -25px; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .5); }
+.btlv-stick-base { width: 108px; height: 108px; margin: -54px 0 0 -54px; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .035); }
+.btlv-stick-knob { width: 52px; height: 52px; margin: -26px 0 0 -26px; background: rgba(243, 246, 248, .32); border: 2px solid rgba(243, 246, 248, .55); }
 .btlv-stick-base.is-on { border-color: rgba(243, 246, 248, .5); }
-.btlv-stick-knob.is-on { background: rgba(243, 246, 248, .78); border-color: #fff; }
-.btlv-game.has-keys .btlv-stick-base:not(.is-on), .btlv-game.has-keys .btlv-stick-knob:not(.is-on) { opacity: 0; }
-.btlv-btns { position: absolute; right: 0; bottom: 0; width: 210px; height: 196px; pointer-events: none; }
-.btlv .btlv-btn { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 50%; pointer-events: auto; touch-action: none;
-  background: var(--panel); border: 2px solid var(--line-hi); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); font-size: 17px; letter-spacing: 1.2px; color: var(--text); }
-.btlv .btlv-btn-a { right: 16px; bottom: 54px; width: 88px; height: 88px; font-size: 20px; border-color: var(--text); }
-.btlv .btlv-btn-b { right: 116px; bottom: 18px; width: 72px; height: 72px; }
-/* the small stick, for dribble moves: where the right thumb is, up and in from SHOOT and over PASS (a flick starts
-   where the thumb lands on it, so it needn't land dead centre) */
-.btlv-ds { position: absolute; right: 104px; bottom: 100px; width: 84px; height: 84px; border-radius: 50%; pointer-events: auto; touch-action: none;
-  border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
-.btlv-ds > span { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); padding-bottom: 4px; font-size: 14px; letter-spacing: 1.2px; line-height: 1; color: var(--muted); white-space: nowrap; pointer-events: none; }
-.btlv-ds-knob { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .5); pointer-events: none; will-change: transform; }
-.btlv-ds.is-on { border-color: rgba(243, 246, 248, .5); }
-.btlv-ds.is-on .btlv-ds-knob { background: rgba(243, 246, 248, .78); border-color: #fff; }
-.btlv-ds.is-off { opacity: 0; pointer-events: none; }
-.btlv-ds.is-cd { opacity: .45; }
-.btlv-game.has-keys .btlv-ds { display: none; }
+.btlv-stick-knob.is-on { background: rgba(243, 246, 248, .8); border-color: #fff; }
+.btlv-btns { position: absolute; inset: 0; pointer-events: none; }
+.btlv .btlv-btn { position: absolute; display: grid; place-items: center; border-radius: 50%; pointer-events: auto; touch-action: none;
+  background: var(--panel-hi); border: 2px solid var(--line-hi); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); font-size: 17px; letter-spacing: 1.2px; color: var(--text); }
+.btlv .btlv-btn-a { right: 14px; bottom: 16px; width: 90px; height: 90px; font-family: var(--num); font-size: 19px; letter-spacing: 1px; background: var(--acc); border-color: rgba(0, 0, 0, .35); color: #140a02; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -3px 0 rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .6); }
+.btlv .btlv-btn-b { right: 28px; top: 14px; width: 62px; height: 62px; font-size: 16px; }
+.btlv-game:not(.is-team) .btlv-btn-a { bottom: auto; top: 50%; margin-top: -45px; }
 .btlv .btlv-btn.is-down { background: var(--text); color: var(--ink); transform: translateY(1px); }
-.btlv .btlv-btn.is-off { opacity: 0; pointer-events: none; }
-.btlv .btlv-btn.is-cd { opacity: .45; }
-.btlv-btn kbd, .btlv-keys kbd { font: inherit; font-size: 14px; line-height: 1; padding: 3px 6px 2px; border-radius: 4px; border: 1px solid var(--line-hi); color: var(--text); background: rgba(255, 255, 255, .06); box-shadow: none; }
-.btlv-btn.is-down kbd { color: var(--ink); border-color: rgba(0, 0, 0, .4); }
-/* with a keyboard: the moves on the left, J K L in a row (only the ones that do something right now: no gaps) */
-.btlv-game.has-keys .btlv-pad { display: flex; align-items: center; justify-content: center; gap: 36px; }
-.btlv-keys { display: flex; align-items: flex-start; gap: 22px; margin: 0; color: var(--muted); }
-.btlv-keys > div { display: grid; justify-items: center; gap: 5px; }
-.btlv-keys b { font-weight: 400; font-size: 14px; letter-spacing: 1.6px; white-space: nowrap; }
-.btlv-keys span { display: flex; gap: 4px; }
-.btlv-game.has-keys .btlv-btns { position: static; width: auto; height: auto; display: flex; gap: 10px; }
-.btlv-game.has-keys .btlv-btn { position: static; flex-direction: row; gap: 10px; width: 140px; height: 58px; border-radius: 8px; font-size: 19px; margin: 0; }
-.btlv-game.has-keys .btlv-btn-a { border-color: var(--text); }
-.btlv-game.has-keys .btlv-btn.is-off { display: none; }
+.btlv .btlv-btn.is-off { display: none; }
+.btlv .btlv-btn.is-dim { opacity: .38; }
+/* the right stick: where the right thumb rests, left of SHOOT (a flick starts where the thumb lands on it) */
+.btlv-ds { position: absolute; right: 122px; top: 50%; width: 100px; height: 100px; margin-top: -50px; border-radius: 50%; pointer-events: auto; touch-action: none;
+  border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .035); }
+.btlv-ds > span { position: absolute; left: 50%; transform: translateX(-50%); font-size: 14px; letter-spacing: 1.4px; line-height: 1; color: var(--muted); white-space: nowrap; pointer-events: none; }
+.btlv-ds > .btlv-rs-up, .btlv-ds > .btlv-rs-mid { bottom: calc(100% + 6px); }
+.btlv-ds > .btlv-rs-dn { top: calc(100% + 6px); }
+.btlv-ds > .btlv-rs-dn.is-cd { opacity: .4; }
+.btlv-ds.is-ball { border-color: rgba(243, 246, 248, .42); }
+.btlv-ds.is-ball > .btlv-rs-mid { color: var(--text); }
+.btlv-ds-knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .5); pointer-events: none; will-change: transform; }
+.btlv-ds.is-on { border-color: rgba(243, 246, 248, .6); }
+.btlv-ds.is-on .btlv-ds-knob { background: rgba(243, 246, 248, .8); border-color: #fff; }
+/* a very narrow phone: the right stick tucks in */
+@media (max-width: 360px) { .btlv-ds { right: 112px; width: 90px; height: 90px; margin-top: -45px; } .btlv .btlv-btn-a { width: 82px; height: 82px; } }
+
+/* with a keyboard: no thumbs on the screen, a small legend of the keys beside the court (what does something now is lit) */
+.btlv-keys { display: none; }
+.btlv-game.has-keys { --chk: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--rail) - 16px), calc((100vw - 380px) * 3 / 4)); }
+.btlv-game.has-keys .btlv-court { --ch: var(--chk); width: calc(var(--chk) * 4 / 3); }
+.btlv-game.has-keys .btlv-pad { position: absolute; inset: auto 0 var(--rail) 0; height: auto; background: none; border: 0; pointer-events: none; overflow: visible; }
+.btlv-game.has-keys .btlv-stick-home, .btlv-game.has-keys .btlv-stick-base, .btlv-game.has-keys .btlv-stick-knob, .btlv-game.has-keys .btlv-btns { display: none; }
+.btlv-game.has-keys .btlv-keys { display: grid; position: absolute; left: 20px; bottom: 22px; width: calc((100vw - var(--chk) * 4 / 3) / 2 - 36px); max-width: 230px; gap: 10px; margin: 0; padding: 12px 12px 13px; color: var(--muted);
+  background: rgba(12, 16, 22, .9); border: 1px solid var(--line); border-radius: 8px; }
+.btlv-keys-row { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 3px; align-items: center; transition: opacity .15s; }
+.btlv-keys-row > .btlv-kk { grid-column: 1 / -1; }
+.btlv-keys-row b { font-weight: 400; font-size: 15px; letter-spacing: 1.3px; color: var(--text); white-space: nowrap; }
+.btlv-keys-row small { font-size: 13px; letter-spacing: .8px; color: var(--faint); line-height: 1.1; }
+.btlv-kk { display: flex; gap: 3px; min-width: 0; }
+.btlv-keys kbd { font: inherit; font-size: 13px; line-height: 1; min-width: 21px; text-align: center; padding: 4px 5px 3px; border-radius: 4px; border: 1px solid var(--line-hi); color: var(--text); background: rgba(255, 255, 255, .06); box-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+.btlv-keys kbd.is-wide { padding: 4px 12px 3px; }
+.btlv-game[data-mode='def'] .btlv-keys-row:is(.is-o, .is-b), .btlv-game[data-mode='ball'] .btlv-keys-row.is-d, .btlv-game[data-mode='off'] .btlv-keys-row:is(.is-b, .is-d:not(:last-child)) { opacity: .38; }
 /* a big screen: a bigger scorebug */
 @media (min-width: 900px) {
   .btlv-game { --bug: 60px; --note: 30px; }
@@ -158,28 +169,18 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   .btlv .btlv-bug-note { font-size: 15px; justify-content: center; gap: 28px; }
   .btlv .btlv-quit { font-size: 16px; padding: 0 20px; }
 }
-/* a wide desktop: the court as tall as the screen allows, the moves to its left and J K L to its right */
-@media (hover: hover) and (pointer: fine) and (min-aspect-ratio: 3/2) {
-  .btlv-game.has-keys { --chk: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--rail)), calc((100vw - 320px) * 3 / 4)); --cwk: calc(var(--chk) * 4 / 3); }
-  .btlv-game.has-keys .btlv-court { --ch: var(--chk); }
-  .btlv-game.has-keys .btlv-stage { flex: 1; }
-  .btlv-game.has-keys .btlv-pad { position: absolute; left: 0; right: 0; top: calc(var(--sat) + var(--bug) + var(--note)); bottom: var(--rail); background: none; border: 0; pointer-events: none; display: block; }
-  .btlv-game.has-keys .btlv-keys { position: absolute; left: 0; bottom: 28px; width: calc((100% - var(--cwk)) / 2); flex-direction: column; align-items: center; gap: 16px; }
-  .btlv-game.has-keys .btlv-btns { position: absolute; right: 0; bottom: 28px; width: calc((100% - var(--cwk)) / 2); flex-direction: column; align-items: center; }
-  .btlv-game.has-keys .btlv-btn { width: min(140px, calc(100% - 24px)); }
-}
-/* a phone on its side: the court as tall as the screen; the scorebug in the left margin over the stick, the buttons
-   in the right margin (the court's own edges are out of bounds, so the buttons may overlap them a little) */
+/* a phone on its side: the court as tall as the screen; the scorebug and the stick in the left margin, the right
+   stick, SHOOT and PASS in the right one */
 @media (orientation: landscape) and (pointer: coarse) {
-  .btlv-game { --pad-min: 0px; --chl: min(calc(100dvh - var(--sat) - var(--rail)), calc((100vw - var(--sal) - var(--sar) - 300px) * 3 / 4)); --cwl: calc(var(--chl) * 4 / 3); }
-  .btlv-game .btlv-court { --ch: var(--chl); }
+  .btlv-game { --pad-h: 0px; --chl: min(calc(100dvh - var(--sat) - var(--rail)), calc((100vw - var(--sal) - var(--sar) - 360px) * 3 / 4)); --cwl: calc(var(--chl) * 4 / 3); }
+  .btlv-game .btlv-court { --ch: var(--chl); width: var(--cwl); }
   .btlv-stage { flex: 1; padding-top: var(--sat); }
   .btlv-bug { position: absolute; top: calc(var(--sat) + 6px); left: calc(var(--sal) + 6px); width: calc((100% - var(--cwl)) / 2 - var(--sal) - 12px);
     grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; padding: 0; background: rgba(12, 16, 22, .92); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-  .btlv .btlv-quit { grid-row: auto; height: 40px; text-align: left; border-right: 0; border-bottom: 1px solid var(--line); }
+  .btlv .btlv-quit { grid-row: auto; height: 36px; text-align: left; border-right: 0; border-bottom: 1px solid var(--line); }
   .btlv-bug-sides, .btlv-bug-sides.is-many { grid-row: auto; flex-direction: column; }
   .btlv-bug-sides .btlv-bug-side, .btlv-bug-sides.is-two .btlv-bug-side:first-child, .btlv-bug-sides.is-two .btlv-bug-side:last-child, .btlv-bug-sides.is-many .btlv-bug-side {
-    display: flex; flex: none; flex-direction: row; justify-content: flex-start; align-items: center; gap: 7px; height: 36px; padding: 0 10px; }
+    display: flex; flex: none; flex-direction: row; justify-content: flex-start; align-items: center; gap: 7px; height: 34px; padding: 0 10px; }
   .btlv-bug-sides.is-many .btlv-bug-name { flex: 0 1 auto; }
   .btlv-bug-side + .btlv-bug-side { border-left: 0; border-top: 1px solid var(--line); }
   .btlv-bug-sides.is-many .btlv-bug-ball { position: static; }
@@ -187,13 +188,15 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   .btlv-bug-score, .btlv-bug-sides.is-many .btlv-bug-score { margin-left: auto; font-size: 26px; }
   .btlv-bug-side.is-on { box-shadow: inset 3px 0 0 var(--tc); }
   .btlv-bug-side.is-king, .btlv-bug-side.is-on.is-king { box-shadow: inset 3px 0 0 var(--tc), inset -3px 0 0 var(--acc); }
-  .btlv-bug-clock { grid-row: auto; flex-direction: row; justify-content: space-between; height: 38px; padding: 0 10px; border-left: 0; border-top: 1px solid var(--line); }
-  .btlv .btlv-bug-note { grid-row: auto; grid-column: auto; flex-direction: column; align-items: flex-start; gap: 5px; padding: 8px 10px; white-space: normal; line-height: 1.15; }
+  .btlv-bug-clock { grid-row: auto; flex-direction: row; justify-content: space-between; height: 34px; padding: 0 10px; border-left: 0; border-top: 1px solid var(--line); }
+  .btlv .btlv-bug-note { grid-row: auto; grid-column: auto; flex-direction: column; align-items: flex-start; gap: 5px; padding: 7px 10px; white-space: normal; line-height: 1.15; }
   .btlv-bug-note > span:first-child:empty { display: none; }
-  .btlv-pad { position: absolute; inset: 0 0 var(--rail) 0; background: none; border: 0; }
-  .btlv-stick-home { left: calc((100% - var(--cwl)) / 4 + var(--sal) / 2); bottom: 84px; }
-  .btlv-btns { right: var(--sar); transform: scale(.84); transform-origin: 100% 100%; }
-  .btlv-ds > span { font-size: 16px; }   /* (scaled with the buttons: still 13px on the screen) */
+  .btlv-bug-goal { display: none; }
+  .btlv-pad { position: absolute; inset: 0 0 var(--rail) 0; height: auto; background: none; border: 0; }
+  .btlv-stick-home { left: calc((100% - var(--cwl)) / 4 + var(--sal) / 2); top: auto; bottom: 86px; }
+  .btlv-ds { right: calc(var(--sar) + 90px); top: auto; bottom: 104px; margin: 0; width: 86px; height: 86px; }
+  .btlv .btlv-btn-a, .btlv-game:not(.is-team) .btlv-btn-a { right: calc(var(--sar) + 12px); top: auto; bottom: 16px; margin: 0; width: 80px; height: 80px; }
+  .btlv .btlv-btn-b { right: calc(var(--sar) + 18px); top: auto; bottom: 116px; width: 58px; height: 58px; }
 }
 
 /* ── QUIT's question and the final ─────────────────────────────────────────────────────────────── */

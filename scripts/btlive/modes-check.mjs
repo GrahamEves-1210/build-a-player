@@ -174,6 +174,7 @@ head('2v2: the call for the ball, the pass to the teammate')
     step(t, inp)
     if (!t.events.some(e => e.e === 'call' && e.pid === cm.i) || !t.call) continue
     calls++
+    if (t.players[hh].act === 'gather') continue                     // (already going up with it: no pass from the air)
     // open: nobody within 5 ft of him, nobody in the lane
     const H = t.players[hh], dx = cm.x - H.x, dy = cm.y - H.y, L2 = dx * dx + dy * dy
     const isOpen = t.players.every(o => o.team === t.poss || (Math.hypot(o.x - cm.x, o.y - cm.y) > 5 && (() => { const q = Math.min(1, Math.max(0, ((o.x - H.x) * dx + (o.y - H.y) * dy) / L2)); return q < 0.12 || Math.hypot(H.x + dx * q - o.x, H.y + dy * q - o.y) >= 3.4 })()))
@@ -192,27 +193,47 @@ head('2v2: the call for the ball, the pass to the teammate')
 
 
 // ── the dribble moves ─────────────────────────────────────────────────────────────────────────────
-head('Dribble moves: a flick picks the move by where it points (the basket is forward)')
+head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the hand the ball is in')
 {
   // a 1v1, the ball at the top of the key (the rim straight up the floor), his man well off him
   const fresh = (x = 28, y = 30) => { const s = toLive(createGame({ teams: [[man('a0', 86)], [man('b0', 86)]], seed: 'mv' })); const h = s.ball.holder; put(s.players[h], x, y); put(s.players[1 - h], 28, 12); s.players[h].moveCd = 0; step(s, idle(s)); return s }
   const flick = (s, dx, dy) => { const inp = idle(s); inp[s.ball.holder] = { mx: 0, my: 0, dx, dy }; step(s, inp); return s.events.find(e => e.e === 'move') }
-  for (const [dx, dy, kind, word] of [[0, -1, 'hesi', 'toward the basket: a hesitation'], [-1, 0, 'cross', 'left: a crossover'], [1, 0, 'cross', 'right: a crossover'], [0, 1, 'back', 'straight back: a step-back'],
-    [-0.72, 0.7, 'btb', 'back and left: behind the back'], [0.72, 0.7, 'btb', 'back and right: behind the back'], [-0.77, -0.64, 'cross', 'forward and across (50 degrees off the basket): a crossover'], [-0.5, -0.87, 'hesi', 'forward, a little across (30 degrees): still the hesitation']]) {
+  // (the ball in his right hand: left is toward the off hand)
+  for (const [dx, dy, kind, hand, word] of [[0, -1, 'hesi', 1, 'toward the basket: a hesitation'], [-1, 0, 'btl', -1, 'left (the off hand): between the legs, to the left hand'], [1, 0, 'inout', 1, 'right (the ball hand): the in-and-out, same hand'], [0, 1, 'back', 1, 'straight back: a step-back'],
+    [-0.72, 0.7, 'btb', -1, 'back and left: behind the back, to the left hand'], [0.72, 0.7, 'back', 1, 'back and right (the ball hand): the side step-back'], [-0.77, -0.64, 'cross', -1, 'forward and left (50 degrees off the basket): a crossover'], [-0.5, -0.87, 'cross', -1, 'forward, a little left (30 degrees): a crossover'],
+    [0.77, -0.64, 'inout', 1, 'forward and right: the in-and-out'], [-0.15, -0.99, 'hesi', 1, 'at the basket, a touch left: the hesitation']]) {
     const s = fresh(), h = s.ball.holder, e = flick(s, dx, dy), p = s.players[h]
-    ok(e?.kind === kind && MOVE_KEYS[p.mv] === kind && p.burst === gticks(MOVES[kind].time) && p.moveCd === gticks(p.R.moveCd), `${word} (${kind}), its burst on, the cooldown set`)
+    ok(e?.kind === kind && MOVE_KEYS[p.mv] === kind && p.burst === gticks(MOVES[kind].time) && p.hand === hand && p.moveCd > p.burst, `${word} (${kind}), its burst on, the ball in his ${hand > 0 ? 'right' : 'left'} hand`)
+  }
+  {
+    // the ball in his left hand: the same flicks mirror
+    const s = fresh(), p = s.players[s.ball.holder]; p.hand = -1
+    ok(flick(s, -1, 0)?.kind === 'inout' && p.hand === -1, 'the ball in his left hand: left is the in-and-out')
+    const t = fresh(), q = t.players[t.ball.holder]; q.hand = -1
+    ok(flick(t, 1, 0)?.kind === 'btl' && q.hand === 1, '...and right is between the legs, to the right hand')
   }
   {
     // in the corner the basket is across the floor: the same flicks are different moves
     const s = fresh(50, 5), e = flick(s, -1, 0); ok(e?.kind === 'hesi', 'from the right corner a flick left (at the basket) is the hesitation')
-    const t = fresh(50, 5); ok(flick(t, 1, 0)?.kind === 'back' && flick(fresh(50, 5), 0, 1)?.kind === 'cross', '...right (away from it) the step-back, down the floor a crossover')
+    const t = fresh(50, 5); ok(flick(t, 1, 0)?.kind === 'back' && flick(fresh(50, 5), 0, 1)?.kind === 'btl', '...right (away from it) the step-back, down the floor (his left) between the legs')
   }
   {
     const s = fresh(), h = s.ball.holder, p = s.players[h]
     ok(!flick(s, 0.3, 0) && p.burst === 0, 'a small push of the stick (under half way) is no move')
-    flick(s, -1, 0); const x0 = p.x
-    for (let n = 0; n < 40; n++) step(s, idle(s))
-    ok(p.burst === 0 && p.mv === 0 && x0 - p.x > 2.5 && p.moveCd > 0 && !flick(s, 1, 0), `a crossover takes him ${(x0 - p.x).toFixed(1)} ft that way; another flick inside the cooldown does nothing`)
+    flick(s, -0.77, -0.64); const x0 = p.x
+    for (let n = 0; n < 20 && p.burst > 0; n++) step(s, idle(s))
+    ok(p.mv === 0 && x0 - p.x > 2.2 && p.hand === -1, `a crossover takes him ${(x0 - p.x).toFixed(1)} ft that way, the ball to his left hand`)
+    // the chain: a flick made while a move is on goes as soon as that one is done
+    const c = fresh(), cp = c.players[c.ball.holder], kinds = []
+    const chain = [[-0.77, -0.64], [0, -1], [0, 1]]
+    let next = 0, t0 = c.tick
+    for (let n = 0; n < 60; n++) {
+      const inp = idle(c)
+      if (next < chain.length && (n === 0 || (cp.burst > 0 && cp.bn - cp.burst === 4))) { inp[c.ball.holder] = { mx: 0, my: 0, dx: chain[next][0], dy: chain[next][1] }; next++ }
+      step(c, inp)
+      for (const e of c.events) if (e.e === 'move') kinds.push(e.kind)
+    }
+    ok(kinds.join(' ') === 'cross hesi back' && c.tick - t0 <= 60, `a chain: crossover into hesitation into step-back, each flicked while the one before was on (${kinds.join(', ')})`)
     const d = fresh(), dh = d.ball.holder; d.ball.st = 'loose'; d.ball.z = 0; d.ball.x = 5; d.ball.y = 38; d.ball.grabAt = d.tick + 99
     const inp = idle(d); inp[dh] = { mx: 0, my: 0, dx: 1, dy: 0 }; step(d, inp)
     ok(!d.events.some(e => e.e === 'move'), 'without the ball a flick is nothing')
@@ -221,15 +242,15 @@ head('Dribble moves: a flick picks the move by where it points (the basket is fo
     // the spin: a second flick, round from the first, while the first is still on
     const s = fresh(), h = s.ball.holder, p = s.players[h]
     flick(s, 1, 0); step(s, idle(s)); step(s, idle(s))
-    const cd = p.moveCd, e = flick(s, -0.5, -0.87)
-    ok(e?.kind === 'spin' && MOVE_KEYS[p.mv] === 'spin' && p.moveCd === cd - 1, 'a second flick a third of a turn round, the move still on: a spin, no new cooldown')
-    ok(!flick(s, 0, 1) && MOVE_KEYS[p.mv] === 'spin', '...and a third does nothing more')
+    const e = flick(s, -0.5, -0.87)
+    ok(e?.kind === 'spin' && MOVE_KEYS[p.mv] === 'spin', 'a second flick a third of a turn round, early in the move: a spin')
+    ok(!flick(s, 0, 1) && MOVE_KEYS[p.mv] === 'spin', '...and a third waits for the spin to end')
     let x1 = p.x, turned = false
     for (let n = 0; n < 20; n++) { const vy = p.vy; step(s, idle(s)); if (p.burst > 0 && vy < -6) turned = true }
     ok(turned && p.mv === 0, 'the burst bends round: by its end he is going the new way')
     const t = fresh(), q = t.players[t.ball.holder]
     flick(t, 1, 0); step(t, idle(t))
-    ok(!flick(t, 0.9, -0.44) && MOVE_KEYS[q.mv] === 'cross', 'a second flick only a little round (26 degrees) leaves the crossover as it is')
+    ok(!flick(t, 0.9, -0.44) && MOVE_KEYS[q.mv] === 'inout', 'a second flick only a little round (26 degrees) leaves the in-and-out as it is')
     void x1
   }
   {
@@ -260,7 +281,7 @@ head('Dribble moves: a flick picks the move by where it points (the basket is fo
       games++
     }
     console.log(`CPU moves in ${games} games (all-star): ${Object.entries(by).map(([k, v]) => `${k} ${(v / games).toFixed(1)}/g`).join('  ')}`)
-    ok(['cross', 'hesi', 'back', 'btb', 'spin'].every(k => by[k] > 0), 'the CPUs make every move: crossover, hesitation, step-back, behind the back, spin')
+    ok(['cross', 'hesi', 'back', 'btb', 'spin', 'inout', 'btl'].every(k => by[k] > 0), 'the CPUs make every move: crossover, hesitation, step-back, behind the back, spin, in-and-out, between the legs')
   }
   {
     // same seed, same inputs (flicks among them): the same game
@@ -341,8 +362,16 @@ head('The room: a flick of the small stick reaches the game once, with the way i
   ok(a.dx === 1 && Math.abs(b.dx - 0.5) < 0.01 && Math.abs(b.dy + 0.87) < 0.01 && !c.dx, 'two flicks in one message (a move and the roll round after it): one a tick, in order, each once')
   msg(hj, 4, [0, 0, 4], [[9, 'x']])
   ok(Math.abs(r.tickOnce(now)[h].dx - 1) < 1e-9, 'a flick is cleaned up as it comes in (held to the stick\'s range, a unit direction)')
+  // the right stick without the ball: down a swipe at it, up a jump; each flick is one, once
+  const dj = 1 - hj, d = mine[dj]
+  msg(dj, 1, [0, 0, 0, 1, 0], [])
+  let di = r.tickOnce(now)[d]
+  ok(di.steal && !di.jump && !di.shoot && !r.tickOnce(now)[d].steal, 'a defender\'s right stick down: one swipe at the ball (SHOOT and PASS untouched)')
+  msg(dj, 2, [0, 0, 0, 1, 1], [])
+  di = r.tickOnce(now)[d]
+  ok(di.jump && !di.steal && !r.tickOnce(now)[d].jump, '...up: one jump')
   const snap = last(ws[0], 's')
-  ok(snap.p[h].length === 21 && typeof snap.p[h][19] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going) for the screens')
+  ok(snap.p[h].length === 25 && typeof snap.p[h][23] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going, his ball hand) for the screens')
 }
 head('2v2 with four people: each one moves his own man, and only his')
 {
