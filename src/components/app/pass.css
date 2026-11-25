@@ -284,3 +284,5 @@
 .pro-card { position: relative; }
 .pc-sale { position: absolute; top: 10px; right: 12px; z-index: 2; padding: 4px 8px 3px; border-radius: 4px; font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.2px; line-height: 1; pointer-events: none; }
 .pro-card .pc-sale { top: -9px; } .pro-card, .pro-card-wrap { overflow: visible !important; }
+/* (phone: the Pro card as far below the Builder Pass as Players of the Day is below it, owner 11-25) */
+@media (max-width: 1023px) { .ag-home .ag-promos .pro-card-wrap { margin-top: 19px; } }
