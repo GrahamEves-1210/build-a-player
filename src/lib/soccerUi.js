@@ -3,17 +3,14 @@
 // read it without loading the soccer data. The soccer app itself: components/SoccerApp.jsx.
 
 // ── The figure ─────────────────────────────────────────────────────────────
-// PLACEHOLDER: the owner draws soccer's own silhouette. Until then the build screen uses the
-// basketball T-pose (same image, same overlay). Swap the image here when the art lands; the
-// dots and the coloured kit parts below ride on the basketball figure's points until then.
-// the striker's own art (2026-11-24): through the ball, 1024x1536; its parts are src/assets/st-figure-color.svg and
-// components/StrikerFigureOverlay.jsx colours them. (It took the basketball figure's place: `striker` says so)
-export const SOCCER_SILHOUETTE = { src: '/st-silhouette.webp', headless: '/st-silhouette.webp', striker: true, w: 1024, h: 1536 }
+// The striker's own art (the owner's, 2026-11-24): through the ball, 1024x1536. Its parts are
+// src/assets/st-figure-color.svg, components/StrikerFigureOverlay.jsx colours them, and the build screen lays his
+// cards out around him (components/Silhouette.jsx STRIKER_ZONES).
+export const SOCCER_SILHOUETTE = { src: '/st-silhouette.webp', w: 1024, h: 1536 }
 
-// Each striker trait takes one of the basketball figure's spots and body parts:
-// heading on the head (and his face), composure on the shirt (crest, name and number),
-// shot power on the boots, pace on the legs and shorts, size the build (height, weight, arms). Nine traits since
-// 11-16: the basketball figure's jump-shot spot is left empty (four a side, Size's row under the right four).
+// The build screen was built on the basketball figure's keys, and the striker's build is still handed to it under
+// them (Silhouette.jsx and StrikerFigureOverlay read these): heading is his face, composure the shirt (crest and
+// number), shot power the boots, pace the shorts, socks and legs, size the hand and the HT/WT box.
 export const SOCCER_AS_BUCKET = {
   heading: 'basketballIQ', passing: 'passing', composure: 'clutch', shotPower: 'bounce',
   size: 'size', dribbling: 'handles', finishing: 'finishing', positioning: 'perimeterDefense', pace: 'speed',

@@ -49,7 +49,6 @@ function setFill(html, id, fill, opacity = '') {
 }
 
 // Exported for share card canvas rendering
-// (soccer draws on this figure too: `nickOf` names the shirt's club or nation, see lib/soccerUi.js)
 export function getBucketSVGMarkup(build, nickOf = null) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
@@ -137,118 +136,7 @@ export function getBucketSVGMarkup(build, nickOf = null) {
   return svg
 }
 
-// ── Soccer: the striker's kit on the same body (lib/soccerUi.js SOCCER_AS_BUCKET hands his build over in the
-// basketball keys). Composure (clutch) is the shirt: the club's colour with short sleeves, the collar and cuffs in
-// its second colour, the crest on the left breast and the number on the front. Pace (speed) is the shorts and the
-// socks: shorts in the club's second colour (white when the shirt is), socks pulled up over the shin pads to just
-// under the knee in the club colour with a band at the top, bare thighs and knees (no tights). Shot Power (bounce)
-// is the boots. Size is the arms. No wristband: a striker doesn't wear one.
-const pathD = id => PROCESSED_SVG.match(new RegExp(`id="${id}"[^>]*?\\bd="([^"]*)"`))?.[1] ?? null
-const lightHex = hex => {
-  if (!/^#[0-9a-f]{6}$/i.test(hex ?? '')) return false
-  const n = i => parseInt(hex.slice(i, i + 2), 16)
-  return 0.299 * n(1) + 0.587 * n(3) + 0.114 * n(5) > 200
-}
-const SOCK_TOP = 588     // just under the knee (the knee sits about 560-580 on this body)
-const SLEEVE = { l: [296, 416], r: [530, 650], cuff: 10 }
-
-export function getSoccerSVGMarkup(build) {
-  const tc  = s => build?.[s]?.teamColor  ?? null
-  const tc2 = s => build?.[s]?.teamColor2 ?? null
-  const sk  = s => build?.[s]?.skinColor  || DEFAULT_SKIN
-  const has = s => !!build?.[s]
-  let svg = PROCESSED_SVG
-  const defs = [], top = []
-  const clip = (id, ds) => defs.push(`<clipPath id="${id}">${ds.filter(Boolean).map(d => `<path d="${d}"/>`).join('')}</clipPath>`)
-
-  // arms first: the sleeves go over them
-  if (has('size')) {
-    svg = setFill(svg, 'left arm',  warmSkin(sk('size'), -40), '0.82')
-    svg = setFill(svg, 'right arm', warmSkin(sk('size'), -40), '0.82')
-  }
-  if (has('clutch')) {
-    const c1 = tc('clutch') ?? '#ffffff', c2 = tc2('clutch') ?? '#111111'
-    svg = setFill(svg, 'jersey', c1, '0.96')
-    // the tank top's armhole trims disappear under the sleeves; the collar takes the trim colour
-    svg = setFill(svg, 'left stripe',  c1, '0.96')
-    svg = setFill(svg, 'right stripe', c1, '0.96')
-    svg = setFill(svg, 'neck stripe',  c2, '0.95')
-    clip('sc-arm-l', [pathD('left arm'), pathD('left stripe')])
-    clip('sc-arm-r', [pathD('right arm'), pathD('right stripe')])
-    const [l0, l1] = SLEEVE.l, [r0, r1] = SLEEVE.r, cf = SLEEVE.cuff
-    top.push(
-      `<g clip-path="url(#sc-arm-l)"><rect x="${l0}" y="0" width="${l1 - l0}" height="200" fill="${c1}" opacity="0.96"/><rect x="${l0}" y="0" width="${cf}" height="200" fill="${c2}" opacity="0.95"/></g>`,
-      `<g clip-path="url(#sc-arm-r)"><rect x="${r0}" y="0" width="${r1 - r0}" height="200" fill="${c1}" opacity="0.96"/><rect x="${r1 - cf}" y="0" width="${cf}" height="200" fill="${c2}" opacity="0.95"/></g>`,
-    )
-  }
-  if (has('speed')) {
-    const c1 = tc('speed') ?? '#ffffff', c2 = tc2('speed') ?? '#111111'
-    const shorts = lightHex(c1) ? c1 : c2
-    const trim = lightHex(shorts) ? (lightHex(c1) ? c2 : c1) : (lightHex(c2) ? c1 : '#ffffff')
-    const sockBand = lightHex(c1) ? c2 : (c2 ?? '#ffffff')
-    const legSkin = warmSkin(sk('speed'), -40)
-    svg = setFill(svg, 'shorts', shorts, '0.95')
-    svg = setFill(svg, 'left shorts stripe',  trim, '0.92')
-    svg = setFill(svg, 'rigth shorts stripe', trim, '0.92')
-    svg = setFill(svg, 'left leg design',  trim, '0.92')
-    svg = setFill(svg, 'rigth leg design', trim, '0.92')
-    // thighs and knees bare, then the socks from under the knee to the boot
-    for (const id of ['left compression', 'right compression', 'left leg', 'rigth leg']) svg = setFill(svg, id, legSkin, '0.82')
-    svg = setFill(svg, 'left sock',  c1, '0.96')
-    svg = setFill(svg, 'right sock', c1, '0.96')
-    clip('sc-leg-l', [pathD('left compression'), pathD('left leg'), pathD('left sock')])
-    clip('sc-leg-r', [pathD('right compression'), pathD('rigth leg'), pathD('right sock')])
-    for (const side of ['l', 'r']) top.push(
-      `<g clip-path="url(#sc-leg-${side})"><rect x="370" y="${SOCK_TOP}" width="200" height="160" fill="${c1}" opacity="0.96"/>` +
-      `<rect x="370" y="${SOCK_TOP}" width="200" height="11" fill="${sockBand}" opacity="0.95"/>` +
-      // the shin pad under the sock: a soft highlight down the front
-      `<rect x="370" y="${SOCK_TOP + 16}" width="200" height="70" fill="#ffffff" opacity="0.07"/></g>`)
-  }
-  if (has('bounce')) {
-    svg = setFill(svg, 'left shoe',    tc('bounce') ?? '#111', '0.72')
-    svg = setFill(svg, 'right shoe',   tc('bounce') ?? '#111', '0.72')
-    svg = setFill(svg, 'left shoe 2',  tc2('bounce') ?? '#eee', '0.72')
-    svg = setFill(svg, 'right shoe 2', tc2('bounce') ?? '#eee', '0.72')
-  }
-  if (defs.length) svg = svg.replace('<g id="body">', `<defs>${defs.join('')}</defs><g id="body">`)
-  if (top.length) svg = svg.replace('</svg>', `${top.join('')}</svg>`)
-  return svg
-}
-
-function SoccerFigureOverlay({ build, logoDir = null }) {
-  const svg = getSoccerSVGMarkup(build)
-  const shirt = build?.clutch, kitLegs = build?.speed
-  const c1 = shirt?.teamColor ?? '#ffffff', c2 = shirt?.teamColor2 ?? '#111111'
-  // the number in the trim colour, or white/black off the shirt when the trim is too close to it
-  const numFill = lightHex(c1) === lightHex(c2) ? (lightHex(c1) ? '#111111' : '#ffffff') : c2
-  const vb = '42.5 -35.2 850.9 815.5'
-  const layer = z => ({ ...SVG_STYLE, overflow: 'visible', zIndex: z })
-  const dir = logoDir ?? '/logos/soccer/'
-  return (
-    <>
-      <div style={{ ...SVG_STYLE, mixBlendMode: 'screen', zIndex: 5 }}>
-        <div style={SVG_STYLE} dangerouslySetInnerHTML={{ __html: svg }} />
-      </div>
-      {(shirt || kitLegs) && (
-        <svg viewBox={vb} preserveAspectRatio="xMidYMid meet" style={layer(7)} aria-hidden="true">
-          {/* the crest on the left breast, the number on the front, the crest again on the shorts */}
-          {shirt && <image href={`${dir}${shirt.team}.png`} x="497" y="88" width="34" height="34" preserveAspectRatio="xMidYMid meet" />}
-          {shirt?.number != null && (
-            <g transform="translate(474, 212) scale(0.82, 1)">
-              <text x="0" y="0" textAnchor="middle" fontFamily="'Bebas Neue', Impact, 'Arial Black', sans-serif" fontSize="74"
-                fill={numFill} stroke={lightHex(numFill) ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.25)'} strokeWidth="2" paintOrder="stroke"
-                style={{ userSelect: 'none', pointerEvents: 'none' }}>{shirt.number}</text>
-            </g>
-          )}
-          {kitLegs && <image href={`${dir}${kitLegs.team}.png`} x="398" y="452" width="22" height="22" preserveAspectRatio="xMidYMid meet" style={{ opacity: 0.9 }} />}
-        </svg>
-      )}
-    </>
-  )
-}
-
-export default function BucketFigureOverlay({ build, logoDir = null, nickOf = null, soccer = false }) {
-  if (soccer) return <SoccerFigureOverlay build={build} logoDir={logoDir} />
+export default function BucketFigureOverlay({ build, logoDir = null, nickOf = null }) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
   const sk  = (s) => build?.[s]?.skinColor  || DEFAULT_SKIN

@@ -516,7 +516,7 @@ function BaseballSilhouette(props) {
 function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isK = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
-  const isStriker = isSoccer && !isBaseball && !!SOCCER_SILHOUETTE.striker   // the striker's own art and his own layout (STRIKER_ZONES, strikerFit)
+  const isStriker = isSoccer && !isBaseball   // the striker's own art and his own layout (STRIKER_ZONES, strikerFit)
   const figW   = isStriker ? ST_FIG_W : isBucket ? BUCKET_FIG_W : isK ? K_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
   const figH   = isStriker ? ST_FIG_H : isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
   const zones  = isStriker ? STRIKER_ZONES : isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
@@ -980,7 +980,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
         <img
           src={
             isBucket
-              ? (isBaseball ? (bucketPhoto ? BASEBALL_SILHOUETTE.headless : BASEBALL_SILHOUETTE.src) : isSoccer ? (bucketPhoto ? SOCCER_SILHOUETTE.headless : SOCCER_SILHOUETTE.src) : bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
+              ? (isBaseball ? (bucketPhoto ? BASEBALL_SILHOUETTE.headless : BASEBALL_SILHOUETTE.src) : isStriker ? SOCCER_SILHOUETTE.src : bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
               : isK ? K_SILHOUETTE
               : isLB ? LB_SILHOUETTE
               : isDL ? '/dl-silhouette.webp'
@@ -1011,8 +1011,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
           // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
           // the silhouette png (z 4) and hide the jersey colours)
-          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} /></div>
-          : <BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} />)}
+          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} /></div>
+          : <BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} />)}
         {isBucket && bucketPhoto && bounds && (() => {
           const { W, H, fx, fy, scale } = bounds
           const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100

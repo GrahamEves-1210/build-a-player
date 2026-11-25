@@ -10,7 +10,7 @@ import { warmSkin } from '../utils/footballSkin'
 //                              shading of the face is drawn back over the skin (FACE_DETAIL below)
 //   clutch        COMPOSURE    the shirt and its long sleeve in the club's colour, the collar and the cuff in its
 //                              second colour, the crest on the chest and the number under it
-//   speed         PACE         the shorts (the second colour; white when the shirt is), the socks (the club's colour)
+//   speed         PACE         the shorts (the second colour; white when the shirt is white), the socks (the club's colour)
 //                              with their turnover in the second colour, the bare thighs and knees
 //   bounce        SHOT POWER   the boots
 //   size          SIZE         the hand
@@ -38,6 +38,8 @@ const lightHex = hex => {
   return 0.299 * n(1) + 0.587 * n(3) + 0.114 * n(5) > 200
 }
 
+const whiteHex = hex => /^#[0-9a-f]{6}$/i.test(hex ?? '') && [1, 3, 5].every(i => parseInt(hex.slice(i, i + 2), 16) > 215)
+
 // parts that share a colour go in one group at the group's opacity: where two of them meet (the jaw, the shoulder
 // seam) the fills can't double up into a bright line
 const Group = ({ ids, fill, opacity }) => (
@@ -62,7 +64,8 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
   const numFill = lightHex(c1) === lightHex(c2) ? (lightHex(c1) ? '#111111' : '#ffffff') : c2
 
   const l1 = legs?.teamColor ?? '#ffffff', l2 = legs?.teamColor2 ?? '#111111'
-  const shorts = lightHex(l1) ? l1 : l2
+  // white shorts under a white shirt; any other shirt (a yellow one too: Dortmund, Brazil) takes the second colour
+  const shorts = whiteHex(l1) ? l1 : l2
   const sockTop = lightHex(l1) === lightHex(l2) ? (lightHex(l1) ? '#111111' : '#ffffff') : l2
 
   return (
