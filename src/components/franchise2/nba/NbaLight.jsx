@@ -3,7 +3,7 @@ import {
   TEAM, CONF_OF, CONF_NAME, SHORTS, records, recText, pct, dateText, nick, manOf, teamOfMan, alive, mySeries, myPoGame,
   CAP_SIM, STRETCH_NAME, stretchGames, stretchDates, stretchRecap, lightNext, boxOf, perLine, roundResult, lightRound, lightStep, LIGHT_STEPS,
   lightToDraft, lightOpenFA, resignList, callOf, lightResign, marketFits, offerFor, offerChance, lightFA, bigDeals, sheetNews, lightCamp, campCuts,
-  lightNewSeason, simPostseason, teamOvr, addNews,
+  lightNewSeason, lightRest, teamOvr, addNews,
 } from '../../../lib/franchise2/nba'
 import { sfx, haptic } from '../../../lib/juice'
 import { fkVars, KLogo, Chyron, LowerThird, Go, ActionBar, BigRec, Fold, Stamp } from '../kit'
@@ -74,7 +74,7 @@ export function StretchCard({ F, play, simToEnd, onTrades }) {
       </div>
       {ddlIn && (
         <button type="button" className="fh-row nb-ddl" onClick={onTrades}>
-          <span><small>Trade deadline</small><b>{dateText(F, F.ddl)} · {F.day === F.ddl ? 'today: trades go through until tonight' : L.k === 0 ? 'in the next stretch' : 'the day after this stretch'}</b></span>
+          <span><small>Trade deadline</small><b>{dateText(F, F.ddl)} · {F.day === F.ddl ? 'today: trades go through until tonight' : L.k === 0 ? 'after the next stretch' : 'after this stretch'}</b></span>
           <i className="fh-row-go" aria-hidden="true">›</i>
         </button>
       )}
@@ -192,7 +192,7 @@ export function PoLight({ F, act, owner }) {
   const verb = P.rd === 2 ? `Sim the ${confWord(CONF_OF[F.team])} finals` : RD_VERB[P.rd]
   const bye = pi && P.seeds[CONF_OF[F.team]].slice(0, 6).includes(F.team)
   const sim = () => { act(X => lightRound(X)); sfx('whistle'); haptic('medium'); toTop() }
-  const rest = () => { act(X => { simPostseason(X); X.lt = { y: X.year, po: { ph: 'out', from: X.log.length } } }); sfx('flip'); toTop() }
+  const rest = () => { act(X => { lightRest(X) }); sfx('flip'); toTop() }
   const opp = S ? (S.hi === F.team ? S.lo : S.hi) : mine ? (mine.h === F.team ? mine.a : mine.h) : null
   const status = S ? (S.g.length ? `Series ${S.wh}-${S.wl}` : `Best of seven · ${S.hi === F.team ? 'home court' : `the ${nick(S.hi)} have home court`}`) : bye ? 'Into the first round: the play-in sets the 7 and 8 seeds' : mine ? (mine.k === '78' ? 'For the No. 7 seed · the loser plays again' : 'Win or go home') : 'Out of the postseason'
   return (

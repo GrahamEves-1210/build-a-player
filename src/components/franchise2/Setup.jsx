@@ -92,7 +92,8 @@ const rulesIn = S => ({ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, sa
 export function PaceStep({ pick, onPick, rules, onRules, capWhat, extra = null, paces = PACES }) {
   return (
     <div className="fsu-pace">
-      <Chyron tone="ink" title="How do you want to run your franchise?" />
+      {/* (short enough for a phone: the chyron keeps its title on one line and cut "…RUN YOUR FR" at 390) */}
+      <Chyron tone="ink" title="How do you want to run it?" />
       {paces.map(([k, name, line]) => (
         <button key={k} type="button" className={`fsu-pace-row${pick === k ? ' is-on' : ''}`} onClick={() => onPick(k)} aria-pressed={pick === k}>
           <b>{name}</b><span>{line}</span>

@@ -93,12 +93,32 @@ const CV = {
   pd: ['PLAYER DEVELOPMENT ASSISTANT', 'SHOOTING COACH', 'ASSISTANT COACH'],
 }
 const OUTSIDE = { oc: ['G LEAGUE HEAD COACH', 'EUROLEAGUE HEAD COACH', 'COLLEGE ASSOCIATE HEAD COACH'], dc: ['G LEAGUE HEAD COACH', 'EUROLEAGUE ASSISTANT', 'COLLEGE ASSOCIATE HEAD COACH'], pd: ['G LEAGUE ASSISTANT', 'COLLEGE ASSISTANT', 'SKILLS TRAINER'] }
-export function genAssistant(R, job, { taken = new Set(), id = null, team = null, kind = 'staff' } = {}) {
+// The surname alone: the lower-thirds, the staff strip and the wire call a coach by it, so no two men on one staff or in
+// one search share one (two O'BRIENs in a list read as one man).
+export const surname = n => String(n ?? '').trim().split(' ').slice(-1)[0]
+const lastsOf = men => new Set(men.filter(c => c?.n ?? c?.name).map(c => surname(c.n ?? c.name)))
+// A made-up man whose surname is taken where he's going gets another (his first name, his face's look and his grades
+// kept). The new one comes from its own dice (R2), so nobody else made by the first dice changes: the same seed still
+// makes the same staffs and the same candidates, this man's surname aside.
+function ownSurname(c, used, taken, R2) {
+  if (used.has(surname(c.n))) {
+    const first = c.n.split(' ')[0]
+    for (let k = 0; k < 60; k++) {
+      const n = `${first} ${surname(coachName(R2.u, c.g))}`
+      if (!used.has(surname(n)) && !taken.has(n)) { c.n = n; break }
+    }
+    taken.add(c.n)
+  }
+  used.add(surname(c.n))
+  return c
+}
+// (lasts: surnames he can't have, the staff he's joining; a name is drawn again only when it lands on one)
+export function genAssistant(R, job, { taken = new Set(), id = null, team = null, kind = 'staff', lasts = null } = {}) {
   const tot = MIX.reduce((a, x) => a + x[1], 0)
   let x = R.u() * tot, g = 'w'
   for (const [k, w] of MIX) { x -= w; if (x < 0) { g = k; break } }
   let n
-  for (let k = 0; k < 30; k++) { n = coachName(R.u, g); if (!taken.has(n)) break }
+  for (let k = 0; k < 30; k++) { n = coachName(R.u, g); if (!taken.has(n) && !lasts?.has(surname(n))) break }
   taken.add(n)
   const v = (m, s, lo = 1, hi = 10) => clamp(lo, hi, Math.round(m + R.n() * s))
   const r = CTYPES.map((t, j) => (j === OWN[job] ? v(AMID, 1.4) : v(4.6, 1.2)))
@@ -116,8 +136,9 @@ function baseStaffs() {
   const taken = new Set(NBA_COACHES.map(c => c.name).concat(NBA_COACH_FREE_AGENTS.map(c => c.name)))
   BASE = {}
   for (const s of SHORTS) {
-    const R = rngOf(`nba-staff-${s}`)
-    BASE[s] = Object.fromEntries(JOBS.map(k => { const c = genAssistant(R, k, { taken }); c.st = FIRST_ST(R); return [k, c] }))
+    const R = rngOf(`nba-staff-${s}`), R2 = rngOf(`nba-staff-${s}-surname`)
+    const used = lastsOf([realHC(s)])
+    BASE[s] = Object.fromEntries(JOBS.map(k => { const c = genAssistant(R, k, { taken }); c.st = FIRST_ST(R); ownSurname(c, used, taken, R2); return [k, c] }))
   }
   BASE.taken = taken
   return BASE
@@ -223,25 +244,47 @@ export function finishCoach(cb, { name, face, style }) {
 // Each opening: the man in the job now (a known quantity), and candidates from around the game (assistants on other
 // benches, G League and overseas head coaches). A candidate's grades show once he's interviewed: IV_N a job.
 export const IV_N = 3
-// the setup's candidates for job k (no league yet: the team's man in the job, then five from the setup's seed)
-export function setupCandidates(seed, team, k) {
+// the setup's candidates for job k (no league yet: the team's man in the job, then five from the setup's seed).
+// The three jobs' lists are made together: no surname twice across the staff as it stands (its head coach, its three
+// assistants) and the fifteen candidates, so the staff the GM ends up with never has two men of one name.
+let CANDS = null
+function setupLists(seed, team) {
+  const key = `${seed}|${team}`
+  if (CANDS?.key === key) return CANDS.by
   const B = baseStaffs()
-  const R = rngOf(`${seed}-hire-${team}-${k}`)
-  const taken = new Set(B.taken)
-  const now = { ...B[team][k], key: `${k}-now`, home: 1, cv: `${TEAM[team].nick.toUpperCase()} ${JOB_LONG[k]} SINCE ${B[team][k].st}` }
-  const list = Array.from({ length: 5 }, (_, j) => ({ ...genAssistant(R, k, { taken, kind: 'pool' }), key: `${k}-${j}` }))
-  // (a few of them are the real thing: an outside man with a big reputation now and then)
-  for (const c of list) if (R.u() < 0.25) c.r[OWN[k]] = clamp(0, 11, c.r[OWN[k]] + 2)
-  return [now, ...list]
+  const used = lastsOf([realHC(team), ...JOBS.map(j => B[team][j])])
+  const by = {}
+  for (const k of JOBS) {
+    const R = rngOf(`${seed}-hire-${team}-${k}`), R2 = rngOf(`${seed}-hire-${team}-${k}-surname`)
+    const taken = new Set(B.taken)
+    const now = { ...B[team][k], key: `${k}-now`, home: 1, cv: `${TEAM[team].nick.toUpperCase()} ${JOB_LONG[k]} SINCE ${B[team][k].st}` }
+    const list = Array.from({ length: 5 }, (_, j) => ({ ...genAssistant(R, k, { taken, kind: 'pool' }), key: `${k}-${j}` }))
+    // (a few of them are the real thing: an outside man with a big reputation now and then)
+    for (const c of list) if (R.u() < 0.25) c.r[OWN[k]] = clamp(0, 11, c.r[OWN[k]] + 2)
+    for (const c of list) ownSurname(c, used, taken, R2)
+    by[k] = [now, ...list]
+  }
+  CANDS = { key, by }
+  return by
 }
+// (a copy each call: a candidate hired goes into the setup, and from there onto the save)
+export const setupCandidates = (seed, team, k) => setupLists(seed, team)[k].map(c => ({ ...c, r: [...c.r] }))
 // the offseason's: the pool's men who fit, the league's best first by reputation, plus the GM's own staff's next man
 export function staffCandidates(F, k, n = 6) {
   ensureStaff(F)
   const J = jobLog(F, k)
   const fits = F.cpool.filter(c => !c.real && !c.home && (c.sd === k || (!c.sd && k !== 'pd')) && !J.gone.includes(c.i))
   const R = rngOf(`${F.seed}-${F.year}-buzz-${k}`)
-  const list = fits.map(c => ({ c, v: score(c.r, k) + (R.u() - 0.5) * 3 })).sort((a, b) => b.v - a.v).slice(0, n).map(x => x.c)
-  return [...list, homeCandidate(F, k)]
+  // (a surname once in the search, and none the GM's staff already has; a man already interviewed stays in it)
+  const home = homeCandidate(F, k)
+  const used = lastsOf([...Object.values(staffMen(F, F.team)), home])
+  const list = []
+  for (const { c } of fits.map(c => ({ c, v: score(c.r, k) + (R.u() - 0.5) * 3 })).sort((a, b) => b.v - a.v)) {
+    if (list.length >= n) break
+    if (used.has(surname(c.n)) && !J.iv.includes(c.i)) continue
+    used.add(surname(c.n)); list.push(c)
+  }
+  return [...list, home]
 }
 function jobLog(F, k) {
   if (!F.stf || F.stf.y !== F.year) F.stf = { y: F.year, iv: {}, gone: {} }
@@ -253,7 +296,9 @@ export function homeCandidate(F, k) {
   if (J) { const c = F.cpool.find(x => x.i === J); if (c) return c }
   const R = rngOf(`${F.seed}-${F.year}-home-${k}`)
   const taken = takenNames(F)
-  const room = [0, 1, 2].map(() => genAssistant(R, k, { taken }))
+  // (not a surname already on the GM's staff, or another job's man from within this summer)
+  const lasts = lastsOf([...Object.values(staffMen(F, F.team)), ...Object.values(F.stf?.y === F.year ? F.stf.home ?? {} : {}).map(i => F.cpool.find(x => x.i === i))])
+  const room = [0, 1, 2].map(() => genAssistant(R, k, { taken, lasts }))
   const c = room.sort((a, b) => score(b.r, k) - score(a.r, k))[0]
   c.i = F.cid++; c.home = F.team; c.cv = `${TEAM[F.team].nick.toUpperCase()} ASSISTANT BEHIND THE BENCH`
   F.cpool.push(c)
@@ -402,9 +447,11 @@ export function coachCarousel(F, recs, po = new Set()) {
   const taken = takenNames(F)
   for (const s of R.shuffle(open)) {
     const cands = []
-    for (const c of F.cpool) if (c.hy && c.fb !== s && !c.home) cands.push({ c, v: score(c.r, 'hc') + (c.ag >= 66 ? -1.2 : 0) - (c.out ?? 0) * 0.3 - (c.fired === F.year ? 2.6 : 0) + (R.u() - 0.5) * 2.2 })
-    for (const o of SHORTS) { if (o === s) continue; const T = staffOf(F, o); for (const k of ['oc', 'dc']) { const c = T[k]; if (c && c.ag <= 58) cands.push({ c, from: [o, k], v: score(c.r, 'hc') + 0.35 + (R.u() - 0.5) * 2.2 }) } }
-    const out = genAssistant(R, R.u() < 0.5 ? 'oc' : 'dc', { taken, kind: 'pool' })
+    // (never a man with the surname of an assistant already on that bench)
+    const lasts = lastsOf(JOBS.map(k => staffOf(F, s)[k]))
+    for (const c of F.cpool) if (c.hy && c.fb !== s && !c.home && !lasts.has(surname(c.n))) cands.push({ c, v: score(c.r, 'hc') + (c.ag >= 66 ? -1.2 : 0) - (c.out ?? 0) * 0.3 - (c.fired === F.year ? 2.6 : 0) + (R.u() - 0.5) * 2.2 })
+    for (const o of SHORTS) { if (o === s) continue; const T = staffOf(F, o); for (const k of ['oc', 'dc']) { const c = T[k]; if (c && c.ag <= 58 && !lasts.has(surname(c.n))) cands.push({ c, from: [o, k], v: score(c.r, 'hc') + 0.35 + (R.u() - 0.5) * 2.2 }) } }
+    const out = genAssistant(R, R.u() < 0.5 ? 'oc' : 'dc', { taken, kind: 'pool', lasts })
     out.r = out.r.map(v => clamp(1, 10, v + R.int(0, 1)))
     cands.push({ c: out, v: score(out.r, 'hc') + (R.u() - 0.5) * 2.2 })
     cands.sort((a, b) => b.v - a.v)
@@ -429,8 +476,9 @@ export function coachCarousel(F, recs, po = new Set()) {
       if (s === F.team) continue
       if (T[k] && R.u() < 0.12) { const c = T[k]; T[k] = null; c.cv = `${NK(s).toUpperCase()} ${JOB_LONG[k]}`; c.out = 0; c.sd = k; F.cpool.push(c) }
       if (!T[k]) {
-        const best = F.cpool.filter(c => !c.real && c.sd === k && !c.home && c.fb !== s).map(c => ({ c, v: score(c.r, k) + (R.u() - 0.5) * 2 })).sort((a, b) => b.v - a.v)[0]?.c
-        const c = best && R.u() < 0.5 ? best : genAssistant(R, k, { taken })
+        const lasts = lastsOf(Object.values(staffMen(F, s)))
+        const best = F.cpool.filter(c => !c.real && c.sd === k && !c.home && c.fb !== s && !lasts.has(surname(c.n))).map(c => ({ c, v: score(c.r, k) + (R.u() - 0.5) * 2 })).sort((a, b) => b.v - a.v)[0]?.c
+        const c = best && R.u() < 0.5 ? best : genAssistant(R, k, { taken, lasts })
         F.cpool = F.cpool.filter(x => x !== c)
         if (c.i == null) c.i = F.cid++
         delete c.cv; delete c.out; c.st = F.year + 1; c.sd = k

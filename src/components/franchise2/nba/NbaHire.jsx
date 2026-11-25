@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useMemo } from 'react'
 import { TEAM, NC } from '../../../lib/franchise2/nba'
 import { sfx, haptic } from '../../../lib/juice'
 import { Chyron, Go, Stamp } from '../kit'
@@ -57,6 +57,8 @@ function Search({ S, go, k }) {
   const cur = H.staff[k] ?? list[0]
   const put = (patch, s) => go({ hire: { ...H, ...patch } }, s)
   const sel = S.hsel != null ? list.find(c => c.key === S.hsel) : null
+  // (a search, and each candidate in it, opens at its top: the page was scrolled down the staff when it was tapped)
+  useLayoutEffect(() => { document.querySelector('.fsu')?.scrollTo(0, 0) }, [k, S.hsel])
   if (sel) {
     const seen = sel.home || iv.includes(sel.key)
     const isCur = cur.key === sel.key
@@ -68,8 +70,8 @@ function Search({ S, go, k }) {
     }
     return (
       <div className="fst-car">
-        <Chyron team={S.team} title={sel.n} sub={JOB_LONG[k]} />
-        <StaffL3 c={sel} role={k} team={S.team} lg={NBA_STAFF} hidden={!seen} reveal={seen && !sel.home} line={[sel.home ? `${TEAM[S.team].nick.toUpperCase()} ${JOB_LONG[k]}` : sel.cv, `AGE ${sel.ag}`].filter(Boolean).join(' · ')} />
+        <Chyron team={S.team} title={sel.n} sub={`${JOB_LONG[k]} · AGE ${sel.ag}`} />
+        <StaffL3 c={sel} role={k} team={S.team} lg={NBA_STAFF} hidden={!seen} reveal={seen && !sel.home} line={sel.home ? `${TEAM[S.team].nick.toUpperCase()} ${JOB_LONG[k]}` : sel.cv} />
         {!seen ? (
           <>
             <p className="fst-note">An interview shows his grades. {left} of {NC.IV_N} interviews left for this job.</p>
@@ -92,7 +94,7 @@ function Search({ S, go, k }) {
         return (
           <StaffL3 key={c.key} c={c} role={k} team={S.team} size="s" lg={NBA_STAFF} hidden={!known} delay={i * 35} onClick={() => go({ hsel: c.key }, 'tap')}
             stamp={cur.key === c.key ? <Stamp kind="w" quiet>{c.home ? 'IN THE JOB' : 'HIRED'}</Stamp> : null}
-            line={[c.home ? `IN THE JOB SINCE ${c.st}` : c.cv, `AGE ${c.ag}`].filter(Boolean).join(' · ')} />
+            line={c.home ? `IN THE JOB SINCE ${c.st}` : c.cv} />
         )
       })}
       <div className="fsu-acts"><Go ghost onClick={() => go({ hk: null, hsel: null, hlast: k }, 'back')}>Back to the staff</Go></div>

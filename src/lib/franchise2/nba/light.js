@@ -16,7 +16,8 @@
 //   F.lt in the season: { y, k (0-2), d0, d1 (its days, [d0, d1)), ph: 'card' | 'recap' | 'done', b0 (the builds'
 //   season lines when it opened: { id: [gp, min, pts, reb, ast, stl, blk, fgm, fga, tpm, tpa] }), hs ({ id: games
 //   out } before the night being played), inj ([[id, name, games, what, season?, day]]: the men hurt in the stretch) }
-//   in the postseason: { y, po: { ph, rd, from (F.log's length before the round), c (the GM's conference) } }
+//   in the postseason: { y, po: { ph ('playin' | 'playoffs' | 'rest': simmed to the champion while still in it |
+//   'out'), rd, from (F.log's length before the round), c (the GM's conference) } }
 //
 // THE OFFSEASON in three steps (FULL has six stops; the same stops run, the GM sees three):
 //   1 THE DRAFT       the awards (and his team options, the front office's call pre-set), then the lottery and the
@@ -140,30 +141,52 @@ export function lightSimAll(F) {
 export function lightRound(F) {
   if (F.phase !== 'playin' && F.phase !== 'playoffs') return null
   lightSettle(F)
-  if (!alive(F)) { simPostseason(F); F.lt = { y: F.year, po: { ph: 'out', from: F.log.length } }; return { out: true } }
+  if (!alive(F)) return lightRest(F)
   const ph = F.phase, rd = F.po.rd, from = F.log.length
   for (let n = 0; n < 12 && F.phase === ph && F.po.rd === rd && F.po.stage !== 'done'; n++) playPoNight(F)
   F.lt = { y: F.year, po: { ph, rd, from, c: CONF_OF[F.team] } }
   return { rows: F.log.slice(from) }
 }
+// SIM THE REST OF THE POSTSEASON, to the champion. A team still in it keeps how its own run ended for the champion's
+// page (F.lt.po.ph 'rest': roundResult reads its last series, or its play-in games); a team already out has nothing
+// new to show ('out').
+export function lightRest(F) {
+  if (F.phase !== 'playin' && F.phase !== 'playoffs') return null
+  lightSettle(F)
+  const was = alive(F), from = F.log.length
+  simPostseason(F)
+  F.lt = { y: F.year, po: was ? { ph: 'rest', from, c: CONF_OF[F.team] } : { ph: 'out', from: F.log.length } }
+  return { out: !was }
+}
 // the round just simmed, for the screen: { ph, rd, rows, S (the GM's series in it), won, out (his season over) }
+// (after SIM THE REST: the GM's last series, the round his postseason ended in or the Finals he won)
 export function roundResult(F) {
   const R = F.lt?.y === F.year ? F.lt.po : null
   if (!R || R.ph === 'out' || !F.po) return null
   const rows = (F.log ?? []).slice(R.from).filter(r => r.po)
-  if (R.ph === 'playin') {
+  const playin = () => {
     if (!rows.length) return null   // (a top-six seed watched it)
     const x = F.po.pi?.[R.c] ?? {}
     const seed = (F.po.final?.[R.c] ?? []).indexOf(F.team) + 1 || null
     return { ph: 'playin', rows, seed, x, out: !seed }
   }
-  const S = (F.po.all?.[R.rd] ?? []).find(s => s.hi === F.team || s.lo === F.team) ?? null
+  if (R.ph === 'playin') return playin()
+  const mineIn = rd => (F.po.all?.[rd] ?? []).find(s => s.hi === F.team || s.lo === F.team) ?? null
+  if (R.ph === 'rest') {
+    let rd = (F.po.all ?? []).length - 1
+    while (rd >= 0 && !mineIn(rd)) rd--
+    // (out in the play-in: its games; otherwise the last series, its games the last of the rows)
+    if (rd < 0) return playin()
+    const S = mineIn(rd)
+    return { ph: 'playoffs', rd, rows: rows.slice(-S.g.length), S, won: S.done === F.team, out: S.done !== F.team }
+  }
+  const S = mineIn(R.rd)
   return { ph: 'playoffs', rd: R.rd, rows, S, won: S?.done === F.team, out: !!S && S.done !== F.team }
 }
 
 // ── The stretch's recap ──────────────────────────────────────────────────────
 // { rows (the GM's games), w, l, rec, conf (the conference in order), seed, div, place, builds: [{ p, gp, t (the
-//   stretch's totals) }], hurt: [{ id, n, g, what, se, d }] (five games or more), minor: [names], wire: [news], as: [ids] (the GM's All-Stars, when the
+//   stretch's totals) }], hurt: [{ id, n, g, what, se, d }] (five games or more or his season, a man once), minor: [names], wire: [news], as: [ids] (the GM's All-Stars, when the
 //   All-Star teams were named in the stretch) }
 export function stretchRecap(F, L = F.lt) {
   if (!L || L.d0 == null) return null
@@ -178,11 +201,16 @@ export function stretchRecap(F, L = F.lt) {
     const t = Object.fromEntries(LINE_K.map((k, j) => [k, Math.max(0, now[j] - (was[j] ?? 0))]))
     builds.push({ p, gp: t.gp, t })
   }
-  // (the injuries that cost a man five games or more, or his season, or a build's; the day-to-day ones counted)
-  const all = (L.inj ?? []).map(([id, n, g, what, se, d]) => ({ id, n, g, what, se: !!se, d }))
-  const isBuild = id => F.teams[F.team].r.some(p => p.i === id && p.b != null)
-  const hurt = all.filter(x => x.g >= 5 || x.se || isBuild(x.id))
-  const minor = [...new Set(all.filter(x => !hurt.includes(x)).map(x => x.n))]
+  // (the injuries that cost a man five games or more, or his season; the shorter ones are the day-to-day line. A man
+  // hurt twice in the stretch, or whose injury got worse, is one line: his longest)
+  const worst = new Map()
+  for (const [id, n, g, what, se, d] of L.inj ?? []) {
+    const x = { id, n, g, what, se: !!se, d }, was = worst.get(id)
+    if (!was || (x.se && !was.se) || (x.se === was.se && x.g > was.g)) worst.set(id, x)
+  }
+  const all = [...worst.values()]
+  const hurt = all.filter(x => x.g >= 5 || x.se).sort((a, b) => b.se - a.se || b.g - a.g)
+  const minor = all.filter(x => !hurt.includes(x)).map(x => x.n)
   const seen = new Set()
   const W = { trade: 7, record: 6, asg: 5, as: 5, ddl: 1, inj: 3, award: 4, tax: 2 }
   const wire = (F.news ?? []).filter(x => x.y === F.year && x.d != null && x.d >= L.d0 && x.d < L.d1 && x.k !== 'sign' && x.k !== 'final' && x.k !== 'season' && x.k !== 'gm' && !(x.k === 'inj' && x.s === F.team))

@@ -373,7 +373,7 @@
 .fr-rule-seg.nb-seg3 button { height: auto; min-height: 58px; padding: 8px 6px; line-height: 1.1; }
 .fr-rule-seg.nb-seg3 button small { line-height: 1.2; }
 /* a lower-third's stat label (PPG, PTS) at 13px */
-:is(.nb, .nb-gd, .nb-sheet) .fk-l3-ovr small { font-size: 13px; }
+:is(.nb, .nb-gd, .nb-sheet, .nb-setup, .nb-staff) .fk-l3-ovr small { font-size: 13px; }
 
 /* a save that didn't go through */
 .nb-savebad { display: flex; align-items: center; gap: 12px; margin: 10px 16px 0; padding: 10px 12px; background: rgba(229,56,59,.16); border-left: 4px solid var(--fk-l); font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: #fff; }
@@ -494,3 +494,15 @@ button.nb-sch-row:active { background: var(--fk-g3); }
 .nb-fst-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .nb-fst-init { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--fk-d); font-weight: 400; font-size: 15px; color: var(--tct, #fff); }
 @media (max-width: 520px) { .nb-fst-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* (GRADE and AGE at 13px want a little more room than the small row's 46px box) */
+:is(.nb-setup, .nb-staff) .fk-l3--s .fk-l3-ovr.is-stat { width: 54px; }
+/* the setup's and the staff's rows on a phone (NbaSetup .nb-setup, NbaStaff .nb-staff): a candidate's line runs onto
+   a second line instead of being cut (TIMBERWOLVES PLAYER DEVELOPMENT ASSISTANT), a build's too (PICK 12 · $5.9M);
+   the head coach's big card keeps its line on a row of its own (it wrapped mid-list and led with a stray dot) */
+@media (max-width: 520px) {
+  :is(.nb-setup .fst-car, .nb-staff.fst-car, .nb-build-row) .fk-l3:not(.fk-l3--l) { height: auto; min-height: var(--h); }
+  :is(.nb-setup .fst-car, .nb-staff.fst-car, .nb-build-row) .fk-l3:not(.fk-l3--l) .fk-l3-meta { display: block; padding: 1px 0; white-space: normal; line-height: 1.25; }
+  :is(.nb-setup .fst-car, .nb-staff.fst-car, .nb-build-row) .fk-l3:not(.fk-l3--l) .fk-l3-bar { padding-top: 4px; padding-bottom: 4px; }
+  .nb-staff .fk-l3--l .fk-l3-line { flex-basis: 100%; }
+  .nb-staff .fk-l3--l .fk-l3-meta > .fk-l3-line::before { content: none; }
+}

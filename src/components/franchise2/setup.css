@@ -208,6 +208,8 @@
 
 @media (min-width: 900px) {
   .fsu { padding-top: 12px; }
+  /* (the bar sticks under that padding: cover it, or the page scrolls through the gap above the steps) */
+  .fsu-top { box-shadow: 0 -12px 0 var(--fk-ink); }
   .fsu-top, .fsu-body { max-width: 1040px; }
   .fsu-body > div { max-width: 640px; margin: 0 auto; }
   .fsu-acts { margin: 6px 0 0; padding: 10px 0 14px; }
