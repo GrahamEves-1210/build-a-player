@@ -1,6 +1,7 @@
 // Loads src/utils/cfbSimulation.js through Vite's SSR loader (it imports football's sim, which reads
 // import.meta.env). If the data agent's src/data/cfb-*.js files aren't there yet, the imports are pointed at
-// the fixture in scripts/cfb/fixture/ (never in src/). Pass FIXTURE=1 to force the fixture.
+// the fixture in scripts/cfb/fixture/ (never in src/). Pass FIXTURE=1 to force the fixture. STUB_DIR=<dir> points the
+// defense's files (cfb-dls, cfb-dbs and their legends) at stand-ins there while they're being written (new-pos-load.mjs).
 import { createServer } from 'vite'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -13,11 +14,14 @@ const DATA = ['cfb-conferences', 'cfb-teams', 'cfb-players']
 export async function loadCFB() {
   const force = process.env.FIXTURE === '1'
   const missing = DATA.filter(d => force || !existsSync(path.join(root, 'src/data', `${d}.js`)))
+  const stub = process.env.STUB_DIR || null
+  const stubbed = stub ? ['cfb-dls', 'cfb-dbs', 'cfb-dl-legends', 'cfb-db-legends'].filter(d => existsSync(path.join(stub, `${d}.js`))) : []
   const plugin = {
     name: 'cfb-fixture',
     enforce: 'pre',
     resolveId(id) {
-      const m = id.match(/(?:^|\/)data\/(cfb-[a-z]+)(?:\.js)?$/)
+      const m = id.match(/(?:^|\/)data\/(cfb-[a-z-]+?)(?:\.js)?$/)
+      if (m && stubbed.includes(m[1])) return path.join(stub, `${m[1]}.js`)
       if (m && missing.includes(m[1])) return path.join(here, 'fixture', `${m[1]}.js`)
       return null
     },

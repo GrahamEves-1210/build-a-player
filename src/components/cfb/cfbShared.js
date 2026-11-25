@@ -15,7 +15,14 @@ export const CFB_POS = {
   qb: { label: 'QB', name: 'Quarterback', fig: '/qb-silhouette.webp' },
   wr: { label: 'WR', name: 'Wide Receiver', fig: '/wr-silhouette.png' },
   rb: { label: 'RB', name: 'Running Back', fig: '/rb-silhouette.webp' },
+  te: { label: 'TE', name: 'Tight End', fig: '/wr-silhouette.png' },
+  dl: { label: 'DL', name: 'Defensive Line', fig: '/dl-silhouette.webp', def: true },
+  db: { label: 'DB', name: 'Defensive Back', fig: '/db-silhouette.png', def: true },
 }
+// a defender's spot, the word for it (his Size chip's man's: utils/cfbSimulation.js buildSub)
+export const SPOT_LABEL = { edge: 'EDGE', dt: 'DT', cb: 'CB', s: 'S' }
+export const SPOT_NAME = { edge: 'Edge Rusher', dt: 'Defensive Tackle', cb: 'Cornerback', s: 'Safety' }
+export const spotOf = (pos, build) => (pos === 'dl' ? (build?.size?.subpos === 'dt' ? 'dt' : 'edge') : pos === 'db' ? (build?.size?.subpos === 's' ? 's' : 'cb') : null)
 
 // The pool a build's wheels deal from: this season's rosters, or each school's legends (data/cfb-legends.js).
 // Only the wheels change: the offers, the season against today's schools and the draft are the same either way.
@@ -142,7 +149,7 @@ export function projText(draft) {
 // a real player's headshot by name and school (the Heisman ceremony, the draft board): pools from lib/cfbLoad.js
 export function photoLookup(pools, base) {
   const m = new Map()
-  for (const k of ['qb', 'rb', 'wr']) for (const p of pools?.[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${base}/${p.headshot}.webp`)
+  for (const k of Object.keys(CFB_POS)) for (const p of pools?.[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${base}/${p.headshot}.webp`)
   return (name, school) => m.get(`${name}|${school}`) ?? null
 }
 
@@ -160,7 +167,9 @@ export function photoLookup(pools, base) {
 // same country whoever plays it. seasonData(data, k): season k (0 = the first), the shared data untouched
 const NEXT_CLASS = { FR: 'SO', SO: 'JR', JR: 'SR' }
 const OUT_AFTER = new Set(['SR', 'GR', '5TH'])
-const EARLY_OUT = { qb: 91, rb: 89, wr: 91 }   // a junior this good goes pro (about the draft board's Day 2 line)
+const EARLY_OUT = { qb: 91, rb: 89, wr: 91, te: 92, dl: 91, db: 91 }   // a junior this good goes pro (about the draft board's Day 2 line)
+// (a defender's depth is inside his spot: two edges and a tackle, two corners and a safety start)
+const DEF_SPOTS = { dl: { edge: ['EDGE', 2], dt: ['DT', 1] }, db: { cb: ['CB', 2], s: ['S', 1] } }
 const NEW_CLASS = ['FR', 'FR', 'RS-FR', 'RS-FR', 'SO', 'RS-SO', 'JR']
 const toChips = attrs => Object.fromEntries(Object.entries(attrs ?? {}).map(([t, v]) => [t, { type: t, val: v }]))
 function nextYear(pools, k, sim) {
@@ -192,7 +201,10 @@ function nextYear(pools, k, sim) {
         room.push({ ...rest, name, short: name.split(' ').pop(), year: NEW_CLASS[Math.floor(r() * NEW_CLASS.length)], attrs, ovr: reOvr(pos, old, attrs), gen: true })
       }
       room.sort((a, b) => (b.ovr ?? 0) - (a.ovr ?? 0) || (a.depth ?? 9) - (b.depth ?? 9))
-      room.forEach((p, i) => out.push({ ...p, depth: i + 1, starter: i === 0 }))
+      if (DEF_SPOTS[pos]) {
+        // (each spot's own depth chart: EDGE1 and EDGE2, DT1; CB1 and CB2, S1)
+        for (const [sub, [tag, n]] of Object.entries(DEF_SPOTS[pos])) room.filter(p => (p.subpos ?? (pos === 'dl' ? 'edge' : 'cb')) === sub).forEach((p, i) => out.push({ ...p, depth: i + 1, starter: i < n, slot: i < n ? `${tag}${i + 1}` : null }))
+      } else room.forEach((p, i) => out.push({ ...p, depth: i + 1, starter: i === 0 }))
     }
     return [pos, out]
   }))

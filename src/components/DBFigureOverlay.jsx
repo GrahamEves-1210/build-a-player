@@ -212,7 +212,8 @@ export default function DBFigureOverlay({ build, numberNudgePx = null, parts = n
   svg = setFill(svg, 'right sleeve', tc(P.rightSleeve), 'opacity:0.63;')
 
   const sizeChip = build?.[P.jersey]
-  const teamNickname = TEAM_NICKNAMES[sizeChip?.team] ?? sizeChip?.team ?? ''
+  // (a college chip carries its school's word: College Football's team is 'cfb/ALA')
+  const teamNickname = TEAM_NICKNAMES[sizeChip?.team] ?? sizeChip?.jerseyWord ?? String(sizeChip?.team ?? '').replace(/^cfb\//, '')
   // the team name's centre: `gap` up the number's tilted axis from the number's centre
   const tiltRad = CHEST_NUM.tilt * Math.PI / 180
   const nickX = CHEST_NUM.x + Math.sin(tiltRad) * CHEST_NICK.gap

@@ -3,7 +3,7 @@ import { valToGrade } from '../../utils/simulation'
 import { IconClose } from '../app/icons'
 import { sfx } from '../../lib/juice'
 import { accountId } from '../../lib/supabase'
-import { CFB_POS, collegeGap, draftProj, projText } from './cfbShared'
+import { CFB_POS, SPOT_LABEL, spotOf, collegeGap, draftProj, projText } from './cfbShared'
 import { CLASS_NAME } from './cfbClass'
 
 // ── ENTER THE NFL DRAFT: a finished college season becomes a new football Career ──
@@ -74,10 +74,10 @@ export default function CFBDraft({ build, types, pos, result, user, userName, pl
     <div className="cfbd-overlay" role="dialog" aria-modal="true" aria-label="Enter the NFL Draft">
       <div className="cfbd">
         <div className="cfbd-head">
-          <div><small>{CFB_POS[pos].label} · {school}{cls ? ` · ${CLASS_NAME[cls]}` : ''}</small><h2>Enter the NFL Draft</h2></div>
+          <div><small>{SPOT_LABEL[spotOf(pos, build)] ?? CFB_POS[pos].label} · {school}{cls ? ` · ${CLASS_NAME[cls]}` : ''}</small><h2>Enter the NFL Draft</h2></div>
           <button className="ag-round-btn" onClick={onCancel} aria-label="Close"><IconClose size={16} /></button>
         </div>
-        <p className="cfbd-why"><b>The jump to the pros.</b> NFL defenders are bigger, faster and smarter than anyone he saw on Saturdays, so his ratings come down before the combine: <b>every trait drops two grades</b> (an A+ becomes an A-); his size is his size. He earns it back in the league the way every Career player does.{c.draft ? <> <b>His draft stock goes with him:</b> {String(c.draft.label).replace(/^Projected /, '').replace(/^./, x => x.toUpperCase())} ({projText(c.draft)}). The combine and the interviews can still move it a little.</> : null}</p>
+        <p className="cfbd-why"><b>The jump to the pros.</b> {pos === 'dl' || pos === 'db' ? 'NFL linemen, backs and receivers' : 'NFL defenders'} are bigger, faster and smarter than anyone he saw on Saturdays, so his ratings come down before the combine: <b>every trait drops two grades</b> (an A+ becomes an A-); his size is his size. He earns it back in the league the way every Career player does.{c.draft ? <> <b>His draft stock goes with him:</b> {String(c.draft.label).replace(/^Projected /, '').replace(/^./, x => x.toUpperCase())} ({projText(c.draft)}). The combine and the interviews can still move it a little.</> : null}</p>
         {!M ? <p className="cfbd-wait">Loading Career…</p> : (
           <>
             <table className="cfbd-table">

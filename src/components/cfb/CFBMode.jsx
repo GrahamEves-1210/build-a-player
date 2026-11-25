@@ -11,7 +11,10 @@ import Disclaimer from '../Disclaimer'
 import { TYPES, ATTR, CATEGORIES } from '../../data/qbs'
 import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR, WR_CATEGORIES } from '../../data/wrs'
-import { HEADSHOT_BASE, calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR } from '../../utils/simulation'
+import { TE_TYPES, TE_ATTR, TE_CATEGORIES } from '../../data/tes'
+import { DL_TYPES, DL_ATTR, DL_CATEGORIES } from '../../data/dls'
+import { DB_TYPES, DB_ATTR, DB_CATEGORIES } from '../../data/dbs'
+import { HEADSHOT_BASE, calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDL, calcOVRDB, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDL, getArchetypeDB } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
 import { useDropMode, useDropSheet, DropBar, DropSheet, BuildComplete } from '../app/AppBuildTray'
 import { IconGear, IconClose, IconPlay, IconSpin } from '../app/icons'
@@ -24,7 +27,7 @@ import { sfx } from '../../lib/juice'
 import { owns } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
 import { loadCFB, loadCFBLegends } from '../../lib/cfbLoad'
-import { CFB_POS, CFB_POOLS, poolOf, classLabel, cfbLogo, cfbLogoDark, confLogo, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent, photoLookup, seasonData } from './cfbShared'
+import { CFB_POS, CFB_POOLS, SPOT_LABEL, spotOf, poolOf, classLabel, cfbLogo, cfbLogoDark, confLogo, loadProgress, saveProgress, saveSeasonLocal, seasonsLocal, summaryOf, seasonEvent, photoLookup, seasonData } from './cfbShared'
 import { barAt, offersFor, cardFor, stockOf, collegeStars } from './cfbRecruit'
 import { Stars, OfferBoard } from './CFBOffers'
 import CFBSimPage from './CFBSimPage'
@@ -54,6 +57,11 @@ const POS = {
   qb: { types: TYPES, attr: ATTR, cats: CATEGORIES, flags: {}, ovr: (b, t) => collegeOVR(calcOVR(b, t)), arch: getArchetype },
   wr: { types: WR_TYPES, attr: WR_ATTR, cats: WR_CATEGORIES, flags: { isWR: true }, ovr: (b, t) => collegeOVR(calcOVRWR(b, t)), arch: getArchetypeWR },
   rb: { types: RB_TYPES, attr: RB_ATTR, cats: undefined, flags: { isRB: true }, ovr: (b, t) => collegeOVR(calcOVRRB(b, t)), arch: getArchetypeRB },
+  te: { types: TE_TYPES, attr: TE_ATTR, cats: TE_CATEGORIES, flags: { isTE: true }, ovr: (b, t) => collegeOVR(calcOVRTE(b, t)), arch: getArchetypeTE },
+  // (defenders: the NFL builders' traits, figure and names. His spot, edge or tackle, corner or safety, is his Size
+  // chip's man's, as the NFL build reads it)
+  dl: { types: DL_TYPES, attr: DL_ATTR, cats: DL_CATEGORIES, flags: { isDL: true }, ovr: (b, t) => collegeOVR(calcOVRDL(b, t)), arch: getArchetypeDL },
+  db: { types: DB_TYPES, attr: DB_ATTR, cats: DB_CATEGORIES, flags: { isDB: true }, ovr: (b, t) => collegeOVR(calcOVRDB(b, t)), arch: getArchetypeDB },
 }
 const emptyBuild = pos => Object.fromEntries(POS[pos].types.map(t => [t, null]))
 const newSeed = () => ((Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) || 1
@@ -367,10 +375,13 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // All-Time: the same rows from data/cfb-legends.js, a school's one to three greats at the spot (every one of them
   // is on the wheel: they're all 'starters'), with the years he played there where a current player has his class.
   // The legends don't age with the build's seasons: only the country he plays against does
-  const rowsOf = useCallback(list => (list ?? []).filter(p => p.starter === true || (pos === 'wr' && (p.depth ?? 9) <= 3)).map(p => {
+  // (a defender: every starter on the line or in the secondary, the two edges and the tackle, the two corners and the
+  // safety; pos is the figure's label there, EDGE or DT as the NFL rows carry it)
+  const rowsOf = useCallback(list => (list ?? []).filter(p => p.starter === true || (pos === 'wr' && (p.depth ?? 9) <= 3) || ((pos === 'dl' || pos === 'db') && (!!p.slot || (p.depth ?? 9) <= 1))).map(p => {
     const t = teamsBy[p.team]
     return {
       ...p,
+      ...(pos === 'dl' || pos === 'db' ? { pos: SPOT_LABEL[p.subpos] ?? p.espnPos ?? pos.toUpperCase() } : {}),
       team: `cfb/${p.team}`, school: p.team, conf: p.conf ?? t?.conf,
       teamName: t?.name ?? p.teamName ?? p.team,
       color: p.color ?? t?.color, color2: p.color2 ?? t?.color2,
@@ -459,7 +470,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
   const addChip = (p, overrides, type) => withCollege({
     type, val: overrides?.[type] ?? p.attrs?.[type] ?? 5, qb: p.short || p.name, qbFull: p.name,
     teamColor: p.color, teamColor2: p.color2, skinColor: p.skin, number: p.number, team: p.team, captain: !!p.captain, sandbox: true,
-    photo: p.headshot ? `${HEADSHOT_BASE}/${p.headshot}.webp` : null, height: p.height, weight: p.weight,
+    photo: p.headshot ? `${HEADSHOT_BASE}/${p.headshot}.webp` : null, height: p.height, weight: p.weight, ...(p.subpos ? { subpos: p.subpos } : {}),
   })
 
   const complete = P.types.every(t => build[t])
@@ -472,9 +483,9 @@ export default function CFBMode({ user, onHome, onCareer }) {
   const startsAt = useCallback((short, prior, ovr, start = cls0) => {
     const k = prior.length, last = prior[k - 1]
     if (!isUnder(classAt(start, k)) || (last && last.school === short && last.role !== 'backup')) return true
-    const bar = barAt(seasonData(data, k), short, pos)
+    const bar = barAt(seasonData(data, k), short, pos, spotOf(pos, build))
     return !bar || ovr > (bar.ovr ?? 0)
-  }, [data, pos, cls0])
+  }, [data, pos, cls0, build])
   const playSeason = useCallback((team, prior = [], b = build, start = cls0) => {
     const build = b   // (everything below reads the build this season is played with)
     const seed = newSeed()
@@ -545,8 +556,8 @@ export default function CFBMode({ user, onHome, onCareer }) {
   const recruit = useMemo(() => {
     if (!offering || !data || !complete) return null
     const card = cardFor(data, data, pos, ovrNow)
-    return { card, offers: offersFor(data, { stars: card.stars, ovr: ovrNow, pos, seed: `oneoff-${pos}-${buildKey}`, n: 10 }) }
-  }, [offering, data, complete, pos, ovrNow, buildKey])
+    return { card, offers: offersFor(data, { stars: card.stars, ovr: ovrNow, pos, sub: spotOf(pos, build), seed: `oneoff-${pos}-${buildKey}`, n: 10 }) }
+  }, [offering, data, complete, pos, ovrNow, buildKey, build])
   const portal = useMemo(() => {
     if (!moving || !data || !result) return null
     const ovr = P.ovr(nextBuild, P.types)
@@ -554,8 +565,8 @@ export default function CFBMode({ user, onHome, onCareer }) {
     const cur = result.team?.short
     const stock = stockOf(result, result.team?.confShort ?? confOf[result.team?.conf]?.short, collegeStars(data, pos, ovr).stars)
     const card = cardFor(data, next, pos, ovr, stock)
-    const away = offersFor(next, { stars: card.stars, ovr, pos, seed: `oneoff-portal-${pos}-${buildKey}-${history.length}-${result.seed}`, skip: [cur], n: 10, lift: stock.lift })
-    const bar = barAt(next, cur, pos)
+    const away = offersFor(next, { stars: card.stars, ovr, pos, sub: spotOf(pos, nextBuild), seed: `oneoff-portal-${pos}-${buildKey}-${history.length}-${result.seed}`, skip: [cur], n: 10, lift: stock.lift })
+    const bar = barAt(next, cur, pos, spotOf(pos, nextBuild))
     const stay = { short: cur, stay: true, starts: !isUnder(classAt(cls0, history.length + 1)) || result.role !== 'backup' || !bar || ovr > (bar.ovr ?? 0), bar: bar ? { name: bar.name, ovr: bar.ovr, year: bar.year } : null }
     // (he pressed Transfer: his own school isn't one of the options. The owner, 2026-11-12; staying is the other button)
     return { ovr, card, stock, offers: away, stay }

@@ -166,7 +166,8 @@ export default function DLFigureOverlay({ build, numberNudgePx = null, nameNudge
   svg = setFill(svg, 'right shoe', tc('getOff'), 'opacity:0.78;')
 
   const jerseyChip = build?.[J]
-  const teamNickname = TEAM_NICKNAMES[jerseyChip?.team] ?? jerseyChip?.team ?? ''
+  // (a college chip carries its school's word: College Football's team is 'cfb/ALA')
+  const teamNickname = TEAM_NICKNAMES[jerseyChip?.team] ?? jerseyChip?.jerseyWord ?? String(jerseyChip?.team ?? '').replace(/^cfb\//, '')
   const helmetTeam = build?.[H]?.team
   const num = jerseyChip?.number ?? ''
 

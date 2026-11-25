@@ -27,7 +27,9 @@ function rankIn(stars, t, pos, seed) {
   const r = seeded(`cfb-rank-${seed}`)
   const [, , best, worst] = BANDS[5 - stars]
   const overall = Math.max(1, Math.round(best + t * (worst - best) + (r() - 0.5) * (worst - best) * 0.08))
-  const posRank = Math.max(1, Math.round(overall / ({ qb: 11, wr: 6, rb: 10 })[pos] + r() * 1.2))
+  // (how many in a class play the position: a receiver one in six, a tight end one in fourteen, a defensive lineman or
+  // a defensive back one in five, the composite rankings' share)
+  const posRank = Math.max(1, Math.round(overall / (({ qb: 11, wr: 6, rb: 10, te: 14, dl: 5, db: 4.5 })[pos] ?? 10) + r() * 1.2))
   return { overall, posRank }
 }
 
@@ -39,9 +41,15 @@ export function tierOf(t, confTier) {
   if (confTier === 'P4' || t.fpiRank <= 70) return 3
   return 2
 }
-// who he'd have to beat at a school: the starter (a receiver: the third starter, the last spot in the three)
-export function barAt(data, short, pos) {
-  const room = data.pools[pos].filter(p => p.team === short).sort((a, b) => (a.depth ?? 9) - (b.depth ?? 9))
+// who he'd have to beat at a school: the starter (a receiver: the third starter, the last spot in the three; a defender:
+// the last starter at his spot, an edge the No. 2 end, a corner the No. 2 corner, a tackle or a safety the one there)
+// sub: a defender's spot (cfbShared spotOf)
+const LAST_START = { edge: 2, cb: 2, dt: 1, s: 1 }
+export function barAt(data, short, pos, sub = null) {
+  const def = pos === 'dl' || pos === 'db'
+  const spot = def ? sub ?? (pos === 'dl' ? 'edge' : 'cb') : null
+  const room = (data.pools[pos] ?? []).filter(p => p.team === short && (!def || (p.subpos ?? (pos === 'dl' ? 'edge' : 'cb')) === spot)).sort((a, b) => (a.depth ?? 9) - (b.depth ?? 9))
+  if (def) return room[(LAST_START[spot] ?? 1) - 1] ?? room[room.length - 1] ?? null
   return (pos === 'wr' ? room[2] ?? room[room.length - 1] : room[0]) ?? null
 }
 export const startsOver = (bar, ovr, year = 0) => !bar || ovr > (bar.ovr ?? 0) || (year > 0 && LEAVES.has(String(bar.year).toUpperCase()))
@@ -49,10 +57,10 @@ export const startsOver = (bar, ovr, year = 0) => !bar || ovr > (bar.ovr ?? 0) |
 // The schools offering him: his stars' level (and the one below when it's thin), the ones with a job he can win
 // first, a little luck. lift (the one-off mode's transfer, -1 to 1): a big year pulls the higher-rated programs
 // in his level up the list, a bad one the lower ones (0: Career's offers, unchanged)
-export function offersFor(data, { stars, ovr, pos, seed, skip = [], n = 5, lift = 0 }) {
+export function offersFor(data, { stars, ovr, pos, sub = null, seed, skip = [], n = 5, lift = 0 }) {
   const r = seeded(`cfb-offers-${seed}`)
   const tierOfConf = Object.fromEntries(data.conferences.map(c => [c.id, c.tier]))
-  const all = data.teams.filter(t => !skip.includes(t.short)).map(t => ({ t, tier: tierOf(t, tierOfConf[t.conf]), bar: barAt(data, t.short, pos) }))
+  const all = data.teams.filter(t => !skip.includes(t.short)).map(t => ({ t, tier: tierOf(t, tierOfConf[t.conf]), bar: barAt(data, t.short, pos, sub) }))
   // (more variety, the owner 11-13: players kept seeing the same schools. His level, the level below always, and a few
   // reach schools from the level above; luck counts for more and the open job for less, so the order moves)
   let pool = all.filter(x => x.tier === stars || x.tier === stars - 1 || (stars === 2 && x.tier === 3))
@@ -75,8 +83,10 @@ const linesCache = new WeakMap()
 function starLines(data, pos) {
   const memo = linesCache.get(data) ?? {}
   if (memo[pos]) return memo[pos]
-  const per = pos === 'wr' ? 3 : 1
-  const s = data.pools[pos].filter(p => (p.depth ?? 9) <= per).map(p => p.ovr ?? 0).sort((a, b) => b - a)
+  // (a defender: every starter on the line or in the secondary, three a school)
+  const def = pos === 'dl' || pos === 'db'
+  const per = pos === 'wr' || def ? 3 : 1
+  const s = (data.pools[pos] ?? []).filter(p => (def ? !!p.slot || p.starter === true : (p.depth ?? 9) <= per)).map(p => p.ovr ?? 0).sort((a, b) => b - a)
   const at = k => s[Math.min(s.length - 1, k * per - 1)] ?? 70
   let n = 0
   const lines = LEVEL_SIZES.map(k => at(n += k))   // [5-star line, 4-star line, 3-star line]
@@ -95,13 +105,13 @@ export function collegeStars(data, pos, ovr) {
 }
 // his place among the players at his position still in college (every one on the rosters, starters and backups)
 export function nationalRank(data, pos, ovr) {
-  return 1 + data.pools[pos].filter(p => (p.ovr ?? 0) > ovr).length
+  return 1 + (data.pools[pos] ?? []).filter(p => (p.ovr ?? 0) > ovr).length
 }
 // a recruiting card for the one-off mode: stars (moved by a season, stock), the position rank, the OVR
 export function cardFor(baseData, data, pos, ovr, stock = null) {
   const { stars: base, t } = collegeStars(baseData, pos, ovr)
   const stars = clamp(2, 5, base + (stock?.move ?? 0))
-  return { stars, base, t, posRank: nationalRank(data, pos, ovr), of: data.pools[pos].length }
+  return { stars, base, t, posRank: nationalRank(data, pos, ovr), of: (data.pools[pos] ?? []).length }
 }
 
 // ── A season's pull on his stock (the one-off mode's transfer portal) ──

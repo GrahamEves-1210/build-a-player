@@ -173,7 +173,9 @@ MILESTONES.cfb = {
     { id: 'unbeaten-6', label: 'Unbeaten at the halfway mark', test: c => c.games.length === 6 && c.losses === 0, big: true },
     { id: 'perfect', label: 'A perfect 12-0', test: c => c.games.length === 12 && c.losses === 0, big: true },
   ],
-  qb: MILESTONES.nfl.qb, rb: MILESTONES.nfl.rb, wr: MILESTONES.nfl.wr,
+  qb: MILESTONES.nfl.qb, rb: MILESTONES.nfl.rb, wr: MILESTONES.nfl.wr, te: MILESTONES.nfl.te,
+  // (a defender's college games carry football's keys for the director: CFBSimPage dirGame)
+  dl: MILESTONES.nfl.dl, db: MILESTONES.nfl.db,
 }
 
 // ── League leaders (synthesised from the real pool around real-world scale) ─

@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { TYPES, ATTR } from '../../data/qbs'
 import { RB_TYPES, RB_ATTR } from '../../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../../data/wrs'
-import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
+import { TE_TYPES, TE_ATTR } from '../../data/tes'
+import { DL_TYPES, DL_ATTR } from '../../data/dls'
+import { DB_TYPES, DB_ATTR } from '../../data/dbs'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDL, calcOVRDB, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDL, getArchetypeDB, valToGrade, HEADSHOT_BASE } from '../../utils/simulation'
 import { collegeOVR } from '../../utils/cfbOvr'
 import { starsFor, rankFor, barAt, offersFor, startsOver } from './cfbRecruit'
 import { Stars, OfferBoard, CommitBar } from './CFBOffers'
@@ -10,14 +13,14 @@ import { loadCFB } from '../../lib/cfbLoad'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
 import CFBSimPage from './CFBSimPage'
-import { CFB_POS, classLabel, seasonEvent, collegeGap, photoLookup, seasonData } from './cfbShared'
+import { CFB_POS, SPOT_LABEL, spotOf, classLabel, seasonEvent, collegeGap, photoLookup, seasonData } from './cfbShared'
 import { CLASSES, CLASS_NAME, classAt, seasonsFrom, canDeclare, canComeBack, isUnder, classAge, draftAge, upgradePoints, backupSeason } from './cfbClass'
 import CFBOffseason from './CFBOffseason'
 import { SPORT } from '../../lib/career'
 import './cfb.css'
 
 // ── Career: START IN COLLEGE ─────────────────────────────────────────────────
-// A football Career (QB, WR or RB) that starts with a college season or two before the draft. He's built
+// A football Career (QB, WR, RB, TE, DL or DB) that starts with a college season or two before the draft. He's built
 // with the NFL builder (c.build, the career's own ratings, never touched here). For college he plays with
 // the college boost: the college gap on every trait but his size (a pro talent against college competition).
 // The boosted OVR makes his recruiting stars and national ranking, the stars bring the offers (real schools,
@@ -43,6 +46,10 @@ const POS = {
   qb: { types: TYPES, attr: ATTR, ovr: (b, t) => collegeOVR(calcOVR(b, t)), arch: getArchetype },
   wr: { types: WR_TYPES, attr: WR_ATTR, ovr: (b, t) => collegeOVR(calcOVRWR(b, t)), arch: getArchetypeWR },
   rb: { types: RB_TYPES, attr: RB_ATTR, ovr: (b, t) => collegeOVR(calcOVRRB(b, t)), arch: getArchetypeRB },
+  te: { types: TE_TYPES, attr: TE_ATTR, ovr: (b, t) => collegeOVR(calcOVRTE(b, t)), arch: getArchetypeTE },
+  // (a defender's spot, edge or tackle, corner or safety, is his Size chip's man's: the NFL build's own, kept as it is)
+  dl: { types: DL_TYPES, attr: DL_ATTR, ovr: (b, t) => collegeOVR(calcOVRDL(b, t)), arch: getArchetypeDL },
+  db: { types: DB_TYPES, attr: DB_ATTR, ovr: (b, t) => collegeOVR(calcOVRDB(b, t)), arch: getArchetypeDB },
 }
 const clamp = (a, b, x) => Math.max(a, Math.min(b, x))
 // (a career in college before class years, `legacy`: its two seasons' labels, and what the engine was told)
@@ -53,7 +60,7 @@ const NO_BOOST = new Set(['size'])   // his frame: the college gap doesn't touch
 // the college build: the NFL build up by the college gap (cfbShared.js collegeGap, the same one the draft takes back
 // off: two steps on every trait, none on Size), plus a returning year's development, capped at S
 export function collegeBuild(build, types, dev = {}, pos = null) {
-  const p = pos ?? (types.includes('arm') ? 'qb' : types.includes('carrying') ? 'rb' : 'wr')
+  const p = pos ?? (types.includes('arm') ? 'qb' : types.includes('carrying') ? 'rb' : types.includes('blocking') ? 'te' : types.includes('getOff') ? 'dl' : types.includes('zoneIQ') ? 'db' : 'wr')
   return Object.fromEntries(types.map(t => {
     const ch = build[t]
     if (!ch) return [t, ch]
@@ -87,18 +94,25 @@ function playSeason(data, c, s) {
   const b = collegeBuild(c.build, P.types, s.dev)
   if (s.role !== 'backup') return { ...data.sim.runCFBSimulation(b, P.types, team, c.pos, s.seed, 'career', null, { name: c.name, year: s.simYear, ...(career ? { career } : {}), ...(s.adv ? { choice: true, season: 2026 + k, ...(k ? { pools: sd.pools } : {}) } : {}) }), ovr: P.ovr(b, P.types) }   // (the college overall the recruiting card and the offseason show)
   // (the school plays its real starter and the build sits behind the man he couldn't beat: cfbClass backupSeason)
-  return backupSeason(data.sim, sd.pools, P.types, team, c.pos, s.seed, { ovr: P.ovr(b, P.types), ...(s.adv ? { cls: s.simYear, build: b, name: c.name, season: 2026 + k, usePools: k > 0 } : {}) })
+  return backupSeason(data.sim, sd.pools, P.types, team, c.pos, s.seed, { ovr: P.ovr(b, P.types), build: b, ...(s.adv ? { cls: s.simYear, name: c.name, season: 2026 + k, usePools: k > 0 } : {}) })
 }
 
 // what a season leaves on his résumé
-const AWARD_KEYS = ['daveyOBrien', 'doakWalker', 'biletnikoff', 'maxwell', 'walterCamp', 'confPOY']
+const AWARD_KEYS = ['daveyOBrien', 'doakWalker', 'biletnikoff', 'mackey', 'bednarik', 'nagurski', 'outland', 'hendricks', 'thorpe', 'maxwell', 'walterCamp', 'confPOY']
+// a season's (or a career's) line, the way his résumé reads it
+const half = x => (Number.isInteger(x) ? x : x.toFixed(1))
+function statText(pos, get) {
+  if (pos === 'qb') return `${get('seasonPassYds').toLocaleString()} pass yds, ${get('seasonTDs')} TD, ${get('seasonINTs')} INT`
+  if (pos === 'rb') return `${get('seasonRushYds').toLocaleString()} rush yds, ${get('seasonRushTDs') + get('seasonRecTDs')} TD`
+  if (pos === 'dl') return `${half(get('seasonSacks'))} sacks, ${half(get('seasonTFL'))} TFL, ${get('seasonTackles')} tackles`
+  if (pos === 'db') return `${get('seasonINTs')} INT, ${get('seasonPD')} passes defended, ${get('seasonTackles')} tackles`
+  return `${get('seasonRecs')} rec, ${get('seasonRecYds').toLocaleString()} yds, ${get('seasonRecTDs')} TD`
+}
 function summaryOf(r, s, pos, teamsBy) {
   const c = r.cfb ?? {}
   const t = c.totals?.full ?? {}
   const a = c.awards ?? {}
-  const statLine = pos === 'qb' ? `${(t.seasonPassYds ?? 0).toLocaleString()} pass yds, ${t.seasonTDs ?? 0} TD, ${t.seasonINTs ?? 0} INT`
-    : pos === 'rb' ? `${(t.seasonRushYds ?? 0).toLocaleString()} rush yds, ${(t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0)} TD`
-    : `${t.seasonRecs ?? 0} rec, ${(t.seasonRecYds ?? 0).toLocaleString()} yds, ${t.seasonRecTDs ?? 0} TD`
+  const statLine = statText(pos, k => t[k] ?? 0)
   // (the Heisman and All-America kept apart from the rest: the résumé takes the best finish of each)
   const awards = AWARD_KEYS.filter(k => a[k]?.userWon).map(k => a[k].award)
   const ap = c.apPath ?? []
@@ -116,9 +130,7 @@ function summaryOf(r, s, pos, teamsBy) {
 // (a backup year adds its own line), and the best finish per award (a win beats a finalist; two wins: 2×)
 function resumeOf(sums, pos) {
   const sum = k => sums.reduce((n, x) => n + (x.totals?.[k] ?? 0), 0)
-  const stats = pos === 'qb' ? `${sum('seasonPassYds').toLocaleString()} pass yds, ${sum('seasonTDs')} TD, ${sum('seasonINTs')} INT`
-    : pos === 'rb' ? `${sum('seasonRushYds').toLocaleString()} rush yds, ${sum('seasonRushTDs') + sum('seasonRecTDs')} TD`
-    : `${sum('seasonRecs')} rec, ${sum('seasonRecYds').toLocaleString()} yds, ${sum('seasonRecTDs')} TD`
+  const stats = statText(pos, sum)
   const times = (n, what) => (n > 1 ? `${n}× ${what}` : what)
   const hw = sums.filter(x => x.heismanFinish === 'won').length, hf = sums.filter(x => x.heismanFinish === 'finalist').length
   const aa1 = sums.filter(x => x.allAmerica === 'first').length, aa2 = sums.filter(x => x.allAmerica === 'second').length
@@ -142,8 +154,9 @@ function stockNudge(sums) {
   return clamp(-7, 7, n)
 }
 
-// a save in college at a position College Football has no rosters for (TE, a defender: the position was switched on the
-// build page after START IN COLLEGE, and every open crashed): on to the draft, the way a career that skipped college goes
+// a save in college at a position College Football has no rosters for (a linebacker, a lineman, a kicker: the position was
+// switched on the build page after START IN COLLEGE, and every open crashed): on to the draft, the way a career that
+// skipped college goes. (TE, DL and DB have rosters now: their saves play college)
 export default function CareerCollege(props) {
   return POS[props.c.pos] ? <CareerCollegeIn {...props} /> : <NoCollege {...props} />
 }
@@ -180,7 +193,7 @@ function CareerCollegeIn({ c, setCareer, onExit }) {
   // the offers, made once and kept on the save
   useEffect(() => {
     if (!data || col.offers) return
-    setCareer({ ...c, college: { ...col, stars, rank, offers: offersFor(data, { stars, ovr: cOvr, pos: c.pos, seed: c.seed }) } })
+    setCareer({ ...c, college: { ...col, stars, rank, offers: offersFor(data, { stars, ovr: cOvr, pos: c.pos, sub: spotOf(c.pos, c.build), seed: c.seed }) } })
   }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const si = col.seasons.length - 1
@@ -193,7 +206,7 @@ function CareerCollegeIn({ c, setCareer, onExit }) {
     const k = col.seasons.length
     const ovr = P.ovr(collegeBuild(c.build, P.types, dev), P.types)
     const cls = legacy ? YEAR_OF[k] : classAt(cls0, k)
-    const bar = barAt(legacy ? data : seasonData(data, k), short, c.pos)
+    const bar = barAt(legacy ? data : seasonData(data, k), short, c.pos, spotOf(c.pos, c.build))
     const last = col.seasons[k - 1]
     // (an underclassman has to beat the starter, unless the job was already his there; a junior or senior plays)
     const starts = legacy ? startsOver(bar, ovr, k) : !isUnder(cls) || (last && last.school === short && last.role !== 'backup') || !bar || ovr > (bar.ovr ?? 0)
@@ -281,7 +294,7 @@ function CareerCollegeIn({ c, setCareer, onExit }) {
           <div className="cfbd-overlay" role="dialog" aria-modal="true" aria-label="Enter the NFL Draft">
             <div className="cfbd">
               <div className="cfbd-head">
-                <div><small>{CFB_POS[c.pos].label} · {sch} · {classLabel(cur.cls)}</small><h2>Enter the NFL Draft</h2></div>
+                <div><small>{SPOT_LABEL[spotOf(c.pos, c.build)] ?? CFB_POS[c.pos].label} · {sch} · {classLabel(cur.cls)}</small><h2>Enter the NFL Draft</h2></div>
                 <button className="ag-round-btn" onClick={() => setExit(false)} aria-label="Close"><IconClose size={16} /></button>
               </div>
               <p className="cfbd-why"><b>The college boost comes off.</b> He was a pro talent against college competition. Against NFL players his ratings are his own again: <b>the ratings he was built with{Object.values(cur.dev ?? {}).some(Boolean) ? ', plus what he trained in college' : ''}</b>. His college résumé goes with him to the combine and gives his draft stock a nudge.</p>
@@ -317,9 +330,9 @@ function CareerCollegeIn({ c, setCareer, onExit }) {
     const ovr2 = P.ovr(collegeBuild(c.build, P.types, dev), P.types)
     const nextCls = legacy ? YEAR_OF[1] : classAt(cls0, col.seasons.length)
     const nextData = legacy ? data : seasonData(data, col.seasons.length)   // (next season's rosters: who he'd be up against)
-    const stay = barAt(nextData, cur.school, c.pos)
+    const stay = barAt(nextData, cur.school, c.pos, spotOf(c.pos, c.build))
     const stayStarts = legacy ? startsOver(stay, ovr2, 1) : !isUnder(nextCls) || cur.role !== 'backup' || !stay || ovr2 > (stay.ovr ?? 0)
-    const away = offersFor(nextData, { stars: starsFor(ovr2), ovr: ovr2, pos: c.pos, seed: `${c.seed}-portal-${col.seasons.length}`, skip: [cur.school], n: 3 })
+    const away = offersFor(nextData, { stars: starsFor(ovr2), ovr: ovr2, pos: c.pos, sub: spotOf(c.pos, c.build), seed: `${c.seed}-portal-${col.seasons.length}`, skip: [cur.school], n: 3 })
     return (
       <div className="ag-screen cfb-screen cfbr">
         <div className="ag-screen-head">

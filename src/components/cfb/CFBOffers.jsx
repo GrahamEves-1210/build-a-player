@@ -11,7 +11,7 @@ export const Stars = ({ n }) => <span className="cfbr-stars" aria-label={`${n} s
 // the third starting receiver).
 // compete (the one-off mode): he plays wherever he signs, so a school where the man there grades out better
 // is a job he has to win in camp (COMPETES), not a backup's role
-const JOB = { qb: 'the starting job', rb: 'the starting job', wr: 'the No. 3 receiver spot' }
+const JOB = { qb: 'the starting job', rb: 'the starting job', wr: 'the No. 3 receiver spot', te: 'the starting job', dl: 'a starting spot on the line', db: 'a starting spot in the secondary' }
 function jobLine(o, pos, compete) {
   const b = o.bar
   if (!b) return `${JOB[pos].charAt(0).toUpperCase() + JOB[pos].slice(1)} is open.`
