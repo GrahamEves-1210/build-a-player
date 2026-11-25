@@ -4,7 +4,7 @@ import { pullFranchiseCloud } from '../../lib/franchise2/cloud'
 import { FRANCHISE_ART, FRANCHISE_TURN, FRANCHISE_CARD_KEY, franchiseCard } from '../../lib/franchiseLive'
 import { sfx } from '../../lib/juice'
 import { IconClose } from '../app/icons'
-import { Chyron, KLogo, fkVars } from './kit'
+import { Chyron, KLogo, fkVars, Go } from './kit'
 import { NameForm } from './Setup'
 import TrophyTurn from './TrophyTurn'
 import './setup.css'
@@ -12,7 +12,8 @@ import './setup.css'
 // The mode's first screen: the three save slots, each a team's slab (its record, the year, rings) or an empty one.
 // A save that's there (a franchise or a setup) has DELETE SAVE under it, asked twice (owner 11-15: it was only in History).
 // lg: another league's saves (basketball Franchise, components/franchise2/nba): { summary, clear, TEAM, where, art, turn }
-export function Slots({ owner, onOpen, onHome, lg = null }) {
+// onSquad: a SQUAD BUILDER button under the slots (owner 11-25), out of Franchise into that sport's Squad Builder
+export function Slots({ owner, onOpen, onHome, onSquad = null, lg = null }) {
   const [sure, setSure] = useState(null)
   const [, redraw] = useState(0)
   const hero = useRef(null)
@@ -70,6 +71,7 @@ export function Slots({ owner, onOpen, onHome, lg = null }) {
               </div>
             )
           })}
+          {onSquad && <Go ghost className="fsu-squad" onClick={() => { sfx('tap'); onSquad() }}>SQUAD BUILDER</Go>}
         </div>
       </div>
     </div>

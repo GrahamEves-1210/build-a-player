@@ -673,8 +673,14 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <ModeArt small kind="quick" tone="depth" title="DEPTH CHART" line="Mini game" onClick={onDepthChart}><DepthArt /></ModeArt>
         )}
       </div>
+      {/* Squad Builder under the cards, one plain row (owner 11-25: back on football and basketball, Franchise kept its card) */}
+      {onSquad && (isBucket || hasFranchise) && (
+        <button type="button" className={`ag-way ag-sqrow${squad ? ' is-live' : ''}`} onClick={onSquad}>
+          <b>SQUAD BUILDER</b><small>{sqLine}</small><IconCaret dir="right" size={14} />
+        </button>
+      )}
     </section>
-  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise, !!onNbaFranchise])
+  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise, !!onNbaFranchise, !!squad])
 
   return (
     <div className={`ag-home ag-home--${sport}`} ref={homeRef}>

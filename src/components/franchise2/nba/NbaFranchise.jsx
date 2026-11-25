@@ -28,7 +28,7 @@ function leaveNote(F) {
   } catch {}
 }
 
-export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTaken }) {
+export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTaken, onSquad = null }) {
   const owner = getUsername(user) || 'Guest'
   // the kit draws the NBA's teams while the mode is open (and football's again when it closes). Set on every render,
   // not once: a kit reloaded under an open league (the dev server's hot reload) came back on football's teams, and the
@@ -112,7 +112,7 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   const toSlots = () => { flush(); setSlot(null); setF(null); setSetup(null) }
   const remove = () => { pend.current = null; LG.clear(F?.slot ?? slot); toSlots() }
 
-  if (slot == null || (!F && !setup)) return <Slots owner={owner} onOpen={open} onHome={onHome} lg={LG} />
+  if (slot == null || (!F && !setup)) return <Slots owner={owner} onOpen={open} onHome={onHome} onSquad={onSquad} lg={LG} />
   if (!F) return <NbaSetup setup={setup} owner={owner} put={putSetup} onStart={start} onBack={toSlots} onBuild={buildOut} />
   return <Suspense fallback={<div className="ag-screen fk fk-root fh" />}><NbaHub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} saveBad={saveBad} onRetry={retry} /></Suspense>
 }
