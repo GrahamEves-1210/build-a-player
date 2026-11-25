@@ -6115,12 +6115,6 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-mc.is-small { min-height: 164px; }
 .ag-mc.is-small .ag-mc-head b { font-size: 22px; }
 /* Squad Builder's row under the cards (football and basketball, while Franchise has its card): a plain line, not a card */
-.ag-sqrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; margin-top: 8px; padding: 0 16px; border: 0; border-radius: 10px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 4px 0 0 #d9a520; color: #fff; text-align: left; }
-.ag-sqrow b { flex: none; font-family: var(--ag-display); font-weight: 400; font-size: 22px; line-height: 1; letter-spacing: .5px; }
-.ag-sqrow small { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--ag-font); font-size: 16px; line-height: 1; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(255,255,255,.7); }
-.ag-sqrow svg { flex: none; color: rgba(255,255,255,.7); }
-.ag-sqrow.is-live small { color: #f5dc8a; }
-.ag-sqrow:active { transform: scale(.99); }
 @media (hover: hover) { .ag-sqrow:hover { background: rgba(255,255,255,.08); } }
 
 /* the Builder Pass strip and Pro, as they were: side by side on a computer */
@@ -6159,9 +6153,6 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
   html.app-look .ag-more .ag-mc--salary .ag-mc-shot { top: 14px; left: 40%; right: 18px; }
   html.app-look .ag-more .ag-mc--salary .ag-mc-shot img { margin-top: -16%; }
   html.app-look .ag-more { gap: 12px; }
-  html.app-look .ag-sqrow { min-height: 60px; margin-top: 12px; padding: 0 20px; }
-  html.app-look .ag-sqrow b { font-size: 26px; }
-  html.app-look .ag-sqrow small { font-size: 18px; }
   /* the wide second row: the art beside the words */
   html.app-look .ag-mc.is-small .ag-team { left: 34%; right: 8px; height: 104%; bottom: -16%; justify-content: flex-end; }
   html.app-look .ag-team img.is-wr { height: 116%; }
@@ -8096,8 +8087,10 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
 :is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform-origin: center bottom; }
 @media (min-width: 1024px) { :is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform: scale(1.09) !important; } }   /* (the desktop stage is shorter for its width) */
 /* soccer's Home: Career a whole row, Salary Cap and Compete side by side under it (no Squad Builder card) */
-.ag-cards.ag-cards--soccer { grid-template-columns: 1fr 1fr !important; }
-.ag-cards.ag-cards--soccer > .ag-mc--career, .ag-cards.ag-cards--soccer > :first-child { grid-column: 1 / -1 !important; }
+@media (max-width: 1023px) {
+  .ag-cards.ag-cards--soccer { grid-template-columns: 1fr 1fr !important; }
+  .ag-cards.ag-cards--soccer > .ag-mc--career, .ag-cards.ag-cards--soccer > :first-child { grid-column: 1 / -1 !important; }
+}   /* (desktop: the same row of three as football's cards) */
 .ag-more:empty { display: none; }
 /* Phone Home: the sport bar and the stage (the figure and the position bar) sit in the same side gaps as the cards
    under them, not edge to edge (owner 11-25) */
