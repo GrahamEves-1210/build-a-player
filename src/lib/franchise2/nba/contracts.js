@@ -28,6 +28,7 @@
 import { rngOf, clamp, r1 } from '../rng'
 import { fixNumbers } from './numbers'
 import { extensionText, teamWords } from './news'
+import { realDeal } from './league'
 import {
   capOf, taxOf, apron1Of, apron2Of, minOf, maxOf, maxPct, twoWayOf, rookieScale, excOf, excYears, indexed,
   payroll, capPayroll, capSheet, capYear, standardOf, twoWaysOf, holdOf, hitOf, hardCapOf, overOf, EXC_TEXT,
@@ -240,6 +241,9 @@ function estimate(F, p, realRow, year, R) {
     const sc = realRow.sc ? [realRow.$, ...realRow.sc] : schedOf({ $: realRow.$, y: realRow.y ?? 1, r: 0.05 })
     putDeal(F, p, { sc: sc.map(v => Math.round(v * 100) / 100), opt: realRow.opt && realRow.opt.yr > year && realRow.opt.yr < year + sc.length ? realRow.opt : null, rs: realRow.rs, ng: realRow.ng }, { year })
     p.bird = realRow.b ?? p.bird
+    // (Bird years are seasons under contract with the team, a season lost to injury included: a man on his own
+    // team's books since before this league year has at least the seasons since he signed, whatever he played)
+    if (realRow.sg != null && realRow.sg < year && realDeal(p.n)?.t === realRow.s) p.bird = Math.max(p.bird ?? 0, year - realRow.sg)
     p.sgn = realRow.sg ?? (realRow.rs && p.dr ? p.dr[0] : year - Math.max(1, Math.min(4, (realRow.ago ?? 1))))
     p.sgd = -1
     if (realRow.x != null) p.ext = realRow.x
@@ -701,7 +705,7 @@ export const BIG_MARKET = new Set(['LAL', 'LAC', 'NYK', 'BKN', 'GSW', 'MIA', 'CH
 // one of the five best). A league's owners differ a little from save to save (seeded: one in four a step looser or
 // tighter). Past the second apron only a spender with one of the three best rosters goes, a little, and never two
 // seasons running (the frozen pick and the repeater bills see to that: team.a2h, the seasons it finished past it).
-//   keep: the line it re-signs and extends its own men to, and sells down to (trades.js salaryDumps)
+//   keep: the line it re-signs and extends its own men to, and sells down to (trades.js sellDown)
 //   add:  the line it won't cross for a new man
 const SPENDERS = new Set(['BOS', 'GSW', 'LAC', 'PHX', 'NYK', 'MIN', 'DEN', 'MIL', 'LAL', 'CLE', 'PHI', 'MIA', 'DAL'])
 const FRUGAL = new Set(['CHI', 'CHA', 'NOP', 'IND', 'UTA', 'WAS'])

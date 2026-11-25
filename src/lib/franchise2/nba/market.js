@@ -4,7 +4,7 @@
 // keep inside the line their ownership spends to (contracts.js spendLines: Bird rights let them go over the cap, but
 // the tax is for contenders; a star is kept whatever the line, the room made by moving other salary) and renounce
 // the rest if they need the room; a few of the men want to test the market first. The teams past their lines move
-// salary (trades.js salaryDumps). Then every round:
+// salary (trades.js sellDown). Then every round:
 //   1. each team that needs a man makes an offer, with the money it can use: its cap room, else its mid-level
 //      (non-taxpayer, taxpayer or room), else the bi-annual, else the minimum, never past the line it adds men to,
 //      the money it's holding for a star of its own, or the room a hard cap leaves it to fill out its roster. The
@@ -37,7 +37,7 @@ import {
   spendLines, strengthRank, teamStrength, BIG_MARKET, mleFor, excFor, cutMan, cutCost, extensionAsk, extendMan,
   ROSTER_MAX, ROSTER_MIN, TWO_WAY_MAX, OFF_MAX, raiseMax, schedOf, legalRoster, outsideBest, sheetOf, superMaxOk,
 } from './contracts'
-import { salaryDumps, shedTo, summerTrades, doTrade, matchLimit, teamSide, whyNot } from './trades'
+import { sellDown, shedTo, summerTrades, doTrade, matchLimit, teamSide, whyNot } from './trades'
 
 export const FA_DAYS = 6
 // his ask comes down each day he goes unsigned (the market drying up), and toward what the league can still pay
@@ -131,7 +131,7 @@ export function keeperOf(F, s, p) {
 }
 // the payroll a team will go to to keep its own man ($M). One of the league's dozen best in his prime: whatever it
 // takes (no front office lets a franchise player walk over the tax). A star (the top forty): past the second apron
-// by a little, for any team: it re-signs him and moves salary elsewhere after (trades.js salaryDumps); a team
+// by a little, for any team: it re-signs him and moves salary elsewhere after (trades.js sellDown); a team
 // already so deep that keeping him would leave it far past the second apron can't, and works a sign-and-trade
 // instead. Anyone else: the line its ownership spends to (contracts.js spendLines: one of its best five to the line
 // for keeping, the rest of the bench to the line for adding). That is where a good-but-not-great player walks: a
@@ -335,7 +335,7 @@ function openMarket(F) {
     const pay = payroll(F, s, year)
     if (pay < capOf(year) - 5) for (const p of (F.fa ?? []).filter(x => x.fr === s && !x.rn && x.hy === year && !x.rfa && !keeperOf(F, s, x))) renounce(F, s, p.i)
   }
-  news.push(...salaryDumps(F, { held: heldBy(F) }))
+  news.push(...sellDown(F, { held: heldBy(F) }))
   return news
 }
 const sumOf = p => r1([p.$ ?? 0, ...(p.sc ?? [])].slice(0, p.y ?? 0).reduce((a, v) => a + v, 0))
@@ -871,7 +871,7 @@ export function cpuOffseason(F, { make = null } = {}) {
     news.push(...cpuExtensions(F, s))
   }
   // (the rosters are set: a team still past the line its ownership spends to moves salary before camp)
-  news.push(...salaryDumps(F))
+  news.push(...sellDown(F))
   // (the pool's rights and holds are spent with the summer)
   for (const p of F.fa ?? []) for (const k of ['fr', 'hy', 'rfa', 'qo', 'qot', 'rsl', 'ask', 'dco', 'osh']) delete p[k]
   F.fao = {}

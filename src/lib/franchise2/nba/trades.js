@@ -9,8 +9,7 @@
 //     cap since 2023-24). A team still under the cap after it absorbs freely (and up to its room + $250K past it).
 //     Over the first apron: 100%. Over the second: 100%, and it can't aggregate two salaries to take one back. A man
 //     on a minimum deal (two years or less) comes in on the minimum exception, no salary back. A trade exception
-//     (team.tpe) can take in salary with nothing going back, the team no further than the first apron after; so can
-//     a league team's unused non-taxpayer mid-level (the 2023 CBA lets it take a contract in by trade).
+//     (team.tpe) can take in salary with nothing going back, the team no further than the first apron after.
 //   - hard caps: a team hard-capped (contracts.js exc.hc) can't end up over its line; taking back more than it sends
 //     hard-caps a team at the first apron, aggregating salaries at the second.
 //   - trade exceptions: a team over the cap that sends out more than it takes back gets one for the difference (each
@@ -22,10 +21,14 @@
 //     him to the sheet until the next summer's free agency is over; a man traded for can't have his
 //     salary combined with others for two months (p.txd); a man the GM's team traded for can't go back to the team it
 //     got him from this league year (no buy-backs).
-//   - picks: only a team's own (as owned now); a top-N protection may be put on a first as it's traded; a swap right
-//     (the other team may swap its first for this team's first that year; once per pick, and it goes with the pick if
-//     it's sold: the holder's pick carries sw.with, the giver's sw.by); the Stepien rule (never without a first
-//     in two drafts running); a team over the second apron can't trade its first seven drafts out (frozen).
+//   - picks: only a team's own (as owned now); a top-N protection may be put on a team's own first as it's traded,
+//     until that draft's order is set (canProtect); a swap right (the other team may swap its first for this team's
+//     first that year; once per pick, and it goes with the pick if it's sold: the holder's pick carries sw.with, the
+//     giver's sw.by; a first can't be traded and swapped in one deal); the Stepien rule (never without a first in two
+//     drafts running, however a protected pick it owes falls: stepienOk); a team over the second apron can't trade
+//     its first seven drafts out (frozen).
+//   - rosters in a deal with the GM's team: a league team it leaves at 16 or 17 waives the end of its bench to make
+//     room, as the league's own deals do (waivesFor: checkTrade names the men in .cut, doTrade waives them).
 //   - a man with a no-trade clause can't be moved without his say (the league's teams don't ask).
 //   - the GM's owner: a deal that adds salary can't take his payroll past ownership's ceiling (contracts.js ownerCap).
 //
@@ -35,6 +38,10 @@
 // deal (what he's paid against what he's worth over the years he's signed, an option year the way its holder will
 // use it; an expiring deal in the season is a rental; a man paid far past his worth is a burden, worth less than
 // nothing), and by his health (the share of this season he'll miss, more of an expiring deal's value).
+// A young man is ranked on what the league can see (tradeRank): the player he is now and the next step a man his age
+// usually takes. His ceiling (pk) is hidden, so it counts only inside that step: a prospect is never worth a proven
+// star on his ceiling alone. A first-round pick on his rookie deal keeps part of his draft slot's value for three
+// seasons (draftFloor).
 // WHAT HE GIVES NOW (nowValue): his level today, for the rest of the season he'll be there for: a contender's measure.
 // WHAT A PICK IS WORTH (pickValue): the chart at the slot it should land (the standings and the team's strength;
 // further out, toward the middle), a protection's odds of conveying, and a year's discount for each draft out.
@@ -49,13 +56,17 @@
 // A DEAL (cpuAnswer): the league team takes it when what it gets beats what it gives by its margin (7%, more for
 // every deal it's already made with the GM's team this league year); a star goes only for a real piece back; a man
 // it just traded for stays put; a man the GM's team just traded for is worth no more than it paid; a contender
-// doesn't take a deal that leaves it weaker for the rest of the season (nowStrength). Short by a
-// reachable amount, it counters (asks for a pick, or takes something off its side).
+// doesn't take a deal that leaves it weaker for the rest of the season (nowStrength); and whatever its own book
+// says, it never sends the GM's team much more than it gets by the league's values (FLEECE). Short by a
+// reachable amount, it counters (counterOf: asks for a pick, a protected first or a swap, wants a protection taken
+// off, protects a first of its own that was asked for, or takes something off its side).
 //
 // THE LEAGUE'S OWN DEALS: contenders buy veterans from rebuilders for picks and salary filler before the deadline
 // (cpuDeadline: almost none before December 15, about half in the deadline's last week, deadline day included); in
 // the summer, taxpayers move bad money to teams with room, with a pick for their trouble
-// (salaryDumps).
+// (salaryDumps). The picks go the way front offices write them (picksCover): a first protected whenever the
+// protected pick covers the price (protFor: the lottery for a team picking late, the top ten in the middle), a swap
+// alongside a first in a bigger deal. A man a team traded for stays put (justIn): he isn't filler in its next deal.
 //
 // State: F.picks (core) [{ y, r, o, t, pr: { top, rl? } | null, sw: { with } | { by } | null }] · F.trl [deal log]
 // · F.trc { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's
@@ -64,7 +75,7 @@ import { rngOf, clamp, r1 } from '../rng'
 import { fixNumbers } from './numbers'
 import { capOf, apron1Of, apron2Of, excOf, payroll, capPayroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
 const minOfY = year => minOf(5, year)
-import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, spendLines, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf, cutMan, ownerCap } from './contracts'
+import { rankOf, rankAt, worthAt, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, cutMan, cutCost, ownerCap } from './contracts'
 
 const shortsOf = F => Object.keys(F.teams ?? {})
 // (the league's own deals collect their wire items here while cpuDeadline / salaryDumps run)
@@ -169,11 +180,32 @@ export const nextDraft = F => (F.phase === 'off' && (F.drd === F.year + 1 || F.d
 export const picksOf = (F, s) => (F.picks ?? []).map((k, i) => ({ ...k, i })).filter(k => k.t === s && k.y >= nextDraft(F))
 // a team's first in a draft, for the Stepien rule (an unprotected first it owns, its own or another's)
 const hasFirst = (picks, s, y) => picks.some(k => k.y === y && k.r === 1 && k.t === s && !k.pr)
-export function stepienOk(F, s, picks = F.picks ?? []) {
+function stepienAs(F, s, picks) {
   const y0 = nextDraft(F)
   const last = Math.max(y0, ...picks.map(k => k.y))
   for (let y = y0; y < last; y++) if (!hasFirst(picks, s, y) && !hasFirst(picks, s, y + 1)) return false
   return true
+}
+// The rule holds every way a protected first it owes can fall: the pick conveys, or it stays home and the debt moves
+// to the next first of its own it still holds (draft.js runLottery: with the protection halved, so it can move once
+// more). None of those may leave the team without a first two drafts running.
+// stepienHit: null (fine), 1 (two drafts running without a first as things stand), or the protected pick whose
+// debt could cause it
+export const stepienOk = (F, s, picks = F.picks ?? []) => !stepienHit(F, s, picks)
+export function stepienHit(F, s, picks = F.picks ?? []) {
+  if (!stepienAs(F, s, picks)) return 1
+  const y0 = nextDraft(F)
+  const last = Math.max(y0, ...picks.map(k => k.y))
+  for (const k of picks) {
+    if (!(k.r === 1 && k.o === s && k.t !== s && k.pr && !k.n && k.y >= y0)) continue
+    const next = picks.filter(q => q.r === 1 && q.o === s && q.t === s && q.y > k.y).sort((x, y) => x.y - y.y)
+    const steps = k.pr.rl || Math.floor(k.pr.top / 2) < 1 ? 1 : 2
+    for (const q of next.slice(0, steps)) if (!stepienAs(F, s, picks.map(x => (x === k ? { ...x, t: s, pr: null } : x === q ? { ...x, t: k.t } : x)))) return k
+    // (no first of its own left on the books to carry the debt: it would fall on the first draft past them, so the
+    // last one on the books has to be covered)
+    if (next.length < steps && k.y < last && !hasFirst(picks, s, last)) return k
+  }
+  return null
 }
 // where a team's pick should land in its round (1 = first): the standings in the season, the team's strength in the
 // offseason; drafts further out drift to the middle
@@ -204,17 +236,21 @@ export function slotValue(n) {
   return 1.5
 }
 // a pick's value, any team's: { v, slot (expected), conv (the odds a protected pick conveys) }
+// where team o's pick should land `out` drafts from the next one, and how sure that is: { slot, sd }
+function slotRead(F, o, out) {
+  const n = shortsOf(F).length || 30
+  const now = projOrder(F)[o] ?? (n + 1) / 2
+  const mid = (n + 1) / 2
+  const w = out <= 0 ? (F.phase === 'season' ? 0.75 : 0.85) : out === 1 ? 0.4 : 0.15
+  return { slot: w * now + (1 - w) * mid, sd: out <= 0 ? (F.phase === 'season' ? 4 : 5) : 8 }
+}
 export function pickValue(F, k) {
   if (!k) return { v: 0 }
   const out = k.y - nextDraft(F)
   const n = shortsOf(F).length || 30
   // (the order's set: the slot itself)
   if (k.n) return { v: slotValue(k.n) * (k.pr?.top && (k.n - (k.r - 1) * n) <= k.pr.top ? 0.25 : 1), slot: k.n, conv: 1 }
-  const now = projOrder(F)[k.o] ?? (n + 1) / 2
-  const mid = (n + 1) / 2
-  const w = out <= 0 ? (F.phase === 'season' ? 0.75 : 0.85) : out === 1 ? 0.4 : 0.15
-  const slot = w * now + (1 - w) * mid
-  const sd = out <= 0 ? (F.phase === 'season' ? 4 : 5) : 8
+  const { slot, sd } = slotRead(F, k.o, out)
   // the odds of every slot in its round (a normal around the projection), the protection's cut
   let v = 0, conv = 0, tot = 0
   for (let s = 1; s <= n; s++) {
@@ -234,17 +270,71 @@ export function pickValue(F, k) {
   // (a draft further out is a guess, and a front office discounts it: the 2033 first is worth about half of next June's)
   return { v: v * Math.pow(0.9, Math.max(0, out)), slot, conv }
 }
+// a swap right's value to its holder: what the better of the two firsts adds to its own, on the odds of where each
+// lands (a contender's swap is worth little to a rebuilder next June; years out, when nobody knows, it's a real asset)
+const SLOT_V = Array.from({ length: 61 }, (_, n) => slotValue(Math.max(1, n)))
+const SWV = new WeakMap()
+export function swapValue(F, giver, holder, y) {
+  const key = `${F.year}|${F.phase}|${F.day ?? 0}|${F.off?.step ?? ''}`
+  let c = SWV.get(F)
+  if (c?.key !== key) { c = { key, m: new Map() }; SWV.set(F, c) }
+  const id = `${giver}|${holder}|${y}`
+  if (c.m.has(id)) return c.m.get(id)
+  const out = y - nextDraft(F), n = shortsOf(F).length || 30
+  const odds = o => {
+    const { slot, sd } = slotRead(F, o, out), a = [0]
+    let tot = 0
+    for (let s = 1; s <= n; s++) { a[s] = Math.exp(-0.5 * ((s - slot) / sd) ** 2); tot += a[s] }
+    return a.map(x => x / tot)
+  }
+  const g = odds(giver), h = odds(holder)
+  let v = 0
+  for (let i = 1; i <= n; i++) for (let j = i + 1; j <= n; j++) v += g[i] * h[j] * (SLOT_V[i] - SLOT_V[j])
+  v *= Math.pow(0.9, Math.max(0, out))
+  c.m.set(id, v)
+  return v
+}
+// the years one team can give another the right to swap firsts: both still own their own first, unprotected, with
+// no swap on it, and its draft order isn't set
+export function swapYears(F, giver, holder) {
+  const own = (s, y) => (F.picks ?? []).some(k => k.y === y && k.r === 1 && k.o === s && k.t === s && !k.pr && !k.sw && !k.n)
+  const out = []
+  for (let y = nextDraft(F), end = y + 7; y < end; y++) if (own(giver, y) && own(holder, y)) out.push(y)
+  return out
+}
+// protections: on a team's own first, unprotected, before its draft order is set (a protected pick that lands inside
+// its protection stays with the team it began with: draft.js runLottery). PROTECTIONS: the ones the league's deals
+// carry (top four, top eight, top ten, the lottery)
+export const PROTECTIONS = [4, 8, 10, 14]
+export const canProtect = (F, s, k) => !!k && k.r === 1 && k.o === s && k.t === s && !k.pr && !k.n
+// the protection a front office puts on its own first when it trades one (0: none to put): a team picking late
+// protects the lottery, one in the middle its top ten, a bad one its top eight or four
+export function protFor(F, s, k) {
+  if (!canProtect(F, s, k)) return 0
+  const { slot } = slotRead(F, k.o, k.y - nextDraft(F))
+  return slot >= 19 ? 14 : slot >= 12 ? 10 : slot >= 7 ? 8 : 4
+}
 
 // ── What a man is worth ──────────────────────────────────────────────────────
-// the league's scale: his rank's worth (a share of the cap) on a curve
-// (a young man is traded for what he'll be: his ceiling counts more than the market's one-year read of it)
+// the league's scale: his rank's worth (a share of the cap) on a curve.
+// A young man is traded on what the league can see: his level now, his age, where he was drafted. His ceiling (pk)
+// is hidden from every front office, so it moves the read only as far as the step a man his age is expected to take
+// anyway (two points at 21 and under, less each year to 24): a prospect is worth the player he has shown he is and
+// a normal young man's next step, never the star he might become.
+const GROWS = ag => (ag <= 21 ? 2 : ag === 22 ? 1.5 : ag === 23 ? 1 : ag === 24 ? 0.5 : 0)
 function tradeRank(F, p) {
   const ag = p.ag ?? 27, o = p.o ?? 60
-  if (ag > 23) return rankOf(F, p)
-  const extra = clamp(0, 10, ((p.pk ?? o) - o) * (ag <= 20 ? 0.45 : ag <= 22 ? 0.35 : 0.25)) - clamp(0, 6, ((p.pk ?? o) - o) * (ag <= 21 ? 0.4 : 0.3))
-  return Math.min(rankOf(F, p), rankAt(F, scoreOf(p) + Math.max(0, extra)))
+  if (ag > 24) return rankOf(F, p)
+  return rankAt(F, o + clamp(0, GROWS(ag), ((p.pk ?? o) - o) * 0.3))
 }
 const talentPts = (F, p) => { const w = worthAt(F, tradeRank(F, p)) / capOf(capYear(F)); return 100 * Math.pow(Math.max(0, w) / 0.3, 1.7) }
+// a first-round pick on his rookie deal holds part of what the pick was worth, whatever his first seasons say: all of
+// it as a rookie, less each season the league has watched him
+const DRAFT_HOLD = [1, 0.8, 0.5, 0.2]
+function draftFloor(F, p) {
+  if (!p.rs || !p.dr || p.dr[1] !== 1 || !(p.dr[2] >= 1)) return 0
+  return slotValue(p.dr[2]) * (DRAFT_HOLD[Math.max(0, capYear(F) - p.dr[0])] ?? 0)
+}
 // (the market's rank already marks an older man down for what he is now: scoreOf takes a point or so a year off
 // past 31. This is the prime he has left over the years he's signed for. A productive veteran on a short deal
 // loses less of it: he only has to be good for the seasons he's paid for)
@@ -265,7 +355,8 @@ const optAt = (F, p, k) => (p.opt && p.opt.yr != null && capYear(F) + k >= p.opt
 function dealOf(F, p) {
   const sal = salaries(p, 4)
   if (!sal.length) return { f: 0, burden: 0 }
-  const W = worthOf(F, p)
+  // (his worth on the same read the league trades him on: tradeRank)
+  const W = Math.max(minOf(p.ys ?? 0, capYear(F)), worthAt(F, tradeRank(F, p)))
   const yrs = sal.length
   let sur = 0, tot = 0, over = 0
   sal.forEach((s, k) => {
@@ -279,7 +370,7 @@ function dealOf(F, p) {
   // (an expiring deal: the rest of a season, then his Bird rights; a rookie deal comes with restricted free agency)
   if (yrs === 1 && !p.rs) f *= F.phase === 'season' ? 0.6 + 0.4 * (1 - (F.day ?? 0) / (F.days ?? SEASON_DAYS)) : 0.85
   // (a rookie-scale deal is cheap control however he's playing: never a burden)
-  if (p.rs) return { f: Math.min(1.4, Math.max(0.8, f) * 1.1), burden: 0, yrs }
+  if (p.rs) return { f: Math.min(1.3, Math.max(0.8, f) * 1.1), burden: 0, yrs }
   return { f, burden: over * 0.8, yrs }
 }
 // ── Injuries ─────────────────────────────────────────────────────────────────
@@ -320,7 +411,8 @@ function injF(F, p, yrs) {
 export function manValue(F, p) {
   if (!p || p.tw) return p?.tw ? 1 : 0
   const d = dealOf(F, p)
-  return talentPts(F, p) * ageF(p, d.yrs) * d.f * injF(F, p, d.yrs) - d.burden
+  const hurt = injF(F, p, d.yrs)
+  return Math.max(talentPts(F, p) * ageF(p, d.yrs) * d.f * hurt - d.burden, draftFloor(F, p) * hurt)
 }
 // what he gives a team this season (a contender's measure): his level now, whatever his age, for the part of the
 // season (and the playoffs) he'll be there for; an overpaid man's money still counts against it a little
@@ -405,13 +497,15 @@ function taxSwing(F, s, outMen, inMen) {
   }
   return pts
 }
+// a pick in a deal: the pick itself, or a swap right carrying its value (pkList)
+const pkVal = (F, k) => k._swap ?? pickValue(F, k).v
 export function teamSide(F, s, inn, out) {
   const sit = s === F.team ? 'mid' : situationOf(F, s)
   const gone = new Set(out.pl.map(p => p.i))
   const ins = inn.pl.map(p => ({ p, v: inValue(F, s, p, gone, sit) })).sort((a, b) => b.v - a.v)
   const pos = ins.filter(x => x.v > 0), neg = ins.filter(x => x.v <= 0)
-  const vIn = pos.reduce((a, x, j) => a + x.v * (PKG[j] ?? 0.2), 0) + neg.reduce((a, x) => a + x.v, 0) + inn.pk.reduce((a, k) => a + pickValue(F, k).v * pickMod(sit), 0)
-  const vOut = out.pl.reduce((a, p) => a + outValue(F, s, p, sit), 0) + out.pk.reduce((a, k) => a + pickValue(F, k).v * pickMod(sit), 0)
+  const vIn = pos.reduce((a, x, j) => a + x.v * (PKG[j] ?? 0.2), 0) + neg.reduce((a, x) => a + x.v, 0) + inn.pk.reduce((a, k) => a + pkVal(F, k) * pickMod(sit), 0)
+  const vOut = out.pl.reduce((a, p) => a + outValue(F, s, p, sit), 0) + out.pk.reduce((a, k) => a + pkVal(F, k) * pickMod(sit), 0)
   const tax = taxSwing(F, s, out.pl, inn.pl)
   // (more men in than out: a roster spot each)
   const cost = Math.max(0, inn.pl.filter(p => !p.tw).length - out.pl.filter(p => !p.tw).length) * 2
@@ -435,11 +529,21 @@ export function matchLimit(F, s, out, after, year = capYear(F)) {
 export const onMinimum = (p, year) => !p.tw && (p.y ?? 0) >= 1 && (p.y ?? 0) <= 2 && hitOf(p, year, year) > 0 && hitOf(p, year, year) <= minOf(p.ys ?? 0, year) + 0.05
 // a team's trade exceptions still good (team.tpe [{ $, n, until }]; until a calDay)
 export const tpesOf = (F, s) => (F.teams[s]?.tpe ?? []).filter(x => x.until > calDay(F) && x.$ > 0.05)
+// why a side's salaries don't match, the way the league office says it
+function matchWhy(s, inn, out, lim, room, apron) {
+  const $ = v => `$${r1(v).toFixed(1)}M`
+  if (out < 0.05) return room > 0.3 ? `The ${s} have ${$(room)} in cap room. They can't take in ${$(inn)} without sending salary back` : `The ${s} are over the cap. They can't take in ${$(inn)} without sending salary back`
+  if (apron) return `The ${s} would take back ${$(inn)} for ${$(out)} out. Over the first apron, they can't take back more than they send`
+  return `The ${s} would take back ${$(inn)} for ${$(out)} out. They can take back ${$(lim)} at most`
+}
 // one team's side of the rules: { ok, why, O, I, after, hc1 (it takes back more than it sends: hard-capped at the
 // first apron), tpe (the exception it absorbs into), agg }
-// what's left of a team's non-taxpayer mid-level to take a contract in with (none once it has used its cap room or
-// another mid-level)
+// what's left of a league team's non-taxpayer mid-level to take a contract in with (the 2023 CBA lets a team take a
+// man in by trade with it, as it would sign a free agent: nothing going back, under the first apron after and
+// hard-capped there; none once it has used its cap room or another mid-level). The league's teams use it to take on
+// salary a taxpayer has to move; the GM's mid-level stays his to spend in free agency.
 function mleLeft(F, s, year) {
+  if (s === F.team) return 0
   const e = excFor(F, s, year)
   return e.room ? 0 : e.mk == null ? excOf('nt', year) : e.mk === 'nt' ? e.mle ?? 0 : 0
 }
@@ -463,16 +567,14 @@ function sideRules(F, s, outMen, inMen, outPk, inPk, cuts = 0) {
     if (capAfter > cap + 0.001 && IM > 0.001) {
       const room = capPay < cap ? O + cap - capPay + 0.25 : 0
       const lim = Math.max(matchLimit(F, s, O, after, year), room)
-      if (IM > lim + 0.001) {
+      // (past what it can take back: a league team's mid-level takes him in when no trade exception will: mleLeft)
+      mle = IM > lim + 0.001 && O < 0.05 && after <= apron1Of(year) + 0.001 && IM <= mleLeft(F, s, year) + 0.001 && !tpesOf(F, s).some(x => IM <= x.$ + 0.001)
+      if (IM > lim + 0.001 && !mle) {
         // (a trade exception can absorb it instead: all the salary coming in under one exception, nothing combined
         // with it, and the team no further than the first apron after)
         const fit = tpesOf(F, s).filter(x => IM <= x.$ + 0.001).sort((x, y) => x.$ - y.$)[0]
         if (fit && after <= apron1Of(year) + 0.001) tpe = fit
-        // (the 2023 CBA: a team may take a contract in with its non-taxpayer mid-level, as it would sign a free agent
-        // with it: nothing going back, under the first apron after and hard-capped there. The league's teams use it
-        // to take on salary a taxpayer has to move; the GM's mid-level stays his to spend in free agency)
-        else if (O < 0.05 && s !== F.team && IM <= mleLeft(F, s, year) + 0.001 && after <= apron1Of(year) + 0.001) mle = true
-        else return { ok: false, why: O < 0.05 ? `The ${s} are over the cap: they can't take in $${r1(IM)}M in salary without sending salary back` : `The ${s} would take back $${r1(IM)}M in salary for $${r1(O)}M out; over the cap they can take back $${r1(lim)}M at most`, k: 'match' }
+        else return { ok: false, why: matchWhy(s, IM, O, lim, pay < cap ? cap - pay : 0, after > apron1Of(year)), k: 'match' }
       }
       // (taking back more than it sends, past what its room covers: hard-capped at the first apron, the 2023 CBA)
       if (IM > O + 0.001 && IM > room + 0.001) hc1 = true
@@ -537,17 +639,21 @@ export function checkTrade(F, deal) {
     if (w) return { ok: false, why: w, k: 'man', who: p }
   }
   // picks: owned, real, not twice, protections on firsts only
+  // (a first that's in the deal itself can't also be one side of a swap in it)
+  const sent = new Set([...(deal.pa ?? []), ...(deal.pb ?? [])].filter(e => e?.swap == null).map(pIdx))
   for (const [s, list] of [[a, deal.pa ?? []], [b, deal.pb ?? []]]) {
     const seen = new Set()
     for (const e of list) {
       if (e?.swap != null) {
         const o = s === a ? b : a
-        const mine = (F.picks ?? []).find(k => k.y === e.swap && k.r === 1 && k.o === s && k.t === s)
-        const theirs = (F.picks ?? []).find(k => k.y === e.swap && k.r === 1 && k.o === o && k.t === o)
+        const at = t => (F.picks ?? []).findIndex(k => k.y === e.swap && k.r === 1 && k.o === t && k.t === t)
+        const mi = at(s), ti = at(o), mine = F.picks?.[mi], theirs = F.picks?.[ti]
         if (!mine || !theirs || mine.pr || theirs.pr) return { ok: false, why: `A ${e.swap} swap needs both teams to own their own unprotected first`, k: 'pick' }
+        if (mine.n || theirs.n) return { ok: false, why: `The ${e.swap} draft order is set: those picks can't be swapped now`, k: 'pick' }
         // (one swap a pick: a first already promised in a swap can't be promised again)
         if (mine.sw || theirs.sw) return { ok: false, why: `A ${e.swap} first in the deal already carries a swap`, k: 'pick' }
         if (seen.has(`sw${e.swap}`)) return { ok: false, why: 'A swap is in the deal twice', k: 'pick' }
+        if (sent.has(mi) || sent.has(ti)) return { ok: false, why: `A ${e.swap} first can't be traded and swapped in the same deal`, k: 'pick' }
         seen.add(`sw${e.swap}`)
         continue
       }
@@ -555,13 +661,15 @@ export function checkTrade(F, deal) {
       if (!k || k.t !== s || k.y < nextDraft(F)) return { ok: false, why: 'A pick in the deal has changed hands', k: 'pick' }
       if (seen.has(i)) return { ok: false, why: 'A pick is in the deal twice', k: 'pick' }
       seen.add(i)
-      if (e?.top != null && (k.r !== 1 || k.pr || e.top < 1 || e.top > 29)) return { ok: false, why: 'Protections go on unprotected first-round picks (top 1 to 29)', k: 'pick' }
+      if (e?.top != null && (!canProtect(F, s, k) || e.top < 1 || e.top > 29)) return { ok: false, why: k.n ? `The ${k.y} draft order is set: that pick can't be protected now` : 'A protection goes on a team\'s own unprotected first-round pick', k: 'pick' }
     }
   }
   const pk = (list) => (list ?? []).filter(e => e?.swap == null).map(e => F.picks[pIdx(e)])
-  const ra = sideRules(F, a, am, bm, pk(deal.pa), pk(deal.pb), deal.cut?.[a] ?? 0)
+  // (a league team a deal with the GM's team leaves past 15 waives a man or two to make room: waivesFor)
+  const wv = waivesFor(F, deal)
+  const ra = sideRules(F, a, am, bm, pk(deal.pa), pk(deal.pb), deal.cut?.[a] ?? wv[a]?.length ?? 0)
   if (!ra.ok) return ra
-  const rb = sideRules(F, b, bm, am, pk(deal.pb), pk(deal.pa), deal.cut?.[b] ?? 0)
+  const rb = sideRules(F, b, bm, am, pk(deal.pb), pk(deal.pa), deal.cut?.[b] ?? wv[b]?.length ?? 0)
   if (!rb.ok) return rb
   // (the GM's owner: a deal that adds salary stops at his ceiling; one that cuts payroll always goes, and a man on the
   // minimum comes in past it, as he signs past it (contracts.js canSign). The league's teams have none)
@@ -571,8 +679,34 @@ export function checkTrade(F, deal) {
     if (r.after - (r.I - r.IM) > o.$ + 0.01) return { ok: false, why: o.why, k: 'owner' }
   }
   const P = picksAfter(F, deal)
-  for (const s of [a, b]) if (!stepienOk(F, s, P)) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
-  return { ok: true, a: ra, b: rb }
+  for (const s of [a, b]) {
+    const hit = stepienHit(F, s, P)
+    if (hit === 1) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
+    // (a protected first that stays home is owed later: the league counts every draft the debt could land on)
+    if (hit) return { ok: false, why: `The Stepien rule: the ${s} owe a ${hit.y} first that is top-${hit.pr.top} protected. If it doesn't convey, a later first goes in its place, and this deal could leave them two straight drafts without one`, k: 'stepien' }
+  }
+  const cut = Object.entries(wv).flatMap(([s, men]) => men.map(p => ({ s, i: p.i, n: p.n })))
+  return { ok: true, a: ra, b: rb, ...(cut.length && { cut }) }
+}
+// a league team that a deal with the GM's team leaves past 15 standard contracts in the season makes room the way
+// the league's own deals do: it waives the end of its bench (the men it gives up least to let go and owes least),
+// two at most. { [short]: [men] }; a team that would need more can't make the deal
+const WAIVE_MAX = 2
+export function waivesFor(F, deal) {
+  const out = {}
+  if (F.phase !== 'season' || (deal.a !== F.team && deal.b !== F.team)) return out
+  for (const [s, o, give, get] of [[deal.a, deal.b, deal.ga ?? [], deal.gb ?? []], [deal.b, deal.a, deal.gb ?? [], deal.ga ?? []]]) {
+    if (s === F.team || !F.teams[s] || !F.teams[o]) continue
+    const gone = new Set(give)
+    const inn = get.map(id => F.teams[o].r.find(p => p.i === id)).filter(p => p && !p.tw).length
+    const mine = standardOf(F.teams[s]).filter(p => !gone.has(p.i))
+    const n = mine.length + inn - ROSTER_MAX
+    if (n < 1 || n > WAIVE_MAX) continue
+    const cost = p => Math.max(0, manValue(F, p)) + cutCost(F, p).total * 0.5
+    const men = mine.map(p => ({ p, c: cost(p) })).sort((x, y) => x.c - y.c || (x.p.o ?? 0) - (y.p.o ?? 0)).slice(0, n).map(x => x.p)
+    if (men.length === n) out[s] = men
+  }
+  return out
 }
 // why a man can't be traded now (or null)
 export function whyNot(F, s, p) {
@@ -595,9 +729,12 @@ function resolve(F, deal) {
   const bk = (deal.pb ?? []).map(e => (e?.swap != null ? { swap: e.swap } : { ...F.picks[pIdx(e)], ...(e?.top && { pr: { top: e.top } }) }))
   return { am, bm, ak, bk }
 }
-// a swap right's value to its holder: what the better of the two picks adds, about a fifth of a pick in the middle
-const swapValue = (F, giver, y) => { const o = projOrder(F)[giver] ?? 15; const out = y - nextDraft(F); return Math.max(2, (20 - o) * 0.9 + 6) * Math.pow(0.9, Math.max(0, out)) }
-const pkList = (F, list, giver) => list.map(k => (k.swap != null ? { y: k.swap, r: 1, o: giver, sw: 1, _swap: swapValue(F, giver, k.swap) } : k))
+// a side's picks for the values: a swap right as its own entry, carrying what it's worth to the team that would hold it
+const pkList = (F, list, giver, holder) => list.map(k => (k.swap != null ? { y: k.swap, r: 1, o: giver, sw: 1, _swap: swapValue(F, giver, holder, k.swap) } : k))
+// a deal's pick entries from one team to another, ready for teamSide ([index | { i, top } | { swap }])
+const pkOf = (F, list, giver, holder) => pkList(F, (list ?? []).map(e => (e?.swap != null ? { swap: e.swap } : { ...F.picks[pIdx(e)], ...(e?.top && { pr: { top: e.top } }) })), giver, holder)
+// how far past even the league's values a team will go for the GM's team, whatever its own book says
+const FLEECE = 1.15
 // team s (deal.b, the league's team) on a deal with deal.a: { yes, why, short, side, need }
 export function decide(F, deal, { user = true } = {}) {
   const { a, b } = deal
@@ -611,10 +748,10 @@ export function decide(F, deal, { user = true } = {}) {
   const fresh = bm.find(p => p.tx && p.tx[1] === ly && p.tx[2] != null && (F.phase !== 'season' || (F.day ?? 0) - p.tx[2] < 40))
   // (packaged with others inside two months of the trade that brought him: the league's rule, not the team's call)
   if (fresh) return { yes: false, why: bm.length > 1 && aggLocked(F, fresh) ? 'agg' : 'new', who: fresh }
-  const inPk = pkList(F, ak, a), outPk = pkList(F, bk, b)
-  const side = teamSide(F, b, { pl: am, pk: inPk.filter(k => !k._swap) }, { pl: bm, pk: outPk.filter(k => !k._swap) })
-  const sw = inPk.reduce((x, k) => x + (k._swap ?? 0), 0) - outPk.reduce((x, k) => x + (k._swap ?? 0), 0)
-  side.in += Math.max(0, sw); side.out += Math.max(0, -sw); side.gain += sw
+  const inPk = pkList(F, ak, a, b), outPk = pkList(F, bk, b, a)
+  const side = teamSide(F, b, { pl: am, pk: inPk }, { pl: bm, pk: outPk })
+  // (the men it would waive to make room: what they're worth to it comes off its side)
+  if (user) for (const m of waivesFor(F, deal)[b] ?? []) { const c = Math.max(0, manValue(F, m)); side.cost += c; side.gain -= c }
   if (side.in <= 0.5 && side.tax <= 1) return { yes: false, why: 'nothing', side, short: Infinity }
   // a contender doesn't take a step back this season, whatever the future it's offered
   if (side.sit === 'win' && bm.length) {
@@ -624,11 +761,20 @@ export function decide(F, deal, { user = true } = {}) {
   // a star goes only for a real piece back: one player or pick worth at least half of him
   const top = Math.max(0, ...bm.map(p => outValue(F, b, p, side.sit)))
   if (user && top >= 60) {
-    const best = Math.max(0, ...side.ins.map(x => x.v), ...inPk.map(k => (k._swap ?? pickValue(F, k).v) * pickMod(side.sit)))
-    if (best < top * 0.5) return { yes: false, why: 'star', side, short: Infinity, who: [...bm].sort((x, y) => (y.o ?? 0) - (x.o ?? 0))[0] }
+    const best = Math.max(0, ...side.ins.map(x => x.v), ...inPk.map(k => pkVal(F, k) * pickMod(side.sit)))
+    // (best: the best player offered, for the answer's words)
+    if (best < top * 0.5) return { yes: false, why: 'star', side, short: Infinity, who: [...bm].sort((x, y) => (y.o ?? 0) - (x.o ?? 0))[0], best: [...am].sort((x, y) => (y.o ?? 0) - (x.o ?? 0))[0] ?? null }
   }
   const need = marginOf(F, b, side.out, user)
-  const short = need - side.gain
+  let short = need - side.gain
+  // (hard to fleece: a contender's or a rebuilder's own book can make a lopsided deal look good to it, so with the
+  // GM's team it also holds to the league's values: it never sends much more than it gets. A bad contract's burden
+  // is in those values, so a salary dump still goes for what it costs to take)
+  if (user) {
+    const g = gauge(F, deal)
+    const over = g.b - (Math.max(0, g.a) * FLEECE + 2)
+    if (g.b > 0 && over > 0) short = Math.max(short, over)
+  }
   return { yes: short <= 0, why: short <= 0 ? 'yes' : side.why ?? 'short', short, side, need }
 }
 export function sayOf(F, s, d) {
@@ -641,7 +787,10 @@ export function sayOf(F, s, d) {
     case 'agg': return `${aggText(F, d.who)}.`
     case 'calls': return `The ${N} have stopped taking calls this week.`
     case 'nothing': return `The ${N} want something back.`
-    case 'star': return `The ${N} want a front-line player or a high pick for ${who}, not depth.`
+    // (by the best man offered: a starter isn't called depth)
+    case 'star': return !d.best ? `The ${N} want a front-line player or a high lottery pick for ${who}.`
+      : (d.best.o ?? 0) >= 78 || ((d.best.ag ?? 30) <= 23 && (d.best.o ?? 0) >= 74) ? `The ${N} don't see ${d.best.n} as the main piece of a deal for ${who}. They want a star or a high lottery pick back.`
+        : `The ${N} want a front-line player or a high pick for ${who}, not depth.`
     case 'reb': return `The ${N} are rebuilding. They want picks and young players, not veterans.`
     case 'win': return `The ${N} are playing for this season. They won't move ${who ?? 'him'} for a step back.`
     default: return d.short <= (d.need ?? 5) * 1.5 ? `The ${N} want a little more.` : `The ${N} say the offer isn't close.`
@@ -658,15 +807,33 @@ export function cpuAnswer(F, deal) {
 }
 // a counter within reach: one of the GM's picks added (the cheapest that covers it), or one thing off the league
 // team's side; the one that moves the gauge least
+// (the picks the way front offices write them: one more of the GM's picks, a first with the protection a team in
+// his place would put on it or without; the right to swap firsts in a year; a protection he put on a pick taken
+// off; a protection on a first of its own that he asked for)
 export function counterOf(F, deal, d) {
   if (!d.side || !(d.short > 0) || d.short > Math.max(60, d.side.out * 0.8)) return null
   if (d.why !== 'short' && d.why !== 'reb') return null
+  const { a, b } = deal
+  const pa = deal.pa ?? [], pb = deal.pb ?? []
   const tries = []
-  const used = new Set((deal.pa ?? []).map(pIdx))
-  for (const k of picksOf(F, deal.a)) if (!used.has(k.i)) tries.push({ ...deal, pa: [...(deal.pa ?? []), k.i] })
-  if ((deal.gb ?? []).length + (deal.pb ?? []).length >= 2) {
+  const used = new Set(pa.filter(e => e?.swap == null).map(pIdx))
+  for (const k of picksOf(F, a)) {
+    if (used.has(k.i)) continue
+    tries.push({ ...deal, pa: [...pa, k.i] })
+    const top = protFor(F, a, k)
+    if (top) tries.push({ ...deal, pa: [...pa, { i: k.i, top }] })
+  }
+  const swapped = new Set([...pa, ...pb].filter(e => e?.swap != null).map(e => e.swap))
+  for (const y of swapYears(F, a, b)) if (!swapped.has(y)) tries.push({ ...deal, pa: [...pa, { swap: y }] })
+  pa.forEach((e, j) => { if (e?.top) tries.push({ ...deal, pa: pa.map((x, jj) => (jj === j ? e.i : x)) }) })
+  pb.forEach((e, j) => {
+    if (e?.swap != null || e?.top) return
+    const i = pIdx(e), top = protFor(F, b, F.picks?.[i])
+    if (top) tries.push({ ...deal, pb: pb.map((x, jj) => (jj === j ? { i, top } : x)) })
+  })
+  if ((deal.gb ?? []).length + pb.length >= 2) {
     for (const id of deal.gb ?? []) tries.push({ ...deal, gb: deal.gb.filter(x => x !== id) })
-    for (const e of deal.pb ?? []) tries.push({ ...deal, pb: deal.pb.filter(x => x !== e) })
+    for (const e of pb) tries.push({ ...deal, pb: pb.filter(x => x !== e) })
   }
   let best = null
   const base = gauge(F, deal)
@@ -684,9 +851,9 @@ export function counterOf(F, deal, d) {
 const pkg = vals => { const s = [...vals].sort((x, y) => y - x); return s.filter(v => v > 0).reduce((t, v, j) => t + v * (PKG[j] ?? 0.2), 0) + s.filter(v => v <= 0).reduce((t, v) => t + v, 0) }
 export function gauge(F, deal) {
   const { am, bm, ak, bk } = resolve(F, deal)
-  const pv = (list, giver) => pkList(F, list, giver).reduce((t, k) => t + (k._swap ?? pickValue(F, k).v), 0)
-  const ga = pkg(am.map(p => manValue(F, p))) + pv(ak, deal.a)
-  const gb = pkg(bm.map(p => manValue(F, p))) + pv(bk, deal.b)
+  const pv = (list, giver, holder) => pkList(F, list, giver, holder).reduce((t, k) => t + pkVal(F, k), 0)
+  const ga = pkg(am.map(p => manValue(F, p))) + pv(ak, deal.a, deal.b)
+  const gb = pkg(bm.map(p => manValue(F, p))) + pv(bk, deal.b, deal.a)
   const lean = Math.abs(ga) + Math.abs(gb) > 0 ? clamp(-1, 1, (gb - ga) / Math.max(Math.abs(ga), Math.abs(gb), 8)) : 0
   return { a: ga, b: gb, lean }
 }
@@ -717,13 +884,15 @@ export function doTrade(F, deal, { user = null } = {}) {
   const line = tradeLine(F, deal)
   const g = gauge(F, deal)
   const isUser = user ?? (a === F.team || b === F.team)
+  // (the men a league team waives to make room in a deal with the GM's team: named before anyone moves)
+  const wv = isUser && !deal.cut ? waivesFor(F, deal) : {}
   // the books: aggregating salaries over the cap hard-caps a team at the second apron; taking back more than it
   // sends, at the first; an exception it absorbs a man into is used up; sending out more than it takes back, over
   // the cap, makes a trade exception for the difference (good for a year)
   const year = capYear(F), now = calDay(F)
   for (const [s, out, inn] of [[a, am, bm], [b, bm, am]]) {
     if (F.noCap && s === F.team) continue
-    const sr = sideRules(F, s, out, inn, [], [])
+    const sr = sideRules(F, s, out, inn, [], [], deal.cut?.[s] ?? wv[s]?.length ?? 0)
     const team = F.teams[s]
     if (sr.agg || sr.hc1) {
       const e = excFor(F, s, year)
@@ -779,7 +948,14 @@ export function doTrade(F, deal, { user = null } = {}) {
   const item = { k: 'trade', tag: 'TRADE', s: a, text: line, ...([...am, ...bm].some(p => rankOf(F, p) <= 40) && { big: true }) }
   SINK?.push(item)
   F.trn = (F.trn ?? 0) + 1
-  return { line, news: [item] }
+  const news = [item], cut = []
+  for (const [s, men] of Object.entries(wv)) for (const m of men) {
+    if (!F.teams[s].r.includes(m)) continue
+    cutMan(F, s, m.i)
+    cut.push({ s, i: m.i, n: m.n })
+    news.push({ k: 'cut', tag: 'WAIVED', s, text: `The ${s} have waived ${posOf(m)} ${m.n} to make room after the trade` })
+  }
+  return { line, news, ...(cut.length && { cut }) }
 }
 // the GM proposes (deal.a = F.team): { ok (done), say: 'yes'|'no'|'counter'|'bad', text, counter }
 export function proposeTrade(F, deal) {
@@ -787,7 +963,7 @@ export function proposeTrade(F, deal) {
   if (!c.ok) return { ok: false, say: 'bad', text: c.why }
   if (callsLeft(F, deal.b) <= 0) return { ok: false, say: 'no', text: sayOf(F, deal.b, { why: 'calls' }) }
   const ans = cpuAnswer(F, deal)
-  if (ans.yes) { const t = doTrade(F, deal); return { ok: true, say: 'yes', text: ans.text, line: t.line, news: t.news } }
+  if (ans.yes) { const t = doTrade(F, deal); return { ok: true, say: 'yes', text: ans.text, line: t.line, news: t.news, ...(t.cut && { cut: t.cut }) } }
   const k = callKey(F), was = F.trc?.[deal.b]
   F.trc = { ...(F.trc ?? {}), [deal.b]: [k, was && was[0] === k ? was[1] + 1 : 1] }
   return { ok: false, say: ans.counter ? 'counter' : 'no', text: ans.text, counter: ans.counter ?? null, why: ans.why }
@@ -796,11 +972,14 @@ export function proposeTrade(F, deal) {
 // ── The league's own deals ───────────────────────────────────────────────────
 // salary filler: the team's least valuable men (out of its top seven) whose salaries make a deal legal for both
 // sides; returns [men] or null
+// a man a team traded for stays put for a while: the league's teams don't flip a man the week they get him (and for
+// two months his salary can't be combined with others anyway). In the season: anyone it traded for this league year
+const justIn = (F, p) => aggLocked(F, p) || (F.phase === 'season' && p.tx?.[1] === lyOf(F) && (p.tx[2] ?? -1) >= 0)
 function fillerFor(F, s, need, avoid = new Set(), max = 3) {
   const year = capYear(F)
   // (the core stays: the team's best four; a deadline deal moves the rotation's mid-salary men, the way the league's do)
   const top7 = new Set(F.teams[s].r.filter(p => !p.tw).sort((x, y) => (y.o ?? 0) - (x.o ?? 0)).slice(0, 4).map(p => p.i))
-  const pool = F.teams[s].r.filter(p => !p.tw && !top7.has(p.i) && !avoid.has(p.i) && !whyNot(F, s, p) && hitOf(p, year, year) > 0).sort((x, y) => (need > 12 ? hitOf(y, year, year) - hitOf(x, year, year) : 0) || manValue(F, x) - manValue(F, y))
+  const pool = F.teams[s].r.filter(p => !p.tw && !top7.has(p.i) && !avoid.has(p.i) && !justIn(F, p) && !whyNot(F, s, p) && hitOf(p, year, year) > 0).sort((x, y) => (need > 12 ? hitOf(y, year, year) - hitOf(x, year, year) : 0) || manValue(F, x) - manValue(F, y))
   const out = []
   let sum = 0
   for (const p of pool) {
@@ -811,20 +990,36 @@ function fillerFor(F, s, need, avoid = new Set(), max = 3) {
   return sum >= need ? out : null
 }
 // the fewest of team s's picks worth at least `want` to `to` (seconds first): [index] or null
+// (the deal's entries: a second, a first as it is, a first of its own with the protection a team in its place puts
+// on one, the right to swap firsts in a year. The cheapest that covers goes, so a first is protected whenever the
+// protected pick is enough, and a swap sweetens a deal a second can't)
 function picksCover(F, s, want, to) {
-  const mine = picksOf(F, s).map(k => ({ i: k.i, v: pickValue(F, k).v * pickMod(situationOf(F, to)), r: k.r })).sort((x, y) => x.v - y.v)
   if (want <= 0) return []
+  const mod = pickMod(situationOf(F, to))
+  // (key: the first it stands on; a team's own first in a year can go one way only: as it is, protected, or swapped)
+  const C = []
+  for (const k of picksOf(F, s)) {
+    const key = k.r === 1 && k.o === s ? `f${k.y}` : `p${k.i}`
+    C.push({ e: k.i, v: pickValue(F, k).v * mod, key, o: k.r === 2 ? 0 : 3 })
+    const top = protFor(F, s, k)
+    if (top) C.push({ e: { i: k.i, top }, v: pickValue(F, { ...k, pr: { top } }).v * mod, key, o: 2 })
+  }
+  // (a swap goes with a first in a bigger deal, the way the league's deals carry one; it's never the whole price,
+  // and one worth less than a second isn't an offer)
+  for (const y of swapYears(F, s, to)) { const v = swapValue(F, s, to, y) * mod; if (v >= 4) C.push({ e: { swap: y }, v, key: `f${y}`, o: 1 }) }
+  C.sort((x, y) => x.v - y.v || x.o - y.o)
   // (never far past what's owed: a first isn't thrown in to cover a second's worth)
   const ok = v => v >= want && v <= want * 1.5 + 4
-  for (const k of mine) if (ok(k.v)) return [k.i]
-  for (let x = 0; x < mine.length; x++) for (let y = x + 1; y < mine.length; y++) if (ok(mine[x].v + mine[y].v)) return [mine[x].i, mine[y].i]
+  for (const k of C) if (k.o !== 1 && ok(k.v)) return [k.e]
+  const pair = (x, y) => x.key !== y.key && (x.o !== 1 || y.o >= 2) && (y.o !== 1 || x.o >= 2)
+  for (let x = 0; x < C.length; x++) for (let y = x + 1; y < C.length; y++) if (pair(C[x], C[y]) && ok(C[x].v + C[y].v)) return [C[x].e, C[y].e]
   return null
 }
 // one deal: rebuilding team a's veteran to contender b, for filler and picks (both sides by their own book; in the
 // deadline's last week, `wide`, more of the seller's men are on the table and the buyer pays a little over its book)
 function tryBuy(F, R, a, b, wide = false) {
   const year = capYear(F)
-  const vets = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.ag ?? 0) >= 25 && rankOf(F, p) <= 230 && manValue(F, p) > 2 && !(p.tx && p.tx[1] === lyOf(F)))
+  const vets = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.ag ?? 0) >= 25 && rankOf(F, p) <= 230 && manValue(F, p) > 2 && !(p.tx && p.tx[1] === lyOf(F)) && !justIn(F, p))
   for (const p of R.shuffle(vets).slice(0, wide ? 5 : 3)) {
     // (the contender's filler, enough to match; none needed if it has the room)
     const sal = hitOf(p, year, year)
@@ -844,7 +1039,7 @@ function tryBuy(F, R, a, b, wide = false) {
     const base = { a: b, b: a, ga: fill.map(x => x.i), gb: [p.i], pa: [], pb: [], ...(cutN && { cut: { [a]: cutN } }) }
     if (!checkTrade(F, base).ok) continue
     // (a buyer adds payroll only inside the line its ownership spends to: contracts.js spendLines)
-    if (sal > fill.reduce((x, q) => x + hitOf(q, year, year), 0) && payB + sal - fill.reduce((x, q) => x + hitOf(q, year, year), 0) > spendLines(F, b, year).keep) continue
+    if (payB + sal - fill.reduce((x, q) => x + hitOf(q, year, year), 0) > Math.max(payB, spendLines(F, b, year).keep)) continue
     // the rebuilder's price, in the contender's picks
     const sideA = teamSide(F, a, { pl: fill, pk: [] }, { pl: [p], pk: [] })
     const want = -sideA.gain + marginOf(F, a, sideA.out, false)
@@ -853,7 +1048,7 @@ function tryBuy(F, R, a, b, wide = false) {
     const deal = { ...base, pa: pk }
     if (!checkTrade(F, deal).ok) continue
     const dA = decide(F, { a: b, b: a, ga: deal.ga, gb: deal.gb, pa: deal.pa, pb: [] }, { user: false })
-    const sideB = teamSide(F, b, { pl: [p], pk: [] }, { pl: fill, pk: pk.map(i => F.picks[i]) })
+    const sideB = teamSide(F, b, { pl: [p], pk: [] }, { pl: fill, pk: pkOf(F, pk, b, a) })
     if (!dA.yes) continue
     // (in the deadline's last week a buyer pays a little over its own book: its season is now)
     if (sideB.gain < (wide ? -0.1 * sideB.out : marginOf(F, b, sideB.out, false))) continue
@@ -889,8 +1084,8 @@ export function cpuDeadline(F, day = F.day ?? 0) {
   }
   const out = SINK
   SINK = null
-  // (deadline day: the taxpayers' salary dumps, a pick attached)
-  if (left <= 1) out.push(...salaryDumps(F))
+  // (the deadline's last two days: the teams past the line their ownership spends to move salary: sellDown)
+  if (left <= 1) out.push(...sellDown(F))
   return out
 }
 // the summer's trades between the league's teams (core can call it on any offseason stop; cpuOffseason does): a
@@ -908,27 +1103,73 @@ export function summerTrades(F, n = 4) {
   SINK = null
   return out
 }
-// THE LEAGUE'S FRONT OFFICES MANAGE THEIR PAYROLLS (salaryDumps: the first day of free agency, the end of the
-// summer, and the deadline's last two days). A team past the line its ownership spends to (contracts.js spendLines:
-// the luxury tax is for contenders, the second apron for almost nobody) moves salary until it's back under it, the
-// ways the real league does:
-//   - a contract goes to a team with the cap room, a trade exception or the minimum exception to take it whole;
+// the summer's salary dumps: a team over the tax line (or the second apron) sends a contract it would rather not
+// pay to a team with the room to take it, with a pick for the trouble. Returns wire items.
+export function salaryDumps(F) {
+  SINK = []
+  const year = capYear(F)
+  const R = rngOf(`${F.seed}-${year}-dumps`)
+  const S = shortsOf(F).filter(s => s !== F.team)
+  let done = 0
+  for (const a of R.shuffle(S)) {
+    if (done >= 6) break
+    const pay = payroll(F, a, year)
+    if (pay <= taxOf(year) + 1) continue
+    // its worst contracts, by what they cost against what they're worth
+    // (only a contract that's a burden: a man worth more than he's paid is traded for value, not dumped)
+    const bad = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.$ ?? 0) >= 6 && !justIn(F, p)).map(p => ({ p, v: manValue(F, p) })).filter(x => x.v < 0).sort((x, y) => x.v - y.v).slice(0, 3)
+    for (const { p } of bad) {
+      const sal = hitOf(p, year, year)
+      const takers = S.filter(b => b !== a && payroll(F, b, year) + sal <= capOf(year) + 0.25)
+      let made = false
+      for (const b of R.shuffle(takers).slice(0, 6)) {
+        const base = { a, b, ga: [p.i], gb: [], pa: [], pb: [] }
+        if (!checkTrade(F, base).ok) continue
+        const sideB = teamSide(F, b, { pl: [p], pk: [] }, { pl: [], pk: [] })
+        const want = -sideB.gain + marginOf(F, b, Math.abs(sideB.in), false)
+        const pk = picksCover(F, a, want, b)
+        if (pk == null) continue
+        const deal = { ...base, pa: pk }
+        if (!checkTrade(F, deal).ok || !decide(F, { a, b, ga: deal.ga, gb: [], pa: deal.pa, pb: [] }, { user: false }).yes) continue
+        // (the sender: the tax it saves and the man it loses, against the picks)
+        const sideA = teamSide(F, a, { pl: [], pk: [] }, { pl: [p], pk: pkOf(F, pk, a, b) })
+        if (sideA.gain < 0) continue
+        doTrade(F, deal, { user: false })
+        made = true
+        done++
+        break
+      }
+      if (made) break
+    }
+  }
+  const out = SINK
+  SINK = null
+  return out
+}
+
+// ── The league's front offices manage their payrolls (round 6) ───────────────
+// sellDown: the first day of free agency, the end of the summer, and the deadline's last two days. A team past the
+// line its ownership spends to (contracts.js spendLines: the luxury tax is for contenders, the second apron for
+// almost nobody) moves salary until it's back under it, the ways the real league does:
+//   - a contract goes to a team with the cap room, a trade exception, a mid-level or the minimum exception to take it
+//     whole;
 //   - or to a team that sends a smaller salary back (it gets the better player; the seller gets the savings);
 //   - a contract nobody wants at its price goes with a pick for the trouble; a good player on a fair deal brings a
 //     pick back.
-// The seller's core stays (its three best men), and so does anyone it traded for this league year. The taker stays
-// under its own line. Both sides answer by their own books (teamSide, decide); the seller, under orders to cut
-// payroll, takes a small loss on value to do it. Returns wire items.
+// The seller's core stays (its three best men), and so does anyone it just traded for. The taker stays under its own
+// line. Both sides answer by their own books (teamSide, decide); the seller, under orders to cut payroll, gives up
+// about a point of value for every $1M it clears, no more. (salaryDumps above is the older pass: taxpayers' bad
+// contracts into cap room only. Nothing calls it now.)
+import { spendLines } from './contracts'
 function shedOne(F, a, S, line) {
   const year = capYear(F), ly = lyOf(F)
-  const payA = payroll(F, a, year)
-  const need = payA - line(a)
+  const need = payroll(F, a, year) - line(a)
   if (need <= 0.05) return false
   const team = F.teams[a]
   const core = new Set(standardOf(team).slice().sort((x, y) => (y.o ?? 0) - (x.o ?? 0)).slice(0, 3).map(p => p.i))
   const full = standardOf(team).length >= ROSTER_MAX
   // (a man it traded for stays put a while: this summer's arrivals through the summer, a season's for forty days)
-  const fresh = p => !!p.tx && p.tx[1] === ly && (F.phase === 'season' ? (p.tx[2] ?? -1) >= 0 && (F.day ?? 0) - p.tx[2] < 40 : true)
+  const fresh = p => justIn(F, p) || (!!p.tx && p.tx[1] === ly && (F.phase === 'season' ? (p.tx[2] ?? -1) >= 0 && (F.day ?? 0) - p.tx[2] < 40 : true))
   const cand = standardOf(team)
     .filter(p => !core.has(p.i) && p.b == null && !whyNot(F, a, p) && !fresh(p) && hitOf(p, year, year) > 0)
     // (a minimum deal only saves money off a full roster: under 15 the spot is filled again at the minimum)
@@ -942,27 +1183,25 @@ function shedOne(F, a, S, line) {
     const takers = S.filter(b => b !== a).map(b => ({ b, sp: line(b, true) - payroll(F, b, year) })).filter(x => x.sp > 1).sort((x, y) => y.sp - x.sp || (x.b < y.b ? -1 : 1))
     for (const { b, sp } of takers.slice(0, 14)) {
       // what it sends back: nothing if it can take him whole, else one of its men on a smaller salary (not one of its
-      // best four, not a man it just traded for), the smallest that makes the deal legal
+      // best four, not a man it just traded for): one that leaves the taker under its own line and the seller a real
+      // saving
       const top4 = new Set(standardOf(F.teams[b]).slice().sort((x, y) => (y.o ?? 0) - (x.o ?? 0)).slice(0, 4).map(q => q.i))
-      // (a salary back has to leave the taker under its own line and the seller a real saving)
       const backs = [...(sal <= sp - 0.5 ? [null] : []), ...standardOf(F.teams[b])
         .filter(q => !top4.has(q.i) && q.b == null && !whyNot(F, b, q) && !fresh(q) && hitOf(q, year, year) > 0)
         .filter(q => hitOf(q, year, year) >= sal - sp + 0.5 && hitOf(q, year, year) <= sal - Math.max(0.8, Math.min(need, sal * 0.2)))
         .sort((x, y) => hitOf(x, year, year) - hitOf(y, year, year) || x.i - y.i).slice(0, 8)]
       for (const q of backs) {
         const back = q ? hitOf(q, year, year) : 0
-        if (sal - back > sp - 0.5) continue
         const base = { a, b, ga: [p.i], gb: q ? [q.i] : [], pa: [], pb: [] }
         if (!checkTrade(F, base).ok) continue
-        const inn = { pl: [p], pk: [] }, out = { pl: q ? [q] : [], pk: [] }
-        const sideB = teamSide(F, b, inn, out)
+        const sideB = teamSide(F, b, { pl: [p], pk: [] }, { pl: q ? [q] : [], pk: [] })
         // (the taker's price: what it's short by its own book, in the seller's picks)
         const want = -sideB.gain + marginOf(F, b, Math.max(sideB.out, Math.abs(sideB.in)), false)
         const pa = want > 0 ? picksCover(F, a, want, b) : []
         if (pa == null) continue
         // (the seller: under orders to cut payroll, it gives up about a point of value for every $1M it clears, no
         // more: a real asset doesn't go for nothing, it brings a pick back)
-        const sideA = teamSide(F, a, { pl: q ? [q] : [], pk: [] }, { pl: [p], pk: pa.map(i => F.picks[i]) })
+        const sideA = teamSide(F, a, { pl: q ? [q] : [], pk: [] }, { pl: [p], pk: pkOf(F, pa, a, b) })
         const short = sideA.out - sideA.in - (5 + 0.9 * Math.min(need + 2, sal - back))
         let pb = []
         if (short > 0) {
@@ -982,6 +1221,7 @@ function shedOne(F, a, S, line) {
 }
 // one team moves salary until its payroll is down to `target` (a front office making room to keep a star of its
 // own): the same trades, the other teams inside their own lines. Returns wire items; the caller reads the payroll.
+// (held(s): money team s is holding for free agents of its own, market.js: it takes on no salary past that)
 export function shedTo(F, a, target, { held = null } = {}) {
   if (a === F.team) return []
   SINK = []
@@ -995,12 +1235,10 @@ export function shedTo(F, a, target, { held = null } = {}) {
   SINK = null
   return out
 }
-// (held(s): money team s is holding for free agents of its own, market.js: it takes on no salary past that)
-export function salaryDumps(F, { held = null } = {}) {
+export function sellDown(F, { held = null } = {}) {
   SINK = []
   const year = capYear(F)
   const S = shortsOf(F).filter(s => s !== F.team)
-  // (the line each team sells down to, and takes salary up to)
   // (in the season the tax line itself is the mark for a team that means to stay under it: nobody moves a man in
   // February to be $2M further under a line it's already under)
   const duck = F.phase === 'season' ? taxOf(year) - 0.4 : 0

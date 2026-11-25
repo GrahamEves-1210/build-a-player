@@ -337,6 +337,23 @@ entries at `seasonEndDeals`.
   protection (`{ i, top: N }`) or be a swap (`{ swap: year }`); core's draft settles both as it does now.
 - Labels: `OVER_TEXT` (cap.js), `RIGHTS_TEXT`, `SIT_TEXT` (contracts.js), `EXC_TEXT` (cap.js).
 
+### Money (round 6, 2026-11-24)
+
+- `payroll(F, s, year)` is salaries and dead money: what the tax, the aprons, the hard caps and the owner's ceiling
+  read. Cap holds and the empty-roster charges count against cap room only: `capPayroll(F, s, year)` (cap.js), and
+  on the sheet `capSheet().capPay` / `.hold` (`.pay` is salaries; `.room` counts the holds; `.over` reads salaries,
+  'cap' when only the holds take the team over the cap).
+- `spendLines(F, s, year) -> { sit, keep, add }` (contracts.js): the payroll an AI front office runs to, by its
+  situation and its ownership (`ownerTier`); `strengthRank(F, s)`. `taxTolerance` / `lineOf` are kept for old callers.
+- Team: `a2h: [year]` the seasons it finished past the second apron (cap.js assessTax).
+- trades.js: `sellDown(F)` is the league's sell-down pass (the first day of free agency, the end of the
+  summer, the deadline's last two days; `salaryDumps` is no longer called); `shedTo(F, s, target)`; a league team's unused non-taxpayer mid-level can
+  take a contract in by trade (sideRules `mle`); cap room in a trade counts the summer's holds, the aprons don't.
+- market.js: `lateOffer` (the GM) and the league's late signings follow one rule (lateDeal / lateBest); the wire has
+  a `SIGN-AND-TRADE` tag (k 'sign').
+- contracts.js: `marketChanged()` bumps the market cache's version (call it if a man's rating changes inside one
+  offseason stop without a man joining or leaving the league); `marketOf` no longer reads the clock.
+
 ### C (sim), 2026-11-19
 
 1. **seams.js:** the C half can be one line, `export { ...the ten names..., startGame, playTo, possession, finishGame } from './sim'`. `nba/sim.js` re-exports every C seam (plus extras: `allStars`, `seriesMvp`, `updateRecords`, `outText`, `prospect`, `planRotation`, `clutchTime`). Checked on this branch: `scripts/franchise2/nba-sim.mjs` runs 3 seasons clean with it.
@@ -349,21 +366,3 @@ entries at `seasonEndDeals`.
 8. **Injuries:** `tickInjuries(F, short)` heals only a man who missed a game that night (`rollInjuries` marks him `inj.m`), so `inj.g` counts games. Call `tickInjuries(F, days)` with a number over the summer (130 is about right): an ACL torn in March then runs into the next season.
 9. **Ceilings:** `league.js peakFor` (room x 1.1-2.7 a year) inflated the league in C's 10-season runs (88+ men went 29 to 47). `aging.js seedPotential` (room x 0.6-2.0) and `prospect(R, { rank })` for the class hold it level (88+ men: 29 at the start, 27-31 on average). Please use them, or match their numbers.
 10. **Playoffs:** pass `{ playoff: true }` to `rotationOf` for the screen too. Playoff rotations shorten to eight, and stars play 38-40.
-
-### Money (round 6, 2026-11-24)
-
-- `payroll(F, s, year)` is salaries and dead money: what the tax, the aprons, the hard caps and the owner's ceiling
-  read. Cap holds and the empty-roster charges count against cap room only: `capPayroll(F, s, year)` (cap.js), and
-  on the sheet `capSheet().capPay` / `.hold` (`.pay` is salaries; `.room` counts the holds; `.over` reads salaries,
-  'cap' when only the holds take the team over the cap).
-- `spendLines(F, s, year) -> { sit, keep, add }` (contracts.js): the payroll an AI front office runs to, by its
-  situation and its ownership (`ownerTier`); `strengthRank(F, s)`. `taxTolerance` / `lineOf` are kept for old callers.
-- Team: `a2h: [year]` the seasons it finished past the second apron (cap.js assessTax).
-- trades.js: `salaryDumps(F)` is now the league's sell-down pass (the first day of free agency, the end of the
-  summer, the deadline's last two days); `shedTo(F, s, target)`; a league team's unused non-taxpayer mid-level can
-  take a contract in by trade (sideRules `mle`); cap room in a trade counts the summer's holds, the aprons don't.
-- market.js: `lateOffer` (the GM) and the league's late signings follow one rule (lateDeal / lateBest); the wire has
-  a `SIGN-AND-TRADE` tag (k 'sign').
-- contracts.js: `marketChanged()` bumps the market cache's version (call it if a man's rating changes inside one
-  offseason stop without a man joining or leaving the league); `marketOf` no longer reads the clock.
-

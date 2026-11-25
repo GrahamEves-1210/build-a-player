@@ -485,7 +485,7 @@ function DraftDone({ F }) {
 // ── 4. RE-SIGN ───────────────────────────────────────────────────────────────
 const RIGHTS = { bird: 'Bird rights', ebird: 'Early Bird rights', nbird: 'Non-Bird rights' }
 const rightsOf = p => (!p.fr || p.rn ? null : (p.bird ?? 0) >= 3 ? 'bird' : p.bird === 2 ? 'ebird' : 'nbird')
-const RIGHTS_SAYS = { bird: 'he can be paid over the cap, up to his max', ebird: 'he can be paid over the cap, up to 175% of his last salary or 105% of the average salary, for two seasons or more', nbird: 'he can be paid over the cap, up to 120% of his last salary' }
+const RIGHTS_SAYS = { bird: 'he can be paid over the cap, up to his max', ebird: 'he can be paid over the cap, up to 175% of his last salary', nbird: 'he can be paid over the cap, up to 120% of his last salary' }
 function Resign({ F, act, go }) {
   const open = useOpen()
   const ids = F.off?.mine ?? []
