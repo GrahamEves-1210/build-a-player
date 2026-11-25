@@ -6,7 +6,7 @@ import { sfx, haptic } from '../../../lib/juice'
 import { teamWords } from '../../../lib/franchise2/nba/news'
 import { fkVars, KLogo, LowerThird, Chyron, Go, BackBar, Tag, Fold, ActionBar, Stamp, reduced } from '../kit'
 import { money } from './NbaHub'
-import { picksOf as tradePicks, tpesOf, availOf } from '../../../lib/franchise2/nba/trades'
+import { picksOf as tradePicks, tpesOf, availOf, swapYears, canProtect, PROTECTIONS } from '../../../lib/franchise2/nba/trades'
 import { hitOf } from '../../../lib/franchise2/nba/cap'
 import '../trades.css'
 import { Rotation, PlayerSheet } from './NbaRoster'
@@ -40,7 +40,7 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
         </>
       )}
       <Fold title="Draft picks" right={`${picksOf(F, F.team).filter(p => p.r === 1).length} firsts`}>
-        <ul className="nb-picks">{picksOf(F, F.team).map(p => <li key={`${p.y}${p.r}${p.o}`}>{pickText(F, p)}</li>)}</ul>
+        <ul className="nb-picks">{picksOf(F, F.team).map(p => <li key={`${p.y}${p.r}${p.o}`}>{pickText(F, p)}{p.sw ? ` · ${swapNote(p)}` : ''}</li>)}</ul>
       </Fold>
       {man != null && <PlayerSheet F={F} act={act} id={man} owner={owner} onClose={() => setMan(null)} />}
     </div>
@@ -67,9 +67,21 @@ export function CapBar({ F, s = F.team }) {
 }
 
 // ── TRADES ───────────────────────────────────────────────────────────────────
-// pick a team; the deal on top (what each side sends, its cap hits), the value bar, the other GM's answer, then one
-// side's men and picks at a time; the league office checks it (salary matching, the aprons, the Stepien rule:
-// trades.js), then the other GM answers (yes, no, or a counter to take or work from)
+// pick a team; the deal on top (what each side sends, its cap hits, the value bar, what blocks it or the other GM's
+// answer: all of it stays in view while the lists scroll), then one side's men and picks at a time; the league
+// office checks it (salary matching, the aprons, the Stepien rule: trades.js), then the other GM answers (yes, no,
+// or a counter to take or work from)
+// A pick in the deal is an entry (trades.js): its index in F.picks (as it is), { i, top } (a protection put on a
+// team's own first as it's traded) or { swap: year } (the right to swap firsts that year)
+const pkI = e => (typeof e === 'number' ? e : e?.i ?? null)
+const swapNote = k => (k.sw?.with ? `may swap with the ${TEAM[k.sw.with]?.nick}` : `the ${TEAM[k.sw?.by]?.nick} may swap for it`)
+const entryText = (F, e) => {
+  if (e?.swap != null) return `${e.swap} 1st swap rights`
+  const k = F.picks?.[pkI(e)]
+  return k ? pickText(F, e?.top ? { ...k, pr: { top: e.top } } : k) : null
+}
+// what a protected first that stays home turns into (draft.js runLottery: the next first, the protection halved)
+const rollText = top => (Math.floor(top / 2) >= 1 ? `top-${Math.floor(top / 2)} protected` : 'unprotected')
 function Trades({ F, act, onBack }) {
   const [them, setThem] = useState(null)
   const [side, setSide] = useState(0)
@@ -107,25 +119,43 @@ function Trades({ F, act, onBack }) {
   const sum = (s, ids) => ids.reduce((x, i) => x + hit(manIn(s, i)), 0)
   const S = [[F.team, ga, setGa, pa, setPa], [them, gb, setGb, pb, setPb]]
   const [s0, sel, set, psel, pset] = S[side]
-  const list = (s, ids, pids) => [...ids.map(i => manIn(s, i)?.n), ...pids.map(i => pickText(F, F.picks[i]))].filter(Boolean)
-  const done = (r, names) => { for (const x of r?.news ?? []) addNews(F, x); setSent(names); setGa([]); setGb([]); setPa([]); setPb([]); sfx('claim'); haptic('success') }
+  const list = (s, ids, pids) => [...ids.map(i => manIn(s, i)?.n), ...pids.map(e => entryText(F, e))].filter(Boolean)
+  // (a first in the list: how it's in the deal now: null (not in it), 'plain', a protection's top N, or 'swap')
+  const other = s0 === F.team ? them : F.team
+  const swapOk = swapYears(F, s0, other)
+  const ownFirst = k => k.r === 1 && k.o === s0
+  const pickState = k => {
+    const e = psel.find(x => x?.swap == null && pkI(x) === k.i)
+    if (e != null) return e?.top ?? 'plain'
+    return ownFirst(k) && psel.some(x => x?.swap === k.y) ? 'swap' : null
+  }
+  const setPick = (k, how) => {
+    const rest = psel.filter(x => (x?.swap != null ? !(ownFirst(k) && x.swap === k.y) : pkI(x) !== k.i))
+    pset(how == null ? rest : [...rest, how === 'plain' ? k.i : how === 'swap' ? { swap: k.y } : { i: k.i, top: how }])
+    setAns(null); setSent(null); sfx('tap')
+  }
+  // (the league team's waivers to make room, as a sentence)
+  const cutText = (cut, did) => { const by = {}; for (const x of cut ?? []) (by[x.s] ??= []).push(x.n); return Object.entries(by).map(([s, n]) => `The ${TEAM[s].nick} ${did ? 'waived' : 'would waive'} ${n.join(' and ')} to make room.`).join(' ') }
+  const done = (r, names, gv) => { for (const x of r?.news ?? []) addNews(F, x); setSent({ names, g: gv }); setGa([]); setGb([]); setPa([]); setPb([]); sfx('claim'); haptic('success') }
   const namesOf = d => [list(d.a, d.ga ?? [], d.pa ?? []), list(d.b, d.gb ?? [], d.pb ?? [])]
+  const lineOf = r => (r?.cut?.length ? `${r.line}. ${cutText(r.cut, true)}` : r?.line ?? '')
   const ask = () => {
-    const names = namesOf(deal)
+    const names = namesOf(deal), gv = CAP_SIM.gauge(F, deal)
     const r = act(X => CAP_SIM.proposeTrade(X, deal))
-    setAns(r)
-    if (r?.ok) done(r, names); else sfx(r?.say === 'counter' ? 'flip' : 'deny')
+    setAns(r?.ok ? { ...r, line: lineOf(r) } : r)
+    if (r?.ok) done(r, names, gv); else sfx(r?.say === 'counter' ? 'flip' : 'deny')
   }
   const takeCounter = () => {
     const c = ans?.counter
     if (!c || !CAP_SIM.checkTrade(F, c).ok) return
-    const names = namesOf(c)
+    const names = namesOf(c), gv = CAP_SIM.gauge(F, c)
     const r = act(X => CAP_SIM.doTrade(X, c))
-    setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}' terms`, line: r?.line })
-    done(r, names)
+    setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}' terms`, line: lineOf(r) })
+    done(r, names, gv)
   }
   const workFrom = () => { const c = ans?.counter; if (!c) return; setGa(c.ga ?? []); setGb(c.gb ?? []); setPa(c.pa ?? []); setPb(c.pb ?? []); setAns(null); sfx('tap') }
-  const g = any && chk?.ok ? CAP_SIM.gauge(F, deal) : null
+  // (the value bar: up from the first man or pick chosen, legal deal or not, and kept on the board once it's done)
+  const g = any ? CAP_SIM.gauge(F, deal) : sent?.g ?? null
   const cs = CAP_SIM.capSheet(F, them)
   const sit = CAP_SIM.situationOf(F, them)
   const tpe = tpesOf(F, F.team)
@@ -151,14 +181,15 @@ function Trades({ F, act, onBack }) {
         {S.map(([s, ids, , pids], k) => (
           <div key={s} className="nb-deal-side" style={fkVars(s)}>
             <span className="nb-deal-h"><KLogo s={s} size={22} /><b>{TEAM[s].nick} {!any && sent ? 'sent' : 'send'}</b></span>
-            <p>{(!any && sent ? sent[k] : list(s, ids, pids)).join(', ') || 'Nothing yet'}</p>
+            <p>{(!any && sent ? sent.names[k] : list(s, ids, pids)).join(', ') || 'Nothing yet'}</p>
             {ids.length > 0 && <small className="nb-deal-cap">{money(sum(s, ids))} in cap hits</small>}
           </div>
         ))}
+        {g && <TradeGauge F={F} them={them} g={g} />}
         {chk && !chk.ok && <p className="nb-why nb-deal-why">{teamWords(chk.why)}</p>}
+        {chk?.ok && chk.cut && !ans && <p className="nb-deal-note">{cutText(chk.cut, false)}</p>}
         {ans && <TradeSaid ok={ans.ok} counter={!!ans.counter} text={teamWords(ans.text ?? `The ${TEAM[them].nick} pass`)} line={ans.ok ? teamWords(ans.line ?? '') : ''} />}
       </section>
-      {g && <TradeGauge F={F} them={them} g={g} />}
       {ans?.counter && (
         <div ref={said} className="tr-counter nb-tcounter-box">
           <p className="nb-tcounter">{counterText(F, ans.counter)}</p>
@@ -176,12 +207,42 @@ function Trades({ F, act, onBack }) {
           return (
             <button key={p.i} type="button" disabled={!!no} className={`nb-tman${sel.includes(p.i) ? ' is-on' : ''}`} onClick={() => tog(sel, set, p.i)} aria-pressed={sel.includes(p.i)}>
               <b>{p.n}</b><span>{p.p} · {p.o} OVR · AGE {p.ag}</span>
-              <em>{no ? teamWords(no) : `${dealText(p)}${!p.tw && p.y > 0 ? ` · CAP HIT ${money(hit(p))}` : ''}`}</em>
+              {/* (a veteran on a one-year minimum counts at the two-year veteran's minimum: the row says why the two differ) */}
+              <em>{no ? teamWords(no) : `${dealText(p)}${!p.tw && p.y > 0 ? ` · CAP HIT ${money(hit(p))}${hit(p) < (p.$ ?? 0) - 0.04 ? ' (VETERAN MINIMUM)' : ''}` : ''}`}</em>
               {av && <em className="is-inj">{av.season ? 'OUT FOR THE SEASON' : CAP_SIM.outText(p)} · {String(p.inj.k).toUpperCase()}</em>}
             </button>
           )
         })}
-        <Fold title="Draft picks" right={`${psel.length || ''}`}>{pickList(s0).map(k => <button key={k.i} type="button" className={`nb-tman${psel.includes(k.i) ? ' is-on' : ''}`} onClick={() => tog(psel, pset, k.i)} aria-pressed={psel.includes(k.i)}><b>{pickText(F, k)}</b>{k.sw && <em>{k.sw.with ? `May swap with the ${TEAM[k.sw.with]?.nick}` : `The ${TEAM[k.sw.by]?.nick} may swap for it`}</em>}</button>)}</Fold>
+        {/* (a pick goes in as it is; a team's own first can then be protected, or kept and offered as a swap) */}
+        <Fold title="Draft picks" right={`${psel.length || ''}`}>
+          {pickList(s0).map(k => {
+            const how = pickState(k)
+            const prot = canProtect(F, s0, k), swap = ownFirst(k) && swapOk.includes(k.y)
+            const giver = TEAM[s0].nick, taker = TEAM[other].nick
+            return (
+              <div key={k.i} className="nb-tpick">
+                <button type="button" className={`nb-tman${how ? ' is-on' : ''}`} onClick={() => setPick(k, how ? null : 'plain')} aria-pressed={!!how}>
+                  <b>{pickText(F, k)}</b>
+                  {k.sw && <em>{k.sw.with ? `May swap with the ${TEAM[k.sw.with]?.nick}` : `The ${TEAM[k.sw.by]?.nick} may swap for it`}</em>}
+                </button>
+                {how && (prot || swap) && (
+                  <div className="nb-tprot">
+                    <div className="nb-tprot-o" role="radiogroup" aria-label={`How the ${k.y} first is offered`}>
+                      <button type="button" role="radio" aria-checked={how === 'plain'} className={how === 'plain' ? 'is-on' : ''} onClick={() => setPick(k, 'plain')}>Unprotected</button>
+                      {prot && PROTECTIONS.map(n => <button key={n} type="button" role="radio" aria-checked={how === n} className={how === n ? 'is-on' : ''} onClick={() => setPick(k, n)}>Top {n}</button>)}
+                      {swap && <button type="button" role="radio" aria-checked={how === 'swap'} className={how === 'swap' ? 'is-on' : ''} onClick={() => setPick(k, 'swap')}>Swap rights</button>}
+                    </div>
+                    <p className="nb-tnote">
+                      {how === 'swap' ? `The ${taker} may swap their own ${k.y} first for the ${/s$/.test(giver) ? `${giver}'` : `${giver}'s`} if it lands higher. The ${giver} keep a first either way.`
+                        : how === 'plain' ? `The ${taker} get the pick wherever it lands.`
+                          : `If it lands in the top ${how}, the ${giver} keep it and the ${taker} get their next first instead, ${rollText(how)}.`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </Fold>
       </section>
       <ActionBar className="nb-tact">
         <Go disabled={!chk?.ok || !!ans?.counter} onClick={ask}>Propose the trade</Go>
@@ -197,9 +258,10 @@ function TradeGauge({ F, them, g }) {
   const mine = tot > 0 ? (a / tot) * 100 : 50
   const even = Math.abs(g.lean) < 0.08
   const lean = even ? 'Even' : `${TEAM[g.lean > 0 ? F.team : them].nick} ${Math.abs(g.lean) >= 0.35 ? 'win big' : 'come out ahead'}`
+  // (on the deal board, which stays in view: the verdict, the bar, each side's share under its own column)
   return (
-    <div className={`tr-gauge${even ? ' is-even' : ''}`} aria-label={`By the league's values: ${lean}`}>
-      <div className="tr-gauge-h"><span>{TEAM[F.team].nick}</span><b>{lean}</b><span>{TEAM[them].nick}</span></div>
+    <div className={`tr-gauge nb-deal-gauge${even ? ' is-even' : ''}`} aria-label={`By the league's values: ${lean}`}>
+      <div className="tr-gauge-h"><b>{lean}</b></div>
       <div className="tr-gauge-bar" aria-hidden="true">
         {/* (the GM's side white, theirs in their colour: two teams in the same colour still read apart) */}
         <i style={{ width: `${mine}%`, background: '#f4f5f7' }} />
@@ -223,7 +285,7 @@ function TradeSaid({ ok, counter, text, line }) {
 // a counter, the way the other GM says it: what they'd send and what they want back
 function counterText(F, c) {
   const nm = (s, ids) => ids.map(i => F.teams[s].r.find(p => p.i === i)?.n).filter(Boolean)
-  const pk = list => (list ?? []).map(e => (typeof e === 'number' ? F.picks[e] : F.picks[e?.i])).filter(Boolean).map(p => pickText(F, p))
+  const pk = list => (list ?? []).map(e => entryText(F, e)).filter(Boolean)
   const they = [...nm(c.b, c.gb), ...pk(c.pb)], you = [...nm(c.a, c.ga), ...pk(c.pa)]
   return `The ${TEAM[c.b].nick} send ${they.join(', ') || 'nothing'} for ${you.join(', ') || 'nothing'}`
 }

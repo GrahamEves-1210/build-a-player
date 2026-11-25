@@ -301,6 +301,19 @@
 .nb-counter p { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; }
 .nb-tcounter { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; line-height: 1.35; color: #fff; }
 .nb-tman:disabled { opacity: .5; cursor: default; }
+/* (the value bar on the deal board, which stays in view; the league team's waivers; how a first is offered) */
+.nb-deal > .nb-deal-gauge, .nb-deal > .nb-deal-note { grid-column: 1 / -1; }
+.nb-deal-gauge { gap: 3px; padding: 6px 10px 5px; background: var(--fk-g1); }
+.nb-deal-gauge .tr-gauge-h { display: block; text-align: center; }
+.nb-deal-gauge .tr-gauge-h b { font-size: 15px; }
+.nb-deal-gauge .tr-gauge-bar { height: 10px; }
+.nb-deal-note { margin: 0; padding: 8px 10px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--fk-ag-mid); font-family: var(--fk-b); font-weight: 600; font-size: 13px; line-height: 1.3; color: var(--fk-text); }
+.nb-tpick { display: grid; gap: 4px; }
+.nb-tprot { display: grid; gap: 6px; padding: 8px 10px 10px; background: var(--fk-g1); box-shadow: inset 3px 0 0 #f4f5f7; }
+.nb-tprot-o { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.nb-tprot-o button { min-height: 40px; padding: 0 6px; border: 1px solid rgba(196,201,208,.3); background: var(--fk-g2); color: #fff; font-family: var(--fk-b); font-weight: 700; font-size: 13px; cursor: pointer; }
+.nb-tprot-o button.is-on { background: #f4f5f7; color: #0b0c0e; }
+@media (min-width: 700px) { .nb-tprot-o { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .nb-cap-holds { font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
 .nb-run { position: fixed; inset: 0; z-index: 1065; display: grid; place-items: center; padding: 16px; background: rgba(8,9,11,.92); color: var(--fk-text); }
 .nb-run-in { display: grid; gap: 14px; width: 100%; max-width: 460px; }

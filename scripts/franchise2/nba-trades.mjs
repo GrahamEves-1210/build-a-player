@@ -222,6 +222,123 @@ const F0 = N.createNbaFranchise({ seed: 'qa-trades', team: 'WAS', owner: 'G' })
   // (deadline day itself is open: some seasons it's busy, some quiet; over five seeds 0-5 deals that day. The last three
   // days always carry some)
   ok(days.filter(d => d > ddl - 3).length >= 1, 'deals in the deadline\'s last three days (deadline day open)')
+  ok(days.length >= 14 && days.length <= 38, `a season's deals in the real league's range (${days.length})`)
+  // (no hot potato: a man a team traded for isn't traded away by it again inside two months)
+  const at = new Map()
+  let flips = 0
+  for (const e of F.trl ?? []) {
+    for (const [from, names] of [[e.a, e.ag], [e.b, e.bg]]) for (const n of names) { const x = at.get(n); if (x && x.t === from && e.d - x.d < 60) flips++ }
+    for (const n of e.bg) at.set(n, { t: e.a, d: e.d })
+    for (const n of e.ag) at.set(n, { t: e.b, d: e.d })
+  }
+  ok(flips === 0, `no man is traded away by the team that just traded for him (${flips} flips)`)
+  // (the league's own deals carry protections, and a swap now and then)
+  const ents = (F.trl ?? []).flatMap(e => [...e.pa, ...e.pb])
+  const prot = ents.filter(x => x?.top).length, swaps = ents.filter(x => x?.swap != null).length, firsts = ents.filter(x => x?.swap == null && F.picks[typeof x === 'number' ? x : x.i]?.r === 1).length
+  L(`   picks in those deals: ${firsts} firsts, ${prot} of them protected, ${swaps} swaps`)
+  ok(prot >= 1 && prot < firsts, 'some of the firsts the league\'s teams trade are protected, not all')
+  ok(swaps <= Math.max(3, days.length * 0.2), 'a swap is the exception')
+  ok(N.SHORTS.every(s => T.stepienOk(F, s)), 'the Stepien rule holds for every team, however its protected picks fall')
+}
+
+// ── 8. what the league can see: prospects and stars ──────────────────────────
+{
+  const F = N.createNbaFranchise({ seed: 'fl', team: 'BKN', owner: 'G' })
+  N.simTo(F, 70)
+  const all = N.SHORTS.flatMap(s => F.teams[s].r.filter(p => !p.tw).map(p => ({ s, p, v: T.manValue(F, p) }))).sort((a, b) => b.v - a.v)
+  const top = all.slice(0, 12)
+  L(`\n8. the 12 most valuable men: ${top.map(x => `${x.p.n} ${x.p.o}/${x.p.ag} ${Math.round(x.v)}`).join(', ')}`)
+  ok(top.every(x => x.p.o >= 87), 'the league\'s most valuable men are its proven best (87 OVR and up)')
+  // (a prospect with a high hidden ceiling: worth what he's shown, not what he might be)
+  const hid = all.filter(x => x.p.ag <= 22 && x.p.o <= 80 && (x.p.pk ?? 0) >= x.p.o + 10 && !(x.p.dr?.[0] === F.year && x.p.dr[1] === 1 && x.p.dr[2] <= 5))
+  const star = all.filter(x => x.p.o >= 89 && x.p.ag <= 30)
+  const hi = Math.max(...hid.map(x => x.v)), lo = Math.min(...star.map(x => x.v))
+  L(`   ${hid.length} prospects rated 80 or less with a hidden ceiling 10+ higher: worth ${Math.round(hi)} at most; the ${star.length} stars (89+, 30 or younger) ${Math.round(lo)} at least`)
+  ok(hid.length > 3 && hi < lo, 'no such prospect is worth what a star is')
+  const [, demin] = man(F, 'Egor Demin'), [bs, tatum] = man(F, 'Jayson Tatum'), [, mpj] = man(F, 'Michael Porter Jr.')
+  if (demin && tatum && mpj && bs !== 'BKN') {
+    L(`   ${demin.n} ${Math.round(T.manValue(F, demin))}, ${tatum.n} ${Math.round(T.manValue(F, tatum))}`)
+    const firsts = T.picksOf(F, 'BKN').filter(k => k.r === 1)
+    let got = null
+    for (const k of firsts) { const d = { a: 'BKN', b: bs, ga: [demin.i, mpj.i], gb: [tatum.i], pa: [k.i], pb: [] }; const a = C.cpuAnswer(F, d); if (a.yes || a.counter) got = `${k.y}: ${a.yes ? 'yes' : 'counter'}` }
+    ok(!got, `Demin, an expiring deal and any one first doesn't get Tatum, and draws no counter (${got ?? 'no'})`)
+    const a = C.cpuAnswer(F, { a: 'BKN', b: bs, ga: [demin.i, mpj.i], gb: [tatum.i], pa: [], pb: [] })
+    L(`   the answer: ${a.text}`)
+    ok(!/depth/.test(a.text), 'an 81-rated starter offered for a star isn\'t called depth')
+  }
+  // (hard to fleece: a search for the most lopsided deal a league team takes, by the league's own values)
+  let s0 = 12345
+  const rnd = () => { s0 = (s0 * 1103515245 + 12345) % 2147483648; return s0 / 2147483648 }
+  const some = (a, n) => { const b = [...a], out = []; while (out.length < n && b.length) out.push(b.splice(Math.floor(rnd() * b.length), 1)[0]); return out }
+  const mine = F.teams.BKN.r.filter(p => !p.tw && !C.whyNot(F, 'BKN', p)), myPicks = T.picksOf(F, 'BKN').map(k => k.i)
+  let best = 0, yes = 0, bestT = ''
+  for (const s of N.SHORTS) {
+    if (s === 'BKN') continue
+    for (const tgt of F.teams[s].r.filter(p => !p.tw && !C.whyNot(F, s, p)).sort((a, b) => T.manValue(F, b) - T.manValue(F, a)).slice(0, 3)) {
+      for (let k = 0; k < 150; k++) {
+        const d = { a: 'BKN', b: s, ga: some(mine, 1 + Math.floor(rnd() * 3)).map(p => p.i), gb: [tgt.i], pa: some(myPicks, Math.floor(rnd() * 4)), pb: [] }
+        if (!C.checkTrade(F, d).ok || !T.decide(F, d).yes) continue
+        yes++
+        const g = T.gauge(F, d), r = g.b / Math.max(1, g.a)
+        if (g.b >= 15 && r > best) { best = r; bestT = `${tgt.n} (${Math.round(g.b)}) for ${Math.round(g.a)}` }
+      }
+    }
+  }
+  L(`   ${yes} deals accepted in the search; the most lopsided: ${best.toFixed(2)}x, ${bestT}`)
+  ok(yes >= 40, 'the league still makes deals with the GM')
+  ok(best <= 1.3, 'the best deal the GM can get is about 1.2 times what he gives, by the league\'s values')
+}
+
+// ── 9. protections and swaps in a deal, and the room a league team makes ─────
+{
+  const F = clone(F0)
+  const s = 'WAS', o = 'BOS'
+  const y = T.nextDraft(F)
+  const mineOf = yy => T.picksOf(F, s).find(k => k.r === 1 && k.o === s && k.y === yy)
+  const other = T.picksOf(F, s).find(k => k.r === 2)
+  const base = { a: s, b: o, ga: [], gb: [], pb: [] }
+  L(`\n9. protections go on a team's own first; swaps: ${T.swapYears(F, s, o).join(', ')}`)
+  ok(C.checkTrade(F, { ...base, pa: [{ i: mineOf(y + 1).i, top: 10 }] }).ok, 'a first can go top-10 protected')
+  ok(!C.checkTrade(F, { ...base, pa: [{ i: other.i, top: 10 }] }).ok, 'a second can\'t be protected')
+  ok(!C.checkTrade(F, { ...base, pa: [mineOf(y + 2).i, { swap: y + 2 }] }).ok, 'a first can\'t be traded and swapped in one deal')
+  ok(T.protFor(F, s, mineOf(y + 1)) > 0 && T.PROTECTIONS.includes(T.protFor(F, s, mineOf(y + 1))), `a front office protects its own first (top ${T.protFor(F, s, mineOf(y + 1))})`)
+  const sv = T.swapValue(F, s, o, y + 4), sv0 = T.swapValue(F, o, s, y)
+  L(`   a swap's worth to its holder: ${s}'s ${y + 4} to ${o} ${sv.toFixed(1)}, ${o}'s ${y} to ${s} ${sv0.toFixed(1)}; a plain ${y + 4} first ${T.pickValue(F, mineOf(y + 4)).v.toFixed(1)}`)
+  ok(sv > 0 && sv < T.pickValue(F, mineOf(y + 4)).v * 0.6, 'a swap right is worth a fraction of the pick')
+  // (the Stepien rule sees where a protected pick's debt can fall)
+  const G = clone(F)
+  C.doTrade(G, { ...base, pa: [{ i: mineOf(y + 1).i, top: 10 }] })
+  const g2 = (yy) => T.picksOf(G, s).find(k => k.r === 1 && k.o === s && k.y === yy)
+  const c3 = C.checkTrade(G, { ...base, pa: [g2(y + 3).i] })
+  L(`   with the ${y + 1} first owed top-10 protected, the ${y + 3} first: ${c3.ok ? 'legal' : c3.why}`)
+  ok(!c3.ok && c3.k === 'stepien', 'a first two drafts after a protected one can\'t go: the debt could fall on the year between')
+  ok(!C.checkTrade(G, { ...base, pa: [g2(y + 4).i] }).ok && C.checkTrade(G, { ...base, pa: [g2(y + 5).i] }).ok, 'nor the next (the debt can move twice); the one after that can')
+  // (a league team at 15 takes two men for one from the GM: it waives a man, and the deal says who)
+  const H = clone(F0)
+  N.simTo(H, T.dec15(H) + 5)
+  let made = null
+  for (const t of N.SHORTS) {
+    if (t === s || made || H.teams[t].r.filter(p => !p.tw).length !== 15) continue
+    const theirs = H.teams[t].r.filter(p => !p.tw && !C.whyNot(H, t, p))
+    const men = H.teams[s].r.filter(p => !p.tw && !C.whyNot(H, s, p))
+    for (const x of theirs) for (let i = 0; i < men.length && !made; i++) for (let j = i + 1; j < men.length && !made; j++) {
+      const d = { a: s, b: t, ga: [men[i].i, men[j].i], gb: [x.i], pa: [], pb: [] }
+      const c = C.checkTrade(H, d)
+      if (c.ok && c.cut?.length === 1 && T.decide(H, d).yes) made = { d, c, t }
+    }
+  }
+  ok(!!made, 'a two-for-one with a league team at 15 is legal (it was refused: 16 players)')
+  if (made) {
+    const who = made.c.cut[0]
+    const r = C.proposeTrade(H, made.d)
+    L(`   ${r.line}; waived: ${r.cut?.map(x => `${x.s} ${x.n}`).join(', ')}; the wire: ${r.news?.map(x => x.text).join(' | ')}`)
+    ok(r.ok && r.cut?.[0]?.i === who.i && H.teams[made.t].r.filter(p => !p.tw).length === 15 && H.fa.some(p => p.i === who.i), 'the league team waives the man the deal named and is back at 15')
+  }
+  // (the words when nothing goes back)
+  const big = F.teams[o].r.filter(p => !p.tw && !C.whyNot(F, o, p)).sort((a, b) => b.$ - a.$)[0]
+  const cw = C.checkTrade(F, { a: s, b: o, ga: [], gb: [big.i], pa: [other.i], pb: [] })
+  L(`   ${big.n} for a second: ${cw.ok ? 'legal' : cw.why}`)
+  ok(cw.ok || !/\$0(\.0)?M/.test(cw.why), 'no "$0M out" in the league office\'s answer')
 }
 
 L(`\n${bad ? `${bad} FAILED` : 'all ok'}`)

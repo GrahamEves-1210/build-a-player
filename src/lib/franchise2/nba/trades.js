@@ -21,10 +21,14 @@
 //     him to the sheet until the next summer's free agency is over; a man traded for can't have his
 //     salary combined with others for two months (p.txd); a man the GM's team traded for can't go back to the team it
 //     got him from this league year (no buy-backs).
-//   - picks: only a team's own (as owned now); a top-N protection may be put on a first as it's traded; a swap right
-//     (the other team may swap its first for this team's first that year; once per pick, and it goes with the pick if
-//     it's sold: the holder's pick carries sw.with, the giver's sw.by); the Stepien rule (never without a first
-//     in two drafts running); a team over the second apron can't trade its first seven drafts out (frozen).
+//   - picks: only a team's own (as owned now); a top-N protection may be put on a team's own first as it's traded,
+//     until that draft's order is set (canProtect); a swap right (the other team may swap its first for this team's
+//     first that year; once per pick, and it goes with the pick if it's sold: the holder's pick carries sw.with, the
+//     giver's sw.by; a first can't be traded and swapped in one deal); the Stepien rule (never without a first in two
+//     drafts running, however a protected pick it owes falls: stepienOk); a team over the second apron can't trade
+//     its first seven drafts out (frozen).
+//   - rosters in a deal with the GM's team: a league team it leaves at 16 or 17 waives the end of its bench to make
+//     room, as the league's own deals do (waivesFor: checkTrade names the men in .cut, doTrade waives them).
 //   - a man with a no-trade clause can't be moved without his say (the league's teams don't ask).
 //   - the GM's owner: a deal that adds salary can't take his payroll past ownership's ceiling (contracts.js ownerCap).
 //
@@ -52,13 +56,17 @@
 // A DEAL (cpuAnswer): the league team takes it when what it gets beats what it gives by its margin (7%, more for
 // every deal it's already made with the GM's team this league year); a star goes only for a real piece back; a man
 // it just traded for stays put; a man the GM's team just traded for is worth no more than it paid; a contender
-// doesn't take a deal that leaves it weaker for the rest of the season (nowStrength). Short by a
-// reachable amount, it counters (asks for a pick, or takes something off its side).
+// doesn't take a deal that leaves it weaker for the rest of the season (nowStrength); and whatever its own book
+// says, it never sends the GM's team much more than it gets by the league's values (FLEECE). Short by a
+// reachable amount, it counters (counterOf: asks for a pick, a protected first or a swap, wants a protection taken
+// off, protects a first of its own that was asked for, or takes something off its side).
 //
 // THE LEAGUE'S OWN DEALS: contenders buy veterans from rebuilders for picks and salary filler before the deadline
 // (cpuDeadline: almost none before December 15, about half in the deadline's last week, deadline day included); in
 // the summer, taxpayers move bad money to teams with room, with a pick for their trouble
-// (salaryDumps).
+// (salaryDumps). The picks go the way front offices write them (picksCover): a first protected whenever the
+// protected pick covers the price (protFor: the lottery for a team picking late, the top ten in the middle), a swap
+// alongside a first in a bigger deal. A man a team traded for stays put (justIn): he isn't filler in its next deal.
 //
 // State: F.picks (core) [{ y, r, o, t, pr: { top, rl? } | null, sw: { with } | { by } | null }] · F.trl [deal log]
 // · F.trc { team: [day, turned-down calls] } · p.tx [team he came from, league year, day, paid (the GM's side's
@@ -181,20 +189,23 @@ function stepienAs(F, s, picks) {
 // The rule holds every way a protected first it owes can fall: the pick conveys, or it stays home and the debt moves
 // to the next first of its own it still holds (draft.js runLottery: with the protection halved, so it can move once
 // more). None of those may leave the team without a first two drafts running.
-export function stepienOk(F, s, picks = F.picks ?? []) {
-  if (!stepienAs(F, s, picks)) return false
+// stepienHit: null (fine), 1 (two drafts running without a first as things stand), or the protected pick whose
+// debt could cause it
+export const stepienOk = (F, s, picks = F.picks ?? []) => !stepienHit(F, s, picks)
+export function stepienHit(F, s, picks = F.picks ?? []) {
+  if (!stepienAs(F, s, picks)) return 1
   const y0 = nextDraft(F)
   const last = Math.max(y0, ...picks.map(k => k.y))
   for (const k of picks) {
     if (!(k.r === 1 && k.o === s && k.t !== s && k.pr && !k.n && k.y >= y0)) continue
     const next = picks.filter(q => q.r === 1 && q.o === s && q.t === s && q.y > k.y).sort((x, y) => x.y - y.y)
     const steps = k.pr.rl || Math.floor(k.pr.top / 2) < 1 ? 1 : 2
-    for (const q of next.slice(0, steps)) if (!stepienAs(F, s, picks.map(x => (x === k ? { ...x, t: s, pr: null } : x === q ? { ...x, t: k.t } : x)))) return false
+    for (const q of next.slice(0, steps)) if (!stepienAs(F, s, picks.map(x => (x === k ? { ...x, t: s, pr: null } : x === q ? { ...x, t: k.t } : x)))) return k
     // (no first of its own left on the books to carry the debt: it would fall on the first draft past them, so the
     // last one on the books has to be covered)
-    if (next.length < steps && k.y < last && !hasFirst(picks, s, last)) return false
+    if (next.length < steps && k.y < last && !hasFirst(picks, s, last)) return k
   }
-  return true
+  return null
 }
 // where a team's pick should land in its round (1 = first): the standings in the season, the team's strength in the
 // offseason; drafts further out drift to the middle
@@ -652,7 +663,12 @@ export function checkTrade(F, deal) {
     if (r.after - (r.I - r.IM) > o.$ + 0.01) return { ok: false, why: o.why, k: 'owner' }
   }
   const P = picksAfter(F, deal)
-  for (const s of [a, b]) if (!stepienOk(F, s, P)) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
+  for (const s of [a, b]) {
+    const hit = stepienHit(F, s, P)
+    if (hit === 1) return { ok: false, why: `The Stepien rule: the ${s} can't go two straight drafts without a first-round pick`, k: 'stepien' }
+    // (a protected first that stays home is owed later: the league counts every draft the debt could land on)
+    if (hit) return { ok: false, why: `The Stepien rule: the ${s} owe a ${hit.y} first that is top-${hit.pr.top} protected. If it doesn't convey, a later first goes in its place, and this deal could leave them two straight drafts without one`, k: 'stepien' }
+  }
   const cut = Object.entries(wv).flatMap(([s, men]) => men.map(p => ({ s, i: p.i, n: p.n })))
   return { ok: true, a: ra, b: rb, ...(cut.length && { cut }) }
 }
@@ -757,7 +773,7 @@ export function sayOf(F, s, d) {
     case 'nothing': return `The ${N} want something back.`
     // (by the best man offered: a starter isn't called depth)
     case 'star': return !d.best ? `The ${N} want a front-line player or a high lottery pick for ${who}.`
-      : (d.best.o ?? 0) >= 80 ? `The ${N} don't see ${d.best.n} as the main piece of a deal for ${who}. They want a star or a high lottery pick back.`
+      : (d.best.o ?? 0) >= 78 || ((d.best.ag ?? 30) <= 23 && (d.best.o ?? 0) >= 74) ? `The ${N} don't see ${d.best.n} as the main piece of a deal for ${who}. They want a star or a high lottery pick back.`
         : `The ${N} want a front-line player or a high pick for ${who}, not depth.`
     case 'reb': return `The ${N} are rebuilding. They want picks and young players, not veterans.`
     case 'win': return `The ${N} are playing for this season. They won't move ${who ?? 'him'} for a step back.`

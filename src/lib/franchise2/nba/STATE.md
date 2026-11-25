@@ -335,6 +335,12 @@ entries at `seasonEndDeals`.
 - Trades: `proposeTrade(F, deal)` (counts the GM's turned-down calls and offers a counter), `gauge(F, deal)` for the
   value meter, `whyNot(F, s, man)` for a man who can't be traded now, `tradeWindow(F)`. A deal's picks may carry a
   protection (`{ i, top: N }`) or be a swap (`{ swap: year }`); core's draft settles both as it does now.
+  2026-11-24: the screen and the league's teams both use them. A protection goes on a team's own first before its
+  draft order is set (`canProtect`, `PROTECTIONS` = top 4 / 8 / 10 / 14, `protFor` the one an AI team puts on);
+  `swapYears(F, giver, holder)` lists the years a swap is legal; `stepienOk` also covers every draft a protected
+  pick's debt can fall on. In a deal with the GM's team in the season, a league team left at 16 or 17 waives its
+  end of the bench: `checkTrade(...).cut` = `[{ s, i, n }]` (who would go), `doTrade` / `proposeTrade` return the
+  same `cut` once done, with a WAIVED wire item in `news`.
 - Labels: `OVER_TEXT` (cap.js), `RIGHTS_TEXT`, `SIT_TEXT` (contracts.js), `EXC_TEXT` (cap.js).
 
 ### C (sim), 2026-11-19
