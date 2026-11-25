@@ -78,6 +78,9 @@ import { isTester } from '../lib/mimic'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
+
+// the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
+const BAND_STEP = 85
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -264,7 +267,7 @@ function BucketStackedSilhouette({ attrs, ready, fast = false }) {
             transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
             // Fully sequential — each band only starts once the previous one
             // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
+            transitionDelay: visible ? `${(attrs.length - 1 - i) * BAND_STEP}ms` : '0ms',
           }}
         >
           <span className="splash-stack-band-label">{a.label}</span>

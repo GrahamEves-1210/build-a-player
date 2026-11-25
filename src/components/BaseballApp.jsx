@@ -56,6 +56,9 @@ import { BASEBALL_SILHOUETTE, BASEBALL_POOL, BASEBALL_POS, BASEBALL_MODES, BASEB
 import { encodeBaseballBuild, decodeBaseballBuild } from '../lib/baseballShare'
 import { switchSport } from './app/AppHome'
 
+// the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
+const BAND_STEP = 85
+
 // ═════════════════════════════════════════════════════════════════════════════
 // BASEBALL: the fourth game, at /baseball (main.jsx mounts it while lib/baseballLive.js is on).
 // Built like SoccerApp, with basketball's two positions: a BATTER ('bat') or a PITCHER ('pit'), each
@@ -194,7 +197,7 @@ function BaseballStackedSilhouette({ pos, ready, fast = false }) {
         <div key={a.label} className="splash-stack-band" style={{
           background: a.col, flex: a.flex, alignItems: a.at === 'end' ? 'flex-end' : a.at === 'start' ? 'flex-start' : 'center', opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
-          transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
+          transitionDelay: visible ? `${(attrs.length - 1 - i) * BAND_STEP}ms` : '0ms',
         }}>
           <span className={`splash-stack-band-label bb-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}`} style={a.off ? { marginTop: `${a.off}em` } : undefined}>{a.label}</span>
         </div>

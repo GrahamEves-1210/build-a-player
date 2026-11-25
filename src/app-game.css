@@ -7895,3 +7895,5 @@ html.low-power .sil-wrap .st-fx { display: none; }
 .splash-stack-band-label { display: none !important; }
 /* ...and no colours (owner 11-25): one plain ghost, pale and see-through, no gaps or lines (every sport) */
 .splash-stack-band { background: rgba(236,240,238,.4) !important; }
+/* (just the blocks: no ghost of the figure behind them) */
+.ag-figure-base, .ag-figure--nba .splash-figure, .st-home-fig > .splash-figure { display: none !important; }

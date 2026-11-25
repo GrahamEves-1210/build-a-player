@@ -16,6 +16,9 @@ import { K_LIVE } from '../lib/kLive'
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 
+// the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
+const BAND_STEP = 85
+
 export const POS_OPTIONS = [
   {
     pos: 'qb', label: 'QB', classic: true, alltime: true,
@@ -378,7 +381,7 @@ export function StackedSilhouette({ position, attrs, ready, fast = false }) {
             transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
             // Fully sequential — each band only starts once the previous one
             // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
+            transitionDelay: visible ? `${(attrs.length - 1 - i) * BAND_STEP}ms` : '0ms',
           }}
         >
           <span className={`splash-stack-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}${a.v ? ' is-v' : ''}`} style={a.x || a.y ? { position: 'relative', ...(a.x ? { left: `${a.x}%` } : null), ...(a.y ? { top: a.y } : null), ...(a.fs ? { fontSize: a.fs } : null) } : undefined}>{a.label}</span>
