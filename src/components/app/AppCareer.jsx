@@ -874,6 +874,7 @@ function soccerAhead(c) {
   if (sum?.wc) out.push(`The season ends with the ${sum.wc} World Cup: a place in the ${nationName(c.nation)} squad is there to be won.`)
   if (sum?.cont) out.push(`The season ends with the ${sum.cont.year} ${sum.cont.name}: a place in the ${nationName(c.nation)} squad is there to be won.`)
   return out
+}
 
 // The press conference before a season (lib/career.js pressFor, lib/careerPress.js): his first one with a team, or
 // media day when there is something to ask him. The team's own question, three answers and a no comment; the look of
@@ -891,14 +892,6 @@ function PressCard({ c, q, onAnswer }) {
       {!c.press && <p className="cr-note">The coaches and the locker room read what he says. An answer can move his reputation or the team around him.</p>}
     </div>
   )
-}
-
-// soccer: the season's final table goes on the season it was (the recap's table), unless the engine put one there
-// ([short, W, D, L, GF, GA] in table order: about half a kilobyte a season)
-const withTable = (n, rows) => {
-  const s = n.seasons[n.seasons.length - 1]
-  if (!rows?.length || !s || s.table?.length) return n
-  return { ...n, seasons: [...n.seasons.slice(0, -1), { ...s, table: rows.map(r => [r.short, r.wins, r.draws, r.losses, r.gf, r.ga]) }] }
 }
 
 // ── Hub ─────────────────────────────────────────────────────────────────────
