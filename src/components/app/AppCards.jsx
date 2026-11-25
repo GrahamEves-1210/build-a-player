@@ -68,7 +68,7 @@ async function loadNba() {
 // A card's tag is the player's real position (ST, LW, AM…), the build's is always ST
 async function loadSoccer() {
   const [pl, clubs, nations, hs] = await Promise.all([
-    import('../../data/soccer-strikers'), import('../../data/soccer-clubs'), import('../../data/soccer-nations'), import('../../data/soccer-headshots.json'),
+    import('../../data/soccer-strikers'), import('../../data/soccer-clubs'), import('../../data/soccer-nations'), import('../../lib/soccerFace'),
   ])
   const isNation = new Set(nations.WC_NATIONS.map(t => t.short))
   return {
@@ -78,7 +78,7 @@ async function loadSoccer() {
     poolSet: { classic: ['CHAMPIONS LEAGUE', 'Every player in this season’s Champions League'], 'all-time': ['WORLD CUP', 'The legends of the 48 greatest World Cup nations'] },
     teams: [...clubs.UCL_CLUBS, ...nations.WC_NATIONS],
     logo: t => (isNation.has(t) ? `/logos/nations/${t}.png` : `/logos/soccer/${t}.png`),
-    photo: (name, p) => { const f = p?.espn != null ? hs.default[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null },
+    photo: (name, p) => { const k = hs.soccerFaceKey(p); return k ? `${HEADSHOT_BASE}/${k}.webp` : null },
   }
 }
 // Baseball (once it's live and its cards are on: BASEBALL_LIVE, BASEBALL_MODES.cards): batters and pitchers, CURRENT

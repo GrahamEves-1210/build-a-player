@@ -4,7 +4,7 @@ import { NameTag } from './app/NameTag'
 import { SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
 import { SOCCER_ALL_STRIKERS } from '../data/soccer-strikers'
 import { WC_ALL_NATIONS } from '../data/soccer-nations'
-import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
+import { soccerFaceKey } from '../lib/soccerFace'
 import { migrateSoccerKeys } from '../data/soccer-attrs'
 import { SOCCER_SAL_POOL as ALL_PLAYERS, SOCCER_SAL_COLS as SAL_COLS, soccerSalTypesFor as typesFor, soccerSalBuild, soccerSalStats } from '../data/soccer-salary'
 import { salaryKit, seededRandom, TIERS, TIER_BANDS, BUDGET_OPTIONS, RECENT_PENALTY, budgetForDateStr } from '../lib/salaryCore'
@@ -56,7 +56,7 @@ const crestOf = p => {
 }
 const metaOf = p => crestOf(p).meta
 const logoOf = p => crestOf(p).src
-const photoOf = p => { const f = p?.espn != null ? SOCCER_HEADSHOTS[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null }
+const photoOf = p => { const k = soccerFaceKey(p); return k ? `${HEADSHOT_BASE}/${k}.webp` : null }
 const look = p => { const t = metaOf(p); return { teamColor: t?.color ?? '#444', teamColor2: t?.color2 ?? '#222', photo: photoOf(p) } }
 const _playerMap = new Map(ALL_PLAYERS.map(p => [p.name, p]))
 
