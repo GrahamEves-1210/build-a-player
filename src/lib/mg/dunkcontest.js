@@ -92,6 +92,15 @@ const HANGP = pose({ hy: 46, fFx: 6, fFy: 4, fBx: -2, fBy: 6, hFx: 6, hFy: 121, 
 const HANG1 = pose({ hy: 46, fFx: 6, fFy: 4, fBx: -2, fBy: 6, hFx: 6, hFy: 121, hBx: -16, hBy: 88 })
 const FALLP = pose({ hy: 46, lean: 0.06, fFx: 10, fFy: 2, fBx: -6, fBy: 4, hFx: 22, hFy: 92, hBx: -14, hBy: 90 })
 const LANDP = pose({ hy: 33, lean: 0.28, fFx: 14, fBx: -12, hFx: 24, hFy: 52, hBx: 18, hBy: 50 })
+// the floor taking him: knees and hips give all the way, then he comes back up to LANDP
+const LANDD = pose({ hy: 26, lean: 0.38, fFx: 16, fBx: -13, hFx: 27, hFy: 44, hBx: 21, hBy: 42 })
+// the gather: the last long step sat down into, the ball brought down by the hip, ready to throw everything up.
+// Off one foot (LOAD1): the plant leg out in front, the other one behind about to drive. Off two (LOAD2): feet together,
+// hips back, the ball low between his hands
+const LOAD1 = pose({ hy: 33, lean: -0.05, fFx: 19, fBx: -15, fBy: 7, hFx: 6, hFy: 46, hBx: 3, hBy: 47 })
+const LOAD2 = pose({ hy: 30, lean: 0.14, fFx: 9, fBx: -6, hFx: 8, hFy: 38, hBx: 5, hBy: 40 })
+// in the air off one foot: the free knee driven up, the takeoff leg trailing long under him
+const AIR_LEGS = { fFx: 16, fFy: 35, fBx: -9, fBy: 6 }
 const FLAIL = pose({ hy: 47, lean: 0.12, fFx: 12, fFy: 16, fBx: -10, fBy: 22, hFx: 30, hFy: 98, hBx: -14, hBy: 100 })
 // the front rig (meter.js athleteFront): mid-turn, the ball tucked or up over his head
 const F_TUCK = pose({ hy: 46, fFx: 11, fFy: 24, fBx: -11, fBy: 22, hFx: 8, hFy: 84, hBx: -8, hBy: 84 })
@@ -108,29 +117,29 @@ const SPEC = {
     keys: [k(0, TAKE2), k(150, UP2), k(360, COCK2), k(500, SLAM2)] },
   tomahawk: { stamp: 'TOMAHAWK', take: 5, F: 900, H: 3.35, fin: 520, hang: 260, one: true, moves: [],
     keys: [k(0, TAKE1), k(170, RISE1, 'n'), k(390, TCOCK, 'n'), k(520, SLAM1, 'n')] },
-  reverse: { stamp: 'REVERSE JAM', take: 3.3, F: 900, H: 3.3, fin: 520, hang: 0, xFin: 0.95, spin: [80, 340, 0.5], moves: [],
-    keys: [k(0, TAKE1), k(200, UP2), k(380, AWAY2), k(520, REVSLAM)] },
+  reverse: { stamp: 'REVERSE JAM', take: 3.3, F: 900, H: 3.3, fin: 520, hang: 0, xFin: 0.95, spin: [80, 340, 0.5], two: true, moves: [],
+    keys: [k(0, TAKE2), k(200, UP2), k(380, AWAY2), k(520, REVSLAM)] },
   windmill: { stamp: 'WINDMILL', take: 5.2, F: 980, H: 3.45, fin: 560, hang: 200, one: true, slow: [220, 560], slowRate: 0.55,
     moves: [{ kind: 'hold', at: 360, hold: 'HOLD TO WIND IT UP', noun: 'WINDMILL' }],
     keys: [k(0, TAKE1), k(120, WMILL, 'n', -40), k(240, WMILL, 'n', -150), k(360, WMILL, 'n', -250), k(470, WMILL, 'n', -292), k(560, SLAM1, 'n')] },
   cradle: { stamp: 'CRADLE ROCK', take: 5.2, F: 980, H: 3.45, fin: 560, hang: 0, one: true, slow: [200, 560], slowRate: 0.55,
     moves: [{ kind: 'hold', at: 330, hold: 'HOLD TO ROCK IT', noun: 'ROCK' }],
     keys: [k(0, TAKE1), k(130, ROCK, 'n', 55), k(330, ROCK, 'n', -112), k(450, ROCK, 'n', 96), k(560, SLAM1, 'n')] },
-  'bounce-legs': { stamp: 'THROUGH THE LEGS', take: 5, F: 1000, H: 3.45, fin: 580, hang: 0, bounce: true, slow: [230, 580], slowRate: 0.55,
+  'bounce-legs': { stamp: 'THROUGH THE LEGS', take: 5, F: 1000, H: 3.45, fin: 580, hang: 0, bounce: true, two: true, slow: [230, 580], slowRate: 0.55,
     moves: [{ kind: 'tap', at: 370, verb: 'UNDER THE LEG', noun: 'LEG SWAP' }],
     keys: [k(0, CATCH, 'x'), k(150, RISE1, 'n'), k(280, KNEE_N, 'n'), k(345, KNEE_N, 'n'), k(395, UNDER_F, 'f'), k(490, FARUP, 'f'), k(580, SLAMF, 'f')] },
-  'double-clutch': { stamp: 'DOUBLE CLUTCH', take: 5, F: 1020, H: 3.5, fin: 600, hang: 300, slow: [240, 600], slowRate: 0.55,
+  'double-clutch': { stamp: 'DOUBLE CLUTCH', take: 5, F: 1020, H: 3.5, fin: 600, hang: 300, slow: [240, 600], slowRate: 0.55, two: true,
     moves: [{ kind: 'tap', at: 380, verb: 'PUMP IT BACK UP', noun: 'PUMP' }],
-    keys: [k(0, TAKE1), k(150, UP2), k(280, CLUTCH), k(380, CLUTCH_LO), k(500, UP2), k(600, SLAM2)] },
-  '360-windmill': { stamp: '360 WINDMILL', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 240, one: true, spin: [60, 330, 1], slow: [200, 640],
+    keys: [k(0, TAKE2), k(150, UP2), k(280, CLUTCH), k(380, CLUTCH_LO), k(500, UP2), k(600, SLAM2)] },
+  '360-windmill': { stamp: '360 WINDMILL', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 240, one: true, spin: [60, 330, 1], slow: [200, 640], two: true,
     moves: [{ kind: 'hold', at: 330, hold: 'HOLD THE SPIN', noun: 'SPIN' }, { kind: 'tap', at: 470, verb: 'WINDMILL IT', noun: 'WINDMILL' }],
-    keys: [k(0, TAKE1), k(150, CHEST), k(330, CHEST), k(360, WMILL, 'n', -45), k(410, WMILL, 'n', -150), k(470, WMILL, 'n', -250), k(560, WMILL, 'n', -292), k(640, SLAM1, 'n')] },
+    keys: [k(0, TAKE2), k(150, CHEST), k(330, CHEST), k(360, WMILL, 'n', -45), k(410, WMILL, 'n', -150), k(470, WMILL, 'n', -250), k(560, WMILL, 'n', -292), k(640, SLAM1, 'n')] },
   'ft-line': { stamp: 'FROM THE LINE', take: 14.15, F: 1300, H: 3.65, fin: 800, hang: 0, one: true, slow: [220, 800], takeW: 0.96,
     moves: [{ kind: 'hold', at: 420, hold: 'HOLD THE SPLIT', noun: 'GLIDE' }, { kind: 'tap', at: 620, verb: 'COCK IT BACK', noun: 'COCK' }],
     keys: [k(0, TAKE1), k(180, SPLIT, 'n'), k(420, SPLIT2, 'n'), k(520, RISE1, 'n'), k(620, TCOCK, 'n'), k(800, SLAM1, 'n')] },
-  'legs-360': { stamp: '360 THROUGH THE LEGS', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 200, spin: [60, 330, 1], slow: [200, 640],
+  'legs-360': { stamp: '360 THROUGH THE LEGS', take: 5.6, F: 1150, H: 3.7, fin: 640, hang: 200, spin: [60, 330, 1], slow: [200, 640], two: true,
     moves: [{ kind: 'hold', at: 330, hold: 'HOLD THE SPIN', noun: 'SPIN' }, { kind: 'tap', at: 470, verb: 'UNDER THE LEG', noun: 'LEG SWAP' }],
-    keys: [k(0, TAKE1), k(150, CHEST), k(330, CHEST), k(400, KNEE_N, 'n'), k(445, KNEE_N, 'n'), k(495, UNDER_F, 'f'), k(560, FARUP, 'f'), k(640, SLAMF, 'f')] },
+    keys: [k(0, TAKE2), k(150, CHEST), k(330, CHEST), k(400, KNEE_N, 'n'), k(445, KNEE_N, 'n'), k(495, UNDER_F, 'f'), k(560, FARUP, 'f'), k(640, SLAMF, 'f')] },
 }
 const X_FIN = 1.35          // his hips at the finish of a dunk going forward, feet from the rim
 const RIM_IN = { x: 0, y: 10.45 }, FRONT_IRON = { x: 0.72, y: 10.12 }, BACK_IRON = { x: -0.66, y: 10.12 }
@@ -282,6 +291,7 @@ export function make({ v, seed, def }) {
   function land(t) {
     g.landed = true; g.tf = t; g.k = steps.length
     g.fx.push('h:medium')
+    g.nudge.kick(t, D.tier === 'hard' ? 3.4 : D.tier === 'medium' ? 2.8 : 2.3, 0, 1, 110)   // (the hit itself; the roar's comes after)
     after(t + 90, () => {
       const quality = steps.reduce((a, s) => a + s.q, 0) / steps.length
       g.quality = quality
@@ -496,9 +506,9 @@ function hoop(ctx, V, c, part, rot, netAge, jolt) {
     // the strands from the iron to a tighter ring a foot and a half down; through, it swells, whips up and swings
     let lift = 0, swing = 0, bulge = 0
     if (netAge != null && netAge >= 0 && netAge < 1300) {
-      lift = Math.exp(-netAge / 300) * (0.45 + Math.sin(netAge / 46) * 0.3) * Math.min(1, netAge / 110)
+      lift = Math.exp(-netAge / 300) * (0.6 + Math.sin(netAge / 40) * 0.35) * Math.min(1, netAge / 90)
       swing = Math.exp(-netAge / 420) * Math.sin(netAge / 78) * 0.3
-      bulge = netAge < 260 ? Math.sin((netAge / 260) * Math.PI) * 0.35 : 0
+      bulge = netAge < 200 ? Math.sin((netAge / 200) * Math.PI) * 0.5 : 0
     } else if (jolt != null && jolt >= 0 && jolt < 700) { swing = Math.exp(-jolt / 220) * Math.sin(jolt / 32) * 0.16; lift = Math.exp(-jolt / 180) * 0.12 }
     const N = 7, rows = 3, H = 1.5
     const P = []
@@ -687,8 +697,9 @@ export function draw(ctx, g, view) {
     } else if (t < RUN0) { mixPose(STANDB, PLANT, 0.4, P); ballOf(P, '2', BW); ball = { rx: BW.x, ry: BW.y } }
     else {
       runPose(2 * Math.PI * (t - T1) / STRIDE, P)
-      const pl = prog(t, T1 - 150, T1) * 0.75
-      if (pl > 0) mixPose(P, PLANT, pl, P)
+      // the gather: the last long step, sitting down into it
+      const pl = easeIn(prog(t, T1 - 240, T1))
+      if (pl > 0) mixPose(P, S.two ? LOAD2 : LOAD1, pl, P)
       ballOf(P, '2', BW); ball = { rx: BW.x, ry: BW.y }
       // off the bounce: he throws it down ahead of the mark and goes up to meet it
       if (S.bounce && t >= T1 - 470) ball = null
@@ -700,12 +711,25 @@ export function draw(ctx, g, view) {
     const xAt = tt => lerp(runX(S, g.p1), xFin, clamp(tt / S.fin, 0, 1))
     bx = xAt(tau)
     if (tau > S.fin) bx = lerp(xFin, xFin - 1.25, easeOut(prog(tau, S.fin, S.F)))
-    j = Hrig * 4 * u * (1 - u)
+    // up like a shot, floating as he gets to the top at the finish, then dropping (was a plain parabola)
+    void u
+    const apex = S.fin
+    j = tau <= apex ? Hrig * (1 - (1 - tauC / apex) ** 2.4) : Hrig * (1 - clamp((tauC - apex) / (S.F - apex), 0, 1) ** 2)
     const K = keyed(S, Math.min(tau, S.keys[S.keys.length - 1].t), P)
+    // off one foot: the free knee driven up and the takeoff leg trailing, until he brings his legs up for the finish
+    if (!S.two && g.id !== 'ft-line') {
+      const w = clamp((tau - 30) / 70, 0, 1) * clamp((S.fin - 40 - tau) / 120, 0, 1)
+      if (w > 0) { P.fFx = lerp(P.fFx, AIR_LEGS.fFx, w); P.fFy = lerp(P.fFy, AIR_LEGS.fFy, w); P.fBx = lerp(P.fBx, AIR_LEGS.fBx, w); P.fBy = lerp(P.fBy, AIR_LEGS.fBy, w) }
+    }
     theta = spinOf(S, tau)
     if (K.b !== 'x') { ball = { rx: KEY.bx, ry: KEY.by }; ballFar = K.far }
     // the plant into the takeoff
-    if (tau < 70) mixPose(PLANT, P, tau / 70, P)
+    // out of the gather: everything goes up at once
+    if (tau < 90) {
+      mixPose(S.two ? LOAD2 : LOAD1, P, easeOut(tau / 90), P)
+      // (the ball goes up in his hands with them)
+      if (ball && K.b !== 'x') { ballOf(P, K.b, BW); ball = { rx: BW.x, ry: BW.y } }
+    }
     // on the rim: hanging on it, then down
     if (landed && hangMs && t >= g.tf) {
       const a = t - g.tf
@@ -722,7 +746,9 @@ export function draw(ctx, g, view) {
       const a = t - landAt
       j = 0
       bx = landed && hangMs ? 1.33 : xFin - 1.25
-      copyPose(LANDP, P)
+      if (a < 80) mixPose(FALLP, LANDD, easeOut(a / 80), P)
+      else if (a < 300) mixPose(LANDD, LANDP, easeInOut((a - 80) / 220), P)
+      else copyPose(LANDP, P)
       if (a < 90) g.nudgedLand || (g.nudgedLand = true, g.nudge.kick(t, 1.4, 0, 1, 150))
       // he turns to the building: the flex, or his hands on his head
       const thL = spinEnd(S)
@@ -737,8 +763,9 @@ export function draw(ctx, g, view) {
         ball.blend = w
       } else if (t >= g.tf) {
         const a = t - g.tf
-        if (a < 120) ballLoose = { x: 0, y: lerp(RIM_IN.y, 9.0, a / 120) }
-        else ballLoose = { ...freeAt({ x: 0, y: 9.0, vx: 0.0016 * g.popDir * 0.6, vy: -0.008, t0: g.tf + 120 }, t) }
+        // (thrown down through it: out the bottom of the net in a blink, still going)
+        if (a < 70) ballLoose = { x: 0, y: lerp(RIM_IN.y, 8.8, easeIn(a / 70)) }
+        else ballLoose = { ...freeAt({ x: 0, y: 8.8, vx: 0.0016 * g.popDir * 0.6, vy: -0.0115, t0: g.tf + 70 }, t) }
         ball = null
       }
     } else if (g.clank && t >= g.clank.from) {
@@ -798,10 +825,16 @@ export function draw(ctx, g, view) {
   if (landed && t >= g.tf) {
     const a = t - g.tf
     netAge = a - 40
-    if (hangMs && a < 80 + hangMs) rot = -0.075 * Math.min(1, a / 60) + Math.sin(a / 70) * 0.01
-    else { const r0 = hangMs ? a - 80 - hangMs : a; rot = Math.sin(r0 / 32) * 0.085 * Math.exp(-r0 / 210) * (hangMs ? 1 : 0.7) }
+    // the iron yanked down by the slam (further while he hangs on it), then snapping back up and ringing
+    if (hangMs && a < 80 + hangMs) rot = (a < 45 ? -0.14 * easeOut(a / 45) : -0.14 + 0.05 * easeOut(clamp((a - 45) / 120, 0, 1))) + Math.sin(a / 70) * 0.012
+    else if (!hangMs && a < 45) rot = -0.13 * easeOut(a / 45)
+    else { const r0 = hangMs ? a - 80 - hangMs : a - 45; rot = -Math.cos(r0 / 30) * (hangMs ? 0.1 : 0.13) * Math.exp(-r0 / 190) }
   } else if (g.clank && t >= g.clank.at) { jolt = t - g.clank.at; rot = Math.sin(jolt / 26) * 0.05 * Math.exp(-jolt / 150) }
-  hoop(ctx, V, c, 'back', rot, netAge, jolt)
+  // the whole basket shudders on the slam, the stanchion and all: hardest on the hard ones
+  const shA = landed && t >= g.tf ? t - g.tf : -1
+  const shud = shA >= 0 && shA < 900 ? Math.sin(shA / 22) * Math.exp(-shA / 240) * (D.tier === 'hard' ? 0.1 : D.tier === 'medium' ? 0.055 : 0.03) * kk : 0
+  const hoopAt = part => { if (shud) { ctx.save(); ctx.translate(shud, 0) } hoop(ctx, V, c, part, rot, netAge, jolt); if (shud) ctx.restore() }
+  hoopAt('back')
 
   // the ball in the world: in a hand, on its way to the iron, or loose
   let bwx = null, bwy = null
@@ -841,11 +874,13 @@ export function draw(ctx, g, view) {
   const behind = bwx != null && !inRim && ((ballFar && !front) || (front && Math.sin(theta) < 0))
   if (behind) drawBall()
   if (inRim) drawBall()
-  hoop(ctx, V, c, 'net', rot, netAge, jolt)
-  hoop(ctx, V, c, 'front', rot, netAge, jolt)
+  hoopAt('net')
+  hoopAt('front')
 
   // him
-  const hipX = SX(bx), PEz = easedPose(PE, P, g, dtG, 22)
+  // (the body's usual soft lag, but next to none out of the gather and on the slam: those are meant to snap)
+  const snap = (tau != null && tau < 140) || (landed && t >= g.tf - 60 && t < g.tf + 140)
+  const hipX = SX(bx), PEz = easedPose(PE, P, g, dtG, snap ? 7 : 22)
   g.fig = { x: hipX, y: floorY - j * s, s }   // (where he is on the screen: the frame-by-frame checks crop to him)
   PEz.j = j
   if (front) {
@@ -865,6 +900,18 @@ export function draw(ctx, g, view) {
   if (!behind && !inRim) drawBall()
   if (g.phase !== 'pick') nameTag(ctx, view, clamp(hipX, 34, view.w - 34), floorY + 5 * U, name, 1)
 
+  // the hit: a white flash off the iron and a burst of strokes out from the rim, gone in a blink (not with Reduce
+  // Motion or low power)
+  if (shA >= 0 && shA < 160 && !lightFx() && !view.empty) {
+    const f = shA / 160, rx = SX(0) + shud, ry = SY(RIM_FT)
+    if (shA < 90) { ctx.fillStyle = `rgba(255,255,255,${(0.26 * (1 - shA / 90)).toFixed(3)})`; ctx.fillRect(0, 0, view.w, view.h) }
+    ctx.strokeStyle = `rgba(255,248,225,${(0.9 * (1 - f)).toFixed(3)})`; ctx.lineWidth = 2.4 * U; ctx.lineCap = 'round'; ctx.beginPath()
+    for (let i = 0; i < 8; i++) {
+      const a0 = -Math.PI * 0.95 + (i / 7) * Math.PI * 0.9 + (i % 2) * 0.12, r0 = (1.1 + f * 1.6) * kk * 0.5, r1 = r0 + (0.9 + (i % 3) * 0.3) * kk * 0.5 * (1 - f * 0.5)
+      ctx.moveTo(rx + Math.cos(a0) * r0, ry + Math.sin(a0) * r0 * 0.8); ctx.lineTo(rx + Math.cos(a0) * r1, ry + Math.sin(a0) * r1 * 0.8)
+    }
+    ctx.stroke(); ctx.lineCap = 'butt'
+  }
   // the rings in the air: on the ball for the move, on the rim for the finish
   // (the next one shows too, dim, while he's still on this one: he sees the beat coming)
   const ringOf = (st, dim) => {
