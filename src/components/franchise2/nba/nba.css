@@ -164,8 +164,10 @@
 .nb-cap-k { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 14px; font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
 
 .nb-sheet-ov { position: fixed; inset: 0; z-index: 1070; display: grid; place-items: end center; background: rgba(0,0,0,.6); }
-.nb-sheet { display: grid; gap: 12px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; padding: 14px 16px calc(18px + var(--web-rail, 0px)); background: var(--fk-ink); box-sizing: border-box; }
-@media (min-width: 700px) { .nb-sheet-ov { place-items: center; } .nb-sheet { padding-bottom: 18px; } }
+/* (the website's bottom ad rail: the overlay is in app-game.css's list of layers, "nothing under the rail" rule 1, so
+   it ends at the top of the rail and the ad's box is cut out of it; the sheet fits the room above) */
+.nb-sheet { display: grid; gap: 12px; width: 100%; max-width: 560px; max-height: min(88vh, calc(100dvh - var(--web-rail, 0px) - 12px)); overflow-y: auto; overscroll-behavior: contain; padding: 14px 16px 18px; background: var(--fk-ink); box-sizing: border-box; }
+@media (min-width: 700px) { .nb-sheet-ov { place-items: center; } }
 .nb-sheet-top { display: flex; justify-content: space-between; align-items: center; font-family: var(--fk-d); font-size: 18px; text-transform: uppercase; }
 .nb-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
 .nb-facts span { display: grid; gap: 3px; padding: 8px 10px; background: var(--fk-g1); }
@@ -231,6 +233,21 @@
 .nb-honors ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
 .nb-honors li { display: grid; gap: 1px; font-family: var(--fk-b); font-size: 14px; }
 .nb-honors li small { font-weight: 600; font-size: 13px; color: var(--fk-mute); }
+/* History: the records book and the Hall (football History's plaques and jerseys, fd2.css; these are the NBA's additions) */
+.nb-hist .fh-seg.nb-seg { margin-bottom: 0; }
+.nb-recs { align-items: stretch; }
+.nb-rec { align-content: start; gap: 2px; text-align: left; color: #fff; }
+.nb-rec.is-tap { cursor: pointer; }
+.nb-rec b { color: #fff; }
+.nb-rec u { margin-top: 4px; padding-top: 5px; border-top: 1px solid var(--fk-line2); text-decoration: none; font-family: var(--fk-b); font-weight: 600; font-size: 13px; line-height: 1.25; color: var(--fk-mute); }
+.nb-rec.is-nba { box-shadow: inset 0 -2px 0 var(--fk-gold); }
+.nb-rec.is-nba u { color: var(--fk-gold); }
+.nb-rec em { white-space: normal; flex-wrap: wrap; row-gap: 0; line-height: 1.2; }
+.nb-rec em span { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.nb-hall li { cursor: pointer; }
+.nb-hall.is-wait small { color: var(--fk-mute); }
+.nb-hist .fd-jersey { cursor: pointer; }
+@media (min-width: 900px) { .nb-hist .nb-recs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .nb-save { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding-top: 8px; }
 
 /* the summer */
@@ -302,7 +319,9 @@
 .nb-tcounter { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; line-height: 1.35; color: #fff; }
 .nb-tman:disabled { opacity: .5; cursor: default; }
 .nb-cap-holds { font-family: var(--fk-b); font-size: 13px; color: var(--fk-mute); }
-.nb-run { position: fixed; inset: 0; z-index: 1065; display: grid; place-items: center; padding: 16px; background: rgba(8,9,11,.92); color: var(--fk-text); }
+/* (the sim's overlay, NbaHub: scoped to its own root, because the live game's "on a 9-0 run" chip is .nb-run too and was
+   picking this rule up: pinned across the top of the game over the LEAVE GAME bar) */
+.fk-root.nb-run { position: fixed; inset: 0; z-index: 1065; display: grid; place-items: center; padding: 16px; background: rgba(8,9,11,.92); color: var(--fk-text); }
 .nb-run-in { display: grid; gap: 14px; width: 100%; max-width: 460px; }
 .nb-run-rec { display: flex; align-items: center; gap: 12px; }
 .nb-run-rec b { font-family: var(--fk-d); font-weight: 400; font-size: 56px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
@@ -376,6 +395,7 @@
 .nb-deal-yr.is-opt { box-shadow: inset 3px 0 0 var(--fk-gold); }
 .nb-deal-yr.is-opt em { color: var(--fk-gold); }
 .nb-car tr.is-now td { color: #fff; font-weight: 700; }
+.nb-car tfoot td { border-top: 2px solid rgba(196,201,208,.4); color: #fff; font-weight: 700; }
 .nb-honor-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
 .nb-honor-list li { display: grid; gap: 1px; padding: 6px 10px; background: var(--fk-g1); font-family: var(--fk-b); font-size: 14px; }
 .nb-honor-list small { font-size: 13px; color: var(--fk-mute); }

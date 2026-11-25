@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   TEAM, CONF_OF, SHORTS, CONF_DIVS, DIVS, records, recText, confOrder, coachOrder, teamOvr, myGames, nextMine, dateText, seasonText, CAP_SIM,
   nick, addNews, manOf, teamOfMan, b2bOf, TYPES, cutBlock, careerView, retiredRow, FIRST_YEAR, photoOf } from '../../../lib/franchise2/nba'
+import { realCareer, predates } from '../../../lib/franchise2/nba/realCareers'
 import { GUARD_CATEGORIES } from '../../../data/nba-guards'
 import { BIG_CATEGORIES } from '../../../data/nba-bigs'
 import { BUCKET_ATTR } from '../../../data/nba-attrs'
@@ -209,20 +210,34 @@ function Contract({ F, p }) {
   )
 }
 
-// his seasons: the ones closed (offseason.js carRow; the oldest folded into one row) and this one so far
+// his seasons: his real NBA career before the save as one line (realCareers.js: a real man's totals through 2025-26),
+// the ones closed here (offseason.js carRow; the oldest folded into one row) and this one so far, then his career.
+// A man whose career started before the save and whose earlier seasons nobody has numbers for (a made-up veteran, a
+// real man the table lacks) gets the note instead, whether or not he has rows here: no false numbers.
 function Career({ F, p, s }) {
+  const base = realCareer(p)
   const rows = careerView(p).map(c => ({ ...c, lbl: c.y2 ? `${c.y}-${String((c.y2 + 1) % 100).padStart(2, '0')}` : seasonText(c.y), tm: c.s || `${c.y2 - c.y + 1} YRS` }))
+  if (base) rows.unshift({ ...base, lbl: `${base.y0}-${String(FIRST_YEAR % 100).padStart(2, '0')}`, tm: `${base.yrs} ${base.yrs === 1 ? 'YR' : 'YRS'}`, pre: true })
   const x = F.ss?.[p.i]
   if (x?.gp && F.phase !== 'off') rows.push({ ...x, lbl: seasonText(F.year), tm: x.s ?? s ?? '', now: true })
   const f = (c, k) => (c.gp ? (c[k] / c.gp).toFixed(1) : '-')
+  // (the career line: every row but a traded season's TOT, which repeats its teams' rows)
+  const tot = { gp: 0, min: 0, pts: 0, reb: 0, ast: 0 }
+  for (const c of rows) if (!c.tot) for (const k in tot) tot[k] += c[k] ?? 0
+  const old = predates(p) && !base
+  const note = old ? `His numbers here start with the ${seasonText(FIRST_YEAR)} season.` : null
   return (
     <section className="nb-sec">
       <h3 className="nb-sec-h">Career{rows.length > 0 && <span>Per game</span>}</h3>
-      {!rows.length ? <p className="nb-sec-note">{p.rk === F.year || p.ys === 0 ? 'No NBA games yet.' : `His numbers here start with the ${seasonText(F.year)} season.`}</p> : (
-        <div className="bx-scroll"><table className="nb-car">
-          <thead><tr><th>SEASON</th><th>TM</th><th>G</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th></tr></thead>
-          <tbody>{rows.map(c => <tr key={c.lbl + c.tm} className={c.now ? 'is-now' : ''}><td>{c.lbl}</td><td>{c.tm}</td><td>{c.gp}</td><td>{f(c, 'min')}</td><td>{f(c, 'pts')}</td><td>{f(c, 'reb')}</td><td>{f(c, 'ast')}</td></tr>)}</tbody>
-        </table></div>
+      {!rows.length ? <p className="nb-sec-note">{note ?? (p.rk === F.year || p.ys === 0 ? 'No NBA games yet.' : `His numbers here start with the ${seasonText(F.year)} season.`)}</p> : (
+        <>
+          <div className="bx-scroll"><table className="nb-car">
+            <thead><tr><th>SEASON</th><th>TM</th><th>G</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th></tr></thead>
+            <tbody>{rows.map(c => <tr key={c.lbl + c.tm} className={c.now ? 'is-now' : ''}><td>{c.lbl}</td><td>{c.tm}</td><td>{c.gp}</td><td>{f(c, 'min')}</td><td>{f(c, 'pts')}</td><td>{f(c, 'reb')}</td><td>{f(c, 'ast')}</td></tr>)}</tbody>
+            {rows.filter(c => !c.tot).length > 1 && !old && <tfoot><tr><td>CAREER</td><td /><td>{tot.gp}</td><td>{f(tot, 'min')}</td><td>{f(tot, 'pts')}</td><td>{f(tot, 'reb')}</td><td>{f(tot, 'ast')}</td></tr></tfoot>}
+          </table></div>
+          {note && <p className="nb-sec-note">{note}</p>}
+        </>
       )}
     </section>
   )
@@ -276,7 +291,8 @@ function RetiredSheet({ F, r, owner, onClose }) {
               <tbody><tr><td>{gp}</td><td>{f(pts)}</td><td>{f(reb)}</td><td>{f(ast)}</td></tr></tbody>
             </table></div>
           ) : <p className="nb-sec-note">No NBA games on record.</p>}
-          {gp > 0 && (r.yrs ?? 0) > (r.y ?? FIRST_YEAR) - FIRST_YEAR + 1 && <p className="nb-sec-note">{`His numbers here start with the ${seasonText(FIRST_YEAR)} season.`}</p>}
+          {/* (rc: the totals are his whole career, the real seasons before the save counted; a row kept from before that, or a made-up veteran's, starts with the save) */}
+          {gp > 0 && !r.rc && (r.yrs ?? 0) > (r.y ?? FIRST_YEAR) - FIRST_YEAR + 1 && <p className="nb-sec-note">{`His numbers here start with the ${seasonText(FIRST_YEAR)} season.`}</p>}
         </section>
         {keys.length > 0 && (
           <section className="nb-sec">

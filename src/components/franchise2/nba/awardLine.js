@@ -12,7 +12,8 @@ function retiredSeason(F, i, y) {
   if (!r) return null
   if (r.car) return r.car
   const one = Math.min(r.yrs ?? 1, (r.y ?? y) - FIRST_YEAR + 1) === 1
-  return one && r.y === y && r.t?.[0] ? [{ y, s: r.s, gp: r.t[0], pts: r.t[1], reb: r.t[2], ast: r.t[3], noDef: 1 }] : null
+  // (rc: the row's totals are his whole real career, not that one season)
+  return one && !r.rc && r.y === y && r.t?.[0] ? [{ y, s: r.s, gp: r.t[0], pts: r.t[1], reb: r.t[2], ast: r.t[3], noDef: 1 }] : null
 }
 export function seasonOf(F, i, y) {
   if (y === F.year && F.ss?.[i]?.gp) return F.ss[i]

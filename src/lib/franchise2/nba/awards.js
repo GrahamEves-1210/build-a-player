@@ -348,5 +348,5 @@ export function hallScore(r) {
   for (const a of r.aw ?? []) v += HALL_PTS[String(a).slice(4)] ?? 0
   return v
 }
-export const hallOfFamer = r => !!r && r.t != null && ((r.b == null && HALL_RESUME.has(r.n)) || (r.aw ?? []).some(a => String(a).slice(4) === 'MVP') || hallScore(r) >= 30)
+export const hallOfFamer = r => !!r && r.t != null && ((r.b == null && HALL_RESUME.has(r.n)) || (r.aw ?? []).some(a => String(a).slice(4) === 'MVP') || hallScore(r) >= 32)
 export const hallClass = r => (r.y != null ? r.y + 4 : null)
