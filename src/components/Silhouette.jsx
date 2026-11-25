@@ -564,7 +564,9 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
       const zone = zonesRef.current.find(z => z.type === ad.type)
       if (!zone) return
       const dist = Math.sqrt((figX - zone.ax) ** 2 + (figY - zone.ay) ** 2)
-      if (dist <= 80) onDropRef.current(ad.type)
+      // (the striker: a drop on the trait's own card counts too. Size has no dot to aim at, and his dots are small targets)
+      const onOwnCard = zonesRef.current === STRIKER_ZONES && !!e.target?.closest?.(`.cz-type-${zone.type}`)
+      if ((dist <= 80 && !zone.noDot) || onOwnCard || (zone.noDot && zonesRef.current !== STRIKER_ZONES && dist <= 80)) onDropRef.current(ad.type)
     }
     el.addEventListener('dragover', onDragOver)
     el.addEventListener('drop', onDropNative)

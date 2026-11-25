@@ -7798,7 +7798,8 @@ html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width:
   /* the website from a tablet up: the stage between the tabs and the ad rail, the full width of the field (the
      field's 90px side padding is the basketball figure's) */
   .sil-wrap.sil-wrap--st-desk { width: calc(100% + 164px); height: calc(100dvh - 229px); min-height: 380px; margin-top: 15px; }
-  html.is-tablet:not(.app-look) .sil-wrap.sil-wrap--st-desk { width: 100%; }
+  /* (an iPad in the classic look: the short stage with no cards; the ball stays inside it) */
+  html.is-tablet:not(.app-look) .sil-wrap.sil-wrap--st-desk { width: 100%; height: calc(100% - 78px); min-height: 0; }
 }
 @media (max-width: 768px) {
   .mobile-build .sil-wrap.sil-wrap--st { width: 100%; margin: 0; }
