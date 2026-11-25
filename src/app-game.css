@@ -6767,7 +6767,7 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-
 .ag-home--soccer .ag-bg-lines { background: repeating-linear-gradient(180deg, transparent 0 63px, rgba(242,242,238,.035) 63px 64px); }
 .ag-home--soccer .ag-wordmark em { color: #9a9ca1; }
 /* (drawn half again as tall, from the top: the far goal sits low behind his legs, not as a box round his waist) */
-.ag-home--soccer .ag-stage-photo { background-image: url('/soccerbackground.webp'); background-size: auto 150%; background-position: center 0%; filter: saturate(.9) brightness(1.1); }
+.ag-home--soccer .ag-stage-photo { background-image: url('/soccerbackground-nolights.webp'); background-size: auto 150%; background-position: center 0%; filter: saturate(.95) brightness(1.4); }   /* (the roof's light strip painted out, and brighter: owner 11-25) */
 .ag-home--soccer .ag-platform-ring { box-shadow: 0 0 10px rgba(242,242,238,.28); }
 .ag-home--soccer .ag-sport { background: #131416; }
 .ag-home--soccer .ag-stage .ag-positions { background: #1a1b1e; }
@@ -6779,7 +6779,7 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-
 .ag-home--soccer .ag-mode--gold.is-on { background: linear-gradient(135deg, #fbe28c 0%, #f0bd2e 48%, #c8920f 100%); color: #1d1503; }
 .ag-home--soccer .ag-start { background: #f2f2ee; color: #0b0c0e; }
 @media (hover: hover) { .ag-home--soccer .ag-start:hover { background: #d9d9d5; } }
-.ag-home--soccer .ag-mc--career { background: linear-gradient(100deg, rgba(8,9,11,.92) 30%, rgba(8,9,11,.35)), url('/soccerbackground.webp') center 44% / cover no-repeat, #0e0f11; }
+.ag-home--soccer .ag-mc--career { background: linear-gradient(100deg, rgba(8,9,11,.78) 30%, rgba(8,9,11,.12)), url('/soccerbackground-nolights.webp') center 44% / cover no-repeat, #0e0f11; }
 .ag-home--soccer .ag-mc--career.has-team { background: linear-gradient(120deg, var(--team), color-mix(in srgb, var(--team) 40%, #05090c)); }
 .ag-home--soccer .ag-mc--compete { background: linear-gradient(150deg, #ecece8, #8d8f94 88%); }
 .ag-home--soccer .ag-mc--compete .ag-mc-head :is(b, small) { color: #0b0c0e; text-shadow: none; }
@@ -8153,12 +8153,12 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 @media (max-width: 520px) {
   .ag-home .ag-home-inner { position: relative; }
   .ag-home .ag-hud > :first-child { flex: 0 1 auto; width: auto; max-width: 38%; }
-  .ag-home .ag-brand .ag-brand-mark { position: absolute; top: 12px; left: 50%; transform: translateX(-50%) !important; height: 36px !important; width: auto; z-index: 3; }
+  .ag-home .ag-brand .ag-brand-mark { position: absolute; top: 11px; left: 50%; transform: translateX(-50%) !important; height: 38px !important; width: auto; z-index: 3; }
   .ag-home .ag-brand { position: static !important; justify-content: center; padding: 0 12px; }
   .ag-home .ag-hud .coin-pill, .ag-home .ag-hud .ag-hud-coins { margin-left: auto; }
   .ag-home .ag-wordmark { font-size: 36px !important; }
 }
-@media (max-width: 375px) { .ag-home .ag-brand .ag-brand-mark { height: 28px !important; top: 15px; } }
+@media (max-width: 375px) { .ag-home .ag-brand .ag-brand-mark { height: 29.5px !important; top: 14px; } }
 /* Phone Home's header (owner 11-25): SIGN IN without the gold coin, and the settings gear a little larger */
 @media (max-width: 520px) {
   .ag-home .ag-hud .coin-pill--signin .coin-ico { display: none; }
@@ -8175,18 +8175,14 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 /* Phone soccer Home (owner 11-25): the photo cropped past the roof's light strip and the pitch's goal-area lines, and
    the striker's ghost back to the other figures' size */
 @media (max-width: 1023px) {
-  .ag-home--soccer .ag-stage-photo { background-size: auto 230% !important; background-position: center 22% !important; }
   .ag-home--soccer .st-home-fig { left: 10%; right: 10%; top: 12%; bottom: -1%; }
 }
 /* Phone Home: MORE WAYS TO PLAY's line, on its own, between the game modes and the Builder Pass (owner 11-25) */
 @media (max-width: 1023px) { .ag-home .ag-promos { position: relative; padding-top: 28px !important; margin-top: 18px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 2px; background: rgba(255,255,255,.28); } }
 
-/* soccer Home on desktop too: the photo cropped to the stands (no roof strip, no goal-area lines) */
-.ag-home--soccer .ag-stage-photo { background-size: auto 230% !important; background-position: center 22% !important; }
 /* desktop too: MORE WAYS TO PLAY's line between the game modes and the Builder Pass */
 @media (min-width: 1024px) { .ag-home .ag-promos { position: relative; padding-top: 30px !important; margin-top: 20px !important; } .ag-home .ag-promos::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,.28); } }
 @media (min-width: 1024px) {
-  .ag-home--soccer .ag-stage-photo { background-size: auto 320% !important; background-position: center 14% !important; }   /* (the wide stage: stands only) */
   .ag-home .ag-sport { height: 56px !important; }   /* (the sport bar as tall as the phone's, owner 11-25) */
 }
 /* Home's player chip (owner 11-25): no level title tag beside the name, and a shorter XP bar */
@@ -8210,3 +8206,6 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 }
 .wm-cp { -webkit-mask-size: 100% 100%, .33em .148em; mask-size: 100% 100%, .33em .148em; -webkit-mask-position: 0 0, .11em .326em; mask-position: 0 0, .11em .326em; }
 .wm-cb, .wm-cp { text-shadow: none !important; }   /* (the glow would be cut square at the mask's edge) */
+
+/* Home: no light shining down on the player figures (owner 11-25) */
+.ag-home .ag-stage-beam { display: none !important; }
