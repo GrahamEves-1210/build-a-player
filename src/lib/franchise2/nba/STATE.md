@@ -476,3 +476,28 @@ given. `nba-buildbalance.mjs` also counts the playoff teams' three best men out 
 missed. `nba-dynasty.mjs` prints a season's health line (taxpayers, the top payroll against the second apron, trades,
 85+ and 90+ men, the best and worst records, the GM's team) and the averages.
 
+
+## The PLAYERS step by spot, CULTURE BUILDING and football's four styles (2026-11-25)
+
+- **Builds by spot:** the setup's PLAYERS step is PG, SG, SF, PF, C, one build a spot (`BUILD_MAX` 5); PG/SG/SF on the
+  guard builder, PF/C on the big builder. `S.picks` = `[{ id, pos: 'guard'|'big', spot }]`; `F.builds[].spot` is the
+  spot he was built for (`makeBuild` uses it; a build from before reads his ratings: `buildSpot`). `setup.js
+  fixSetup(S)` brings an older setup (guards and bigs, ROTATIONS, the old styles) to this shape; `setupStarters(S)`
+  is the man each spot's build replaces (the coach's five of opening night, the men a full roster waives for the
+  builds left out).
+- **Builds start:** `rotation.js setOf(T)` passes `bst` (the team's builds) while the GM has no order of his own
+  (`T.rot` empty): `planRotation` takes the coach's five of everyone else and puts each build in the place of the
+  man at his spot (two at one spot: the better starts). The replaced man goes to the bench, on the roster (unless he
+  is the man a full roster waives). The GM's own order (Team > Rotation EDIT) overrides it; AUTO goes back to it.
+- **Coach ratings:** `CTYPES` = dev, off, def, **cul** (CULTURE BUILDING, where `rot` ROTATIONS was: the same place
+  in a coach's `r` array; `fixFive` reads an old `{ rot }` object), late. Culture: his team's own free agents weigh
+  its offer (v - mid) x 0.012 higher, every free agent x 0.004 (`coachPull`), a man 23 and under (v - mid) x 0.04
+  OVR a summer (`coachDev`). The bench-unit edge ROTATIONS gave is gone (the league's average).
+- **Styles:** football's four (`players`, `developer`, `motivator`, `recruiter`); `styleOf` maps the old `pace` to
+  `motivator` and `defense` to `recruiter` (upgradeNba, fixSetup). Players' Coach: +0.00005 a shot both ends a game
+  played this season (`F.log`), up to +0.003; Motivator: +0.003 in the playoffs, +0.002 in a close last five
+  minutes; Recruiter: +0.04 on free agents' pull and a scouting point more each month (`draft.js scoutTick`).
+- **Asks:** `market.js askOf` (the screens' read) works an ask out without keeping it on the man (`askFor(F, p,
+  false)`): a screen opened before the market read him had fixed his ask at that moment (nba-seed run 5).
+- **Coach photos:** a real coach's ESPN 65px jpg shows as its cut-out, `public/headshots/nba-coaches/cut/<espn>.png`
+  (`coachShot`; made by `scripts/franchise2/nba/cut.py`), in the players' 600x436 frame.

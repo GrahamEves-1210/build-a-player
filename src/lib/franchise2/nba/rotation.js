@@ -21,6 +21,9 @@
 //                              included, unless fewer than five others can; the plan lists him in `sat`); the rest
 //                              are scaled to fill 240
 //         { dev: { id: ovr } } a young first-round pick's development minutes (setOf fills it: devBonus)
+//         { bst: [ids] }       the GM's builds, auto starters with no order of his (setOf fills it): each takes the
+//                              place of the coach's starter at his spot, the rest of the five the coach's
+//   spotFive(players)          the coach's five by spot, [PG..C] (the setup's REPLACES line: who a build's spot is)
 //   startersOf(players)        the coach's best five: the best men who fit the five spots
 //   dressed(T, { po, year })   tonight's men: healthy (the playoffs: a short injury is played through), not resting; a two-way man only in the regular season, 50 games
 //                              at most (p.twa = [season, games active]), and only when the team needs him (to make 13
@@ -62,7 +65,11 @@ export function dressed(T, { po = false, year = null } = {}) {
 // (st: his whole order; planRotation starts the first five of it who can play tonight)
 // (dev: the team's young first-round picks and what each is worth in the bench's minutes, devBonus below; the game
 // plays stripped copies of the men, so it rides on the set)
-export const setOf = T => { const dev = devOf(T); return { st: T.rot ?? [], order: T.rot ?? null, min: T.min ?? null, ...(dev && { dev }) } }
+// (bst: the GM's builds, auto starters while the order is the coach's: each replaces the starter at his spot)
+export const setOf = T => {
+  const dev = devOf(T), bst = T.rot?.length ? null : (T.r ?? []).filter(p => p.b != null && !p.tw).map(p => p.i)
+  return { st: T.rot ?? [], order: T.rot ?? null, min: T.min ?? null, ...(dev && { dev }), ...(bst?.length && { bst }) }
+}
 export function rotationOf(F, short, { playoff = false } = {}) {
   const T = F.teams[short], L = planRotation(dressed(T, { po: playoff, year: F.year }), { ...setOf(T), po: playoff })
   return L.order.filter(i => L.min[i] > 0).map(i => ({ i, st: L.st.includes(i), min: L.min[i] }))
@@ -105,6 +112,20 @@ function fitFive(men, forced = []) {
   return pick.reverse()
 }
 export const startersOf = players => fitFive(players).map(([p]) => p)
+// the coach's five by spot: [PG, SG, SF, PF, C], the man playing each (null: nobody there)
+export function spotFive(players) {
+  const out = [null, null, null, null, null]
+  for (const [p, j] of fitFive(players)) out[j] = p
+  return out
+}
+// The five with the GM's builds in it (set.bst): the coach's five of everyone else, then each build in the place of
+// the man at his own spot (the starter he replaces goes to the bench); two builds at one spot, the better one starts.
+function buildFive(pool, bs) {
+  const at = new Map(fitFive(pool.filter(p => !bs.includes(p))).map(([p, j]) => [j, p]))
+  const done = new Set()
+  for (const b of [...bs].sort((x, y) => ovr(y) - ovr(x))) { const j = spotOf(b); if (done.has(j)) continue; done.add(j); at.set(j, b) }
+  return [...at.entries()].map(([j, p]) => [p, j])
+}
 
 // a five that doesn't look like a lineup: swap in the men who fix it, giving up as little as possible (val: what a
 // man is worth to the coach right now); the pool is everyone who could go in
@@ -146,7 +167,9 @@ export function planRotation(players, set = {}) {
   const up = players.filter(p => !zero.has(p.i))
   const sat = up.length >= 5 ? players.filter(p => zero.has(p.i)) : []
   const want = (set.st ?? []).filter(id => ids.has(id) && !sat.some(p => p.i === id)).slice(0, 5).map(id => byId.get(id))
-  const fit = fitFive(sat.length ? up : players, want)
+  const pool = sat.length ? up : players
+  const bs = !want.length && set.bst?.length ? pool.filter(p => set.bst.includes(p.i)) : []
+  const fit = bs.length ? buildFive(pool, bs) : fitFive(pool, want)
   const spot = new Map(fit.map(([p, j]) => [p, j]))
   const five = fit.map(([p]) => p).sort((a, b) => ovr(b) - ovr(a))
   for (const p of players) spot.has(p) || spot.set(p, spotOf(p))

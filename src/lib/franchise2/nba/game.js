@@ -514,7 +514,7 @@ function sideOf(F, s, po = false) {
   }
   if (men.some(p => p.inj?.g > 0)) hurtOk = 1
   const dnp = T.r.filter(p => !men.includes(p)).map(p => (p.inj?.g > 0 ? { i: p.i, r: 'inj', k: p.inj.k } : p.rest ? { i: p.i, r: 'rest' } : { i: p.i, r: 'tw', k: po ? 'not eligible for the playoffs' : twGames(p, F.year) >= TW_GAMES ? '50-game limit' : 'G League' }))
-  const co = coachSide(F, s)
+  const co = coachSide(F, s, { po })
   return { short: s, men, set: setOf(T), dnp, ...(hurtOk && { hurtOk }), ...(co && { co }) }
 }
 export function startGame(F, home, away, { seed = null, playoff = false } = {}) {

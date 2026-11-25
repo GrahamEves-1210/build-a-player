@@ -10,7 +10,7 @@ import { placeBuilds, reseatBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
 import { numberAll, needsNumbers } from './numbers'
 import { lightInit } from './light'
-import { ensureStaff } from './coach'
+import { ensureStaff, fixFive, styleOf } from './coach'
 import { fixRetired } from './realCareers'
 
 export * from './league'
@@ -46,7 +46,7 @@ export function createNbaFranchise(setup) {
   ensureStaff(F, { mine: setup.staff ?? null })   // the league's coaching staffs, the GM's hires in his (coach.js)
   F.phase = 'season'
   // the GM's own builds: named in the setup, onto the roster as rookies (builds.js)
-  F.builds = (setup.builds ?? []).slice(0, BUILD_MAX).map(B => ({ pos: B.pos, build: B.build, types: B.types ?? null, name: B.name, num: B.num, face: B.face ?? null, age: 20, ...(B.sandbox && { sandbox: 1 }) }))
+  F.builds = (setup.builds ?? []).slice(0, BUILD_MAX).map(B => ({ pos: B.pos, ...(B.spot && { spot: B.spot }), build: B.build, types: B.types ?? null, name: B.name, num: B.num, face: B.face ?? null, age: 20, ...(B.sandbox && { sandbox: 1 }) }))
   if (F.builds.some(B => B.sandbox)) F.sandbox = true
   placeBuilds(F)
   numberAll(F)
@@ -151,6 +151,13 @@ export function upgradeNba(F) {
   fixWire(F)   // (the wire's one style: news.js)
   fixRetired(F)   // (the retired list: a real man's real career on his row, realCareers.js)
   reseatBuilds(F)
+  // (the GM's coach from before 2026-11-25: ROTATIONS is CULTURE BUILDING's line, PACE AND SPACE / DEFENSE FIRST are
+  // MOTIVATOR / RECRUITER: coach.js fixFive, styleOf)
+  if (F.coach) {
+    F.coach.r = fixFive(F.coach.r)
+    if (F.coach.from?.rot && !F.coach.from.cul) { const { rot, ...x } = F.coach.from; F.coach.from = { ...x, cul: rot } }
+    F.coach.style = styleOf(F.coach.style)
+  }
   return F
 }
 export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }

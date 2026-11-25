@@ -3,9 +3,13 @@
 //   setupLeague(S)      the league this setup will tip off with: the seed, the team and the rules createNbaFranchise
 //                       builds from, so the made-up men at the end of each bench carry the names they will have
 //   buildWaives(S)      who a full roster waives for each of the GM's builds, as placeBuilds will (builds.js)
+//   setupStarters(S)    the team's starting five by spot, { PG: man, ... }: the man each build replaces (rotation.js)
+//   fixSetup(S)         a setup saved before 2026-11-25 in today's shape (null when it already is)
 // Checked by scripts/franchise2/nba-setup.mjs.
-import { FIRST_YEAR, buildTeams, DIV_OF } from './league'
-import { waiveFor } from './builds'
+import { FIRST_YEAR, buildTeams, DIV_OF, SPOTS, groupOfSpot, ovrOfAttrs } from './league'
+import { waiveFor, buildSpot, attrsOfBuild } from './builds'
+import { spotFive, dressed } from './rotation'
+import { styleOf } from './coach'
 import * as X from './seams'
 
 // ── Last season ──────────────────────────────────────────────────────────────
@@ -55,4 +59,44 @@ export function buildWaives(S) {
     t.r.push({ i: -1, g: p.pos, b: 0 })
   }
   return out
+}
+
+// The starter at each spot: the coach's five on opening night (rotation.js spotFive, the men dressed, less the men a
+// full roster waives for the builds: buildWaives), the man a build at that spot replaces in the five (planRotation's
+// bst). He goes to the bench; he stays on the roster.
+export function setupStarters(S) {
+  if (!S?.team || !S.seed) return {}
+  const F = setupLeague(S)
+  const T = F.teams[S.team], gone = new Set(Object.values(buildWaives(S)).map(m => m.i))
+  // (the builds on the roster as they'll be, so the men dressed are the opening night's: a two-way man suits up only
+  // when the team is short; a build not built yet counts as a 70)
+  const ovr = p => { const B = S.builds?.[p.id]; return B?.build ? ovrOfAttrs(p.pos, attrsOfBuild(p.pos, B.build)) : 70 }
+  const r = [...T.r.filter(p => !gone.has(p.i)), ...(S.picks ?? []).map((p, k) => ({ i: -1 - k, b: k, g: p.pos, p: p.spot, o: ovr(p) }))]
+  const five = spotFive(dressed({ ...T, r }, { year: F.year }).filter(p => p.b == null))
+  return Object.fromEntries(SPOTS.map((k, j) => [k, five[j]]))
+}
+
+// A setup from before: PLAYERS by spot (PG..C, one each) where it had guards and bigs (a pick { id, pos } gets the
+// spot his ratings read as, or the first open one in his group; one with no open spot in his group is dropped, his
+// build with him), the coach's ROTATIONS line as CULTURE BUILDING, the old styles as football's (coach.js)
+export function fixSetup(S) {
+  if (!S) return null
+  let out = S
+  const picks = S.picks ?? []
+  if (picks.some(p => !p.spot)) {
+    const used = new Set(picks.filter(p => p.spot).map(p => p.spot)), keep = [], builds = { ...(S.builds ?? {}) }
+    for (const p of picks) {
+      if (p.spot) { keep.push(p); continue }
+      const B = S.builds?.[p.id], g = p.pos === 'big' ? 'big' : 'guard'
+      const want = B?.build ? buildSpot(g, attrsOfBuild(g, B.build)) : null
+      const spot = want && !used.has(want) ? want : SPOTS.find(k => groupOfSpot(k) === g && !used.has(k))
+      if (!spot) { delete builds[p.id]; continue }
+      used.add(spot); keep.push({ ...p, pos: g, spot })
+    }
+    out = { ...out, picks: keep, builds }
+  }
+  const L = S.cb?.lines
+  if (L?.rot && !L.cul) { const { rot, ...x } = L; out = { ...out, cb: { ...S.cb, lines: { ...x, cul: rot } } } }
+  if (S.coach?.style && styleOf(S.coach.style) !== S.coach.style) out = { ...out, coach: { ...S.coach, style: styleOf(S.coach.style) } }
+  return out === S ? null : out
 }

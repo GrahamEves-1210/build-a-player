@@ -362,6 +362,10 @@
 .nb-run-bar i { display: block; height: 100%; background: var(--tca, #fff); transition: width .1s linear; }
 .nb-builds { display: grid; gap: 10px; }
 .nb-build-row { display: grid; gap: 6px; }
+/* (a build's line, REPLACES BRUNSON 90 · PICK 30 · $3.0M, runs onto a second line at any width rather than lose its money) */
+.nb-build-row .fk-l3:not(.fk-l3--l) { height: auto; min-height: var(--h); }
+.nb-build-row .fk-l3:not(.fk-l3--l) .fk-l3-meta { display: block; padding: 1px 0; white-space: normal; line-height: 1.25; }
+.nb-build-row .fk-l3:not(.fk-l3--l) .fk-l3-bar { padding-top: 4px; padding-bottom: 4px; }
 .nb-build-cap { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 13px; line-height: 1.35; color: var(--fk-mute); }
 .nb-build-add { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .nb-link { justify-self: start; min-height: 36px; padding: 0 4px; border: 0; background: none; color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
@@ -372,8 +376,10 @@
 .fr-rule-seg.nb-seg3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .fr-rule-seg.nb-seg3 button { height: auto; min-height: 58px; padding: 8px 6px; line-height: 1.1; }
 .fr-rule-seg.nb-seg3 button small { line-height: 1.2; }
-/* a lower-third's stat label (PPG, PTS) at 13px */
+/* a lower-third's stat label (PPG, PTS) at 13px; a coach's GRADE box in the setup and on the staff screens sits and
+   sizes as football's (kit.css) */
 :is(.nb, .nb-gd, .nb-sheet, .nb-setup, .nb-staff) .fk-l3-ovr small { font-size: 13px; }
+:is(.nb-setup, .nb-staff) .fk-l3-ovr.is-stat small { font-size: max(12px, calc(var(--h) * .19)); }
 
 /* a save that didn't go through */
 .nb-savebad { display: flex; align-items: center; gap: 12px; margin: 10px 16px 0; padding: 10px 12px; background: rgba(229,56,59,.16); border-left: 4px solid var(--fk-l); font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: #fff; }
@@ -494,8 +500,6 @@ button.nb-sch-row:active { background: var(--fk-g3); }
 .nb-fst-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .nb-fst-init { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--fk-d); font-weight: 400; font-size: 15px; color: var(--tct, #fff); }
 @media (max-width: 520px) { .nb-fst-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-/* (GRADE and AGE at 13px want a little more room than the small row's 46px box) */
-:is(.nb-setup, .nb-staff) .fk-l3--s .fk-l3-ovr.is-stat { width: 54px; }
 /* the setup's and the staff's rows on a phone (NbaSetup .nb-setup, NbaStaff .nb-staff): a candidate's line runs onto
    a second line instead of being cut (TIMBERWOLVES PLAYER DEVELOPMENT ASSISTANT), a build's too (PICK 12 · $5.9M);
    the head coach's big card keeps its line on a row of its own (it wrapped mid-list and led with a stray dot) */

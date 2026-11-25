@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { TEAM, DIVS, CONF_DIVS, DIV_OF, CONF_NAME, CONF_OF, buildTeams, teamOvr, depthOrder, photoOf, FIRST_YEAR, NC } from '../../../lib/franchise2/nba'
 import { CAP_SIM } from '../../../lib/franchise2/nba'
-import { lastSeason } from '../../../lib/franchise2/nba/setup'
+import { lastSeason, fixSetup } from '../../../lib/franchise2/nba/setup'
 import { sfx, haptic } from '../../../lib/juice'
 import { IconClose, IconCaret } from '../../app/icons'
 import { GamesSwitch } from '../../simFlow'
@@ -17,7 +17,8 @@ import '../setup.css'
 //   0 THE MODE    FULL or LIGHT (kept on the save: F.pace), the league rules and key moments
 //   1 THE TEAM    the 30 logos by division; a team's card: last season, its OVR, its rank, its payroll, its real head
 //                 coach, its stars
-//   2 PLAYERS     up to three of the GM's own builds (a guard or a big), built on the build page and named here
+//   2 PLAYERS     up to five of the GM's own builds, one at each spot (PG..C), each replacing the starter there, built
+//                 on the build page (PG/SG/SF the guard builder, PF/C the big builder) and named here
 //   3 THE COACH   spun from the league's real head coaches (CoachBuild.jsx with nbaCoachLg.js), a style, a name, a face
 //   4 THE HIRE    the coach card and his staff: keep the men in the jobs or interview and hire others (NbaHire.jsx)
 // The setup is saved in its slot after every change (NbaFranchise putSetup).
@@ -45,7 +46,9 @@ export function preview() {
 const ORDER = Object.values(CONF_DIVS).flat().flatMap(d => DIVS[d])
 
 export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }) {
-  const S = setup
+  // (a setup saved before the PLAYERS step went by spot and the coach's ROTATIONS became CULTURE BUILDING: setup.js)
+  const S = useMemo(() => fixSetup(setup) ?? setup, [setup])
+  useEffect(() => { if (S !== setup) put(S) }, [S]) // eslint-disable-line react-hooks/exhaustive-deps
   // (a setup saved by the three-step version on its last step, the rules: on to the coach)
   const step = S.step === 'rules' ? 'coach' : S.step ?? 'team'
   const go = (patch, s) => { put({ ...S, ...patch }); if (s) sfx(s) }

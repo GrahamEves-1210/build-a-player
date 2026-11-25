@@ -1,4 +1,5 @@
 // NBA Franchise: the coaches are real and modest. (coach.js)
+//   1b. The four styles against none, and CULTURE BUILDING (the head coach's culture line) best against worst.
 //   1. Wins: one team's games against the league with the best staff possible, the real best (Spoelstra's lines), the
 //      real worst and the worst possible, everything else the same (the same games, the same dice).
 //   2. Development: young men's OVR over three summers under the best staff and the worst.
@@ -8,6 +9,7 @@
 import * as N from '../../src/lib/franchise2/nba/index'
 import { ageMan } from '../../src/lib/franchise2/nba/aging'
 import { rngOf } from '../../src/lib/franchise2/rng'
+import { askFor, offerScore } from '../../src/lib/franchise2/nba/market'
 const C = N.NC
 const GPO = +(process.argv[2] ?? 6), SEASONS = +(process.argv[3] ?? 3)
 let bad = 0
@@ -55,22 +57,55 @@ console.log(`swing best-worst possible ${swing.toFixed(1)} wins · real best-wor
 if (!(swing > 5 && swing < 15)) fail(`best-worst swing ${swing.toFixed(1)} outside 5-15 wins`)
 if (!(real > 1.5 && real < 9)) fail(`Spoelstra-Keefe ${real.toFixed(1)} outside 1.5-9 wins`)
 
-// pace and threes: the PACE AND SPACE style against DEFENSE FIRST
+// the four styles (the GM's coach: football's PLAYERS' COACH, DEVELOPER, MOTIVATOR, RECRUITER), each against no style
 {
-  const F = N.createNbaFranchise({ seed: 'coach-pace', team: 'BOS', owner: 'chk', coach: { name: 'Pace Test', r: { dev: 6, off: 6, def: 6, rot: 6, late: 6 }, style: 'pace' } })
-  const run = st => {
-    F.coach.style = st
-    let fga = 0, tpa = 0, g = 0, pts = 0
-    for (const o of N.SHORTS) if (o !== 'BOS') for (let j = 0; j < 4; j++) {
-      const r = N.CAP_SIM.simGame(F, 'BOS', o, { seed: `p-${o}-${j}` })
-      for (const l of r.box.BOS) { fga += l.fga; tpa += l.tpa }
-      pts += r.hs; g++
+  const F = N.createNbaFranchise({ seed: 'coach-style', team: 'BOS', owner: 'chk', coach: { name: 'Style Test', r: { dev: 6, off: 6, def: 6, cul: 6, late: 6 }, style: null } })
+  const games = ({ po = false, n = 30 } = {}) => {
+    let w = 0, g = 0, net = 0
+    for (const o of N.SHORTS) if (o !== 'BOS') for (let j = 0; j < n; j++) {
+      const r = N.CAP_SIM.simGame(F, 'BOS', o, { seed: `st-${o}-${j}`, playoff: po })
+      w += r.hs > r.as ? 1 : 0; net += r.hs - r.as; g++
     }
-    return { fga: fga / g, tpa: tpa / g, pts: pts / g }
+    return { w: w / g, net: net / g }
   }
-  const a = run('pace'), b = run('defense'), c = run('developer')
-  console.log(`\nSTYLE  pace-and-space ${a.fga.toFixed(1)} FGA ${a.tpa.toFixed(1)} 3PA ${a.pts.toFixed(1)} pts · neutral ${c.fga.toFixed(1)} FGA ${c.tpa.toFixed(1)} 3PA · defense-first ${b.fga.toFixed(1)} FGA ${b.tpa.toFixed(1)} 3PA ${b.pts.toFixed(1)} pts`)
-  if (!(a.fga > c.fga && c.fga > b.fga && a.tpa > c.tpa)) fail('style pace/threes not in order')
+  const at = (st, f) => { F.coach.style = st; return f() }
+  // players' coach: the chemistry of the 60th game against the first (F.log: the season's games played)
+  const log = n => { F.log = Array.from({ length: n }, () => ({})) }
+  log(0); const p0 = at('players', games); log(60); const p60 = at('players', games); const n60 = at(null, games); log(0)
+  // motivator: playoff games
+  const mPo = at('motivator', () => games({ po: true })), nPo = at(null, () => games({ po: true }))
+  // recruiter: what free agents make of an offer at their ask (market.js offerScore), and the scouts' month
+  const fa = N.SHORTS.filter(s => s !== 'BOS').flatMap(s => F.teams[s].r.slice(0, 4))
+  const pull = st => at(st, () => fa.reduce((t, p) => { const a = askFor(F, p); return t + offerScore(F, p, 'BOS', { sc: Array(Math.max(1, a.y)).fill(a.$) }) }, 0) / fa.length)
+  const rP = pull('recruiter'), nP = pull(null), plP = pull('players')
+  const sp = st => at(st, () => { F.sp = 0; N.scoutTick(F, 29, 30); return F.sp })
+  const dv = st => at(st, () => C.coachDev(F, 'BOS', { ag: 21 }))
+  console.log(`\nSTYLES (BOS, ${29 * 30} games a line)`)
+  console.log(`  PLAYERS' COACH  net a game: game 1 ${p0.net.toFixed(2)} · game 60 ${p60.net.toFixed(2)} (no style ${n60.net.toFixed(2)}) · win% ${(p60.w * 100).toFixed(1)} vs ${(n60.w * 100).toFixed(1)} · FA pull ${(plP / nP * 100 - 100).toFixed(1)}%`)
+  console.log(`  MOTIVATOR       playoff net ${mPo.net.toFixed(2)} (no style ${nPo.net.toFixed(2)}) · win% ${(mPo.w * 100).toFixed(1)} vs ${(nPo.w * 100).toFixed(1)}`)
+  console.log(`  RECRUITER       free agents' pull +${(rP / nP * 100 - 100).toFixed(1)}% · scouting a month ${sp('recruiter')} vs ${sp(null)}`)
+  console.log(`  DEVELOPER       a 21-year-old's summer +${dv('developer').toFixed(2)} OVR (no style ${dv(null).toFixed(2)})`)
+  if (!(p60.net > n60.net && p60.net - n60.net < 3)) fail('players coach chemistry not modest and positive')
+  if (!(mPo.net > nPo.net && mPo.net - nPo.net < 3)) fail('motivator playoffs not modest and positive')
+  if (!(rP > nP && Math.abs(plP - nP) < 1e-9)) fail('recruiter pull / players coach no pull')
+  if (!(sp('recruiter') > sp(null))) fail('recruiter scouting')
+  if (!(dv('developer') > dv(null))) fail('developer')
+  // an old style maps to the new four
+  if (C.styleOf('pace') !== 'motivator' || C.styleOf('defense') !== 'recruiter' || C.styleOf('players') !== 'players') fail('old styles')
+  // CULTURE BUILDING: the head coach's culture rating, the best real (Spoelstra 11) against the worst (Christie 4)
+  const T = F.staff.NYK, was = [...T.hc.r]
+  const own = F.teams.NYK.r.slice(0, 8).map(p => ({ ...p, fr: 'NYK' })), other = F.teams.LAL.r.slice(0, 8)
+  const sc = (men, s) => men.reduce((t, p) => { const a = askFor(F, p); return t + offerScore(F, p, s, { sc: Array(Math.max(1, a.y)).fill(a.$) }) }, 0) / men.length
+  const cul = v => { T.hc.r = [...was]; T.hc.r[3] = v; return { own: sc(own, 'NYK'), fa: sc(other, 'NYK'), dev: C.coachDev(F, 'NYK', { ag: 21 }), dev26: C.coachDev(F, "NYK", { ag: 25 }) } }
+  const hi = cul(11), lo = cul(4), mid = cul(was[3])
+  const winsOf = v => { T.hc.r = [...was]; T.hc.r[3] = v; let w = 0, g = 0; for (const o of N.SHORTS) if (o !== 'NYK') for (let j = 0; j < 3; j++) { const r = N.CAP_SIM.simGame(F, 'NYK', o, { seed: `cu-${o}-${j}` }); w += r.hs > r.as ? 1 : 0; g++ } return w / g * 82 }
+  const wHi = winsOf(11), wLo = winsOf(4)
+  T.hc.r = was
+  console.log(`  CULTURE (NYK head coach: 11 S vs 4 C, his ${was[3]} today)  own free agents re-signing: offer worth +${((hi.own / lo.own - 1) * 100).toFixed(1)}% · other free agents +${((hi.fa / lo.fa - 1) * 100).toFixed(1)}% · a 21-year-old's summer ${hi.dev.toFixed(2)} vs ${lo.dev.toFixed(2)} OVR (25: ${hi.dev26.toFixed(2)} vs ${lo.dev26.toFixed(2)}) · games ${wHi.toFixed(1)} vs ${wLo.toFixed(1)} wins /82 (no game effect: the same)`)
+  if (!(hi.own > lo.own && hi.own / lo.own - 1 < 0.15 && hi.fa > lo.fa && (hi.own / lo.own) > (hi.fa / lo.fa))) fail('culture: own men first, modest')
+  if (!(hi.dev > lo.dev && Math.abs(hi.dev26 - lo.dev26) < 1e-9)) fail('culture: the young buy in (23 and under only)')
+  if (Math.abs(wHi - wLo) > 0.01) fail('culture moved games')
+  void mid
 }
 
 // ── 2. development ───────────────────────────────────────────────────────────
