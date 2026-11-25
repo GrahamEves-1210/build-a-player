@@ -5,14 +5,19 @@
 //             up for the top corners, down for the bottom), let go to strike it, tap SHOOT again at contact for a
 //             perfect strike. CURL (E) held is a finesse shot: curled, placed, more accurate, less pace. Too much
 //             power and it's over; from an angle the far post's the harder one to find.
+//   or DRAW it (soccer.js's draw the shot): a finger (the mouse) on the ball, and draw it to the target. Where the
+//             stroke ends is where it's going, its pace the power, a bow in it the curl. The ball rolled across is
+//             drawn from the spot it's rolling to, and struck as it gets there.
 // Three of five in the target pass. Finishing is the target's size and the shot's accuracy; shot power the pace.
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, GOOD, BAD, GOLD, text, DISPLAY, LABEL, nudge, lightMode } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, kickPose, runPose, kitsOf, dress, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, shotHud, aimMark, scout, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
+  shooter, strikeOf, shotAt, shotHud, aimMark, scout, skipOutro, padCtl, padInput, padStick, drawPads,
+  stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar } from './soccer.js'
+import { tip } from './soccerPads.js'
 
 export const how = {
-  finishing: 'Five balls from five spots. Hold SHOOT and aim at the lit target with the stick, let go to strike it, tap SHOOT again at contact. Hold CURL for a placed, curled finish. Three of five in the target.',
+  finishing: 'Five balls from five spots. Draw each one from the ball to the lit target: the quicker the stroke the harder it’s hit, bend it to curl it. Three of five in the target. On a keyboard: aim with the arrows, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',
 }
 
 const N = 5, NEED = 3, GAP = 900
@@ -31,7 +36,7 @@ export function make({ v, seed }) {
   const g = {
     t: 0, game: 'finishing', zones: 'none', stick: true, pads: null, fx: [], done: null, outro: 1900, stamp: null,
     shots, i: 0, R, made: 0, k, phase: 'set', at: 700, shot: null, nextAt: null, rollAt: null, doneAt: null,
-    ctl: padCtl(), vh: 640, camX: shots[0].spot.x * 0.85, camZ: shots[0].spot.z - 7.4,
+    ctl: padCtl(), vh: 640, st: stroke(), lastView: null, camX: shots[0].spot.x * 0.85, camZ: shots[0].spot.z - 7.4,
     hud: { prompt: 'SET', dots: shots.map(() => null) },
     tick(dt) {
       g.t += dt
@@ -43,7 +48,7 @@ export function make({ v, seed }) {
         if (sh.spot.roll && k.phase === 'strike') k.strikeAt = Math.max(k.strikeAt, g.rollAt)
         if (k.tick(g.t)) strike()
         if (sh.spot.roll && g.t > g.rollAt + 900 && k.phase === 'idle') { g.shot = { miss: true, at: g.t }; land(false, 'LET IT GO') }
-        if (g.t > g.at + 7000 && k.phase === 'idle') { k.press(g.t, 'driven'); k.release(g.t + 400) }
+        if (g.t > g.at + 7000 && k.phase === 'idle' && !g.st.on) { k.press(g.t, 'driven'); k.release(g.t + 400) }
       }
       if (g.phase === 'fly' && g.t >= g.shot.at + g.shot.T) land()
       if (g.phase === 'gap' && g.t >= g.nextAt) { if (g.i + 1 >= N) finish(); else { g.i++; start() } }
@@ -53,11 +58,34 @@ export function make({ v, seed }) {
     },
     input(a) {
       if (skipOutro(g, a)) return
+      if (drawIn(a)) return
       padInput(g.ctl, a, g.vh, {
         down: id => { if (g.phase !== 'aim') return; if (k.phase === 'strike' && id === 'S') { if (k.tap(g.t)) g.fx.push('h:light'); return } if (k.phase === 'idle') k.press(g.t, id === 'P' ? 'finesse' : padStick(g.ctl).y < -0.6 ? 'low' : 'driven') },
         up: id => { if (k.phase === 'power' && ((id === 'P') === (k.type === 'finesse'))) k.release(g.t) },
       })
     },
+  }
+  // ── drawing it: from the ball (the rolled one from the spot it's coming to) ──
+  const camNow = () => camOf(g.lastView ?? { w: 360, h: g.vh }, { x: g.camX, y: 3.4, z: g.camZ, F: 600, hzAt: 0.2 })
+  g.aimView = () => { const C = camNow(), sp = shots[g.i].spot; return { C, ball: P(C, sp.x, 0.11, sp.z) } }
+  function drawIn(a) {
+    if (a.kind !== 'down' && a.kind !== 'move' && a.kind !== 'up') return false
+    const id = a.id ?? 0, st = g.st
+    // (the lens may still be on its way to this spot: the stroke's read through the lens as it was when it was started)
+    if (a.kind === 'down') { if (g.phase === 'aim' && k.phase === 'idle') { const av = g.aimView(); strokeDown(st, a.x, a.y, g.t, id, av.ball); st.C = av.C } return true }
+    if (id !== st.id) return false
+    if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
+    strokeUp(st, a.x, a.y, g.t, id)
+    if (g.phase !== 'aim' || k.phase !== 'idle') return true
+    const rd = readStroke(st, st.C ?? g.aimView().C, { foot: 1, base: shots[g.i].spot.roll ? 'volley' : 'driven' })
+    if (rd.tap || rd.back) return true
+    // (a stroke that ends by the lit target is drawn onto it, the more so the better the finisher: the stick's
+    // corners are the targets, and a finger's never that exact)
+    const [tx, ty] = TARGETS[shots[g.i].k], d = Math.hypot(rd.x - tx, rd.y - ty), pull = lerp(0.25, 0.65, clamp((v - 1) / 10, 0, 1)) * clamp(1 - d / 1.1, 0, 1)
+    if (rd.type !== 'chip') { rd.x = lerp(rd.x, tx, pull); rd.y = lerp(rd.y, ty, pull) }
+    drawnShot(k, rd, g.t, 180)
+    g.fx.push('h:light')
+    return true
   }
   function start() {
     g.phase = 'aim'; g.at = g.t; g.shot = null; k.reset(); k.type = 'driven'
@@ -70,7 +98,7 @@ export function make({ v, seed }) {
     const sh = shots[g.i]
     const from = sh.spot.roll ? rollPos(g, g.t) : { x: sh.spot.x, z: sh.spot.z }
     const late = sh.spot.roll ? Math.abs(g.t - g.rollAt) / 160 : 0
-    if (sh.spot.roll) { k.type = k.type === 'finesse' ? 'finesse' : 'volley'; if (late > 1) k.timed = 'red' }
+    if (sh.spot.roll) { k.type = k.type === 'finesse' || k.type === 'chip' ? k.type : 'volley'; if (late > 1) k.timed = 'red' }
     const s = strikeOf(k, from, { v, foot: 1, weak: false })
     g.shot = { ...s, at: g.t }
     g.phase = 'fly'; g.hud.prompt = null
@@ -135,7 +163,7 @@ function ballNow(g) {
   return { x: s.to.x * (1 + f * 0.3), y: Math.max(0.11, s.to.y + f * 0.6), z: f * 5, spin: 14 }
 }
 export function draw(ctx, g, view) {
-  g.vh = view.h
+  g.vh = view.h; g.lastView = { w: view.w, h: view.h }
   const C = camOf(view, { x: g.camX, y: 3.4, z: g.camZ, F: 600, hzAt: 0.2 }), K = kitsOf(view), team = [view.colors.us, view.colors.trim]
   stadium(ctx, view, C, { team, board: `FINISHING  ${g.made}/${N}`, empty: true })
   const s = g.shot, b = ballNow(g)
@@ -161,9 +189,17 @@ export function draw(ctx, g, view) {
   const me = sh.spot.roll && b && g.phase === 'aim' ? { x: sh.spot.x - 0.42, z: sh.spot.z - 0.3 } : { x: sh.spot.x - 0.42, z: sh.spot.z - 0.3 }
   man(ctx, C, me.x, me.z, pose, dress(K.train, { number: null, skin: view.cast?.me?.skin ?? '#8d5a3b' }))
   if (b && b.z <= 0.05) ball(ctx, C, b.x, b.y, b.z, b.spin)
-  if (g.phase === 'aim' && (g.k.phase === 'power' || g.k.phase === 'strike')) { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }
+  if (g.phase === 'aim' && g.k.drawn && g.k.phase === 'strike') aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
+  else if (g.phase === 'aim' && (g.k.phase === 'power' || g.k.phase === 'strike')) { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }
   text(ctx, `BALL ${Math.min(g.i + 1, N)} OF ${N}`, 12, 60, { font: LABEL, size: 16, align: 'left', color: 'rgba(255,255,255,.8)' })
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, base: sh.spot.roll ? 'volley' : 'driven' })
+  // the first ball: a stroke drawn off the ball to the lit target, and the line under it
+  if (g.phase === 'aim' && g.i === 0 && g.k.phase === 'idle' && !g.st.on) {
+    const bp = P(C, sh.spot.x, 0.11, sh.spot.z), [tx, ty] = TARGETS[sh.k], to = P(C, tx, ty, 0)
+    if (drawnSoFar() < 2) ghostStroke(ctx, { x: bp.x, y: bp.y }, { x: to.x, y: to.y }, 0, g.t - g.at - 200)
+    tip(ctx, view, view.keys ? 'DRAW IT TO THE TARGET WITH THE MOUSE' : 'DRAW IT FROM THE BALL TO THE TARGET', view.keys ? view.h - 100 : undefined, 14)
+  }
   shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
-  drawPads(ctx, view, g.ctl, { move: 'AIM', S: 'SHOOT', P: 'CURL' }, !g.done)
+  drawPads(ctx, view, g.ctl, view.keys ? { move: 'AIM', S: 'SHOOT', P: 'CURL' } : { stick: false, S: null, P: null }, !g.done)
   placeStamp(g.stamp, view)
 }

@@ -6,20 +6,29 @@
 //   stutter  STUTTER (E) in the run-up: a check, a little hop. A keeper who's guessing often goes early on it, and
 //            once he's gone you can put it the other way. Stutter too late and you've lost your rhythm.
 //   finish   tap SHOOT again as your foot meets it: inside the window it's a perfect strike.
+//   or DRAW it (a finger, or the mouse): from the ball to your spot, the way the phone games do it (soccer.js's draw
+//            the shot). The stroke is the penalty: where it ends is where it's going, its pace is the power (too
+//            quick and it's over the bar), a bow in it bends it, and a soft one up the middle is the Panenka. Let go
+//            and he runs up and strikes it as drawn. STUTTER still works, and a new stroke in the run-up changes it:
+//            stutter, watch him go, and draw it the other way.
 // The keeper: on his line, bouncing. He has a tell (he shades a side, or steps across), he reads a taker who's been
 // looking at one corner, and some keepers stay big and save anything down the middle. The minute matters: a late
 // one, or a shootout, is pressure, and pressure shrinks the window and costs accuracy (composure fights it).
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, particles, nudge, manOf, lightMode } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperRoar, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperRoar, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
+  stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar, padLayout } from './soccer.js'
+import { tip } from './soccerPads.js'
 
 export const how = {
-  penalty: 'Aim with the stick. Hold SHOOT to start the run-up, let go to set the power: too much and it’s over the bar. STUTTER in the run-up to make the keeper go early, then put it the other way. Tap SHOOT at the strike for a perfect penalty.',
+  penalty: 'Draw it from the ball to your spot: the quicker the stroke, the harder it’s hit (too quick and it’s over the bar), bend it to curl it, a soft one up the middle to chip it. STUTTER in the run-up and a keeper who’s guessing goes early: draw it again the other way. On a keyboard: aim with the arrows, hold SPACE to run up and let go to set the power, then tap it again at the strike.',
 }
 
 const WHISTLE = 900
 const RUN = 1250             // the run-up, from the first step to the ball
+const RUN_D = 1000           // (a drawn one: he's set, and he goes as soon as it's drawn)
+const READ_D = 0.45          // (a keeper reads a drawn one's hips less than a taker who's stood staring at a corner)
 const STUT = 360             // the check
 const SPOT_Z = -11, BALL_X = 0
 const START = { x: -1.25, z: SPOT_Z - 2.5 }, PLANT = { x: -0.42, z: SPOT_Z - 0.32 }
@@ -42,16 +51,16 @@ export function make({ v, seed, cast = null, situation = null }) {
     sit: situation ?? null, pressure, k, stay, guess, tellSide, jumpy,
     phase: 'set', runAt: null, arriveAt: null, stutAt: null, struckAt: null, shot: null, res: null, why: '', endAt: null, popAt: null, doneAt: null,
     kgoes: stay ? 0 : guess, kdive: null, diveAt: null, read: false, lean: 0, aimHold: 0, lastAim: 0,
-    ctl: padCtl(), vh: 640,
+    ctl: padCtl(), vh: 640, st: stroke(), run: RUN, lastView: null, readyAt: null,
     who: { me: manOf(cast, 'us', 'st', 0), gk: manOf(cast, 'them', 'gk', 0), mates: [manOf(cast, 'us', 'st', 1), manOf(cast, 'us', 'st', 2)] },
     dirt: particles(30, 5), nudge: nudge(),
     hud: { prompt: shootout ? 'SHOOTOUT · WAIT FOR THE WHISTLE' : 'WAIT FOR THE WHISTLE' },
     tick(dt) {
       g.t += dt
       const o = padStick(g.ctl)
-      if (g.phase === 'set' && g.t >= WHISTLE) { g.phase = 'wait'; g.fx.push('whistle'); g.hud.prompt = 'PICK A CORNER' }
+      if (g.phase === 'set' && g.t >= WHISTLE) { g.phase = 'wait'; g.readyAt = g.t; g.fx.push('whistle'); g.hud.prompt = 'PICK YOUR SPOT' }
       // aiming: right up to the strike
-      if (!g.shot && g.phase !== 'set') {
+      if (!g.shot && g.phase !== 'set' && !k.drawn) {
         k.aimAt(o.x, o.y)
         // (how long he's been showing one corner)
         const side = Math.abs(o.x) > 0.35 ? Math.sign(o.x) : 0
@@ -61,8 +70,10 @@ export function make({ v, seed, cast = null, situation = null }) {
       if (g.phase === 'run') {
         // the stutter holds him up; he gets there, then it's struck
         const stutter = g.stutAt != null ? STUT : 0
-        g.arriveAt = g.runAt + RUN + stutter
+        g.arriveAt = g.runAt + g.run + stutter
         if (g.struckAt == null && k.phase === 'strike') k.strikeAt = Math.max(k.strikeAt, g.arriveAt)
+        // (drawing it again as he gets there: he waits on it, a beat)
+        if (g.struckAt == null && k.drawn && g.st.on) k.strikeAt = Math.max(k.strikeAt, Math.min(g.t + 30, g.arriveAt + 380))
         if (g.struckAt == null && g.t >= g.arriveAt && k.phase === 'power') k.release(g.t)   // (got there still holding: he hits it)
         keeper()
       }
@@ -81,27 +92,55 @@ export function make({ v, seed, cast = null, situation = null }) {
     },
     input(a) {
       if (skipOutro(g, a)) return
+      if (drawIn(a)) return
       padInput(g.ctl, a, g.vh, { down: id => (id === 'S' ? sDown() : stutter()), up: id => { if (id === 'S') sUp() } })
     },
   }
   function sDown() {
     if (k.phase === 'strike') { if (k.tap(g.t)) g.fx.push('h:light'); return }
     if (g.phase !== 'wait' || k.phase !== 'idle') return
-    g.phase = 'run'; g.runAt = g.t; g.arriveAt = g.t + RUN
+    g.phase = 'run'; g.runAt = g.t; g.run = RUN; g.arriveAt = g.t + RUN
     k.press(g.t, 'pen'); g.hud.prompt = null
     // he's been staring at a corner: a keeper who reads it goes that way
     if (!stay && g.aimHold > 380 && r() < readP) { g.kgoes = g.lastAim; g.read = true }
     g.fx.push('h:light')
   }
   function sUp() { if (k.phase === 'power') k.release(g.t) }
+  // ── drawing it: any finger (or the mouse) but the one on STUTTER ──
+  const viewNow = () => g.lastView ?? { w: 360, h: g.vh }
+  g.aimView = () => { const C = camFor(viewNow()); return { C, ball: P(C, BALL_X, 0.11, SPOT_Z) } }
+  function drawIn(a) {
+    if (a.kind !== 'down' && a.kind !== 'move' && a.kind !== 'up') return false
+    const id = a.id ?? 0, st = g.st
+    if (a.kind === 'down') {
+      if (!g.keysView) { const B = padLayout(g.vh).P; if (Math.hypot(a.x - B.x, a.y - B.y) < B.r + 12) return false }
+      if ((g.phase !== 'wait' && g.phase !== 'run') || g.struckAt != null || (k.phase === 'power' && !k.drawn)) return true
+      strokeDown(st, a.x, a.y, g.t, id, g.aimView().ball)
+      return true
+    }
+    if (id !== st.id) return false
+    if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
+    strokeUp(st, a.x, a.y, g.t, id)
+    if (g.struckAt != null) return true
+    const rd = readStroke(st, g.aimView().C, { foot: 1, base: 'pen' })
+    if (rd.tap || rd.back) { if (g.phase === 'wait') g.hud.prompt = 'DRAW IT UP TO THE GOAL'; return true }
+    if (g.phase === 'wait') {
+      g.phase = 'run'; g.runAt = g.t; g.run = RUN_D; g.arriveAt = g.t + RUN_D; g.hud.prompt = null
+      // his hips: a keeper who reads him goes the way he's going
+      if (!stay && Math.abs(rd.x) > 1.2 && r() < readP * READ_D) { g.kgoes = Math.sign(rd.x); g.read = true }
+      g.fx.push('h:light')
+    }
+    drawnShot(k, rd, g.t, 0)
+    return true
+  }
   function stutter() {
     if (g.phase !== 'run' || g.stutAt != null || g.struckAt != null) return
     const into = g.t - g.runAt
-    if (into > RUN - 220) { g.lostRhythm = true }   // (right at the ball: it throws him)
+    if (into > g.run - 220) { g.lostRhythm = true }   // (right at the ball: it throws him)
     g.stutAt = g.t
     g.fx.push('h:light')
     // a jumpy keeper goes on it: he's committed now
-    if (!stay && jumpy && g.kdive == null && into < RUN - 150) { g.diveAt = g.t + 160 + r() * 120; g.early = true }
+    if (!stay && jumpy && g.kdive == null && into < g.run - 150) { g.diveAt = g.t + 160 + r() * 120; g.early = true }
   }
   function keeper() {
     // his tell: a shade to one side in the run-up, then the dive, about as the ball's struck
@@ -123,6 +162,8 @@ export function make({ v, seed, cast = null, situation = null }) {
     // gone early the other way: he can't get back
     if (dived && g.kgoes && g.kgoes !== side && Math.abs(s.to.x) > 0.9) K.reach = 0.2
     if (dived && g.kgoes && Math.abs(s.to.x) <= 0.9) K.reach = 0.25   // (down the middle as he goes)
+    // the Panenka: dinked down the middle as he goes, he's on the floor; stood up, he catches it
+    if (s.chip && g.kgoes && (Math.abs(s.to.x) < 1.2 || Math.sign(s.to.x) !== g.kgoes)) { K.up = 0.55; K.dive = 0.6 }
     g.shot.save = s.onTarget ? keeperSave(g.shot, K, r) : null
     g.phase = 'struck'
     g.fx.push('stamp', 'h:medium')
@@ -162,7 +203,7 @@ function takerAt(g) {
     const stut = g.stutAt != null ? clamp((t - g.stutAt) / STUT, 0, 1) : 0
     const moving = g.stutAt != null && stut < 1 ? g.stutAt : t
     const runT = (moving - g.runAt) + (g.stutAt != null && stut >= 1 ? t - g.stutAt - STUT : 0)
-    const f = clamp(runT / RUN, 0, 1), e = f * 0.85 + 0.15 * f * f
+    const f = clamp(runT / g.run, 0, 1), e = f * 0.85 + 0.15 * f * f
     const x = lerp(START.x, PLANT.x, e), z = lerp(START.z, PLANT.z - 0.1, e)
     if (g.stutAt != null && stut < 1) return { x, z, pose: { ...POSE.ready, hy: 48 + Math.sin(stut * Math.PI) * 4, lx: -9, rx: 9, ly: -Math.sin(stut * Math.PI) * 6, tilt: 0.2 }, lift: Math.sin(stut * Math.PI) * 0.12 }
     if (f >= 0.8) return { x, z, pose: kickPose(0.42 * prog(f, 0.8, 1), 1) }
@@ -224,7 +265,7 @@ function ballNow(g) {
   return { x: s.to.x + Math.sign(s.to.x) * f * 1.4, y: s.to.y + f * (s.over ? 1.4 : 0), z: f * 6, spin: 10 }
 }
 export function draw(ctx, g, view) {
-  g.vh = view.h
+  g.vh = view.h; g.keysView = !!view.keys; g.lastView = { w: view.w, h: view.h }
   const C = camFor(view), K = kitsOf(view)
   const team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
   staticStadium(ctx, view, C, 'pen', { team, away, board: boardWords(g) })
@@ -254,12 +295,22 @@ export function draw(ctx, g, view) {
   list.sort((p, q) => q.z - p.z)
   for (const m of list) m.fn()
   if (b.held) ball(ctx, C, b.x, b.y, b.z, b.spin, 0, false)
-  if (!g.shot && g.phase !== 'set') {
+  // the spot: where it's drawn to (or where the stick's pointing, on the keys)
+  const dr = g.k.drawn
+  if (!g.shot && dr) aimMark(ctx, C, dr.x, dr.y, { alpha: 0.9 })
+  else if (!g.shot && g.phase !== 'set' && (view.keys || g.k.phase !== 'idle')) {
     const a = g.k.aim
     aimMark(ctx, C, a.x * (POST - 0.7), lerp(0.3, BAR - 0.45, (a.y + 1) / 2), { alpha: 0.9 })
   }
   if (g.res === 'goal' && g.done && !g.kicked) { g.kicked = true; g.nudge.kick(g.t, 2.5, 0, 1, 180) }
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, base: 'pen', foot: 1 })
+  // the first one: how it's done, a stroke drawn off the ball into the top corner, and the line under it
+  if (g.phase === 'wait' && !g.st.on && !dr && g.k.phase === 'idle') {
+    const b = P(C, BALL_X, 0.11, SPOT_Z), to = P(C, 2.75, 1.75, 0)
+    if (drawnSoFar() < 2) ghostStroke(ctx, { x: b.x, y: b.y }, { x: to.x, y: to.y }, 0.1, g.t - g.readyAt - 300)
+    tip(ctx, view, view.keys ? 'DRAW IT WITH THE MOUSE · OR AIM AND SPACE' : 'DRAW IT FROM THE BALL TO YOUR SPOT', view.keys ? view.h - 100 : undefined, 14)
+  }
   shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
-  drawPads(ctx, view, g.ctl, { move: 'AIM', S: 'SHOOT', P: 'STUTTER' }, !g.done)
+  drawPads(ctx, view, g.ctl, view.keys ? { move: 'AIM', S: 'SHOOT', P: 'STUTTER' } : { stick: false, S: null, P: 'STUTTER' }, !g.done)
   placeStamp(g.stamp, view)
 }

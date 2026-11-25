@@ -61,18 +61,21 @@ export function drawControls(ctx, view, ctl, labels, live = true, t = 0) {
   }
   const ax = ctl.tid != null ? ctl.ox : C.stick.x, ay = ctl.tid != null ? ctl.oy : C.stick.y, R = C.stick.R
   ctx.globalAlpha = live ? 1 : 0.4
-  ctx.fillStyle = 'rgba(6,10,12,.42)'; circle(ctx, ax, ay, R + 6); ctx.fill()
-  ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 2; circle(ctx, ax, ay, R + 6); ctx.stroke()
-  ctx.fillStyle = ctl.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#e9eef0' : 'rgba(233,238,240,.7)'
-  circle(ctx, ax + s.x * R, ay - s.y * R, 19); ctx.fill()
-  ctx.strokeStyle = 'rgba(6,10,12,.5)'; ctx.lineWidth = 1.5; ctx.stroke()
-  if (ctl.tid == null) text(ctx, labels.stick, ax, ay + R + 18, { size: 12, track: 1.2, color: 'rgba(255,255,255,.62)' })
+  // (labels.stick false, labels.a null: the shot's drawn on the picture, no stick and no shoot button)
+  if (labels.stick !== false) {
+    ctx.fillStyle = 'rgba(6,10,12,.42)'; circle(ctx, ax, ay, R + 6); ctx.fill()
+    ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 2; circle(ctx, ax, ay, R + 6); ctx.stroke()
+    ctx.fillStyle = ctl.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#e9eef0' : 'rgba(233,238,240,.7)'
+    circle(ctx, ax + s.x * R, ay - s.y * R, 19); ctx.fill()
+    ctx.strokeStyle = 'rgba(6,10,12,.5)'; ctx.lineWidth = 1.5; ctx.stroke()
+    if (ctl.tid == null) text(ctx, labels.stick, ax, ay + R + 18, { size: 12, track: 1.2, color: 'rgba(255,255,255,.62)' })
+  }
   const btn = (c, lit, label, size) => {
     ctx.fillStyle = lit ? view.accent : 'rgba(28,38,43,.9)'; circle(ctx, c.x, c.y, c.r); ctx.fill()
     ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; ctx.stroke()
     text(ctx, label, c.x, c.y + 1, { font: DISPLAY, size, color: lit ? '#06100c' : '#fff' })
   }
-  btn(C.a, ctl.aId != null && live, labels.a, labels.a.length > 6 ? 15 : 18)
+  if (labels.a) btn(C.a, ctl.aId != null && live, labels.a, labels.a.length > 6 ? 15 : 18)
   if (labels.b) btn(C.b, (ctl.bId != null || t - ctl.bLit < 140) && live, labels.b, 14)
   ctx.globalAlpha = 1
 }

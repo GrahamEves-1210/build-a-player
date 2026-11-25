@@ -5,15 +5,20 @@
 //                                with the stick (held down: low), hold for power, let go, tap again as you strike it
 // Go before he's committed and he reads it: the pass is cut out, the shot's blocked. He can sell you a step one way
 // before he goes the other. Leave it too long and he's on you (or back across to block it).
+// Or DRAW the shot (soccer.js's draw the shot): a finger anywhere but on PASS, a mouse anywhere. The stroke is read as
+// though it's drawn from the ball (the ring on the goal shows where it's going): where it points, its pace the power,
+// a bow in it the curl. The moment the finger goes down is the moment he's chosen to shoot; drawn back across toward
+// the runner, it's the square ball instead.
 // Link-up play buys the time to read him, finishing and composure the shot.
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manOf } from './kit.js'
 import { placeStamp } from './read.js'
 import {
   camOf, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribblePose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp,
   shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, aimTo, celebration, scorerAt, mateAt, keeperBeaten, defenderBeaten, keeperRoar,
-  strikerDenied, celebMs, skipOutro, POST, BAR, NET_D,
+  strikerDenied, celebMs, skipOutro, POST, BAR, NET_D, P,
+  stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar,
 } from './soccer.js'
-import { newCtl, control, stickOf, drawControls, tip } from './soccerPads.js'
+import { newCtl, control, stickOf, drawControls, tip, padsOf } from './soccerPads.js'
 
 export const how = {
   'two-on-one': 'Watch the last man. He steps up: square it to the runner. He drops off to the runner: keep it and shoot.',
@@ -48,7 +53,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     chase: [{ x: -rs * 7.5, z: START_Z - 4.5, cyc: 0.2 }, { x: rs * 10.5, z: START_Z - 6, cyc: 0.7 }],
     commitAt: null, showAt: null, showTo: null, act: null, actAt: null, read: null,
     shot: null, pass: null, save: null, res: null, endAt: null, popAt: null, why: null, cel: null, assist: false,
-    ctl: newCtl(), vh: 640,
+    ctl: newCtl(), vh: 640, st: stroke(), lastView: null, keysView: false, downAt: null,
     camX: x0 * 0.5, camZ: START_Z - 14,
     dirt: particles(24, 4), nudge: nudge(),
     hud: { prompt: null },
@@ -57,7 +62,7 @@ export function make({ v, seed, cast = null, situation = null }) {
       const s = dt / 1000
       const st = stickOf(g.ctl)
       if (!g.shot && k.phase !== 'done') k.aimAt(st.x, st.y)
-      const live = !g.res && !g.act
+      const live = !g.res && !g.act && !k.drawing   // (a finger down drawing it: he's chosen, the shot's coming)
       // you, the runner, the men chasing back (once it's a goal the celebration has them)
       if (!g.cel) {
         const mySp = g.shot ? RUN * Math.max(0, 1 - (g.t - g.shot.at) / 600) : g.pass ? RUN * Math.max(0.3, 1 - (g.t - g.pass.at) / 900) : g.res ? Math.max(0, RUN * (1 - (g.t - g.endAt) / 500)) : RUN
@@ -88,6 +93,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     },
     input(a) {
       if (g.done) { skipOutro(g, a); return }
+      if (drawIn(a)) return
       control(g.ctl, a, g.vh, g.t, { a: down => shootPress(down), b: down => { if (down) passPress() } })
     },
   }
@@ -122,7 +128,35 @@ export function make({ v, seed, cast = null, situation = null }) {
     q.x += clamp((g.pass ? g.mate.x * 0.5 : g.me.x * 0.32) - q.x, -3 * s, 3 * s)
   }
   // a press is judged when it lands: has he committed yet, and to what
-  const readNow = () => (g.commitAt == null || g.t < g.commitAt ? 'early' : g.goes)
+  const readNow = (t = g.t) => (g.commitAt == null || t < g.commitAt ? 'early' : g.goes)
+  // ── drawing it: anywhere but PASS ──
+  const camNow = () => camOf(g.lastView ?? { w: 360, h: g.vh }, { x: g.camX, y: 5.8, z: g.camZ, F: 440, hzAt: 0.15 })
+  g.aimView = () => { const C = camNow(); return { C, ball: P(C, g.me.x + 0.25, 0.11, g.me.z + 0.75) } }
+  function drawIn(a) {
+    if (a.kind !== 'down' && a.kind !== 'move' && a.kind !== 'up') return false
+    const id = a.id ?? 0, st = g.st
+    if (a.kind === 'down') {
+      if (!g.keysView) { const B = padsOf(g.vh).b; if (Math.hypot(a.x - B.x, a.y - B.y) < B.r + 14) return false }
+      if (!g.act && !g.res && k.shape(g.t)) { strokeDown(st, a.x, a.y, g.t, id, null); g.downAt = g.t }
+      return true
+    }
+    if (id !== st.id) return false
+    if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
+    strokeUp(st, a.x, a.y, g.t, id)
+    if (!k.drawing || g.act || g.res) { if (k.drawing) k.reset(); return true }
+    const v0 = g.aimView(), rd = readStroke(st, v0.C, { foot: 1, origin: v0.ball })
+    if (rd.tap) { k.reset(); return true }
+    if (rd.back) {
+      // drawn back across toward the runner: the square ball (judged as he chose it, when the finger went down)
+      k.reset()
+      if (Math.sign(rd.dx) === Math.sign(g.mate.x - g.me.x)) { passPress(); g.read = readNow(g.downAt) ; g.pass.ok = g.read === 'ball' }
+      return true
+    }
+    g.act = 'shoot'; g.actAt = g.downAt; g.read = readNow(g.downAt)
+    drawnShot(k, rd, g.t, WINDUP)
+    g.fx.push('h:light')
+    return true
+  }
   function passPress() {
     if (g.act) return
     g.act = 'pass'; g.actAt = g.t; g.read = readNow()
@@ -130,6 +164,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.fx.push('tap', 'h:light')
   }
   function shootPress(down) {
+    if (k.drawing || k.drawn) return
     if (down) {
       if (!g.act) {
         g.act = 'shoot'; g.actAt = g.t; g.read = readNow()
@@ -244,7 +279,7 @@ function mePose(g) {
   return g.act ? runPose(g.me.cyc % 1, 0.9) : dribblePose(g.me.cyc % 1)
 }
 export function draw(ctx, g, view) {
-  g.vh = view.h
+  g.vh = view.h; g.keysView = !!view.keys; g.lastView = { w: view.w, h: view.h }
   const C = camOf(view, { x: g.camX, y: 5.8, z: g.camZ, F: 440, hzAt: 0.15 }), K = kitsOf(view)
   const team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim]
   stadium(ctx, view, C, { team, away, board: boardWords(g) })
@@ -302,9 +337,18 @@ export function draw(ctx, g, view) {
   }
   if (!ballDone) ball(ctx, C, b.x, b.y, b.z, b.spin)
   // the aim on the goal, the shot's bar, the controls
-  if (!g.res && !g.shot && !g.pass) { const a = aimTo(g.k.aim.x, g.k.aim.y); aimMark(ctx, C, a.x, a.y, { alpha: g.k.phase === 'idle' ? 0.6 : 1 }) }
+  const dr = g.k.drawn
+  if (!g.res && !g.shot && !g.pass && dr) aimMark(ctx, C, dr.x, dr.y)
+  else if (!g.res && !g.shot && !g.pass && !g.k.drawing && (view.keys || g.k.phase !== 'idle')) { const a = aimTo(g.k.aim.x, g.k.aim.y); aimMark(ctx, C, a.x, a.y, { alpha: g.k.phase === 'idle' ? 0.6 : 1 }) }
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, origin: P(C, g.me.x + 0.25, 0.11, g.me.z + 0.75) })
   shotHud(ctx, view, g.k, { t: g.t, y: view.h - (view.keys ? 64 : 186) })
-  drawControls(ctx, view, g.ctl, { stick: 'AIM', a: 'SHOOT', b: 'PASS' }, !g.done, g.t)
+  // (on a phone the shot's drawn: PASS is the one button)
+  drawControls(ctx, view, g.ctl, view.keys ? { stick: 'AIM', a: 'SHOOT', b: 'PASS' } : { stick: false, a: null, b: 'PASS' }, !g.done, g.t)
   if (!g.act && !g.res && g.t < 1900) tip(ctx, view, 'HE STEPS UP: PASS · HE DROPS OFF: SHOOT', undefined, 13)
+  else if (!g.act && !g.res && !g.k.drawing && g.t < 4600) {
+    // the first one: the stroke that's a shot, and the line under it
+    if (drawnSoFar() < 2) { const from = view.keys ? P(C, g.me.x + 0.25, 0.11, g.me.z + 0.75) : { x: 250, y: view.h - 170 }; ghostStroke(ctx, from, { x: from.x - g.rs * 30, y: from.y - 120 }, 0.1, g.t - 1900) }
+    tip(ctx, view, view.keys ? 'DRAW YOUR SHOT WITH THE MOUSE · E TO PASS' : 'DRAW YOUR SHOT · PASS TO SQUARE IT', view.keys ? view.h - 100 : undefined, 14)
+  }
   placeStamp(g.stamp, view)
 }
