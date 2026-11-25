@@ -247,3 +247,4 @@ button.cr-devnote--go { width: 100%; min-height: 44px; text-align: left; cursor:
 @media (max-width: 380px) { .cr-lt .sq-table-row { font-size: 13px; } }
 /* THE NUMBERS BY YEAR: room for a season (2026-27) in the first column */
 .crs-yr--wide { grid-template-columns: 62px repeat(3, minmax(0, 1fr)); }
+.cr-lt .sq-table-head > span:nth-child(2) { text-align: left; padding-left: 26px; }
