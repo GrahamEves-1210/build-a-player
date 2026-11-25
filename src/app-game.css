@@ -6757,6 +6757,9 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-
 .ag-home--soccer .ag-mode { background: #141518; }
 .ag-home--soccer .ag-mode.is-on { background: var(--hm-a); color: var(--hm-on); }
 .ag-home--soccer .ag-mode--ucl.is-on { background: #2b1d86; color: #fff; }   /* (the Champions League card keeps its navy-purple when picked) */
+/* (the World Cup card is gold like every sport's all-time card, owner 11-25) */
+.ag-home--soccer .ag-mode--gold { background: linear-gradient(135deg, rgba(245,200,66,.2), rgba(184,134,11,.1)), #15110a; }
+.ag-home--soccer .ag-mode--gold.is-on { background: linear-gradient(135deg, #fbe28c 0%, #f0bd2e 48%, #c8920f 100%); color: #1d1503; }
 .ag-home--soccer .ag-start { background: #f2f2ee; color: #0b0c0e; }
 @media (hover: hover) { .ag-home--soccer .ag-start:hover { background: #d9d9d5; } }
 .ag-home--soccer .ag-mc--career { background: linear-gradient(100deg, rgba(8,9,11,.92) 30%, rgba(8,9,11,.35)), url('/soccerbackground.webp') center 44% / cover no-repeat, #0e0f11; }
