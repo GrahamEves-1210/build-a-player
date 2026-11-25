@@ -17,7 +17,7 @@
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, particles, nudge, manOf, lightMode } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperRoar, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperDive, keeperLanded, keeperUp, handsOf, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar, padLayout } from './soccer.js'
 import { tip } from './soccerPads.js'
 
@@ -42,7 +42,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   const k = shooter(v, { pressure, fill: 900, windup: 160 })
   k.type = 'pen'
   // the keeper: which way he'll go (or stay big), whether his tell is honest, how he reacts to a stutter
-  const stay = r() < 0.16, guess = r() < 0.5 ? -1 : 1
+  const stay = r() < 0.13, guess = r() < 0.5 ? -1 : 1
   const honest = r() < 0.62, tellSide = honest ? guess : -guess
   const jumpy = r() < byV(v, 0.5, 0.68)     // goes early on a stutter
   const readP = lerp(0.6, 0.18, tv) * (1 + pressure * 0.4)
@@ -54,11 +54,12 @@ export function make({ v, seed, cast = null, situation = null }) {
     ctl: padCtl(), vh: 640, st: stroke(), run: RUN, lastView: null, readyAt: null,
     who: { me: manOf(cast, 'us', 'st', 0), gk: manOf(cast, 'them', 'gk', 0), mates: [manOf(cast, 'us', 'st', 1), manOf(cast, 'us', 'st', 2)] },
     dirt: particles(30, 5), nudge: nudge(),
-    hud: { prompt: shootout ? 'SHOOTOUT · WAIT FOR THE WHISTLE' : 'WAIT FOR THE WHISTLE' },
+    // (the words go over the controls, in the picture: the HUD's own line would sit on the STUTTER button and the keys)
+    hud: { prompt: null }, say: shootout ? 'SHOOTOUT · WAIT FOR THE WHISTLE' : 'WAIT FOR THE WHISTLE',
     tick(dt) {
       g.t += dt
       const o = padStick(g.ctl)
-      if (g.phase === 'set' && g.t >= WHISTLE) { g.phase = 'wait'; g.readyAt = g.t; g.fx.push('whistle'); g.hud.prompt = 'PICK YOUR SPOT' }
+      if (g.phase === 'set' && g.t >= WHISTLE) { g.phase = 'wait'; g.readyAt = g.t; g.fx.push('whistle'); g.say = null }
       // aiming: right up to the strike
       if (!g.shot && g.phase !== 'set' && !k.drawn) {
         k.aimAt(o.x, o.y)
@@ -80,7 +81,7 @@ export function make({ v, seed, cast = null, situation = null }) {
       if (k.tick(g.t) && !g.shot) strike()
       if (g.shot && !g.res) {
         const s = g.shot, a = g.t - s.at
-        if (s.save?.saved && a >= s.save.f * s.T) resolve('saved', s.save.held ? (s.chip ? 'He stood up and caught the dink' : 'Too close to him: he held it') : g.read ? 'He read it and got there' : 'Guessed right and got a hand to it')
+        if (s.save?.saved && a >= s.save.f * s.T) resolve('saved', s.save.held ? (s.chip ? 'He stood up and caught the dink' : (s.save.stretch ?? 0) < 0.5 ? 'Too close to him: he held it' : 'He went the right way and held it') : g.read ? 'He read it and got there' : 'Guessed right and got a hand to it')
         else if (a >= s.T) {
           if (s.over) resolve('over', 'Leaned back: over the bar')
           else if (s.wide) resolve('wide', Math.abs(s.to.x) > POST ? 'Went for the corner and missed it' : 'Hit the post')
@@ -100,7 +101,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (k.phase === 'strike') { if (k.tap(g.t)) g.fx.push('h:light'); return }
     if (g.phase !== 'wait' || k.phase !== 'idle') return
     g.phase = 'run'; g.runAt = g.t; g.run = RUN; g.arriveAt = g.t + RUN
-    k.press(g.t, 'pen'); g.hud.prompt = null
+    k.press(g.t, 'pen'); g.say = null
     // he's been staring at a corner: a keeper who reads it goes that way
     if (!stay && g.aimHold > 380 && r() < readP) { g.kgoes = g.lastAim; g.read = true }
     g.fx.push('h:light')
@@ -123,9 +124,9 @@ export function make({ v, seed, cast = null, situation = null }) {
     strokeUp(st, a.x, a.y, g.t, id)
     if (g.struckAt != null) return true
     const rd = readStroke(st, g.aimView().C, { foot: 1, base: 'pen' })
-    if (rd.tap || rd.back) { if (g.phase === 'wait') g.hud.prompt = 'DRAW IT UP TO THE GOAL'; return true }
+    if (rd.tap || rd.back) { if (g.phase === 'wait') { g.say = 'DRAW IT UP TO THE GOAL'; g.sayAt = g.t } return true }
     if (g.phase === 'wait') {
-      g.phase = 'run'; g.runAt = g.t; g.run = RUN_D; g.arriveAt = g.t + RUN_D; g.hud.prompt = null
+      g.phase = 'run'; g.runAt = g.t; g.run = RUN_D; g.arriveAt = g.t + RUN_D; g.say = null
       // his hips: a keeper who reads him goes the way he's going
       if (!stay && Math.abs(rd.x) > 1.2 && r() < readP * READ_D) { g.kgoes = Math.sign(rd.x); g.read = true }
       g.fx.push('h:light')
@@ -147,7 +148,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     const toBall = g.arriveAt - g.t
     g.lean = g.kdive == null ? lerp(g.lean, toBall < 700 ? tellSide * 0.6 : 0, 0.05) : 0
     if (g.diveAt == null && !stay) g.diveAt = g.arriveAt - 130 + r() * 170
-    if (g.kdive == null && g.diveAt != null && g.t >= g.diveAt) { g.kdive = g.kgoes; g.kAt = g.t; if (g.kgoes) g.fx.push('h:light') }
+    if (g.kdive == null && g.diveAt != null && g.t >= g.diveAt) { g.kdive = g.kgoes; g.kAt = g.t; g.kx0 = swayX(g); if (g.kgoes) g.fx.push('h:light') }
   }
   function strike() {
     g.struckAt = g.t
@@ -157,14 +158,34 @@ export function make({ v, seed, cast = null, situation = null }) {
     const dived = g.kdive != null, side = Math.sign(s.to.x) || 0
     let K
     if (!dived && stay) K = { x: 0, z: KEEP_Z, react: byV(v, 150, 230), reach: 0.9, up: 2.4, dive: 3.6, read: 0 }
-    else if (!dived) { g.kdive = g.kgoes; g.kAt = g.t; K = { x: 0, z: KEEP_Z, react: 90, reach: 0.6, up: 2.3, dive: 3.9, read: g.kgoes * 1.2 } }
-    else K = { x: 0, z: KEEP_Z, react: 0, reach: 0.6, up: 2.25, dive: g.kgoes === side || (Math.abs(s.to.x) < 0.9 && g.kgoes) ? 3.7 : 0.4, read: g.kgoes }
+    else if (!dived) { g.kdive = g.kgoes; g.kAt = g.t; g.kx0 = swayX(g); K = { x: 0, z: KEEP_Z, react: 90, reach: 0.6, up: 2.3, dive: 3.9, read: g.kgoes * 1.2 } }
+    else K = { x: 0, z: KEEP_Z, react: 0, reach: 0.6, up: 2.25, dive: g.kgoes === side || (Math.abs(s.to.x) < 0.9 && g.kgoes) ? 3.15 : 0.4, read: g.kgoes }
     // gone early the other way: he can't get back
     if (dived && g.kgoes && g.kgoes !== side && Math.abs(s.to.x) > 0.9) K.reach = 0.2
     if (dived && g.kgoes && Math.abs(s.to.x) <= 0.9) K.reach = 0.25   // (down the middle as he goes)
     // the Panenka: dinked down the middle as he goes, he's on the floor; stood up, he catches it
     if (s.chip && g.kgoes && (Math.abs(s.to.x) < 1.2 || Math.sign(s.to.x) !== g.kgoes)) { K.up = 0.55; K.dive = 0.6 }
+    // gone early on the stutter, he's on the grass by the time it's struck: only a low one near him is still his
+    const early = dived && !!g.kgoes && g.t - g.kAt > 220
+    if (early) K.up = 0.95
     g.shot.save = s.onTarget ? keeperSave(g.shot, K, r) : null
+    // The picture of it. Where his dive takes his hands: on to the ball when he saves it, half a metre short when it
+    // beats him on his side, his own way when he's gone the wrong one. A keeper who stood up goes late for one away
+    // from him, and stays on his feet for one near him
+    const sv = g.shot.save, fk = clamp((KEEP_Z - SPOT_Z) / -SPOT_Z, 0, 1), cross = shotAt(g.shot, fk * s.T), arrive = g.t + fk * s.T
+    if (g.kx0 == null) g.kx0 = swayX(g)
+    const off = cross.x - g.kx0, sideK = Math.sign(off) || 1, far = Math.abs(off) > 1.15
+    if (g.kdive) {
+      const t0 = g.kAt, at = arrive - t0
+      if (early) g.kd = { K: g.kdive, t0 }
+      else if (sv?.saved && sideK === g.kdive) g.kd = { K: g.kdive, t0, hx: Math.abs(off), hy: cross.y, at }
+      else if (sideK === g.kdive && far && Math.abs(off) < 5) g.kd = { K: g.kdive, t0, hx: Math.max(0.9, Math.abs(off) - 0.5), hy: cross.y > 1.9 ? cross.y - 0.4 : cross.y, at }
+      else g.kd = { K: g.kdive, t0 }
+    } else if (far && (sv?.saved || Math.abs(off) < 4.6)) {
+      const t0 = g.t + 130
+      g.kd = { K: sideK, t0, hx: sv?.saved ? Math.abs(off) : Math.max(0.9, Math.abs(off) - 0.7), hy: cross.y, at: Math.max(300, arrive - t0) }
+    } else g.kd = { K: 0, off, y: cross.y }
+    g.kd.setAt = g.t
     g.phase = 'struck'
     g.fx.push('stamp', 'h:medium')
   }
@@ -172,8 +193,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (g.res) return
     g.res = kind; g.why = why; g.resAt = g.t; g.endAt = g.t + (kind === 'goal' ? 120 : 60)
     if (kind === 'goal') {
-      g.cel = celebration(`${seed}|pen`, { from: { x: PLANT.x, z: PLANT.z }, toward: { x: (Math.sign(g.shot.to.x) || 1) * 0.9, z: -9 }, side: (Math.sign(g.shot.to.x) || 1), athletic: v >= 8, mates: [{ x: -6, z: -14.5 }, { x: -3.5, z: -16 }, { x: 4.5, z: -15 }] })
-      g.kAt0 = { x: (g.kdive ?? 0) * 2.1, z: KEEP_Z, rot: (g.kdive || 1) * 1.42, ball: { x: clamp(g.shot.to.x, -3, 3), z: 1.5 } }
+      g.cel = celebration(`${seed}|pen`, { sit: g.sit, from: { x: PLANT.x, z: PLANT.z }, toward: { x: (Math.sign(g.shot.to.x) || 1) * 0.9, z: -9 }, side: (Math.sign(g.shot.to.x) || 1), athletic: v >= 8, mates: [{ x: -6, z: -14.5 }, { x: -3.5, z: -16 }, { x: 4.5, z: -15 }] })
     }
   }
   function finish() {
@@ -213,36 +233,55 @@ function takerAt(g) {
   if (after < 300) return { x: PLANT.x, z: PLANT.z, pose: kickPose(0.45 + 0.55 * easeOut(after / 300), 1, { high: g.shot?.over }) }
   // missed or saved: the head drops
   const base = mix(kickPose(1), POSE.stand, clamp((after - 300) / 200, 0, 1))
-  return { x: PLANT.x, z: PLANT.z, pose: g.res ? strikerDenied('miss', after - 400, base) : base }
+  return { x: PLANT.x, z: PLANT.z, pose: g.res ? strikerDenied(g.res === 'saved' ? 'save' : 'miss', t - g.resAt - 150, base) : base }
+}
+// the keeper on his line before he goes: bouncing, swaying, shading the side his tell gives away
+const swayX = g => Math.sin(g.t / 520) * 0.18 + g.lean * 0.3
+const DIVE0 = { hx: 2.5, hy: 1, at: 540 }
+const smooth = f => f * f * (3 - 2 * f)
+// the dive he's in. Before the ball's struck it's a dive his way; once it is, it bends to where the ball's going
+function diveNow(g) {
+  const kd = g.kd, K = kd?.K ?? g.kdive, t0 = kd?.t0 ?? g.kAt, aimed = kd?.hx != null
+  const b = aimed ? smooth(prog(g.t, kd.setAt, kd.setAt + 110)) : 0
+  const o = aimed ? { hx: lerp(DIVE0.hx, kd.hx, b), hy: lerp(DIVE0.hy, kd.hy, b), at: kd.at } : DIVE0
+  const d = keeperDive(g.t - t0, K, o)
+  return { ...d, x: (g.kx0 ?? 0) + d.dx, t0, K, o: aimed ? kd : DIVE0 }
 }
 function keeperAt(g) {
-  const t = g.t, s = g.shot
-  if (g.res === 'goal' && g.cel) return null
-  if (g.kdive == null) {
-    const bounce = Math.abs(Math.sin(t / 170)) * 3, sway = Math.sin(t / 520) * 0.18
+  const t = g.t, kd = g.kd
+  const goal = g.res === 'goal' && g.cel, ballIn = { x: clamp(g.shot?.to.x ?? 0, -3, 3), z: 1.5 }
+  const going = kd ? kd.K !== 0 && t >= kd.t0 : !!g.kdive
+  if (!going && !(kd && kd.K === 0) && g.kdive !== 0) {
+    // (stood up, about to go late: set, where he was)
+    if (kd) return { x: g.kx0, z: KEEP_Z, lift: 0, pose: POSE.set }
+    const bounce = Math.abs(Math.sin(t / 170)) * 3
     const base = g.phase === 'run' && g.arriveAt - t < 450 ? POSE.set : POSE.ready
-    return { x: sway + g.lean * 0.3, z: KEEP_Z, lift: 0, pose: { ...base, hy: base.hy + bounce, lean: g.lean * 0.15, hlx: base.hlx - 5, hrx: base.hrx + 5 } }
+    return { x: swayX(g), z: KEEP_Z, lift: 0, pose: { ...base, hy: base.hy + bounce, lean: g.lean * 0.15, hlx: base.hlx - 5, hrx: base.hrx + 5 } }
   }
-  const K = g.kdive
-  if (K === 0) {
-    // stood big: goes for it as it comes
-    const at = s ? s.at + 60 : Infinity, f = prog(t, at, at + 260), to = s ? s.to : { x: 0, y: 1 }
-    const pose = { ...POSE.set, hy: lerp(44, 50, f), hlx: lerp(-22, to.x * 28 - 8, f), hly: lerp(-62, -40 - to.y * 30, f), hrx: lerp(22, to.x * 28 + 8, f), hry: lerp(-62, -40 - to.y * 30, f) }
-    return after(g, { x: lerp(0, clamp(to.x, -1.2, 1.2) * 0.7, f), z: KEEP_Z, lift: 0, pose })
+  if (!going) {
+    // stood big: his hands go to it as it comes
+    const s = g.shot, at = s ? s.at + 60 : Infinity, f = easeOut(prog(t, at, at + 260)), off = kd?.off ?? 0, y = kd?.y ?? 1
+    const shift = clamp(off, -1, 1) * 0.55, hx = clamp((off - shift) / 0.0164, -34, 34), hy = -clamp(y / 0.0164, 22, 118)
+    const pose = { ...POSE.set, hy: lerp(44, y > 1.5 ? 53 : 48, f), hlx: lerp(-22, hx - 7, f), hly: lerp(-62, hy, f), hrx: lerp(22, hx + 7, f), hry: lerp(-62, hy, f) }
+    const me = { x: (g.kx0 ?? 0) + shift * f, z: KEEP_Z, lift: y > 2 ? Math.sin(f * Math.PI) * 0.25 : 0, pose }
+    if (goal) { const kb = keeperBeaten(g.cel, t - g.endAt, { ...me, rot: 0, lift: 0, ball: ballIn }); g.kHold = kb.holds ? { x: kb.x, z: kb.z } : null; return kb }
+    if (g.res && t - g.resAt > 380) { const u = keeperUp(t - g.resAt - 380, { rot: 0, pose }); return { ...me, lift: 0, pose: u.pose } }
+    return me
   }
-  const d = prog(t - g.kAt, 0, 620)
-  const flyX = K * lerp(0.2, 2.2, easeOut(d)), lift = Math.sin(Math.min(1, d) * Math.PI) * 0.6
-  const high = (s?.to.y ?? 1) > 1.4
-  const pose = d < 0.16 ? mix(POSE.set, { ...POSE.set, hy: 36, lean: K * 0.25 }, d / 0.16) : { ...POSE.dive, rot: K * lerp(0.4, high ? 1.2 : 1.45, easeOut((d - 0.16) / 0.84)) }
-  return after(g, { x: flyX, z: KEEP_Z - d * 0.2, lift, pose })
+  const d = diveNow(g), landAt = d.t0 + d.end + 80
+  if (t < landAt || !g.res) return { x: d.x, z: KEEP_Z, lift: d.lift, pose: d.pose, flying: true }
+  const L = keeperLanded(d.K, d.o), at = { x: (g.kx0 ?? 0) + L.dx, z: KEEP_Z, rot: L.rot, lift: L.lift }
+  // beaten: down where he landed, then up and into the net for it
+  if (goal) { const kb = keeperBeaten(g.cel, t - Math.max(landAt, g.endAt), { ...at, ball: ballIn }); g.kHold = kb.holds ? { x: kb.x, z: kb.z } : null; return kb }
+  // a save or a miss: up off the grass, and his roar
+  const u = keeperUp(t - Math.max(landAt, g.resAt + 300), at)
+  return { x: at.x, z: KEEP_Z, lift: u.lift, pose: u.pose }
 }
-// a save or a miss: up, and his celebration
-function after(g, at) {
-  if (g.endAt == null || g.res === 'goal') return at
-  const age = g.t - g.endAt
-  if (age < 450) return at
-  const up = prog(age, 450, 800)
-  return { x: at.x, z: at.z, lift: at.lift * (1 - up), pose: keeperRoar(age - 450, { ...at.pose, rot: (at.pose.rot ?? 0) * (1 - up) }) }
+// a ball he's holding: in his hands as he lands with it, then pulled in to his chest
+function heldAt(kp, age) {
+  const h = handsOf(kp.pose, kp.lift ?? 0), r = kp.pose.rot ?? 0, hip = (kp.pose.hy ?? 53) * 0.0164 + (kp.lift ?? 0)
+  const chest = { x: Math.sin(r) * 0.42, y: hip + Math.cos(r) * 0.42 }, f = easeOut(prog(age, 120, 520))
+  return { x: kp.x + lerp(h.x, chest.x, f), y: Math.max(0.14, lerp(h.y, chest.y, f)) }
 }
 function ballNow(g) {
   const s = g.shot
@@ -250,9 +289,11 @@ function ballNow(g) {
   const a = g.t - s.at
   if (s.save?.saved && a >= s.save.f * s.T) {
     const p = shotAt(s, s.save.f * s.T), f = clamp((a - s.save.f * s.T) / 520, 0, 1)
-    if (s.save.held) return { x: lerp(p.x, 0.2, f), y: lerp(p.y, 0.9, f), z: -0.55, spin: 0, held: true }
-    const sd = Math.sign(p.x) || 1
-    return { x: p.x + sd * f * 3.2, y: Math.max(0.11, p.y + Math.sin(f * Math.PI) * 0.8 - f * 0.3), z: lerp(-0.3, 2.4, f), spin: 9 + f * 6 }
+    if (s.save.held) return { x: p.x, y: p.y, z: KEEP_Z - 0.3, spin: 0, held: true, age: a - s.save.f * s.T }
+    const sd = Math.sign(p.x) || 1, g2 = clamp((a - s.save.f * s.T) / 700, 0, 1)
+    // palmed away: round the post from out wide (it never crosses the line between the posts), over the bar from the middle
+    if (Math.abs(p.x) > 1.3) { const x = p.x + sd * (POST + 1.6 - Math.abs(p.x)) * easeOut(g2); return { x, y: Math.max(0.11, p.y + Math.sin(g2 * Math.PI) * 0.7 - g2 * p.y * 0.8), z: KEEP_Z - 0.1 + Math.max(0, Math.abs(x) - POST - 0.25) * 2.2, spin: 9 + g2 * 6 } }
+    return { x: p.x + sd * g2 * 0.8, y: p.y + (BAR + 1 - p.y) * easeOut(Math.min(1, g2 * 2.2)) + g2 * 0.5, z: KEEP_Z - 0.1 + 3.2 * g2 * g2, spin: 9 + g2 * 6 }
   }
   if (a < s.T) return shotAt(s, a)
   const af = a - s.T
@@ -278,16 +319,14 @@ export function draw(ctx, g, view) {
   const gkLook = dress(K.gk, g.who.gk ?? { number: 1, skin: '#c09060' }, { front: true, sleeves: true }), meLook = dress(K.us, g.who.me ?? { number: 9, skin: '#8d5a3b' })
   const list = []
   const age = g.endAt != null ? g.t - g.endAt : 0
+  const kp = keeperAt(g)
+  list.push({ z: kp.z, fn: () => man(ctx, C, kp.x, kp.z, kp.pose, kp.front === false ? { ...gkLook, front: false } : gkLook, { lift: kp.lift ?? 0 }) })
+  if (b.held && b.age != null) { const h = heldAt(kp, b.age); b.x = h.x; b.y = h.y }
   if (g.res === 'goal' && g.cel) {
-    const kb = keeperBeaten(g.cel, age, g.kAt0)
-    g.kHold = kb.holds ? { x: kb.x, z: kb.z } : null
-    list.push({ z: kb.z, fn: () => man(ctx, C, kb.x, kb.z, kb.pose, { ...gkLook, front: kb.front }) })
     const sc = scorerAt(g.cel, age)
     list.push({ z: sc.z, fn: () => man(ctx, C, sc.x, sc.z, sc.pose, meLook, { lift: sc.lift, turn: sc.turn, name: g.who.me?.name }) })
     g.cel.mates.forEach((m, i) => { if (age < m.delay) return; const at = mateAt(g.cel, i, age, sc); list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, dress(K.us, g.who.mates?.[i] ?? { number: [7, 10, 11][i], skin: ['#5e3c22', '#f0c4a0', '#c09060'][i] }), { lift: at.lift, turn: at.turn }) }) })
   } else {
-    const kp = keeperAt(g)
-    list.push({ z: KEEP_Z, fn: () => man(ctx, C, kp.x, kp.z, kp.pose, gkLook, { lift: kp.lift }) })
     const sp = takerAt(g)
     list.push({ z: sp.z, fn: () => man(ctx, C, sp.x, sp.z, sp.pose, meLook, { name: g.who.me?.name, lift: sp.lift ?? 0 }) })
   }
@@ -308,8 +347,8 @@ export function draw(ctx, g, view) {
   if (g.phase === 'wait' && !g.st.on && !dr && g.k.phase === 'idle') {
     const b = P(C, BALL_X, 0.11, SPOT_Z), to = P(C, 2.75, 1.75, 0)
     if (drawnSoFar() < 2) ghostStroke(ctx, { x: b.x, y: b.y }, { x: to.x, y: to.y }, 0.1, g.t - g.readyAt - 300)
-    tip(ctx, view, view.keys ? 'DRAW IT WITH THE MOUSE · OR AIM AND SPACE' : 'DRAW IT FROM THE BALL TO YOUR SPOT', view.keys ? view.h - 100 : undefined, 14)
-  }
+    tip(ctx, view, g.say && g.t - g.sayAt < 1600 ? g.say : view.keys ? 'DRAW IT WITH THE MOUSE · OR AIM AND SPACE' : 'DRAW IT FROM THE BALL TO YOUR SPOT', undefined, 14)
+  } else if (g.phase === 'set' && g.say) tip(ctx, view, g.say, undefined, 14)
   shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
   drawPads(ctx, view, g.ctl, view.keys ? { move: 'AIM', S: 'SHOOT', P: 'STUTTER' } : { stick: false, S: null, P: 'STUTTER' }, !g.done)
   placeStamp(g.stamp, view)

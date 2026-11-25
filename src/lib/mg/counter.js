@@ -220,7 +220,7 @@ export function make({ v, seed, cast = null, situation = null }) {
       const scorer = assist ? g.mate : g.me, other = assist ? g.me : g.mate
       const side = assist ? rs : (scorer.x < 0 ? -1 : 1)
       // (off toward the corner of the box on his side, in front of the camera, not out past it)
-      g.cel = celebration(`${seed}-21`, { from: { x: scorer.x, z: scorer.z }, side, toward: { x: scorer.x * 0.4 + side * 4.5, z: Math.max(scorer.z - 1.5, -9) }, mates: [{ x: other.x, z: other.z, who: assist ? g.who.me : g.who.mate }] })
+      g.cel = celebration(`${seed}-21`, { sit: g.sit, from: { x: scorer.x, z: scorer.z }, side, toward: { x: scorer.x * 0.4 + side * 4.5, z: Math.max(scorer.z - 1.5, -9) }, mates: [{ x: other.x, z: other.z, who: assist ? g.who.me : g.who.mate }] })
     } else g.fx.push('deny', 'h:heavy')
   }
   return g

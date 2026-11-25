@@ -158,7 +158,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (goal) {
       g.popAt = g.t; g.fx.push('h:success'); g.nudge.kick(g.t, 2.5, 0, 1, 180)
       // away to the corner on his side, his teammates after him
-      g.cel = celebration(`${seed}-fk`, { from: { x: bx - g.foot * 0.4, z: bz - 0.3 }, side: sgn, toward: { x: bx * 0.55 + sgn * 2.2, z: bz + 5.5 }, mates: [{ x: bx + sgn * 3, z: bz + 4, who: g.who.mates[0] }, { x: bx - sgn * 4, z: bz + 2, who: g.who.mates[1] }] })
+      g.cel = celebration(`${seed}-fk`, { sit: g.sit, from: { x: bx - g.foot * 0.4, z: bz - 0.3 }, side: sgn, toward: { x: bx * 0.55 + sgn * 2.2, z: bz + 5.5 }, mates: [{ x: bx + sgn * 3, z: bz + 4, who: g.who.mates[0] }, { x: bx - sgn * 4, z: bz + 2, who: g.who.mates[1] }] })
     } else g.fx.push(s.kind === 'saved' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g

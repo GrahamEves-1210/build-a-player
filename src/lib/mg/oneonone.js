@@ -467,7 +467,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (kind === 'goal') {
       const me = g.shot?.mate ? g.mt : g.me
       const mates = [g.mt && !g.shot?.mate ? { x: g.mt.x, z: g.mt.z } : { x: g.me.x, z: g.me.z }, { x: me.x - 6, z: me.z - 9 }, { x: me.x + 5, z: me.z - 11 }]
-      g.cel = celebration(`${seed}|oo`, { from: { x: me.x, z: me.z }, side: me.x > 0 ? 1 : me.x < 0 ? -1 : (r() < 0.5 ? -1 : 1), athletic: v >= 8, mates })
+      g.cel = celebration(`${seed}|oo`, { sit: g.sit, from: { x: me.x, z: me.z }, side: me.x > 0 ? 1 : me.x < 0 ? -1 : (r() < 0.5 ? -1 : 1), athletic: v >= 8, mates })
       g.scorer = g.shot?.mate ? 'mate' : 'me'
       g.kAt = { x: g.gk.x, z: g.gk.z, rot: (Math.sign(g.shot?.to.x - g.gk.x) || 1) * 1.4, ball: { x: clamp(g.shot?.to.x ?? 0, -3, 3), z: 1.5 } }
     }

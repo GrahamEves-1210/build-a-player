@@ -164,7 +164,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (g.res) return
     g.res = kind; g.why = why; g.resAt = g.t; g.endAt = g.t + (now ? 380 : kind === 'goal' ? 120 : 60)
     if (kind === 'goal') {
-      g.cel = celebration(`${seed}|head`, { from: { x: g.to.x, z: g.to.z }, toward: { x: clamp(g.to.x + 2, -3, 3.6), z: g.to.z - 3.4 }, side: 1, athletic: v >= 8, mates: [{ x: -5.2, z: -9.4 }, { x: CROSS.x - 4, z: CROSS.z + 1 }, { x: -2, z: -16 }] })
+      g.cel = celebration(`${seed}|head`, { sit: g.sit, from: { x: g.to.x, z: g.to.z }, toward: { x: clamp(g.to.x + 2, -3, 3.6), z: g.to.z - 3.4 }, side: 1, athletic: v >= 8, mates: [{ x: -5.2, z: -9.4 }, { x: CROSS.x - 4, z: CROSS.z + 1 }, { x: -2, z: -16 }] })
       g.kAt = { x: g.gk.x + (Math.sign(g.shot.to.x - g.gk.x) || 1) * 1.3, z: KEEP_Z, rot: (Math.sign(g.shot.to.x - g.gk.x) || 1) * 1.4, ball: { x: clamp(g.shot.to.x, -3, 3), z: 1.5 } }
     }
   }

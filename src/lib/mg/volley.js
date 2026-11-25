@@ -192,7 +192,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (k.phase === 'power') { k.phase = 'done'; k.strikeAt = g.t }   // (no bar left filling once it's decided)
     g.res = kind; g.why = why; g.resAt = g.t; g.endAt = g.t + (wait || (now ? 380 : kind === 'goal' ? 120 : 60))
     if (kind === 'goal') {
-      g.cel = celebration(`${seed}|vol`, { from: { x: g.me.x, z: g.me.z }, toward: { x: clamp(g.me.x + (g.me.x > -1 ? 1.8 : -1.8), -5, 3.5), z: g.me.z - 2.6 }, side: g.me.x > -1 ? 1 : -1, athletic: v >= 8, mates: [{ x: 3.6, z: -5.1 }, { x: -5.6, z: -8.1 }, { x: 2, z: -20 }] })
+      g.cel = celebration(`${seed}|vol`, { sit: g.sit, from: { x: g.me.x, z: g.me.z }, toward: { x: clamp(g.me.x + (g.me.x > -1 ? 1.8 : -1.8), -5, 3.5), z: g.me.z - 2.6 }, side: g.me.x > -1 ? 1 : -1, athletic: v >= 8, mates: [{ x: 3.6, z: -5.1 }, { x: -5.6, z: -8.1 }, { x: 2, z: -20 }] })
       g.kAt = { x: -0.3 + (Math.sign(g.shot.to.x) || 1) * 1.5, z: KEEP_Z, rot: (Math.sign(g.shot.to.x) || 1) * 1.42, ball: { x: clamp(g.shot.to.x, -3, 3), z: 1.5 } }
     }
   }
