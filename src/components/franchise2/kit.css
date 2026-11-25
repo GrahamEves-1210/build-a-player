@@ -501,8 +501,3 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
   /* the draft's picks: seven across inside the gutter */
   :is(.fk-root, .fk) .dr-picks-strip { min-width: 0; } :is(.fk-root, .fk) .dr-picks-strip .dr-chip { flex: 1 0 40px; min-width: 40px; padding: 6px 2px; }
 }
-/* ...and the whole mode zoomed out a step on a phone, the way Home is (owner 11-25: "zoom out a bit"): every screen,
-   both sports, on its outermost box only (a sheet inside a screen doesn't zoom twice) */
-@media (max-width: 560px) {
-  .fk-root:not(.fk-root .fk-root) { zoom: .88; }
-}
