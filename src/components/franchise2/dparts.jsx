@@ -50,7 +50,7 @@ export function Man({ F, p, s, owner, size = 'm', line, stat, onClick, className
   return <LowerThird name={p.n} pos={posText(p)} num={jersey(F, p)} ovr={stat ? null : p.o} stat={stat} photo={faceFor(F, p, s, size === 's')} team={s} mine={p.b != null ? owner || 'GM' : null} line={line} size={size} onClick={onClick} className={className} delay={delay} />
 }
 // a deal in a few words: $12.5M · 3 YRS
-export const dealText = p => (p.y > 0 ? `${money(p.$)} · ${p.y} ${p.y === 1 ? 'YR' : 'YRS'}` : 'DEAL UP')
+export const dealText = p => (p.y > 0 ? `${money(p.$)} · ${p.y}\u00a0${p.y === 1 ? 'YR' : 'YRS'}` : 'DEAL UP')   // (a no-break space: 4 YRS never splits)
 
 // ── The cap: one bar ─────────────────────────────────────────────────────────
 // the men's deals, the dead money, the rest of the 53, and what's left; the room big

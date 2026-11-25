@@ -394,11 +394,13 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
   :is(.fk-root, .fk) .fh-top-logo img { max-width: 30px; max-height: 30px; }
   :is(.fk-root, .fk) .fh-top-txt b { font-size: 19px; }
   :is(.fk-root, .fk) .fh-top-txt small { font-size: 13px; }
-  :is(.fk-root, .fk) .fh-x { padding: 0 var(--fk-gut); font-size: 14px; }
+  /* (the bars line up with the page: backgrounds full width, their content inside the gutter) */
+  :is(.fk-root, .fk) .fh-top { padding: 0 var(--fk-gut); }
+  :is(.fk-root, .fk) .fh-x { padding: 0 0 0 14px; font-size: 14px; }
   .fk-root.fh { --fk-stick: 44px; }
-  :is(.fk-root, .fk) .fh-tabs-in { padding: 0 calc(var(--fk-gut) - 6px); }
+  :is(.fk-root, .fk) .fh-tabs-in { padding: 0 var(--fk-gut); }
   :is(.fk-root, .fk) .fh-tabs button { height: 44px; font-size: 15px; }
-  :is(.fk-root, .fk) .fk-tick { height: 30px; }
+  :is(.fk-root, .fk) .fk-tick { height: 30px; padding: 0 var(--fk-gut); }
   :is(.fk-root, .fk) .fk-ti { font-size: 15px; padding: 0 12px; }
   :is(.fk-root, .fk) .fh-grid { gap: 20px; }
   :is(.fk-root, .fk) :is(.fh-main, .fh-side) { gap: 16px; }
@@ -501,3 +503,66 @@ html.bap-reduce-motion .fk-fold-h i { transition: none; }
   /* the draft's picks: seven across inside the gutter */
   :is(.fk-root, .fk) .dr-picks-strip { min-width: 0; } :is(.fk-root, .fk) .dr-picks-strip .dr-chip { flex: 1 0 40px; min-width: 40px; padding: 6px 2px; }
 }
+
+/* phones, after the wider side gutter (owner 11-25): what wrapped, crowded or ran past the gutter */
+@media (max-width: 560px) {
+  /* the sheets that come up over a screen: the same gutter as the page under them (some are portalled outside the mode) */
+  body :is(.fd-sheet, .gd-msheet, .nb-sheet, .fg-in) { padding-left: var(--fk-gut, clamp(26px, 8vw, 34px)); padding-right: var(--fk-gut, clamp(26px, 8vw, 34px)); }
+  /* the Season tab's trade offer: the headline in two even lines when it can't fit one */
+  :is(.fk-root, .fk) .tr-notice { gap: 10px; padding: 10px 12px; }
+  :is(.fk-root, .fk) .tr-notice b { font-size: 17px; text-wrap: balance; }
+  /* the basketball staff strip: four jobs two by two (a 3 + 1 wrap before) */
+  :is(.fk-root, .fk) .fst-strip-row.nb-fst-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* the team's last ten seasons: DIVISION CHAMPS under the finish, not beside it */
+  :is(.fk-root, .fk) .fd-past-row { grid-template-columns: 40px 54px minmax(0, 1fr); padding: 5px 10px; }
+  :is(.fk-root, .fk) .fd-past-row i { grid-column: 3; }
+  /* a row's own line (a coordinator's numbers, a man's age and role, a winner's team, a contract) read whole instead
+     of cut: when it doesn't fit beside the position it drops to a row of its own (its dot clipped off the start), and
+     the row grows to hold it; a row that fits looks as it did */
+  :is(.fk-root, .fk) .fk-l3:not(.fk-l3--l):has(.fk-l3-line) { height: auto; min-height: var(--h); }
+  :is(.fk-root, .fk) .fk-l3:not(.fk-l3--l):has(.fk-l3-line) .fk-l3-bar { padding-top: 6px; padding-bottom: 6px; clip-path: inset(0 0 0 4px); }
+  :is(.fk-root, .fk) .fk-l3:not(.fk-l3--l) .fk-l3-meta:has(.fk-l3-line) { flex-wrap: wrap; row-gap: 2px; margin-left: -14px; white-space: normal; }
+  :is(.fk-root, .fk) .fk-l3:not(.fk-l3--l) .fk-l3-meta:has(.fk-l3-line) > span { position: relative; margin-left: 14px; }
+  :is(.fk-root, .fk) .fk-l3:not(.fk-l3--l) .fk-l3-meta:has(.fk-l3-line) > span:not(.fk-l3-line) { white-space: nowrap; }
+  :is(.fk-root, .fk) .fk-l3:not(.fk-l3--l) .fk-l3-meta:has(.fk-l3-line) > span + span::before { position: absolute; left: -9px; margin: 0; }
+  :is(.fk-root, .fk) .fk-l3:not(.fk-l3--l) .fk-l3-meta > .fk-l3-line { flex: 0 1 auto; min-width: 0; overflow: visible; white-space: normal; line-height: 1.15; text-wrap: balance; }
+  /* a button with a line: the label (and its arrow) on top, the line under it, both whole */
+  :is(.fk-root, .fk) .fk-go:has(> small) { flex-wrap: wrap; align-content: center; row-gap: 1px; column-gap: 8px; }
+  :is(.fk-root, .fk) .fk-go > small { order: 3; flex: 1 0 100%; text-align: center; line-height: 1.1; }
+  /* game day's top bar: the week's tag whole (LIVE is the red dot), the moments switch a step smaller */
+  :is(.fk-root, .fk) .gd-week { padding: 0 12px 0 10px; }
+  :is(.fk-root, .fk) .gd-week b { font-size: 15px; letter-spacing: .3px; }
+  :is(.fk-root, .fk) .gd-week span { padding-right: 4px; }
+  :is(.fk-root, .fk) .gd-week span:has(> .gd-live) { gap: 0; font-size: 0; }
+  .gd .sts-moments.gd-mom.gd-mom { gap: 6px; padding: 0 8px; font-size: 13px; letter-spacing: .3px; }
+  /* free agency's bids: the teams wrap as groups instead of crushing their words */
+  :is(.fk-root, .fk) .dl-bid-teams { flex-wrap: wrap; row-gap: 4px; }
+  :is(.fk-root, .fk) .dl-bid-g { white-space: nowrap; }
+  /* the draft's prospect rows: a narrower face and rank, so the school reads whole */
+  :is(.fk-root, .fk) .dr-p-rank { width: 26px; }
+  :is(.fk-root, .fk) .dr-p-slab { width: 56px; }
+  :is(.fk-root, .fk) .dr-p-face { width: 62px; height: 62px; }
+  /* the setup's players step: the man each build replaces, whole */
+  :is(.fk-root, .fk) .fsu-pos-row { grid-template-columns: 46px minmax(0, 1fr) auto; gap: 8px; }
+  :is(.fk-root, .fk) .fsu-pos-st b { letter-spacing: .4px; }
+  /* a save slot's line (2026-27 · 11-9 · REGULAR SEASON) clear of the logo, two even lines when it needs them */
+  :is(.fk-root, .fk) .fsu-slot-txt { padding-right: 84px; }
+  :is(.fk-root, .fk) .fsu-slot-txt em { letter-spacing: 1px; line-height: 1.1; text-wrap: balance; }
+  /* basketball's offseason: the six stops sized to their words (Re-sign on one line), and a row's second line wraps
+     instead of being cut (the lottery's ball and pick owner, a prospect's school, a veteran's years and team) */
+  :is(.fk-root, .fk) .nbo-steps:not(.nl-steps) { display: flex; gap: 3px; }
+  :is(.fk-root, .fk) .nbo-steps:not(.nl-steps) button { flex: 1 1 auto; padding: 0 4px; white-space: nowrap; }
+  :is(.fk-root, .fk) :is(.nbo-odds li small, .nbo-fa-who small > span, .nbo-fa-who b, .nb-pros-txt small) { white-space: normal; overflow: visible; }
+  /* the team bar's line (2026-27 · OCT 20 · No game today · Light) wraps under itself instead of running into Exit */
+  :is(.fk-root, .fk) .fh-top { height: auto; min-height: 52px; padding-top: 5px; padding-bottom: 5px; }
+  :is(.fk-root, .fk) .fh-top-txt small { flex-wrap: wrap; row-gap: 1px; white-space: normal; line-height: 1.15; }
+  /* Light's games to watch: TIMBERWOLVES whole */
+  :is(.fk-root, .fk) .lt-opp-t b { font-size: 16px; letter-spacing: 0; }
+  :is(.fk-root, .fk) .nl-opps .lt-opp { grid-template-columns: 48px minmax(0, 1fr) auto; column-gap: 6px; }
+  :is(.fk-root, .fk) .lt-opp-t { gap: 5px; }
+  /* the staff strip's chips: a narrower face, so SHEPPARD fits at 360 */
+  :is(.fk-root, .fk) .fst-chip { gap: 5px; padding-right: 4px; }
+  :is(.fk-root, .fk) .fst-chip-face { width: 30px; }
+  :is(.fk-root, .fk) .fst-chip-txt b { letter-spacing: 0; }
+}
+

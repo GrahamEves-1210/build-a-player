@@ -38,6 +38,12 @@
 .fsu-steps li b { font-family: var(--fk-d); font-weight: 400; font-size: 13px; letter-spacing: 0; }
 .fsu-steps li.is-done { color: var(--fk-ag); box-shadow: inset 0 -3px 0 var(--fk-ag-mid); }
 .fsu-steps li.is-on { color: var(--fk-ag-ink); background: var(--fk-chrome); box-shadow: inset 0 -3px 0 var(--fk-ag-lo); }
+/* (a phone, with the wider side gutter: the number over the word, so PLAYERS fits whole at 360) */
+@media (max-width: 560px) {
+  .fsu-steps { gap: 2px; }
+  .fsu-steps li { flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; height: 40px; padding: 0 0 3px 6px; font-size: 13px; letter-spacing: 0.3px; line-height: 1; }
+  .fsu-steps li b { font-size: 13px; line-height: 1; }
+}
 
 .fsu-body { max-width: 600px; margin: 0 auto; padding-top: 14px; animation: fsu-in .26s cubic-bezier(.2,.9,.25,1) both; }
 .fsu-body > div { display: flex; flex-direction: column; gap: 12px; }

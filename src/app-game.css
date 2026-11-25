@@ -5937,6 +5937,12 @@ html.ag-sport-leaving .ag-home-inner > *:not(.ag-sport):not(.ag-hud) { opacity: 
   color: rgba(255,255,255,.17); animation: ag-roll-in .14s ease-out both;
 }
 @keyframes ag-roll-in { from { opacity: 0; transform: translateY(14%); } }
+/* (a phone, owner 11-25: the sports, the stage and its positions keep the same side gap as the cards under them,
+   one block with the cards' corners) */
+@media (max-width: 768px) {
+  .ag-home .ag-sport { margin-left: 14px; margin-right: 14px; border-radius: var(--hm-r) var(--hm-r) 0 0; }
+  .ag-home .ag-stage { margin-left: 14px; margin-right: 14px; border-radius: 0 0 var(--hm-r) var(--hm-r); }
+}
 .ag-figure { bottom: 62px; animation: ag-fig-in .16s ease-out both; }
 /* Phone and tablet: the figure fits the stage above the position row. WR, TE and DB art is drawn larger
    about its centre (STACK_MASK's 1.18 and 1.05): --fig-k shrinks the box to cancel it, --fig-o keeps the feet up */

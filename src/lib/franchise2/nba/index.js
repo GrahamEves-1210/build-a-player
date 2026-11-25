@@ -29,7 +29,7 @@ export const NBA_SAVE_V = 1
 export const SLOTS_N = 3
 
 // setup: { seed, team, slot, owner, sandbox, builds: [{ spot, build, types, name, num, face }], rules: { cap, inj }, pace: 'light' | 'full',
-//         coach: coach.js finishCoach (the GM's head coach), staff: { oc, dc, pd } (the men hired in the setup's HIRE step) }
+//         coach: coach.js finishCoach (the GM's head coach), staff: { oc, dc, pd } (hires: none from the setup, which keeps the team's staff) }
 export function createNbaFranchise(setup) {
   const F = {
     v: NBA_SAVE_V, sport: 'nba', seed: setup.seed, slot: setup.slot ?? 0, owner: setup.owner ?? 'Guest', sandbox: !!setup.sandbox,

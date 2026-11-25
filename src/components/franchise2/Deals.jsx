@@ -350,8 +350,8 @@ function FACard({ F, p, fit, V, owner, on, delay, onClick }) {
         <ScoutNote p={p} />
         <span className="dl-bid">
           <span className="dl-bid-teams">
-            {fav && <><KLogo s={fav.s} size={22} /><small className="dl-fav">EXPECTED TO SIGN</small></>}
-            {others.length ? <>{others.map(r => <KLogo key={r.s} s={r.s} size={22} />)}<small>ALSO BIDDING</small></> : !fav && <small>NO OTHER BIDS YET</small>}
+            {fav && <span className="dl-bid-g"><KLogo s={fav.s} size={22} /><small className="dl-fav">EXPECTED TO SIGN</small></span>}
+            {others.length ? <span className="dl-bid-g">{others.map(r => <KLogo key={r.s} s={r.s} size={22} />)}<small>ALSO BIDDING</small></span> : !fav && <small>NO OTHER BIDS YET</small>}
           </span>
           {mine ? <span className={`dl-stand is-${tone}`}>{money(mine.$)} · {word}</span> : !fits && <span className="mk-can is-no">NOT ENOUGH CAP ROOM</span>}
         </span>
