@@ -8092,3 +8092,7 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
    bar's left edge so no dark sliver shows there on a phone) */
 .ag-stage .ag-positions::before, .ag-home .ag-sport .ag-sport-thumb { will-change: transform; backface-visibility: hidden; }
 .ag-home .ag-sport .ag-sport-thumb { margin-left: -2px; }
+/* (the offense/defense slide: the track and each panel's picked block stay on their own layers all the time, so the
+   bar doesn't drop a pixel while it slides and snap back after) */
+.ag-side-track, .ag-side-panel::before { will-change: transform; backface-visibility: hidden; }
+.ag-stage .ag-positions { transform: translateZ(0); }
