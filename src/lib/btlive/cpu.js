@@ -7,7 +7,7 @@
 // and then, helps when a teammate is beaten. A scorer takes what his ratings and the defender give: the shot
 // worth the most right now, a drive around his man, a pull-up, a post-up, a pass to a better look. Teammates
 // space the floor, cut, and crash the glass.
-import { HZ, DT, PACE, COURT, T, MOVES } from './tune.js'
+import { HZ, GHZ, DT, PACE, COURT, T, MOVES } from './tune.js'
 import { rollAt, gauss } from './rng.js'
 import { meterQuality, meterSpec } from './meter.js'
 import * as ref from './referee.js'
@@ -15,20 +15,20 @@ import * as ref from './referee.js'
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const RIM = COURT.rim
 const MS = 1000 / HZ                             // a tick on a watch (the meter)
-const GHZ = HZ / PACE                            // ticks in one of the game's seconds (tune.js PACE)
 const SPIN_AT = 3                                // ticks into a crossover he reads whether it got him by
-const THINK = Math.round(4 / PACE)               // he thinks again this often (ticks)
-const JUMP_LEAD = Math.round(6 / PACE)           // a hand goes up this many ticks before the release it's timed to (the jump is on the game's clock)
+const THINK = 4                                  // he thinks again this often (ticks)
+const JUMP_LEAD = 6                              // a hand goes up this many ticks before the release it's timed to
 
-// How good the CPU is. meterSd: ms of error on the release. react: ticks before he sees what his man did.
+// How good the CPU is. meterSd: ms of error on the release. react: ticks before he sees what his man did (the game's
+// ticks: a level is as quick against the game at any pace; a person's own reaction is real time: balance.mjs HUMANS).
 // contest: how often he gets a hand up on a shot. steal: swipes a second with the ball in reach. help: how often
 // he comes over when a teammate is beaten. ev: how far off his judgment of a shot is. move: how often he uses
 // a dribble move on a set defender. gap: extra feet he gives his man.
 export const LEVELS = {
-  rookie:  { label: 'ROOKIE',   meterSd: 130, react: 12, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8 },
-  pro:     { label: 'PRO',      meterSd: 90,  react: 8,  contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0 },
-  allstar: { label: 'ALL-STAR', meterSd: 62,  react: 5,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4 },
-  legend:  { label: 'LEGEND',   meterSd: 42,  react: 3,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1 },
+  rookie:  { label: 'ROOKIE',   meterSd: 130, react: 14, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8 },
+  pro:     { label: 'PRO',      meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0 },
+  allstar: { label: 'ALL-STAR', meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4 },
+  legend:  { label: 'LEGEND',   meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1 },
 }
 
 const roll = s => rollAt(s.seed ^ 0x5bd1e995, s.cn++)
@@ -192,8 +192,8 @@ function withBall(s, p, m, lvl, out) {
   const { def: D, d: dD } = nearestDef(s, p)
   // a crossover his man has stayed in front of: now and then he spins back the other way off it (a second flick,
   // round from the first, while the move is on: the same thing a thumb does)
-  if (p.burst > 0 && p.mv === MOVES.cross.n && p.bn - p.burst === SPIN_AT && D && dD < 4.6 && D.act === 'free' && roll(s) < lvl.move * 0.35) {
-    if (((D.x - p.x) * p.bdx + (D.y - p.y) * p.bdy) / (dD || 1) > 0.45) {
+  if (p.burst > 0 && p.mv === MOVES.cross.n && p.bn - p.burst === SPIN_AT && D && dD < 4.8 && D.act === 'free' && roll(s) < lvl.move * 0.6) {
+    if (((D.x - p.x) * p.bdx + (D.y - p.y) * p.bdy) / (dD || 1) > 0.3) {
       const dR = ref.rimDist(p) || 1, ux = (RIM.x - p.x) / dR, uy = (RIM.y - p.y) / dR, k = 2 * (ux * p.bdx + uy * p.bdy)
       const rx = k * ux - p.bdx, ry = k * uy - p.bdy
       if (ref.inBounds(p.x + rx * 6.5, p.y + ry * 6.5, -1)) { out.mx = rx; out.my = ry; out.dx = rx; out.dy = ry; m.side = -m.side; m.sideT = s.tick + Math.round(GHZ); return }
@@ -321,7 +321,7 @@ function chaseBall(s, p, m, lvl, out) {
   if (nearer >= 2) return false
   steer(p, tx, ty, out, 0.4)
   const d = Math.hypot(p.x - b.x, p.y - b.y)
-  if (d <= p.R.grab - 0.3 && b.z > p.R.standReach && b.z <= p.R.jumpReach + 0.5 && p.act === 'free' && roll(s) < lvl.contest * 0.5 * PACE) out.jump = true
+  if (d <= p.R.grab - 0.3 && b.z > p.R.standReach && b.z <= p.R.jumpReach + 0.5 && p.act === 'free' && roll(s) < lvl.contest * 0.5) out.jump = true
   return true
 }
 

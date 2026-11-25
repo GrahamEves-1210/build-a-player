@@ -1,4 +1,5 @@
-// BLACKTOP LIVE: the simulation. A fixed step (30 a second): step(state, inputs) moves the game one tick on.
+// BLACKTOP LIVE: the simulation. A fixed step (tune.js: 30 to one of the game's seconds, 36 of them in a real second):
+// step(state, inputs) moves the game one tick on.
 // The next state is a function of the state, every player's input for the tick and the seed, and of nothing
 // else: no clock, no Math.random, no DOM. The state is plain data (JSON-safe), so it can be copied, sent, replayed
 // and run in Node (scripts/btlive/balance.mjs) or on the live server. Everything discrete is decided by the
@@ -23,7 +24,7 @@
 //                                   him, and his shot waits for the release quality his device timed (q)
 //   s.events                        what happened this tick (emptied at the start of the next): the screen and the
 //                                   balance script read it. { e: 'release' | 'make' | 'miss' | 'block' | 'steal' | ... }
-import { HZ, DT, PACE, gticks, rticks, COURT, RULES, T, MOVES, MOVE_KEYS } from './tune.js'
+import { HZ, DT, gticks, rticks, COURT, RULES, T, MOVES, MOVE_KEYS } from './tune.js'
 import { derive } from './ratings.js'
 import { rollAt, hashSeed } from './rng.js'
 import { meterSpec, meterQuality } from './meter.js'
@@ -34,8 +35,6 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const RIM = COURT.rim
 const G = 32                                   // gravity, ft/s²
 const ticks = gticks                           // a time in the game's seconds (tune.js PACE) as ticks; rticks: a real one
-const tk = n => Math.max(1, Math.round(n / PACE))   // a count of ticks written at one game second = HZ ticks
-const SLOW = Math.pow(0.7, PACE), FRICTION = Math.pow(T.looseFriction, PACE)   // a tick's worth of slowing down
 const B_SHOOT = 1, B_PASS = 2, B_STEAL = 8, B_JUMP = 16
 const IDLE = { mx: 0, my: 0 }
 
@@ -265,7 +264,7 @@ function swat(s, p, d) {
     const v = big ? T.swatMax + 8 * r : T.swatMin + (T.swatMax - T.swatMin) * r
     b.vx = Math.cos(a) * v; b.vy = Math.sin(a) * v; b.vz = big ? 4 * rnd(s) - 1 : -(2 + 10 * rnd(s))
   }
-  b.reb = false; b.grabAt = s.tick + tk(tip ? 4 : T.swatGrab); b.lastTeam = d.team; b.t = 0
+  b.reb = false; b.grabAt = s.tick + (tip ? 4 : T.swatGrab); b.lastTeam = d.team; b.t = 0
 }
 
 function shotLands(s) {
@@ -277,7 +276,8 @@ function shotLands(s) {
     if (p.catchFrom >= 0 && s.tick - p.catchT <= ticks(4) && s.players[p.catchFrom].team === p.team) { ast = p.catchFrom; s.stats[ast].ast++ }
     // through the net: it drops straight down under the rim (the screen draws it through the net while it's right
     // under it), bounces, and from the bounce it goes out to whoever checks it (betweenPlays)
-    b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = b.vy = 0; b.vz = -3
+    // (a dunk is thrown down through it: it hits the floor hard under the rim)
+    b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = b.vy = 0; b.vz = v.kind === 'dunk' ? -26 : -3
     s.events.push({ e: 'make', pid: p.i, pts: v.pts, kind: v.kind, three: v.three, poster: v.poster, deep: v.deep, on: v.by, ast, score: [...s.score] })
     const keep = s.rules.makeItTakeIt || s.mode === 'koth'
     endPossession(s, v.pts, keep ? p.team : 1 - p.team, keep ? p.i : null, 'make')
@@ -286,7 +286,7 @@ function shotLands(s) {
   // off the rim: it comes down at the spot the referee picked
   b.st = 'loose'; b.x = RIM.x; b.y = RIM.y; b.z = 10
   b.vx = (b.tx - RIM.x) / T.rebAir; b.vy = (b.ty - RIM.y) / T.rebAir; b.vz = (0.5 * G * T.rebAir * T.rebAir - b.z) / T.rebAir
-  b.reb = true; b.grabAt = s.tick + tk(3); b.t = 0
+  b.reb = true; b.grabAt = s.tick + 3; b.t = 0
   s.events.push({ e: 'miss', pid: p.i, kind: v.kind, three: v.three })
 }
 
@@ -505,7 +505,7 @@ function move(s, p, inp) {
 
 // Never past a line; inside `keep` of it he's eased back in (no jump), and he doesn't walk farther out
 function keepIn(p, keep) {
-  const E = 0.15 * PACE
+  const E = 0.15
   if (p.x < COURT.minX + keep) { p.x = Math.min(COURT.minX + keep, Math.max(COURT.minX, p.x) + E); if (p.vx < 0) p.vx = 0 }
   if (p.x > COURT.maxX - keep) { p.x = Math.max(COURT.maxX - keep, Math.min(COURT.maxX, p.x) - E); if (p.vx > 0) p.vx = 0 }
   if (p.y < COURT.minY + keep) { p.y = Math.min(COURT.minY + keep, Math.max(COURT.minY, p.y) + E); if (p.vy < 0) p.vy = 0 }
@@ -600,7 +600,7 @@ function ballStep(s) {
     b.z = 0
     if (b.vz < -4) { b.vz = -b.vz * 0.45; b.vx *= 0.65; b.vy *= 0.65 } else b.vz = 0
   }
-  if (b.z === 0 && b.vz === 0) { b.vx *= FRICTION; b.vy *= FRICTION }
+  if (b.z === 0 && b.vz === 0) { b.vx *= T.looseFriction; b.vy *= T.looseFriction }
   if (!ref.inBounds(b.x, b.y, 0.6)) {
     const by = s.mode === 'koth' ? kothNext(s, b.lastTeam, b) : -1
     const to = s.mode === 'koth' ? s.players[by].team : 1 - b.lastTeam
@@ -654,7 +654,7 @@ function betweenPlays(s) {
   for (const p of P) {
     p.remote = false                                       // between plays the referee moves everyone
     if (p.act !== 'free') { p.actT++; if (p.actT >= p.actN || p.act === 'jump' || p.act === 'land' || p.act === 'gather') { p.act = 'free'; p.actT = 0 } }
-    if (!jog || p.act !== 'free') { p.vx *= SLOW; p.vy *= SLOW; p.x += p.vx * DT; p.y += p.vy * DT; continue }
+    if (!jog || p.act !== 'free') { p.vx *= 0.7; p.vy *= 0.7; p.x += p.vx * DT; p.y += p.vy * DT; continue }
     walkToSpot(s, p, p.team === off, late)
   }
   // (half a second past the check and a man still isn't on his spot: two of them are stuck in each other's way, so
@@ -662,7 +662,8 @@ function betweenPlays(s) {
   collide(s, true, late ? p => Math.hypot(p.sx - p.x, p.sy - p.y) > T.spotNear : null)
   for (const p of P) keepIn(p, 0)
   if (b.st === 'held') holdBall(s)
-  else if (b.st === 'dead') deadBall(s, dead ? s.next.carrier : b.fd, !dead || since >= ticks(0.2))
+  // (a dunk: the ball is left under the rim a beat longer, while the man who threw it down is still on his way down)
+  else if (b.st === 'dead') deadBall(s, dead ? s.next.carrier : b.fd, !dead || since >= ticks(b.kind === 'dunk' && b.verdict?.made ? 0.6 : 0.2))
   s.phaseT--
   if (dead) {
     if (s.phaseT > 0) return
@@ -735,7 +736,7 @@ function deadBall(s, to, go) {
     b.vz -= G * DT
     b.x += b.vx * DT; b.y += b.vy * DT; b.z += b.vz * DT
     if (b.z <= 0) { b.z = 0; b.fl = true; if (b.vz < -4) { b.vz = -b.vz * 0.45; b.vx *= 0.65; b.vy *= 0.65 } else b.vz = 0 }
-    if (b.z === 0 && b.vz === 0) { b.vx *= FRICTION; b.vy *= FRICTION }
+    if (b.z === 0 && b.vz === 0) { b.vx *= T.looseFriction; b.vy *= T.looseFriction }
     if (!go || !b.fl || to == null || to < 0) return
     feedStart(s, to)
   }
@@ -808,7 +809,7 @@ function tick(s, inputs) {
 }
 
 // Online, on a player's own device: his own body moves now, with the same rules as the step (speed, the ball, a
-// MOVE's burst, rising for a shot), against everyone else where the screen has them (they don't give way here; the
+// dribble move's burst, rising for a shot), against everyone else where the screen has them (they don't give way here; the
 // referee settles real contact). Nothing else in the state changes.
 export function moveLocal(s, i, inp) {
   const p = s.players[i]

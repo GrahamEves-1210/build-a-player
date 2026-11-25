@@ -4,17 +4,19 @@
 // and less below it; how much less is `spread`, the first line of the table.
 // Distances are feet, times are seconds unless a name says Ms or Ticks.
 
-export const HZ = 30                 // simulation ticks a second (the screen draws at 60 and interpolates)
 // THE PACE (the owner, 2026-11-24: "speed up player movement and game in general 20%"). Every speed and time below is
-// written in the game's own seconds, and the game's clock runs this much quicker than a watch: a tick moves the game
-// on PACE / HZ of its seconds. So one number makes every man, the ball, a pass, a shot's flight, a jump, a cooldown,
-// a freeze, the dead ball and the check this much quicker together, and the game inside is the same game.
+// written in the game's own seconds, and the game is stepped 30 times in each of them, as it always was (GHZ: the
+// step it is balanced at). What changed is how many of those steps go by in a second on a watch: 36, not 30. So
+// every man, the ball, a pass, a shot's flight, a jump, a cooldown, a freeze, the dead ball and the check are all
+// 20% quicker together, and inside its own clock the game is the same game, step for step.
 // What a person does is NOT on the game's clock and stays in real time: the shot meter (ms), the shot clock (the
-// seconds on the scorebug), a pressed SHOOT waiting for the ball, a CPU's reaction time.
-export const PACE = 1.2
-export const DT = PACE / HZ          // the game's seconds in one tick
+// seconds on the scorebug), a pressed SHOOT waiting for the ball, a person's reaction time.
+export const GHZ = 30                // steps in one of the game's seconds
+export const HZ = 36                 // steps (ticks) in a real second (the screen draws at 60 and eases between them)
+export const PACE = HZ / GHZ         // 1.2: the game's seconds in a real one
+export const DT = 1 / GHZ            // the game's seconds in one tick
 // a time in the game's seconds as ticks (gticks), and a real one, on a watch (rticks)
-export const gticks = sec => Math.max(1, Math.round(sec * HZ / PACE))
+export const gticks = sec => Math.max(1, Math.round(sec * GHZ))
 export const rticks = sec => Math.max(1, Math.round(sec * HZ))
 
 // The half court, in feet, laid over the court picture (public/court-*.webp, 4:3, 56 x 42 ft edge to edge;
@@ -138,7 +140,7 @@ export const T = {
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
-  cpuRespect: 10,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
+  cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
   cpuRace: 0.35,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
   cpuNeed: 0.42,                     // early in the clock a CPU wants a shot worth this (later, less)...
   cpuHurry: 0.05,                    // ...and this much less every second he has had it (a streetball possession doesn't wait around)
@@ -167,7 +169,7 @@ export const T = {
   stealBase: 0.16,                   // chance at average everything, square in front
   stealPer: 0.7,                     // x (0.55 + this * Perimeter D)
   stealHnd: 0.6,                     // x (1.3 - this * the handler's Handles)
-  stealBurst: 0.45,                  // against a handler in the middle of a MOVE
+  stealBurst: 0.45,                  // against a handler in the middle of a dribble move
   stealGather: 1.25,                 // against a handler going up
   stealBehind: 0.35,                 // from behind him
   stealIq: 0.5,                      // x (1 + this * (0.75 - the handler's IQ)): a smart handler sees the swipe coming

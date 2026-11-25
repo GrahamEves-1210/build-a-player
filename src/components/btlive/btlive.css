@@ -193,6 +193,7 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   .btlv-pad { position: absolute; inset: 0 0 var(--rail) 0; background: none; border: 0; }
   .btlv-stick-home { left: calc((100% - var(--cwl)) / 4 + var(--sal) / 2); bottom: 84px; }
   .btlv-btns { right: var(--sar); transform: scale(.84); transform-origin: 100% 100%; }
+  .btlv-ds > span { font-size: 16px; }   /* (scaled with the buttons: still 13px on the screen) */
 }
 
 /* ── QUIT's question and the final ─────────────────────────────────────────────────────────────── */

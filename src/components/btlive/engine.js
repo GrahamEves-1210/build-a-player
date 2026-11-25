@@ -1,4 +1,4 @@
-// BLACKTOP LIVE, the screen's engine: runs the simulation (lib/btlive) at 30 ticks a second, draws it at the
+// BLACKTOP LIVE, the screen's engine: runs the simulation (lib/btlive) at its ticks (tune.js HZ: 36 a second), draws it at the
 // display's rate with the positions eased between ticks, reads the stick and the buttons, times the shot meter on
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
@@ -52,7 +52,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const online = !!net
   // (mv: this device's own dribble move, as its own man is doing it now: the referee's word on it comes a beat later)
   const NB = { k: 0, n: [0, 0, 0], d: [], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, mv: { burst: 0, mv: 0, bn: 0 }, lt: 0, wasLive: false, aUsed: 0, aOff: false }
-  const DELAY = 6                                  // others are drawn this many ticks behind the latest word (200 ms)
+  const DELAY = Math.round(0.2 * HZ)               // others are drawn this many ticks behind the latest word (200 ms)
   const DX = new Float32Array(N), DY = new Float32Array(N), DB = [0, 0, 0], LP = new Float32Array(N * 2)
   const LAY = { dots: [], bars: [], ball: null, words: [], tabs: [] }   // DEV: what was drawn where on the last frame (px, world)
   const EVLOG = [], PFN = SNAP_ACT                 // (PFN: where a snapshot row keeps the act: proto.js snapOf)
