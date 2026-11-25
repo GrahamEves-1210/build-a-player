@@ -107,7 +107,9 @@ export function marketLines(F) {
   if (c?.key === key) return c.L
   const by = {}
   for (const s of SHORTS) for (const p of F.teams[s].r) if (!p.fl) (by[marketKey(p)] ??= []).push(p.o)
-  for (const p of F.fa ?? []) if (!p.fl) (by[marketKey(p)] ??= []).push(p.o)
+  // (the men on the market count while it's open, the deals that are up and free agency's days: they're about to be
+  // on a roster. The street's unsigned men don't, street.js: the line is the last man who starts)
+  if (F.phase === 'off' && (F.stage === 'resign' || (F.stage === 'fa' && F.fad))) for (const p of F.fa ?? []) if (!p.fl) (by[marketKey(p)] ??= []).push(p.o)
   const L = { ...LINE_2026 }
   for (const [k, a] of Object.entries(by)) { a.sort((x, y) => y - x); if (a.length) L[k] = a[Math.min(a.length, STARTERS[k] ?? 32) - 1] }
   LINES.set(F, { key, L })

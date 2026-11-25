@@ -1,21 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   TEAM, tradeWindow, tradeOffers, answerOffer, tradeTeams, tradeAssets, checkTrade, gauge, leanText, proposeTrade, acceptDeal,
   SIT_TEXT, sitOf, pickText, tradesThisYear, recText, TRADE_MAX, TRADE_DEADLINE, capSheet,
 } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
-import { Chyron, Stamp, Go, KLogo, fkVars, BackBar, ActionBar, Tag } from './kit'
+import { Chyron, Go, KLogo, fkVars, BackBar, ActionBar, Tag } from './kit'
 import { Man, money, posText, dealText } from './dparts'
+import { CapNote, Said, nick, NONE, has, flip, toTop } from './tradebits'
+import Finder, { newFinder } from './Finder'
 import './trades.css'
 
 // TRADES (lib/franchise2/trades.js): the league's offers, a trade built with any team (players and picks from both
 // sides, five a side at most), and the year's deals. One entry: the Team tab (TradeStrip). The gauge is the only
 // number-free read of a deal's value; the other team's answer is its own (its needs, its cap, its plans).
-const nick = s => TEAM[s]?.nick ?? s
-const NONE = { pl: [], pk: [] }
-const has = (side, k, v) => (k === 'pl' ? side.pl.includes(v) : side.pk.includes(v))
-const flip = (side, k, v) => ({ ...side, [k]: has(side, k, v) ? side[k].filter(x => x !== v) : [...side[k], v] })
-const toTop = () => { try { const b = document.querySelector('.fh-scroll'); if (b) requestAnimationFrame(() => b.scrollTo({ top: 0 })) } catch { /* (no scroll box) */ } }
 
 // the window in a few words, for the strip and the screen's header
 function windowLine(F) {
@@ -57,22 +54,32 @@ function headOf(F, o) {
 }
 
 // ── The screen ───────────────────────────────────────────────────────────────
-export default function TradeScreen({ F, act, owner, onBack }) {
+// open: where the screen starts ({ find: 'shop' | 'find', shop: a man's id }: the trade finder, Finder.jsx)
+export default function TradeScreen({ F, act, owner, onBack, open = null, back: from = 'Depth chart' }) {
   const [s, setS] = useState(null)              // the team on the other end
   const [give, setGive] = useState(NONE)        // what the player's team sends
   const [get, setGet] = useState(NONE)          // what it gets
   const [res, setRes] = useState(null)          // the other team's answer: { say, text, counter, line }
+  const [fs, setFs] = useState(() => (open?.find ? newFinder(open.find, open.shop) : null))   // the finder, while it's up
   const W = tradeWindow(F)
   const offers = W.open ? tradeOffers(F) : []
   const start = (team, g = NONE, t = NONE) => { setS(team); setGive(g); setGet(t); setRes(null); sfx('tap'); toTop() }
-  const back = () => { if (s) { setS(null); setRes(null); sfx('back'); toTop() } else onBack() }
+  const find = tab => { setFs(newFinder(tab)); sfx('tap'); toTop() }
+  const back = () => { if (s) { setS(null); setRes(null); sfx('back'); toTop() } else if (fs) { setFs(null); sfx('back'); toTop() } else onBack() }
   return (
     <div className="fd fk fd-narrow tr">
-      <BackBar label={s ? 'Trades' : 'Depth chart'} title={s ? `Trade with the ${nick(s)}` : 'Trades'} onBack={back} />
-      {!s && (
+      <BackBar label={s ? (fs ? 'Trade finder' : 'Trades') : fs ? 'Trades' : from} title={s ? `Trade with the ${nick(s)}` : fs ? 'Trade finder' : 'Trades'} onBack={back} />
+      {!s && fs && <Finder F={F} act={act} owner={owner} st={fs} set={setFs} onOpen={start} />}
+      {!s && !fs && (
         <>
           <Chyron team={F.team} title="TRADES" tag={F.phase === 'off' ? F.year + 1 : F.year} sub={windowLine(F)} />
           {!W.open && <p className="tr-shut">{W.why}</p>}
+          {W.open && (
+            <div className="tr-find" style={fkVars(F.team)}>
+              <button type="button" className="fh-row" onClick={() => find('shop')}><span><small>Trade finder</small><b>Shop a player</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>
+              <button type="button" className="fh-row" onClick={() => find('find')}><span><small>Trade finder</small><b>Find a player</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>
+            </div>
+          )}
           {offers.length > 0 && (
             <>
               <Chyron tone="ink" size="s" title="OFFERS" right={offers.length} />
@@ -185,7 +192,7 @@ function Builder({ F, act, owner, s, give, get, setGive, setGet, res, setRes, on
       {!done && <Deal F={F} s={s} owner={owner} give={give} get={get} onRemove={(k, v, mine) => { setRes(null); if (mine) setGive(flip(give, k, v)); else setGet(flip(get, k, v)); sfx('tap') }} />}
       {!done && <Gauge F={F} s={s} g={g} />}
       {/* (over the cap too: the room and the dead money say why) */}
-      {!done && (chk.ok || chk.why === 'ucap') && <CapNote F={F} chk={chk} />}
+      {!done && (chk.ok || chk.why === 'ucap') && <CapNote chk={chk} />}
       {!done && !chk.ok && chk.why !== 'empty' && <p className="tr-bad">{chk.text}</p>}
       {res && <Said ok={res.ok} counter={res.say === 'counter'} text={res.text} line={res.line} />}
       {res?.say === 'counter' && res.counter && (
@@ -283,37 +290,6 @@ function Gauge({ F, s, g }) {
         <em />
       </div>
       <div className="tr-gauge-f"><small>VALUE SENT</small><small>VALUE SENT</small></div>
-    </div>
-  )
-}
-// the cap after it, and anyone it puts on the street
-function CapNote({ F, chk }) {
-  const c = chk.cap
-  return (
-    <div className={`tr-cap${!c.nocap && c.after < 0 ? ' is-over' : ''}`}>
-      {c.nocap ? <span><small>SALARY CAP</small><b>OFF</b></span> : (
-        <>
-          <span><small>CAP ROOM NOW</small><b>{c.before < 0 ? `-${money(-c.before)}` : money(c.before)}</b></span>
-          <span><small>AFTER THE TRADE</small><b>{c.after < 0 ? `-${money(-c.after)}` : money(c.after)}</b></span>
-          {c.dead > 0 && <span><small>DEAD MONEY</small><b>{money(c.dead)}</b></span>}
-        </>
-      )}
-      {/* (the bonus left on each man who goes lands on this year's cap: why sending a big deal can cost room) */}
-      {!c.nocap && c.deadBy?.length > 1 && <span className="tr-cap-cut"><small>BONUS LEFT, ON THIS YEAR'S CAP</small><b>{c.deadBy.map(x => `${String(x.p.n).split(' ').slice(-1)[0]} ${money(x.d)}`).join(' · ')}</b></span>}
-      {chk.cut?.length > 0 && <span className="tr-cap-cut"><small>ROSTER SPOT</small><b>{chk.cut.map(p => `${posText(p)} ${p.n} released`).join(' · ')}</b></span>}
-    </div>
-  )
-}
-// the other team's answer
-function Said({ ok, counter = false, text, line }) {
-  // (the answer comes in above the lists: on a phone the player's thumb is down at the Propose button, so the
-  // screen goes up to it)
-  const el = useRef(null)
-  useEffect(() => { try { el.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) } catch { /* */ } }, [text])
-  return (
-    <div ref={el} className={`tr-said${ok ? ' is-yes' : counter ? ' is-counter' : ' is-no'}`} role="status">
-      <Stamp kind={ok ? 'w' : counter ? 'ink' : 'l'}>{ok ? 'DONE' : counter ? 'COUNTER' : 'NO DEAL'}</Stamp>
-      <span><b>{text}</b>{line && <small>{line}</small>}</span>
     </div>
   )
 }

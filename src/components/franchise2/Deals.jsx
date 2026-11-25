@@ -3,7 +3,7 @@ import {
   TEAM, resignOne, optionAsk, optionDue, canSign, tagAsk, canTag, openFA, openTalks, offerTalks, acceptTalks, talkFacts,
   worthOf, fitsDeal, capRoom, SAY, startsFor, teamView, rivalsFor, standingOf, fitOf, setOffer, pullOffer, offersOut, committed,
   floorOf, nextFADay, FA_DAYS, openDraft, marketDeals, POS_LABEL, coachGrade, groupOf, GROUP, minimumFor,
-  walkingStarters, optionTier, OPTION_TIER_TEXT,
+  walkingStarters, optionTier, OPTION_TIER_TEXT, favOf, roomLeft,
 } from '../../lib/franchise2'
 import { letterColor } from '../../lib/gradeColors'
 import { sfx, haptic } from '../../lib/juice'
@@ -334,6 +334,10 @@ function FACard({ F, p, fit, V, owner, on, delay, onClick }) {
   const mine = offersOut(F)[p.i]
   const st = mine ? standingOf(F, p, mine, V) : null
   const [word, tone] = st ? STAND[st.k](F, st) : []
+  // (no offer out: the team he's expected to sign with as the bids stand, and whether his ask fits the room left)
+  const fav = mine ? null : favOf(F, p, V)
+  const others = fav ? rivals.filter(r => r.s !== fav.s) : rivals
+  const fits = roomLeft(F, p.i) >= p.$ - 1e-9
   return (
     <div className={`dl-card${on ? ' is-on' : ''}`} style={{ '--d': `${delay}ms` }}>
       <Man F={F} p={p} s={F.team} owner={owner} size="m" line={`AGE ${p.ag}`} onClick={onClick} />
@@ -345,8 +349,11 @@ function FACard({ F, p, fit, V, owner, on, delay, onClick }) {
         <LastLine F={F} p={p} />
         <ScoutNote p={p} />
         <span className="dl-bid">
-          <span className="dl-bid-teams">{rivals.length ? <>{rivals.map(r => <KLogo key={r.s} s={r.s} size={22} />)}<small>ALSO BIDDING</small></> : <small>NO OTHER BIDS YET</small>}</span>
-          {mine && <span className={`dl-stand is-${tone}`}>{money(mine.$)} · {word}</span>}
+          <span className="dl-bid-teams">
+            {fav && <><KLogo s={fav.s} size={22} /><small className="dl-fav">EXPECTED TO SIGN</small></>}
+            {others.length ? <>{others.map(r => <KLogo key={r.s} s={r.s} size={22} />)}<small>ALSO BIDDING</small></> : !fav && <small>NO OTHER BIDS YET</small>}
+          </span>
+          {mine ? <span className={`dl-stand is-${tone}`}>{money(mine.$)} · {word}</span> : !fits && <span className="mk-can is-no">NOT ENOUGH CAP ROOM</span>}
         </span>
       </button>
     </div>

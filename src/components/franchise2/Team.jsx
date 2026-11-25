@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { GROUP, OFF_GROUPS, DEF_GROUPS, ST_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, staleChart, strength, sideGrade, capSheet, TEAM, outText, jersey } from '../../lib/franchise2'
+import { GROUP, OFF_GROUPS, DEF_GROUPS, ST_GROUPS, OL_SPOTS, depthChart, startersOf, moveInChart, setGroup, resetChart, staleChart, strength, sideGrade, capSheet, TEAM, outText, jersey, tradeWindow, marketWindow } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, BigNum, fkVars, BackBar, LowerThird } from './kit'
 import { Man, CapBar, PlayerPage, dealText, money, faceFor, posText } from './dparts'
@@ -8,6 +8,7 @@ import { StaffStrip, StaffScreen } from './Staff'
 import { revOf, useStaged } from './perf'
 import TradeScreen, { TradeStrip } from './Trades'
 import TeamPage, { StatsStrip } from './TeamPage'
+import MarketScreen, { MarketStrip } from './Market'
 
 // TEAM: the depth chart. The order the games play: the starters on top of each room, the men behind them in the
 // order they come in. Tap a man to move him (up, down, to the top, to the room next door) or open his page.
@@ -17,15 +18,20 @@ import TeamPage, { StatsStrip } from './TeamPage'
 const ROOM_NAME = { qb: 'QUARTERBACKS', rb: 'RUNNING BACKS', wr: 'WIDE RECEIVERS', te: 'TIGHT ENDS', ol: 'OFFENSIVE LINE', edge: 'EDGE RUSHERS', dt: 'INTERIOR LINE', lb: 'LINEBACKERS', cb: 'CORNERBACKS', s: 'SAFETIES', k: 'KICKER' }
 const NEXT_DOOR = { edge: 'dt', dt: 'edge', cb: 's', s: 'cb' }
 
-export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
+// go: where the tab opens when the Season tab sends the GM here ('trades' the offers, 'finder' the trade finder,
+// 'market' the free-agent list); onSeason: back to the Season tab (free agency's days are there)
+export default function TeamTab({ F, act, owner, go = null, onGo, onSeason }) {
   const [side, setSide] = useState('off')
   const [pick, setPick] = useState(null)       // the man picked to move (his id)
   const [page, setPage] = useState(null)       // a man's page open
   const [cap, setCap] = useState(false)
   const [staff, setStaff] = useState(false)   // the coaching staff (Staff.jsx)
   const [mine, setMine] = useState(false)     // the team's own page, on its numbers (TeamPage.jsx)
-  const [trades, setTrades] = useState(tradeGo)   // trades (Trades.jsx); the Season tab's offer note opens it
-  useEffect(() => { if (tradeGo) { setTrades(true); onTradeGo?.() } }, [tradeGo]) // eslint-disable-line react-hooks/exhaustive-deps
+  // trades (Trades.jsx): { open: where it starts (the trade finder, a man to shop) }; the Season tab's rows open it
+  const tradesFor = k => (k === 'finder' ? { open: { find: 'shop' } } : k === 'trades' ? { open: null } : null)
+  const [trades, setTrades] = useState(() => tradesFor(go))
+  const [market, setMarket] = useState(go === 'market')   // the free-agent list (Market.jsx)
+  useEffect(() => { if (go) { if (go === 'market') setMarket(true); else setTrades(tradesFor(go)); onGo?.() } }, [go]) // eslint-disable-line react-hooks/exhaustive-deps
   const rev = revOf(F)
   // the chart, who starts and each man's row (the same lower-third Man draws), once per change to the franchise
   const D = useMemo(() => {
@@ -34,6 +40,7 @@ export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
     // (each starter's slot: the line by its spots, LT to RT, whoever's filling in)
     const slotOf = new Map(Object.entries(L).map(([k, p]) => [p.i, k]))
     const rooms = {}
+    const canTrade = tradeWindow(F).open
     for (const k of [...OFF_GROUPS, ...DEF_GROUPS, ...ST_GROUPS]) {
       let up = 0
       rooms[k] = C[k].map((p, i) => {
@@ -42,7 +49,7 @@ export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
         if (starts) up++
         const size = starts ? 'm' : 's'
         return {
-          id: p.i, i, starts, hurt: !!p.in, fill: !!p.fl && !starts, slot: p.in ? 'OUT' : slot,
+          id: p.i, i, starts, hurt: !!p.in, fill: !!p.fl && !starts, slot: p.in ? 'OUT' : slot, shop: canTrade && p.b == null && !p.fl,
           name: p.n, pos: posText(p), num: jersey(F, p), ovr: p.o, photo: faceFor(F, p, F.team, size === 's'), mine: p.b != null ? owner || 'GM' : null,
           line: p.in ? hurtText(F, p, outText) : p.rk === F.year ? `ROOKIE · ${dealText(p)}` : dealText(p), size,
         }
@@ -66,6 +73,7 @@ export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
     page: id => { setPage(id); setPick(null); sfx('tap') },
     move: (id, to) => { act(X => moveInChart(X, id, to)); sfx('swap'); haptic('medium') },
     group: (id, k) => { act(X => setGroup(X, id, k)); setPick(null); sfx('swap') },
+    shop: id => { setTrades({ open: { find: 'shop', shop: id } }); setPick(null); sfx('tap') },
   }
   const run = useCallback((k, ...a) => api.current[k](...a), [])
   // a tap anywhere off the picked man (and his buttons) lets him go
@@ -82,13 +90,15 @@ export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
       <div className="fd-team-top">
         <CapBar F={F} onClick={() => { setCap(true); sfx('tap') }} />
         <StaffStrip F={F} onOpen={() => { setStaff(true); sfx('tap') }} />
-        <TradeStrip F={F} onOpen={() => { setTrades(true); sfx('tap') }} />
+        <TradeStrip F={F} onOpen={() => { setTrades({ open: null }); sfx('tap') }} />
+        <MarketStrip F={F} onOpen={() => { if (marketWindow(F).k === 'market' && onSeason) onSeason(); else setMarket(true); sfx('tap') }} />
         <StatsStrip F={F} onOpen={() => { setMine(true); sfx('tap') }} />
       </div>
     </>
   ), [F, rev, st]) // eslint-disable-line react-hooks/exhaustive-deps
   if (mine) return <TeamPage F={F} s={F.team} owner={owner} act={act} start="stats" back="Depth chart" onBack={() => { setMine(false); sfx('back') }} />
-  if (trades) return <TradeScreen F={F} act={act} owner={owner} onBack={() => { setTrades(false); sfx('back') }} />
+  if (trades) return <TradeScreen F={F} act={act} owner={owner} open={trades.open} onBack={() => { setTrades(null); sfx('back') }} />
+  if (market) return <MarketScreen F={F} act={act} owner={owner} onBack={() => { setMarket(false); sfx('back') }} onMarket={() => { setMarket(false); onSeason?.() }} />
   if (staff) return <StaffScreen F={F} act={act} owner={owner} onBack={() => { setStaff(false); sfx('back') }} />
   if (cap) return <CapScreen F={F} owner={owner} act={act} onBack={() => { setCap(false); sfx('back') }} page={page} setPage={setPage} />
   return (
@@ -121,7 +131,7 @@ export default function TeamTab({ F, act, owner, tradeGo = false, onTradeGo }) {
   )
 }
 // one man on the chart: his slot, his lower-third and (picked) what he can do
-const DcRow = memo(function DcRow({ id, i, last, starts, hurt, fill, slot, on, next, run, team, name, pos, num, ovr, photo, mine, line, size }) {
+const DcRow = memo(function DcRow({ id, i, last, starts, hurt, fill, slot, on, next, run, team, name, pos, num, ovr, photo, mine, line, size, shop }) {
   return (
     <div className={`fd-dc${starts ? ' is-start' : ''}${on ? ' is-pick' : ''}${hurt ? ' is-hurt' : ''}${fill ? ' is-fill' : ''}`}>
       <span className="fd-dc-slot">{slot}</span>
@@ -133,6 +143,7 @@ const DcRow = memo(function DcRow({ id, i, last, starts, hurt, fill, slot, on, n
           <button disabled={i === 0} onClick={() => run('move', id, i - 1)}>▲ Up</button>
           <button disabled={i === last} onClick={() => run('move', id, i + 1)}>▼ Down</button>
           {next && <button onClick={() => run('group', id, next)}>Move to {GROUP[next].label}</button>}
+          {shop && <button onClick={() => run('shop', id)}>Find a trade</button>}
         </div>
       )}
     </div>

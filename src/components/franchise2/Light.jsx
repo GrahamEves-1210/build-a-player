@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   TEAM, recText, mySchedule, DIV_OF, CONF_OF, REG_WEEKS, FINISH_TEXT, coyRec, optionDue, startsFor, resignAsk, optionAsk,
-  marketDeals, callerOf, staffMen, moveText, statLine, standingOf, fitOf,
+  marketDeals, callerOf, staffMen, moveText, statLine, standingOf, fitOf, groupOf,
 } from '../../lib/franchise2'
 import {
   STRETCH, stretchText, stretchRecap, lightNext, lightStep, lightStaff, lightRoom, lightView, marketFits, fairOffer, lightFA, lightOpenDraft,
@@ -14,6 +14,7 @@ import { Chyron, KLogo, ManL3, BigRec, BigNum, Go, Tag, ActionBar, Fold, fkVars,
 import { Man, CapBar, PlayerPage, money } from './dparts'
 import { StaffL3 } from './Staff'
 import { DayResults, CampReport } from './Deals'
+import { FA_FILTERS, FA_SORTS } from './Market'
 import { Step } from './dealbits'
 import { DraftDay } from './Draft'
 import { GameBoxSheet } from './Week'
@@ -314,6 +315,7 @@ function StaffAwards({ F, act, owner }) {
 // ── 2. ROSTER: re-sign, then the market ─────────────────────────────────────
 const STAND = { short: () => ['UNDER HIS NUMBER', 'l'], alone: () => ['ONLY OFFER', 'w'], lead: F => [`${NICK(F.team)} LEAD`, 'w'], close: () => ['TOO CLOSE TO CALL', 'n'], behind: (F, s) => [`${NICK(s.lead)} LEAD`, 'l'] }
 const FIT_TEXT = { hole: 'FILLS A HOLE', start: 'WOULD START', depth: 'DEPTH' }
+const ALL_PAGE = 10
 // a résumé line in a sentence's case: "BILLS QB COACH" → "Bills QB Coach", "OHIO STATE DC" → "Ohio State DC"
 const KEEP_CAPS = new Set(['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'OC', 'DC', 'HC', 'NFL', 'LSU', 'USC', 'SMU', 'BYU', 'TCU', 'UCLA', 'A&M'])
 const titleOf = s => String(s).split(' ').map(w => (KEEP_CAPS.has(w.toUpperCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join(' ')
@@ -342,10 +344,26 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
   const L = F.lt ?? {}
   // (the men who turned down less to stay: on the market now, first on the list, the player can still make an offer)
   const back = Object.entries(L.rsx ?? {}).filter(([, x]) => !x[0]).map(([i]) => (F.fa ?? []).find(p => p.i === +i)).filter(Boolean)
+  // (the best fits; a man off the whole market's list with an offer out joins them, so no offer is ever out of sight)
+  const offKey = Object.keys(L.off ?? {}).join(',')
   const fits = useMemo(() => {
     const ids = new Set(back.map(p => p.i))
-    return [...back.map(p => ({ p, fit: fitOf(F, p, V), back: true })), ...marketFits(F, V).filter(x => !ids.has(x.p.i))].map(x => ({ ...x, fair: fairOffer(F, x.p, V) }))
-  }, [V, back.length]) // eslint-disable-line react-hooks/exhaustive-deps
+    const top = [...back.map(p => ({ p, fit: fitOf(F, p, V), back: true })), ...marketFits(F, V).filter(x => !ids.has(x.p.i))]
+    const have = new Set(top.map(x => x.p.i))
+    const offered = Object.keys(L.off ?? {}).map(i => (F.fa ?? []).find(p => p.i === +i)).filter(p => p && !have.has(p.i)).map(p => ({ p, fit: fitOf(F, p, V) }))
+    return [...top, ...offered].map(x => ({ ...x, fair: fairOffer(F, x.p, V) }))
+  }, [V, back.length, offKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  // the whole market (the men not already listed above): by position, sorted, a page at a time
+  const [mf, setMf] = useState('all')
+  const [ms, setMs] = useState('ovr')
+  const [mn, setMn] = useState(ALL_PAGE)
+  const rest = useMemo(() => {
+    const have = new Set(fits.map(x => x.p.i))
+    const all = (F.fa ?? []).filter(p => !p.fl && !have.has(p.i) && (mf === 'all' || groupOf(p) === mf)).map(p => ({ p, fit: fitOf(F, p, V) }))
+    const by = { ovr: (a, b) => b.p.o - a.p.o, age: (a, b) => a.p.ag - b.p.ag || b.p.o - a.p.o, price: (a, b) => a.p.$ - b.p.$ || b.p.o - a.p.o, fit: (a, b) => b.fit.v - a.fit.v || b.p.o - a.p.o }
+    return all.sort(by[ms])
+  }, [V, fits, mf, ms]) // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = useMemo(() => rest.slice(0, mn).map(x => ({ ...x, fair: fairOffer(F, x.p, V) })), [rest, mn]) // eslint-disable-line react-hooks/exhaustive-deps
   const room = lightRoom(F)
   void rev
   const setCall = (p, c) => { act(X => { X.lt = { ...(X.lt ?? {}), rs: { ...(X.lt?.rs ?? {}), [p.i]: c } } }); sfx(c === false || c === 'decline' ? 'swap' : 'claim') }
@@ -368,6 +386,32 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
   const finish = () => { act(X => lightFA(X)); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
   const over = room.left < -1e-9 && room.spend > 0
   const nOff = Object.keys(offers).length
+  // one man on the market: Fair or Strong, the years, the offer (the best fits and the whole market read the same row)
+  const offerRow = ({ p, fit, fair, back: was }) => {
+    const out = offers[p.i]
+    const c = L.fc?.[p.i] ?? { s: 0, y: fair.o.y }
+    const want = offerFor(F, p, fair.o, c)
+    const o = out ?? want
+    const st = o === fair.o ? fair.st : standingOf(F, p, o, V)
+    const [word, tone] = STAND[st.k](F, st)
+    const can = !!out || canOffer(F, p, o)
+    const pick = x => setChoice(p, fair.o, { ...c, ...x })
+    return (
+      <div key={p.i} className={`lt-pick${out ? ' is-out' : ''}`}>
+        <Man F={F} p={p} s={F.team} owner={owner} size="s" line={was ? `AGE ${p.ag} · TURNED IT DOWN` : `AGE ${p.ag} · ${fit.k === 'depth' && p.p === 'k' ? 'CAMP BATTLE' : FIT_TEXT[fit.k]}${fit.k === 'start' ? ` +${fit.d}` : ''}`} onClick={() => setPage(p.i)} />
+        <div className="lt-terms">
+          <div className="lt-seg" role="radiogroup" aria-label={`Offer to ${p.n}`}>
+            <button type="button" role="radio" aria-checked={!c.s} className={!c.s ? 'is-on' : ''} onClick={() => { if (c.s) { pick({ s: 0 }); sfx('tap') } }}>Fair</button>
+            <button type="button" role="radio" aria-checked={!!c.s} className={c.s ? 'is-on' : ''} onClick={() => { if (!c.s) { pick({ s: 1 }); sfx('tap') } }}>Strong</button>
+          </div>
+          <Step className="lt-step" label={`Years for ${p.n}`} text={yrs(c.y)} onDown={() => pick({ y: c.y - 1 })} onUp={() => pick({ y: c.y + 1 })} downOk={c.y > 1} upOk={c.y < 5} />
+        </div>
+        <button type="button" className={`lt-offer${out ? ' is-on' : ''} is-${tone}`} disabled={!can} onClick={() => toggleOffer(p, want)} aria-pressed={!!out}>
+          <b>{out ? 'Offer made' : can ? 'Offer' : 'No cap room'}</b><small>{word}</small><span>{money(o.$)} · {yrs(o.y)}</span>
+        </button>
+      </div>
+    )
+  }
   return (
     <>
       <StaffLines F={F} />
@@ -401,32 +445,21 @@ function RosterOpen({ F, act, owner, rev, page, setPage }) {
         </section>
         <section className="lt-sec">
           <Chyron team={F.team} size="s" title="FREE AGENCY" right={fits.length || null} sub={`THE BEST FITS FOR THE ${NICK(F.team)} · FAIR IS THE MARKET'S PRICE, STRONG IS 10% MORE`} />
-          {fits.map(({ p, fit, fair, back: was }) => {
-            const out = offers[p.i]
-            const c = L.fc?.[p.i] ?? { s: 0, y: fair.o.y }
-            const want = offerFor(F, p, fair.o, c)
-            const o = out ?? want
-            const st = o === fair.o ? fair.st : standingOf(F, p, o, V)
-            const [word, tone] = STAND[st.k](F, st)
-            const can = !!out || canOffer(F, p, o)
-            const pick = x => setChoice(p, fair.o, { ...c, ...x })
-            return (
-              <div key={p.i} className={`lt-pick${out ? ' is-out' : ''}`}>
-                <Man F={F} p={p} s={F.team} owner={owner} size="s" line={was ? `AGE ${p.ag} · TURNED IT DOWN` : `AGE ${p.ag} · ${fit.k === 'depth' && p.p === 'k' ? 'CAMP BATTLE' : FIT_TEXT[fit.k]}${fit.k === 'start' ? ` +${fit.d}` : ''}`} onClick={() => setPage(p.i)} />
-                <div className="lt-terms">
-                  <div className="lt-seg" role="radiogroup" aria-label={`Offer to ${p.n}`}>
-                    <button type="button" role="radio" aria-checked={!c.s} className={!c.s ? 'is-on' : ''} onClick={() => { if (c.s) { pick({ s: 0 }); sfx('tap') } }}>Fair</button>
-                    <button type="button" role="radio" aria-checked={!!c.s} className={c.s ? 'is-on' : ''} onClick={() => { if (!c.s) { pick({ s: 1 }); sfx('tap') } }}>Strong</button>
-                  </div>
-                  <Step className="lt-step" label={`Years for ${p.n}`} text={yrs(c.y)} onDown={() => pick({ y: c.y - 1 })} onUp={() => pick({ y: c.y + 1 })} downOk={c.y > 1} upOk={c.y < 5} />
-                </div>
-                <button type="button" className={`lt-offer${out ? ' is-on' : ''} is-${tone}`} disabled={!can} onClick={() => toggleOffer(p, want)} aria-pressed={!!out}>
-                  <b>{out ? 'Offer made' : can ? 'Offer' : 'No cap room'}</b><small>{word}</small><span>{money(o.$)} · {yrs(o.y)}</span>
-                </button>
-              </div>
-            )
-          })}
+          {fits.map(offerRow)}
           {!fits.length && <div className="fd-none">NOBODY ON THE MARKET FITS</div>}
+          {/* (the whole market, a tap away: every man on it by position, the same offer on each) */}
+          <Fold title="The whole market" right={(F.fa ?? []).filter(x => !x.fl).length} className="lt-all">
+            <div className="dl-filter" role="radiogroup" aria-label="Position">
+              {FA_FILTERS.map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={mf === k} className={mf === k ? 'is-on' : ''} onClick={() => { setMf(k); setMn(ALL_PAGE); sfx('tap') }}>{l}</button>)}
+            </div>
+            <div className="dl-sort" role="radiogroup" aria-label="Sort">
+              <span>SORT</span>
+              {FA_SORTS.map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={ms === k} className={ms === k ? 'is-on' : ''} onClick={() => { setMs(k); setMn(ALL_PAGE); sfx('tap') }}>{l}</button>)}
+            </div>
+            {!rest.length && <div className="fd-none">NOBODY ELSE AT {FA_FILTERS.find(x => x[0] === mf)?.[1]}</div>}
+            {shown.map(offerRow)}
+            {rest.length > mn && <button type="button" className="dl-more" onClick={() => { setMn(v => v + ALL_PAGE); sfx('tap') }}>SHOW {Math.min(ALL_PAGE, rest.length - mn)} MORE · {rest.length - mn} LEFT</button>}
+          </Fold>
           <p className="fst-note">Other teams bid too. Each player signs where the offer adds up best for him.</p>
         </section>
       </div>
