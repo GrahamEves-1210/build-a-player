@@ -153,9 +153,9 @@ const INTERVIEWS_SOCCER = [
     { t: 'I\'ve never missed a game with it.', stock: 1, persona: 'confident' },
     { t: 'Physios worry too much.', stock: -2, persona: 'cocky' } ] },
   { who: 'First-team manager', q: 'A penalty missed in a cup tie. We get another one. Who takes it?', a: [
-    { t: 'Yes. I\'ve practised them every day since the last one.', stock: 2, persona: 'grinder' },
-    { t: 'Of course. I don\'t miss twice.', stock: 1, persona: 'confident' },
-    { t: 'Only if nobody else wants it.', stock: -1, persona: 'cocky' } ] },
+    { t: 'I do. I\'ve practised them every day since the last one.', stock: 2, persona: 'grinder' },
+    { t: 'Me. I don\'t miss twice.', stock: 1, persona: 'confident' },
+    { t: 'Somebody else, unless nobody wants it.', stock: -1, persona: 'cocky' } ] },
   { who: 'Academy director', q: 'A teammate has a go at the new signing in the papers. What happens next?', a: [
     { t: 'Talk to him face to face. Keep it in the dressing room.', stock: 2, persona: 'grinder' },
     { t: 'Let my football answer it on Saturday.', stock: 1, persona: 'confident' },
@@ -307,7 +307,7 @@ export const rememberNation = n => { try { if (NATION_BY.has(n)) localStorage.se
 const soccerNationOf = n => (NATION_BY.has(n) ? n : lastNation() ?? 'ENG')
 // (the countries a career can be started with: the 48 of the 2026 World Cup and the ones that stayed at home, Italy,
 // Denmark, Poland, Nigeria, Wales, Ireland, Serbia...; the rest of CAREER_NATIONS are opponents)
-export const SOCCER_NATIONS = WC_NATIONS.filter(n => n.pick).sort((a, b) => a.name.localeCompare(b.name)).map(n => ({ short: n.short, name: n.name }))
+export const SOCCER_NATIONS = WC_NATIONS.filter(n => n.pick).sort((a, b) => a.name.localeCompare(b.name)).map(n => ({ short: n.short, name: n.name, conf: n.conf ?? null }))
 export const nationName = short => NATION_BY.get(short)?.name ?? short
 export const nationFlag = short => `/logos/nations/${short}.png`
 

@@ -441,28 +441,6 @@ function LegacyMeter({ c, slim = false, onOpen = null }) {
   )
 }
 
-// soccer: the penalty question asks who takes the next one, so its answers say who. (The answers are written in
-// lib/careerSoccer.js INTERVIEWS_SOCCER and copied onto a career when its meetings are set up: read here, a career
-// that already has its meetings reads right too.)
-const SOCCER_ANSWER = {
-  "Yes. I've practised them every day since the last one.": "I do. I've practised them every day since the last one.",
-  "Of course. I don't miss twice.": "Me. I don't miss twice.",
-  'Only if nobody else wants it.': 'Somebody else, unless nobody wants it.',
-}
-// soccer: the clubs with a real derby against another club in their league, 2026-27 (the North London, West London,
-// M23, Merseyside, Manchester, Tyne-Wear and Roses derbies; Madrid, Barcelona, Seville, the Basque, Valencian and
-// Galician derbies; the Revierderby, the Rhine, Rhine-Main, North, Bavarian and Baden-Württemberg derbies; Milan, Rome,
-// Turin, the Apennine, Emilian and Lombard derbies; Paris, the Derby du Nord, the Breton and Côte d'Azur derbies).
-const DERBY_CLUBS = new Set(('ARS TOT CHE FUL BRE CRY BHA LIV EVE MCI MUN NEW SUN LEE ' +
-  'RMA ATM GET RAY BAR RCD SEV BET ATH RSO ALA OSA VAL LEV VIL CEL DEP ' +
-  'BVB S04 BMG KOE B04 HSV SVW SGE M05 FCB FCA VFB SCF TSG ' +
-  'MIL INT ROM LAZ JUV TOR BOL FIO PRM SAS COM MNZ ' +
-  'PSG PFC RCL LIL REN LOR BST NIC MON OLM').split(' '))
-// The season's DERBY WEEK card (lib/soccerSeason.js) comes up at any club: at one with no derby in its league (Hull
-// City, Bournemouth, RB Leipzig) the same week is its biggest match of the season, and the card says that
-const momentWords = (c, m) => (c.sport === 'soccer' && m?.kicker === 'DERBY WEEK' && !DERBY_CLUBS.has(c.team)
-  ? { ...m, kicker: 'BIG MATCH WEEK', body: String(m.body ?? '').replace(/^Derby week at ([^.]+)\./, 'The fixture the $1 supporters look for first is this weekend.') }
-  : m)
 // soccer, the meetings done: the clubs that came away keen and are about to offer (the offers are worked out from the
 // meetings and the trials, lib/careerSoccer.js soccerOffers: the same call the OFFERS button makes, so the line is true)
 function keenLine(c, list, teamName) {
@@ -602,7 +580,7 @@ function Draft({ c, setCareer }) {
             <div className="cr-q ag-pop" key={i}>
               <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()}</small></span></div>
               <p className="cr-q-text">"{it.q}"</p>
-              <div className="cr-q-opts">{it.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => { setCareer(answerInterview(c, i, k)); flashIt(it.team, a.stock); sfx(a.stock > 0 ? 'claim' : a.stock < 0 ? 'deny' : 'tap') }}>{soccer ? SOCCER_ANSWER[a.t] ?? a.t : a.t}</button>)}</div>
+              <div className="cr-q-opts">{it.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => { setCareer(answerInterview(c, i, k)); flashIt(it.team, a.stock); sfx(a.stock > 0 ? 'claim' : a.stock < 0 ? 'deny' : 'tap') }}>{a.t}</button>)}</div>
               {canSkipTalk && <button className="ag-btn ag-btn--ghost cr-q-skip" onClick={() => { setCareer(answerInterview(c, i, SKIP_TALK)); flashIt(it.team, -1); sfx('tap') }}>{`SKIP THE ${nick(teamName(it.team)).toUpperCase()} INTERVIEW`}</button>}
             </div>
           ) : (
@@ -840,14 +818,6 @@ function SpotMove({ c, m, onAnswer }) {
   )
 }
 
-// soccer: the season's final table goes on the season it was (the recap's table), unless the engine put one there
-// ([short, W, D, L, GF, GA] in table order: about half a kilobyte a season)
-const withTable = (n, rows) => {
-  const s = n.seasons[n.seasons.length - 1]
-  if (!rows?.length || !s || s.table?.length) return n
-  return { ...n, seasons: [...n.seasons.slice(0, -1), { ...s, table: rows.map(r => [r.short, r.wins, r.draws, r.losses, r.gf, r.ga]) }] }
-}
-
 // ── Hub ─────────────────────────────────────────────────────────────────────
 export default function AppCareer({ career: c, setCareer, user, onNewBuild, onExit }) {
   const [tab, setTab] = useState('season')
@@ -892,12 +862,10 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   // the regular season's over: straight to the offseason, or into the bracket
   const wrap = () => {
     if (!D.current) D.current = resumeSeason(c)
-    // (soccer: the final table, for the recap; the director keeps the season it finalized, so this is the one booked)
-    const rows = S.isSoccer ? D.current.finalize()?.standings : null
     const n = finishRegular(c, D.current); D.current = null
-    if (n.phase === 'offseason') { afterBook(withTable(n, rows)) } else { setCareer(n); sfx('whistle') }
+    if (n.phase === 'offseason') { afterBook(n) } else { setCareer(n); sfx('whistle') }
   }
-  const book = () => afterBook(withTable(bookSeason(c), S.isSoccer ? c.active?.final?.standings : null))
+  const book = () => afterBook(bookSeason(c))
   const afterBook = n => {
     const s = n.seasons[n.seasons.length - 1]
     window.dispatchEvent(new CustomEvent('bap:season', { detail: { sport: c.sport, pos: c.pos, mode: 'career', localOnly: true, sandbox: !!c.sandbox, wins: s.wins, losses: s.losses, playoffs: s.playoffs, champion: s.champion, award: s.award, awardName: s.awardName, ovr: c.ovr, ref: c.active?.final ?? null } }))
@@ -1019,7 +987,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             </div>
             {/* (the award race: a thin bar that opens, above the schedule; owner 11-18) */}
             {!a.po && <AwardRace c={c} games={played} />}
-            {S.isSoccer && <Suspense fallback={null}><SoccerTable c={c} games={played} final={fin?.standings ?? null} /></Suspense>}
+            {S.isSoccer && <Suspense fallback={null}><SoccerTable c={c} games={played} /></Suspense>}
             {a.bye && <Schedule c={c} />}
             {a.injury && (
               <div className="sm-moment cr-injury ag-pop">
@@ -1033,7 +1001,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                 </div>
               </div>
             )}
-            {a.moment && <MomentCard key={`${a.k}-${a.moment.id}`} moment={momentWords(c, a.moment)} onPick={pick} />}
+            {a.moment && <MomentCard key={`${a.k}-${a.moment.id}`} moment={a.moment} onPick={pick} />}
             {(canDeadlineTrade(c) || (a.deadline && a.deadline.k === a.k)) && <Deadline c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} setD={d => { D.current = d }} />}
             {byeNow(c) && <ByeWeek key={`bye-${c.year}`} c={c} setCareer={setCareer} getD={() => { if (!D.current) D.current = resumeSeason(c); return D.current }} />}
             {a.bye?.done && a.k === a.bye.wk - 1 && !a.moment && !a.injury && <ByeResult c={c} done={a.bye.done} />}

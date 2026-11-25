@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { sportOf, openTalks, acceptTalks, roundOdds, playoffRound, combinePos, gameCast, gamesMode } from '../../lib/career'
 import { wageText, feeText, nationName, stayPut } from '../../lib/careerSoccer'
-import { soccerLeagueInfo } from '../../utils/soccerSimulation'
 import { sfx } from '../../lib/juice'
 import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconCheck, IconCaret } from './icons'
 import { Analytics, CareerGame, honorsOf, fmt, ClubLogo, tieText, seasonOf, ordinalOf, inLeague } from './AppCareer'
@@ -12,70 +11,34 @@ import './squad-soccer.css'   // (the league table's rows: Squad Builder's socce
 
 // ── The league table ─────────────────────────────────────────────────────────
 // Rows are the season engine's standings: { short, name, played, wins, draws, losses, gf, ga, gd, points, pos, isUs }.
-const byTable = (a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || (a.isUs ? -1 : b.isUs ? 1 : 0)
-// The table as it stands after his club's matches so far, the truest source first:
-//   1. the engine's own: S.x.table(c) (lib/careerSoccer.js: every club's results matchweek by matchweek, his club's as
-//      they were really played; each row carries its zone), or rows kept on the career (c.active.table)
-//   2. the league done: the final table (c.active.final.standings)
-//   3. neither (a build or a season from before the engine's table): the season's simulated final table brought back
-//      to the matches played, his club's row from its real results (an estimate: the other clubs' rows move when the
-//      season is re-simulated)
-export function tableNow(c, games = []) {
-  const a = c.active
-  if (!a) return null
-  let own = null
-  try { own = sportOf(c).x?.table?.(c) ?? a.table ?? null } catch { own = null }
-  if (Array.isArray(own) && own.length) return own
-  if (a.final?.standings?.length) return a.final.standings
-  const k = games.length
-  if (!k) return null
-  const src = a.snap?.last?.standings ?? a.base?.standings
-  if (!src?.length) return null
-  const rows = src.map(r => {
-    if (r.isUs || r.short === c.team) {
-      const wins = games.filter(g => g.won).length, draws = games.filter(g => g.drawn).length
-      const gf = games.reduce((n, g) => n + (g.mySc ?? 0), 0), ga = games.reduce((n, g) => n + (g.oppSc ?? 0), 0)
-      return { ...r, isUs: true, played: k, wins, draws, losses: k - wins - draws, gf, ga, gd: gf - ga, points: wins * 3 + draws }
-    }
-    const f = k / Math.max(1, r.played ?? 38)
-    const wins = Math.min(k, Math.round(r.wins * f)), draws = Math.min(k - wins, Math.round(r.draws * f))
-    const gf = Math.round(r.gf * f), ga = Math.round(r.ga * f)
-    return { ...r, played: k, wins, draws, losses: k - wins - draws, gf, ga, gd: gf - ga, points: wins * 3 + draws }
-  }).sort(byTable)
-  rows.forEach((r, i) => { r.pos = i + 1 })
-  return rows
+// The table as it stands after his club's matches so far: the engine's (lib/careerSoccer.js soccerTable: every club's
+// results matchweek by matchweek, his club's as they were really played; each row carries its zone). null before a
+// ball is kicked, and for a season begun before the engine kept the table (until that season is over)
+export function tableNow(c) {
+  try { const rows = sportOf(c).x?.table?.(c); return Array.isArray(rows) && rows.length ? rows : null } catch { return null }
 }
-// a season's own table (the recap's), kept small on the season: [short, W, D, L, GF, GA] in table order (AppCareer's
-// withTable), or the engine's full rows
-const unpackTable = (S, list, mine) => (list ?? []).map((r, i) => (Array.isArray(r) ? { short: r[0], name: r[6] ?? S.teamOf(r[0])?.name ?? r[0], extra: r[6] != null, played: r[1] + r[2] + r[3], wins: r[1], draws: r[2], losses: r[3], gf: r[4], ga: r[5], gd: r[4] - r[5], points: r[1] * 3 + r[2], pos: i + 1, isUs: r[0] === mine } : { ...r, pos: r.pos ?? i + 1, isUs: r.isUs ?? r.short === mine }))
-const seasonTable = (S, s) => { let rows = null; try { rows = S.x?.tableOf?.(s) ?? null } catch { rows = null } return rows?.length ? rows : unpackTable(S, s.table, s.team) }
-// where a place in the table leads: the Champions League, the Europa League, the Conference League, the drop
-// (the places are the league's own: utils/soccerSimulation.js soccerLeagueInfo; uecl when the league has them)
-// (the engine's rows carry their own zone: those five, and in a second tier 'up' and 'playoff')
+// a booked season's final table (lib/careerSoccer.js tableOf: the short form on the season, read back with its zones)
+const seasonTable = (S, s) => { try { return S.x?.tableOf?.(s) ?? null } catch { return null } }
+// where a place in the table leads (each row's zone is the engine's): the Champions League, the Europa League, the
+// Conference League, the drop; a relegation play-off (Germany, France); in a second tier, promotion and its play-offs
 const ZONE_WORD = { ucl: 'Champions League', uel: 'Europa League', uecl: 'Conference League', up: 'Promotion', playoff: 'Play-off', down: 'Relegation' }
 const ZONES = Object.keys(ZONE_WORD)
-const zoneOfRow = (r, i, byPlace) => (r.zone !== undefined ? (ZONES.includes(r.zone) ? r.zone : null) : byPlace(r.pos ?? i + 1))
-function zonesOf(league, size) {
-  const info = soccerLeagueInfo(league) ?? { ucl: 4, uel: 2, down: 3 }
-  const ucl = info.ucl ?? 4, uel = info.uel ?? 0, uecl = info.uecl ?? 0, down = info.down ?? 3
-  return pos => (pos <= ucl ? 'ucl' : pos <= ucl + uel ? 'uel' : pos <= ucl + uel + uecl ? 'uecl' : pos > size - down ? 'down' : null)
-}
+const zoneOf = r => (ZONES.includes(r?.zone) ? r.zone : null)
 // The table: the top four, his club's place and the bottom three, FULL TABLE a tap away (the whole of it when `all`)
-export function LeagueTable({ c, rows, league, mine = c.team, all: all0 = false }) {
+export function LeagueTable({ c, rows, mine = c.team, all: all0 = false }) {
   const S = sportOf(c)
   const [all, setAll] = useState(all0)
   if (!rows?.length) return null
   const size = rows.length
   const me = rows.findIndex(r => r.isUs || r.short === mine)
-  const zone = zonesOf(league, size)
   const shown = all ? rows : rows.filter((r, i) => i < 4 || Math.abs(i - me) <= 1 || i >= size - 3)
-  const zones = ZONES.filter(z => rows.some((r, i) => zoneOfRow(r, i, zone) === z))
+  const zones = ZONES.filter(z => rows.some(r => zoneOf(r) === z))
   return (
     <div className="cr-lt">
       <div className="sq-table" role="table" aria-label="League table">
         <div className="sq-table-row sq-table-head" role="row"><span>#</span><span>CLUB</span><span>P</span><span>W</span><span>D</span><span>L</span><span>GD</span><span>PTS</span></div>
         {shown.map((r, j) => {
-          const i = rows.indexOf(r), z = zoneOfRow(r, i, zone)
+          const i = rows.indexOf(r), z = zoneOf(r)
           const gap = j > 0 && i - rows.indexOf(shown[j - 1]) > 1
           return (
             <div key={r.short} className={`sq-table-row${i === me ? ' is-mine' : ''}${z ? ` is-${z}` : ''}${gap ? ' is-gap' : ''}`} role="row">
@@ -94,17 +57,15 @@ export function LeagueTable({ c, rows, league, mine = c.team, all: all0 = false 
 }
 // The hub's table: one thin bar through the season (his club's place and points), opened for the table itself
 // (the award race's bar in football and basketball Career: the same piece)
-export function SoccerTable({ c, games, final = null }) {
-  const done = !!final?.length || !!c.active?.final
+export function SoccerTable({ c, games }) {
+  const a = c.active
+  const done = !!a?.final || (a?.k ?? 0) >= (a?.base?.games?.length ?? 99)
   const [open, setOpen] = useState(false)
-  // (nothing to show before a ball is kicked; the engine's rows, zones and all, ahead of the bare final standings)
-  const live = games.length || done ? tableNow(c, games) : null
-  const rows = live?.length && live[0].zone !== undefined ? live : final?.length ? final : live
+  // (nothing to show before a ball is kicked)
+  const rows = games.length || done ? tableNow(c) : null
   if (!rows?.length) return null
-  const S = sportOf(c)
   const me = rows.find(r => r.isUs || r.short === c.team)
-  const league = c.active?.base?.league?.id ?? S.teamOf(c.team)?.league
-  const z = me ? zoneOfRow(me, rows.indexOf(me), zonesOf(league, rows.length)) : null
+  const z = zoneOf(me)
   const bar = (
     <button type="button" className={`cr-race-bar cr-lt-bar${open ? ' is-open' : ''}`} onClick={() => { setOpen(o => !o); sfx('tap') }} aria-expanded={open}>
       <span><small>{done ? 'FINAL TABLE' : 'THE TABLE'}</small><b>{me ? ordinalOf(me.pos).toUpperCase() : '—'}</b></span>
@@ -114,7 +75,7 @@ export function SoccerTable({ c, games, final = null }) {
     </button>
   )
   if (!open) return bar
-  return <div className="cr-race cr-lt-wrap ag-pop">{bar}<LeagueTable c={c} rows={rows} league={league} /></div>
+  return <div className="cr-race cr-lt-wrap ag-pop">{bar}<LeagueTable c={c} rows={rows} /></div>
 }
 
 
@@ -155,10 +116,10 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
         {last.missed > 0 && <p><b>Missed</b> {last.missed} {last.missed === 1 ? 'match' : 'matches'}</p>}
       </div>
       {[wc, last.cont].filter(Boolean).map(t => <Tournament key={t.name ?? 'wc'} t={t} />)}
-      {last.table?.length > 0 && (
+      {seasonTable(S, last)?.length > 0 && (
         <div className="cr-lt-card">
           <span className="ag-eyebrow">{String(last.league ?? 'THE LEAGUE').toUpperCase()} · THE FINAL TABLE</span>
-          <LeagueTable c={c} rows={seasonTable(S, last)} league={last.leagueId ?? last.league} mine={last.team} />
+          <LeagueTable c={c} rows={seasonTable(S, last)} mine={last.team} />
         </div>
       )}
       <Analytics c={c} s={last} />

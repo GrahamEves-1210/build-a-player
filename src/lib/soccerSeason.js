@@ -6,6 +6,16 @@ import { registerMoments, odds, sub, score, pc, outs } from './gameMoments'
 // ═════════════════════════════════════════════════════════════════════════════
 // SOCCER: a striker's season (c.nick is the club's full name)
 // ═════════════════════════════════════════════════════════════════════════════
+// The clubs with a real derby against another club in their league, 2026-27 (the North London, West London, M23,
+// Merseyside, Manchester, Tyne-Wear and Roses derbies; Madrid, Barcelona, Seville, the Basque, Valencian and Galician
+// derbies; the Revierderby, the Rhine, Rhine-Main, North, Bavarian and Baden-Württemberg derbies; Milan, Rome, Turin,
+// the Apennine, Emilian and Lombard derbies; Paris, the Derby du Nord, the Breton and Côte d'Azur derbies).
+// A club without one (Hull City, Bournemouth, RB Leipzig) never gets the Derby Week card.
+const DERBY_CLUBS = new Set(('ARS TOT CHE FUL BRE CRY BHA LIV EVE MCI MUN NEW SUN LEE ' +
+  'RMA ATM GET RAY BAR RCD SEV BET ATH RSO ALA OSA VAL LEV VIL CEL DEP ' +
+  'BVB S04 BMG KOE B04 HSV SVW SGE M05 FCB FCA VFB SCF TSG ' +
+  'MIL INT ROM LAZ JUV TOR BOL FIO PRM SAS COM MNZ ' +
+  'PSG PFC RCL LIL REN LOR BST NIC MON OLM').split(' '))
 const SOCCER_ALL = [
   { id: 'fc-sacked', at: ['mid', 'late'], w: 4, when: c => !c.ucl && c.struggling,
     make: c => ({ kicker: 'MANAGER SACKED', title: 'The board pulls the trigger',
@@ -14,7 +24,7 @@ const SOCCER_ALL = [
         o('buy', 'Buy into the new man', gam(0.55, { team: { off: 1.5 } }, 'It clicks. The new manager plays to the No. 9.', { team: { off: -1.5 }, window: 3, tag: 'NEW MANAGER', then: { team: { off: 1 } } }, 'Three matches to find the shape, then it starts to work.')),
         o('loyal', 'Back the old manager in public', gam(0.5, { team: { off: 0.5 } }, 'The dressing room respects it. They play for each other.', { attr: c.R1('nerve', -1), window: 3, tag: 'OUT OF FAVOUR' }, 'The new man hasn\'t forgotten it. In and out of the team for a few weeks.')),
       ] }) },
-  { id: 'fc-derby', at: ['early', 'mid', 'late'], w: 3, when: c => !c.ucl && c.k >= 2,
+  { id: 'fc-derby', at: ['early', 'mid', 'late'], w: 3, when: c => !c.ucl && c.k >= 2 && DERBY_CLUBS.has(c.team),
     make: c => ({ kicker: 'DERBY WEEK', title: 'The biggest match of the season',
       body: `Derby week at ${c.nick}. The press conference is on Thursday, and every question is for ${c.name}.`,
       options: [
