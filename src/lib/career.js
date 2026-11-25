@@ -2467,7 +2467,7 @@ function careerMarksFor(c) {
   const t = careerTotals(c), held = new Set((c.seasons ?? []).flatMap(s => s.records ?? []))
   return recs.filter(x => !held.has(x.label)).map(x => ({ id: x.id, label: x.label, value: x.value, holder: x.holder, live: x.live, before: x.career(t) ?? 0 }))
 }
-const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team: onSchedule(c, team, base), simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, pre: dealtPre(c), ...(sportOf(c).x?.onFinal ? { onFinal: sportOf(c).x.onFinal } : {}) })
+const director = (c, team, base, seed, simFn = simFor(c), build = c.active?.dirBuild ?? c.build) => createDirector({ sport: c.sport, pos: c.pos, build, team: onSchedule(c, team, base), simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, injuryOdds: injuryOdds(c), recordBook: c.recordBook ?? null, careerMarks: careerMarksFor(c), deals: () => dealsFor(c), career: (k, g) => lifeView(c, k, g), made: sportOf(c).made, pre: dealtPre(c), ...(sportOf(c).x?.onFinal ? { onFinal: (f, t, games) => sportOf(c).x.onFinal(f, t, games, base) } : {}) })
 // (a deadline trade: the new team's record over the games before he got there, so its record decides the playoffs)
 const dealtPre = c => { const d = c.active?.deadline; return d?.granted && d.pre ? { k: d.k, wins: d.pre.wins, losses: d.pre.losses } : null }
 export function startSeason(c) {
@@ -2768,6 +2768,88 @@ export function byeTrain(c, D, game, score, hit = score >= 0.75, sim = false) {
   const gain = { type: t, label: traitName(c, t), from: valToGrade(from), to: valToGrade(to) }
   const next = { ...c, build, ovr: ovrOf(c.pos, build, c.sport), decisions: [...c.decisions, { year: c.year + 1, text: `Bye week work: ${gain.label} ${gain.from} → ${gain.to}` }] }
   return byeDone(next, D, { ...base, gain }, { dirBuild: c.active.dirBuild ?? c.build })
+}
+
+// ── Soccer: the international break and the January window (2026-11-24) ──────────────────────────────────────────
+// Soccer's season stops twice on its own (lib/careerSoccer.js soccerBeat): at the November international break
+// (active.brk) and in the January window (active.jan). Neither blocks the season: played on, the choice lapses.
+// The break is the bye week's choice with football's words left to the screen: train (one drill, a shot at a grade,
+// byeChance) or rest (durability, a match of healing). The result goes in the feed as a note, and on active.brk.done.
+export const breakNow = c => { const a = c?.active; return !!a?.brk && !a.brk.done && a.k === a.brk.k && !a.moment && !a.injury && !a.po && !a.final }
+export const breakDrill = (c, allow = null) => pickPlayoffGame(c.pos, `${c.seed}-brk-${c.year}`, [], g => byeTraits(c, g).length > 0 && (!allow || allow(g))) ?? null
+const breakDone = (c, D, done, note) => withSnap(c, D, { brk: { ...c.active.brk, done }, feed: [...c.active.feed, { k: c.active.k, note, noteKind: 'INTERNATIONAL BREAK' }] })
+export function breakRest(c, D) {
+  if (!breakNow(c) || !D) return c
+  const from = c.durability ?? 5, to = r10(Math.min(BODY_MAX, from + BYE_REST))
+  const run = c.active.out ? null : hurtRun(c, D)
+  let healed = null
+  if (run) { D.sat = D.sat.filter(i => i !== run.last); D.nudge({}, run.last, run.last + 1); healed = { kind: run.inj.kind, back: run.last + 1 } }
+  return breakDone({ ...c, durability: to }, D, { pick: 'rest', from, to, healed }, healed ? `${c.name} rests through the break. The ${healed.kind} clears up a match sooner.` : `${c.name} rests through the break: a week off his feet.`)
+}
+export function breakTrain(c, D, game, score, hit = score >= 0.75, sim = false) {
+  if (!breakNow(c) || !D || byeHurt(c, D)) return c
+  const t = byeTarget(c, game)
+  const top = t && !((c.build[t].faded ?? 0) > 0) ? stepCost(c.build[t].val, c) : 1
+  const chance = t ? byeChance(score, hit) / top : 0
+  const won = !!t && seeded(`${c.seed}-brkgain-${c.year}`)() < chance
+  const base = { pick: 'train', game, score, hit: !!hit, chance, sim: !!sim, ...(top > 1 ? { top } : {}) }
+  if (!won) return breakDone(c, D, { ...base, gain: null }, `Extra work on the training ground through the break. No new grade this time.`)
+  const from = c.build[t].val, to = Math.min(11, Math.round(from) + 1)
+  const build = { ...c.build, [t]: gradeUp(c.build[t], to) }
+  D.nudge({ attr: { [t]: to - from } }, c.active.k, D.total, null, true)
+  const gain = { type: t, label: traitName(c, t), from: valToGrade(from), to: valToGrade(to) }
+  const next = { ...c, build, ovr: ovrOf(c.pos, build, c.sport), active: { ...c.active, dirBuild: c.active.dirBuild ?? c.build }, decisions: [...c.decisions, { year: c.year + 1, text: `International break work: ${gain.label} ${gain.from} → ${gain.to}` }] }
+  return breakDone(next, D, { ...base, gain }, `Extra work on the training ground through the break: ${gain.label} ${gain.from} → ${gain.to}.`)
+}
+// The January window: the bids and the loan on the table (active.jan.offers, the summer's offer shape). Open at its
+// stop, until the next match is played.
+export const januaryNow = c => { const a = c?.active; return !!a?.jan && !a.jan.done && a.k === a.jan.k && !a.moment && !a.injury && !a.po && !a.final }
+export const januaryOffers = c => (januaryNow(c) ? c.active.jan.offers ?? [] : [])
+// he turns them down and stays
+export function januaryStay(c, D) {
+  if (!januaryNow(c) || !D) return c
+  const offers = c.active.jan.offers ?? []
+  const text = offers.length ? `Turned down ${offers.map(o => (o.kind === 'loan' ? `a loan to ${o.fit.name}` : o.fit.name)).join(' and ')} in January. Staying at ${c.fit.name}.` : null
+  return withSnap(text ? { ...c, decisions: [...c.decisions, { year: c.year + 1, text }] } : c, D, { jan: { ...c.active.jan, done: { stayed: true } } })
+}
+// He takes one: the contract is signed the way the summer's is (the sport's own sign), and he finishes the season at the
+// new club: its matches from here (its league's calendar: a move to a league with a shorter season has fewer left),
+// the matches he's played kept. [career, director]: the director is a new one (the screen keeps it), as deadlineTrade's.
+// (o: one of active.jan.offers, or the talks' version of it with the terms he negotiated)
+export function januaryMove(c, D, o) {
+  const S = sportOf(c), a = c?.active
+  if (!S.x?.january || !S.x?.sign || !januaryNow(c) || !D || !o || o.team === c.team) return [c, D]
+  const k = a.k, from = c.team, fromName = S.teamOf(from).name, fromLeague = S.teamOf(from).league ?? null
+  let n = S.x.sign({ ...c, offers: null, talks: null }, o)
+  n = { ...n, nextMods: null, off: c.off ?? null }
+  const roster = n.roster, fit = n.fit
+  const dc = depthChart({ ...n, active: { ...a, benched: null } }, roster)
+  const team = simTeam({ ...n, benchRole: !dc.starter }, fit)
+  const benched = dc.starter ? null : { weeks: 999, behind: dc.ahead[dc.ahead.length - 1]?.name ?? dc.ahead[0]?.name, label: dc.label, bench: true, from: k, ...(S.x.role ? { role: S.x.role({ ...n, active: null }) } : {}) }
+  const simFn = S.sim(c.pos), build = a.dirBuild ?? c.build
+  const run = simFn(build, team)
+  if (!run?.games?.length || run.games.length <= k) return [c, D]
+  const cross = (S.teamOf(o.team).league ?? null) !== fromLeague
+  const base = { ...run, moved: { k, cross }, games: run.games.map((g, i) => (i < k ? D.games[i] : g)) }
+  // (what he did for the old club in the cup and in Europe before the move stays his: the sport's own count, S.x.movedLine)
+  const moved = { k, from, fromName, to: o.team, toName: fit.name, loan: o.kind === 'loan', fee: o.fee ?? null, cross, ...(S.x.movedLine ? S.x.movedLine(c, k, D) : {}) }
+  const role = dc.starter ? 'He goes straight into the side' : `He joins the squad behind ${benched.behind}`
+  const note = o.kind === 'loan' ? `January loan: ${c.name} joins ${fit.name} from ${fromName} until the end of the season. ${role}.` : `January transfer: ${fit.name} sign ${c.name} from ${fromName}. ${role}.`
+  // (the matches he played for the old club keep its badge)
+  const feed = [...a.feed.map(e => (e.g ? { ...e, g: { ...e.g, tm: e.g.tm ?? from } } : e.chunk ? { ...e, tm: e.tm ?? from } : e)), { k, note, noteKind: 'JANUARY WINDOW' }]
+  n = { ...n, role: S.x.role ? S.x.role({ ...n, active: null }) : dc.starter ? 'Starter' : 'Backup', simTeam: unscheduled(team),
+    events: [...n.events, { year: c.year + 1, season: true, text: o.kind === 'loan' ? `Loaned to ${fit.name} in the January window.` : `Signed for ${fit.name} in the January window.` }],
+    active: { ...a, base, benched: benched ? { ...benched, weeks: base.games.length } : null, feed, moved, jan: { ...a.jan, done: { to: o.team, from } } } }
+  // the season so far on a director for the new club: the matches played stay (locked), his form goes with him (the
+  // traits), the old club's moves stay behind (the team mods); the rest is played again from here
+  const D2 = director(n, team, base, a.seed, simFn, build)
+  const snap = D.snapshot()
+  const own = m => ({ attr: { ...(m?.attr ?? {}) }, team: { off: 0, def: 0 } })
+  const carry = (snap.sat ?? []).filter(i => i >= k && i < base.games.length && !(D.games[i]?.tags ?? []).includes('BENCHED'))
+  D2.restore({ ...snap, games: base.games.map(g => ({ ...g })), locked: [...new Set([...(snap.locked ?? []).filter(i => i < k), ...Array.from({ length: k }, (_, i) => i)])], cum: own(snap.cum), windows: snap.windows.map(w => ({ ...w, mods: own(w.mods) })), playoffMods: own(snap.playoffMods), sat: (snap.sat ?? []).filter(i => i < k), last: base, po: null, poRun: null, finalized: false, final: null })
+  for (const i of carry) D2.sitOut(i, (D.games[i]?.tags ?? [])[0] ?? null)
+  D2.redo(k)
+  return [withSnap(n, D2), D2]
 }
 
 // Injury: sit it out, or play through (traits down for longer, and it can get worse).
@@ -3313,6 +3395,7 @@ export function bookSeason(c) {
   { const from = next.team; next = maybeTraded(next, r); if (next.team !== from) next = redealEvent(next, from) }
   const offers = contractSituation(next)
   next = { ...next, fit: fitFor(next), offers, off: { step: 'recap', moves: next.traded ? [] : moves, news, camp: null, contract: Array.isArray(offers) } }
+  if (S.x?.windowNews) next = S.x.windowNews(next)
   return next
 }
 // A shoe deal: a big name with a big season gets one; a superstar gets his own
@@ -3554,6 +3637,9 @@ export function trainable(c, type) {
   const ch = c.build[type]
   if ((c.pos === 'dl' || c.pos === 'lb') && type === 'size') return false   // a lineman's (or a linebacker's) size is his body, not something to train
   if (c.pos === 'ol' && (type === 'size' || type === 'length')) return false   // (an offensive lineman's arms too: length is arm length)
+  // (soccer: Size is his frame, from his height and weight. Before 2026-11-24 the board sold it for points while its own
+  // note said it never changes)
+  if (c.pos === 'st' && type === 'size') return false
   if (!ch) return false
   if (vetWork(c, type)) return true   // (a slipped grade to win back, or one to hold: at any age, lib/careerAging.js)
   if (maxedTrait(ch.val, ch, type) || kCapped(c, ch)) return false
@@ -3919,13 +4005,13 @@ export function ask(c, kind) {
     return { ...c, ...stay, offers: fallback, talks: { ...t, walked: true, patience: 0, lines: [...t.lines, fc ? 'The sporting director closes the folder. "We\'re done here."' : 'The GM closes the folder. "We\'re done here."'] }, events: [...c.events, { year: c.year + 1, text: fc ? `Talks with ${t.fit.name} collapsed over ${({ money: 'his wages', years: 'an extra year', notrade: 'a release clause', starter: 'a first-team promise' })[kind] ?? 'the terms'}.` : `Talks with the ${t.fit.name} collapsed over a ${a.label.toLowerCase()}.` }] }
   }
   // (never past the top of his market, marketTop: leverage lifts it a little for a dominant player)
-  const pushed = kind === 'money' ? r10(Math.max(t.perYear, Math.min(t.perYear * 1.08, marketTop(c, leverageOf(c))))) : t.perYear
+  const pushed = kind === 'money' ? r10(Math.max(t.perYear, Math.min(t.perYear * 1.08, marketTop(c, leverageOf(c)), sportOf(c).x?.wageCap?.(t.team) ?? Infinity))) : t.perYear
   const years = kind === 'years' ? t.years + 1 : t.years
   const tone = (big ? 'That one stung. ' : '') + (patience >= 2 ? 'A nod. "We can do that."' : patience === 1 ? '"…Fine. But that\'s about it."' : 'A long pause. "Last one."')
   return { ...c, talks: { ...t, patience, perYear: pushed, years, noTrade: t.noTrade || kind === 'notrade', starter: t.starter || kind === 'starter', asked: [...t.asked, kind], lines: [...t.lines, tone] } }
 }
 // more money is still on the table: under the top of his market (at it, the ask would cost patience for nothing)
-export const canPushMoney = c => !!c.talks && marketTop(c, leverageOf(c)) > c.talks.perYear + 0.05
+export const canPushMoney = c => !!c.talks && Math.min(marketTop(c, leverageOf(c)), sportOf(c).x?.wageCap?.(c.talks.team) ?? Infinity) > c.talks.perYear + 0.05
 export const closeTalks = c => ({ ...c, talks: null })
 export const acceptTalks = c => (c.talks && !c.talks.walked ? signOffer(c, c.talks) : c)
 // Mid-contract: ask out. Costs reputation either way. Two asks (owner 11-15): ANY TEAM, always granted, anywhere in
