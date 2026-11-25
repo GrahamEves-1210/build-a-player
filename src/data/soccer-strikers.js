@@ -139,6 +139,10 @@ const ALL_STRIKERS = [
     attrs: { pace: 10, finishing: 9, shotPower: 9, dribbling: 3, passing: 4, positioning: 9, heading: 8, size: 10, composure: 10 } },
   { name: "Christos Tzolis", short: "Tzolis", team: 'ARS', nation: 'GRE', number: 17, height: 70, weight: 152, age: 24, foot: 'right', skin: '#a2735e', espn: 303793, starter: false, position: 'ST', role: 'LW',
     attrs: { pace: 6, finishing: 5, shotPower: 4, dribbling: 4, passing: 11, positioning: 7, heading: 2, size: 4, composure: 8 } },
+  { name: "Martín Zubimendi", short: "Zubimendi", team: 'ARS', nation: 'ESP', number: 36, height: 71, weight: 154, age: 27, foot: 'right', skin: '#d4a48e', espn: null, starter: false, position: 'ST', role: 'DM',
+    attrs: { pace: 4, finishing: 4, shotPower: 6, dribbling: 6, passing: 9, positioning: 5, heading: 6, size: 4, composure: 9 } },
+  { name: "Noni Madueke", short: "Madueke", team: 'ARS', nation: 'ENG', number: 20, height: 72, weight: 165, age: 24, foot: 'left', skin: '#6e4b39', espn: null, starter: false, position: 'ST', role: 'RW',
+    attrs: { pace: 9, finishing: 6, shotPower: 7, dribbling: 9, passing: 6, positioning: 7, heading: 3, size: 6, composure: 6 } },
 
   // ─── AVL ────────────────────────────────────────────────────────────
   { name: "Nicolas Jackson", short: "Jackson", team: 'AVL', nation: 'SEN', number: 11, height: 74, weight: 181, age: 25, foot: 'right', skin: '#6c4943', espn: 308524, starter: true, position: 'ST', role: 'ST',
@@ -1663,7 +1667,7 @@ export const SOCCER_STRIKERS = ALL_STRIKERS.filter(p => LIVE_CLUBS.has(p.team))
 // club's top three, and up to three more where they've earned it, five more at the very biggest; 2026-11-16 it was all eight). The rest stay in the
 // data above for Career's leagues and the season engine; only the Champions League pool leaves them out.
 const UCL_PICKS = {
-  ARS: ['Bukayo Saka', 'Viktor Gyökeres', 'Martin Ødegaard', 'Declan Rice', 'Kai Havertz', 'Eberechi Eze'],
+  ARS: ['Bukayo Saka', 'Viktor Gyökeres', 'Martin Ødegaard', 'Declan Rice', 'Kai Havertz', 'Eberechi Eze', 'Martín Zubimendi', 'Noni Madueke'],
   AVL: ['Nicolas Jackson', 'John McGinn', 'Amadou Onana'],
   LIV: ['Florian Wirtz', 'Alexander Isak', 'Hugo Ekitiké', 'Dominik Szoboszlai', 'Cody Gakpo', 'Alexis Mac Allister', 'Bradley Barcola', 'Ryan Gravenberch'],
   MCI: ['Erling Haaland', 'Phil Foden', 'Rayan Cherki', 'Jérémy Doku', 'Antoine Semenyo', 'Enzo Fernández'],

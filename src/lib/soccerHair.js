@@ -7,7 +7,7 @@
 export const SKIN_CURL = 100
 export const CURLS = new Set([
   "Caleb Yirenkyi", "Tim Iroegbunam", "Habib Diarra", "Marcus Thuram", "Pablo Rosario", "David Moses",
-  "Breel Embolo", "Bukayo Saka", "Alisson Santana", "Melayro Bogarde", "Édgar Yoel Bárcenas", "Rayan",
+  "Breel Embolo", "Bukayo Saka", "Noni Madueke", "Alisson Santana", "Melayro Bogarde", "Édgar Yoel Bárcenas", "Rayan",
   "Iñaki Williams", "Randal Kolo Muani", "Ibrahima Baldé", "Aboubakary Koïta", "Samuel Adeniran", "José Fajardo",
   "Yusuf Abdurisag", "Mohamed Kanno", "Gaoussou Diarra", "Mohamed-Ali Cho", "Lamine Yamal", "Junior Mwanga",
   "Nestory Irankunda", "Lucas Ferreira", "Orphé Mbina", "Evidence Makgopa", "Igor Paixão", "Désiré Doué",
