@@ -8191,7 +8191,7 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
    P's 0.362-0.502em, the upright ends 0.321em in. */
 .wm-cb, .wm-cp { position: relative; font-style: normal; }
 .wm-cb::after, .wm-cp::after { content: ''; position: absolute; left: .06em; width: .29em; background: var(--wm-bg, #070b0a); pointer-events: none; }
-.wm-cb::after { top: .354em; height: .119em; }
+.wm-cb::after { top: .3525em; height: .119em; }
 .wm-cp::after { top: .3695em; height: .147em; }
 .ag-home { --wm-bg: #080d0c; } .ag-home--bucket { --wm-bg: #0b0806; } .ag-home--soccer { --wm-bg: #08090b; }
 
