@@ -288,10 +288,12 @@ export function make({ v, seed, def }) {
   }
   function advance(t) { g.k++; const n = steps[g.k]; if (n) n.liveAt = t }
   const after = (at, fn) => g.ev.push({ at, fn, done: false })
-  function land(t) {
+  function land(t0) {
+    // (the slam lands when the ball meets the rim: on the ring's close, which is the moment the ball reaches the iron;
+    // a tap a touch early waits for the ball to get there, a touch late slams the ball he's holding on the rim)
+    const t = Math.max(t0, steps[steps.length - 1].T ?? t0)
     g.landed = true; g.tf = t; g.k = steps.length
-    g.fx.push('h:medium')
-    g.nudge.kick(t, D.tier === 'hard' ? 3.4 : D.tier === 'medium' ? 2.8 : 2.3, 0, 1, 110)   // (the hit itself; the roar's comes after)
+    after(t, () => { g.fx.push('h:medium'); g.nudge.kick(g.t, D.tier === 'hard' ? 3.4 : D.tier === 'medium' ? 2.8 : 2.3, 0, 1, 110) })   // (the hit itself; the roar's comes after)
     after(t + 90, () => {
       const quality = steps.reduce((a, s) => a + s.q, 0) / steps.length
       g.quality = quality
@@ -756,11 +758,14 @@ export function draw(ctx, g, view) {
       else theta = thL
     } else if (tau > (S.spin?.[1] ?? 0)) theta = spinEnd(S)
     // the ball: through the rim, off the iron, or out of his hands
-    if (landed && t >= g.tf - 120) {
-      const w = easeIn(clamp((t - (g.tf - 110)) / 110, 0, 1))
+    const finT = g.steps?.[g.steps.length - 1]?.T ?? null
+    // the throw down: the hand takes the ball the last of the way to the rim on the finish ring's clock, so it meets
+    // the iron as the ring closes (that's the moment to tap); after a late tap it's still held there
+    const toRim = finT != null && !g.clank && !g.lost && (landed || g.k === g.steps.length - 1)
+      ? easeIn(clamp((t - (finT - 150)) / 150, 0, 1)) : 0
+    if (landed && t >= g.tf - 150) {
       if (t < g.tf && ball) {
-        // (the hand takes it the last of the way to the rim, wherever it was)
-        ball.blend = w
+        ball.blend = Math.max(toRim, easeIn(clamp((t - (g.tf - 110)) / 110, 0, 1)) * (g.tf > finT ? 1 : 0))
       } else if (t >= g.tf) {
         const a = t - g.tf
         // (thrown down through it: out the bottom of the net in a blink, still going)
@@ -773,6 +778,7 @@ export function draw(ctx, g, view) {
       if (t < g.clank.at) ball = { ...(ball ?? { rx: 20, ry: 110 }), to: iron, f: easeIn(clamp((t - g.clank.from) / Math.max(1, g.clank.at - g.clank.from), 0, 1)) }
       else { ballLoose = { ...freeAt({ x: iron.x, y: iron.y + 0.2, vx: g.clank.front ? 0.0062 : 0.0048, vy: g.clank.front ? 0.0035 : 0.0105, t0: g.clank.at }, t) }; ball = null }
     } else if (g.lost && t >= g.lost.at) ball = { ...(ball ?? { rx: 20, ry: 100 }), lostAt: g.lost.at }
+    else if (toRim > 0 && ball) ball.blend = toRim
   }
   // (the ball off the bounce, before it's in his hands)
   if (S.bounce && (g.p1 == null ? t >= T1 - 470 : tau < 150)) {
