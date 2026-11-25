@@ -67,7 +67,7 @@
 .nb-champ-mvp .fk-logo { filter: drop-shadow(0 0 1px rgba(255,255,255,.85)); }
 
 /* game day */
-.nb-gd { position: fixed; inset: 0; z-index: 1060; overflow-y: auto; background: var(--fk-ink); color: var(--fk-text); padding: calc(var(--safe-top, 0px) + 14px) 16px calc(var(--web-rail, 0px) + 16px); }
+.nb-gd { position: fixed; inset: 0; z-index: 1060; overflow-y: auto; background: var(--fk-ink); color: var(--fk-text); padding: calc(var(--safe-top, 0px) + 14px) var(--fk-gut, 16px) calc(var(--web-rail, 0px) + 16px); }
 .nb-gd > div { display: grid; gap: 14px; max-width: 640px; margin: 0 auto; }
 .nb-gd-live { min-height: 60vh; align-content: center; cursor: pointer; }
 .nb-gd-tail { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 16px; color: #fff; }

@@ -8,12 +8,12 @@
 .fh.ag-screen { display: flex; flex-direction: column; overflow: hidden; background: var(--fk-ink); color: var(--fk-text); padding: var(--safe-top, 0px) 0 var(--web-rail, 0px); --fk-stick: 50px; }
 html.is-app .fh.ag-screen { padding-bottom: calc(var(--app-bottom) - 12px); }
 .fh-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-.fh .fh-body { display: block; padding: 14px 16px 24px; max-width: 760px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.fh .fh-body { display: block; padding: 14px var(--fk-gut, 16px) 24px; max-width: 760px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 .fh .fh-body > .fd, .fh .fh-body > .fh-grid { width: 100%; }
 .fh button { -webkit-tap-highlight-color: transparent; }
 
 /* the header: the team, the year and where the season is, the way out */
-.fh-top { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 0 0 16px; background: var(--fk-steel); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(196,201,208,.4); }
+.fh-top { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 0 0 var(--fk-gut, 16px); background: var(--fk-steel); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(196,201,208,.4); }
 .fh-top-logo { flex: none; display: grid; place-items: center; width: 44px; height: 44px; background: var(--tc); box-shadow: inset 0 -3px 0 var(--tc2); }
 .fh-top-txt { flex: 1; min-width: 0; display: grid; gap: 3px; line-height: 1; }
 .fh-top-txt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-d); font-weight: 400; font-size: 23px; letter-spacing: .3px; text-transform: uppercase; color: #fff; }
@@ -254,7 +254,7 @@ html.bap-reduce-motion .fg-play { animation: none; }
 /* (a long news tag under the final, an injury or a signing, wraps instead of widening the page) */
 .fg-in > * { min-width: 0; }
 .fg-tags .fk-tag { white-space: normal; line-height: 1.3; }
-@media (max-width: 420px) { .fh-top { gap: 10px; padding-left: 12px; } .fh-top-txt b { font-size: 20px; } .fh-x { padding: 0 12px; } }
+@media (max-width: 420px) { .fh-top { gap: 10px; } .fh-top-txt b { font-size: 20px; } .fh-x { padding: 0 12px; } }
 /* (a phone: the four tabs keep off the screen's edges) */
 @media (max-width: 520px) { .fh-tabs-in { padding: 0 8px; } .fh-tabs button { padding: 0 2px; font-size: 16px; } }
 /* the champions' slab: the line under the name wraps beside the logo, never under it or cut ("BEAT THE BUCCANEERS 31-24") */
