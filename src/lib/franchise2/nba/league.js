@@ -78,10 +78,11 @@ export const photoOf = n => (NBA_HEADSHOTS[n] ? `${HEADSHOT_BASE}/nba/${NBA_HEAD
 const ageIn = (name, year) => (BIRTH_NBA[name] ? year - BIRTH_NBA[name] : null)
 
 // his ceiling: the young have room to grow, a man past 27 is what he is
-// (aging.js seedPotential's numbers: room x 0.6-2.0 a year; more and the league's stars multiply over ten seasons)
+// (aging.js seedPotential's numbers: room x 0.35-1.5 a year. At 0.6-2.0 a third of the men under 23 had an 85+ ceiling
+// and the league's 85+ men went from 43 to 70 in five seasons; aging.js's header has the balance and its check)
 export function peakFor(R, o, ag) {
   const room = Math.max(0, 27 - ag)
-  return clamp(40, 99, Math.round(o + room * (0.6 + R.u() * 1.4) + R.n() * 2.5))
+  return clamp(40, 99, Math.round(o + room * (0.35 + R.u() * 1.15) + R.n() * 2.5))
 }
 const servedFrom = ag => clamp(0, 20, ag - 20)
 
