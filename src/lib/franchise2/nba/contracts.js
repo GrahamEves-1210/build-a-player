@@ -824,6 +824,9 @@ export function cutCost(F, p, { stretch = false } = {}) {
   const day = dayOf(F)
   if (p.ng && (F.phase === 'off' || day < (F.days ?? 170) * 0.45)) return none
   const rest = guaranteedOf(F, p)
+  // (a veteran's one-year minimum counts on the cap as the two-year man's minimum, on the roster or waived: the league
+  // pays the difference, so waiving him doesn't raise the payroll)
+  if (p.mh && rest.length) rest[0] = Math.min(rest[0], hitOf(p, capYear(F), capYear(F)) || rest[0])
   const total = r1(rest.reduce((a, v) => a + v, 0))
   if (!rest.length || total <= 0) return none
   if (!stretch) return { now: rest[0] ?? 0, per: r1(total / rest.length), total, years: rest.length }
