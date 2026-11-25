@@ -34,6 +34,14 @@ const moneyText = v => `$${v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10).t
 const last = n => String(n).split(' ').slice(-1)[0]
 const possessive = n => `${n}${/s$/i.test(n) ? '’' : '’s'}`
 
+// CLOSE TO EVEN: the finder never shows a deal where the other team gets less than this share of what it gives, by
+// the league's chart (the gauge). A club would take less for a veteran it's moving on from, and pay more for a man it
+// needs; it doesn't open the phone call there, and the calls the league makes itself hold to the same kind of line
+// (trades.js makeOffer). Measured with a GM who takes every finder deal the gauge says he wins, three seasons
+// (scripts/franchise2/finder-check.mjs): no line, he nets 24% on what he sends; 0.8, 17%; 0.9, 7-9%, inside the 12%
+// the trade checks hold a GM working the phones to. He can still haggle past it in the trade screen, a call at a time.
+export const FIND_EVEN = 0.9
+
 // the spots the finder searches (the depth chart's rooms)
 export const FIND_GROUPS = ['qb', 'rb', 'wr', 'te', 'ol', 'edge', 'dt', 'lb', 'cb', 's', 'k']
 
@@ -53,7 +61,8 @@ function topUp(F, s, give, base, sit, fairIn) {
   const baseGet = pkg(tm.map(p => valueOf(F, p)))
   const out = []
   for (const mode of ['own', 'fair']) {
-    let room = mode === 'own' ? ownRoom(F, s, side.gain, side.out) : Math.min(fairIn - 2, fairIn / 1.05) - baseGet
+    // (and never past close to even: FIND_EVEN, in the values this try counts the picks at)
+    let room = Math.min(mode === 'own' ? ownRoom(F, s, side.gain, side.out) : Math.min(fairIn - 2, fairIn / 1.05) - baseGet, (fairIn / FIND_EVEN - baseGet) * (mode === 'own' ? pickMod(sit) : 1))
     for (let t = 0; t < 3; t++) {
       const got = room > 0 ? picksFor(F, s, room, mode === 'own' ? sit : 'mid') : null
       const get = { pl: [...base.pl], pk: got?.ks ?? [] }
@@ -88,14 +97,14 @@ function offerFrom(F, s, give, gm, fairIn) {
   if (!d0.ok) return { ok: false, s, why: 'low' }
   const sit = sitOf(F, s)
   const mk = (x, k) => ({ s, give, get: x.get, g: gauge(F, s, give, x.get), cap: x.c.cap, cut: x.c.cut ?? [], k })
-  const bestOf = list => list.sort((a, b) => b.g.get - a.g.get)[0] ?? null
+  const bestOf = list => list.filter(x => x.g.give >= x.g.get * FIND_EVEN).sort((a, b) => b.g.get - a.g.get)[0] ?? null
   const picks = bestOf(topUp(F, s, give, NONE(), sit, fairIn).map(x => mk(x, 'picks')))
   const gone = new Set(give.pl)
   const withMan = []
   for (const p of helpers(F, s, gone)) {
     if (withMan.length >= 2) break
     // (a man it gives for this: by its own book or by the chart, whichever lets him go)
-    if (outValue(F, s, p, sit) > d0.side.in && valueOf(F, p) > fairIn) continue
+    if ((outValue(F, s, p, sit) > d0.side.in && valueOf(F, p) > fairIn) || valueOf(F, p) > fairIn / FIND_EVEN) continue
     const base = { pl: [p.i], pk: [] }
     const c = checkTrade(F, s, give, base)
     const alone = c.ok && decide(F, s, give, base).ok ? [{ get: base, c }] : []
@@ -202,7 +211,7 @@ export function priceOf(F, s, id) {
     must = mine.filter(m => m.p === 'qb' && m.o >= p.o - 3).sort((a, b) => valueOf(F, a) - valueOf(F, b))[0] ?? null
     if (!must) return no('qb', sayOf(F, s, d0))
   }
-  const top = outValue(F, s, p, sit), lv = valueOf(F, p), need = marginOf(F, s, top) * 1.02
+  const top = outValue(F, s, p, sit), lv = valueOf(F, p), need = marginOf(F, s, top)
   const gone = new Set([id])
   // what the GM can send: his picks; the men behind his starters, and the starter the new man would sit down
   const on = new Set(Object.values(startersOf(F, F.team)).map(x => x.i))
@@ -228,7 +237,7 @@ export function priceOf(F, s, id) {
     // (a front-line player goes only for a real piece back: trades.js decide)
     if (top >= 120 && Math.max(...all.map(x => x.tw)) < top * 0.5) return
     const own = tw - top - Math.max(0, pl.length - 1) * 8 >= need, fair = lw >= lv + Math.max(2, lv * 0.05)
-    if (own || fair) combos.push({ all, lw, n: all.length })
+    if ((own || fair) && lw >= lv * FIND_EVEN) combos.push({ all, lw, n: all.length })
   }
   if (forced.length) add([])
   for (let i = 0; i < A.length; i++) {
@@ -248,7 +257,16 @@ export function priceOf(F, s, id) {
     if (!chk.ok) continue
     tries++
     if (!decide(F, s, give, get).ok) continue
-    return { ok: true, s, p, sit, give, get, g: gauge(F, s, give, get), cap: chk.cap, cut: chk.cut ?? [] }
+    // (nothing in it for nothing: any piece the team would take it without comes out, the least valuable first)
+    let best = { give, chk }
+    for (const x of [...c.all].sort((a, b) => a.lw - b.lw)) {
+      if (x === forced[0]) continue
+      const less = { pl: best.give.pl.filter(v => x.k !== 'pl' || v !== x.v), pk: best.give.pk.filter(v => x.k !== 'pk' || v !== x.v) }
+      if (less.pl.length + less.pk.length === best.give.pl.length + best.give.pk.length || !(less.pl.length + less.pk.length)) continue
+      const chk2 = checkTrade(F, s, less, get)
+      if (chk2.ok && decide(F, s, less, get).ok && gauge(F, s, less, get).give >= lv * FIND_EVEN) best = { give: less, chk: chk2 }
+    }
+    return { ok: true, s, p, sit, give: best.give, get, g: gauge(F, s, best.give, get), cap: best.chk.cap, cut: best.chk.cut ?? [] }
   }
   if (tight) return no('ucap', `The ${me} are ${moneyText(Math.max(0.1, -(probe.cap?.after ?? 0)))} short of the cap room for ${last(p.n)}.`)
   if (top >= 120 && !A.some(x => x.tw >= top * 0.5)) return no('star', sayOf(F, s, { why: 'star', who: p }))
