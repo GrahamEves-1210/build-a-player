@@ -49,14 +49,15 @@ export default function NbaTeam({ F, act, owner, view, setView }) {
 
 export function CapBar({ F, s = F.team }) {
   const c = CAP_SIM.capSheet(F, s)
-  const holds = F.phase === 'off' ? c.pay - CAP_SIM.payroll(F, s, CAP_SIM.capYear(F), { holds: false }) : 0
+  // (the payroll is salaries; the summer's cap holds count against cap room only, never the tax or the aprons)
+  const holds = F.phase === 'off' && !(F.noCap && s === F.team) ? (c.holds ?? []).reduce((a, h) => a + h.$, 0) : 0
   const top = Math.max(c.a2 * 1.06, c.pay * 1.03)
   const at = v => `${Math.min(100, (v / top) * 100)}%`
   const OVER = { under: `${money(c.room)} in cap room`, cap: 'Over the cap', tax: `In the tax · ${money(c.bill)} luxury tax`, a1: `Over the first apron · ${money(c.bill)} luxury tax`, a2: `Over the second apron · ${money(c.bill)} luxury tax` }
   return (
     <section className={`nb-cap is-${c.over}`}>
       <div className="nb-cap-h"><b>{money(c.pay)}</b><span>{F.noCap && s === F.team ? 'No salary cap' : OVER[c.over]}</span></div>
-      {holds > 0.05 && <small className="nb-cap-holds">Includes {money(holds)} in cap holds for unsigned free agents</small>}
+      {holds > 0.05 && <small className="nb-cap-holds">Plus {money(holds)} in cap holds for unsigned free agents: they count against cap room only, not the tax or the aprons</small>}
       <div className="nb-cap-bar" aria-hidden="true">
         <i className="nb-cap-fill" style={{ width: at(c.pay) }} />
         {[['CAP', c.cap], ['TAX', c.tax], ['', c.a1], ['', c.a2]].map(([k, v], i) => <em key={i} style={{ left: at(v) }}>{k && <small>{k}</small>}</em>)}

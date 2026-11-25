@@ -9,13 +9,16 @@
 //   rookie scale and the tax brackets grow with the cap, as the CBA indexes them.
 //
 // WHAT COUNTS (payroll): every standard contract's cap hit (a one-year minimum deal for a man with 3+ years counts at
-//   the two-year minimum, the league reimburses the rest), plus dead money (waived salary, stretched or not), plus in
-//   the offseason the cap holds: his own free agents not yet renounced (Bird rights), his unsigned first-round picks,
-//   and an empty-roster charge (the rookie minimum for every spot under 12). Two-way deals count for nothing.
+//   the two-year minimum, the league reimburses the rest), plus dead money (waived salary, stretched or not). Two-way
+//   deals count for nothing. That is the number the luxury tax, the aprons, the hard caps and an owner's ceiling read.
+// CAP ROOM ONLY (capPayroll): in the offseason a team's room under the cap is also charged its cap holds: its own
+//   free agents not yet renounced (Bird rights) and an empty-roster charge (the rookie minimum for every spot under
+//   12). Holds are not salary: they never count toward the tax, an apron or a hard cap (a team re-signs its own men
+//   with Bird rights over the cap, whatever the holds of the others add up to).
 //
 // THE LINES (capSheet over): under the cap · over the cap · over the tax · over the first apron · over the second.
-//   Over the first apron: no bi-annual, no non-taxpayer MLE (the taxpayer MLE only), 110% salary matching in trades
-//   (as the owner's brief has it), no sign-and-trade acquisitions.
+//   Over the first apron: no bi-annual, no non-taxpayer MLE (the taxpayer MLE only), 100% salary matching in trades
+//   (it can't take back more than it sends), no sign-and-trade acquisitions.
 //   Over the second apron: no taxpayer MLE either (the minimum only), no aggregating salaries in a trade, no cash, its
 //   first-round pick seven years out is frozen, and 100% matching.
 //   Hard caps: using the non-taxpayer MLE or the bi-annual hard-caps a team at the first apron for the league year;
@@ -174,7 +177,9 @@ export const capYear = F => (F?.phase === 'off' && F.sed === F.year ? F.year + 1
 export const standardOf = team => (team?.r ?? []).filter(p => !p.tw)
 export const twoWaysOf = team => (team?.r ?? []).filter(p => p.tw)
 
-export function payroll(F, short, year = capYear(F), { holds = true } = {}) {
+// salaries and dead money: what the tax, the aprons, the hard caps and the owner's ceiling read.
+// { holds: true }: with what counts only against cap room in the offseason (the cap holds, the empty-roster charges)
+export function payroll(F, short, year = capYear(F), { holds = false } = {}) {
   const team = F?.teams?.[short]
   if (!team) return 0
   const cy = capYear(F)
@@ -192,6 +197,8 @@ export function payroll(F, short, year = capYear(F), { holds = true } = {}) {
   }
   return r1(pay)
 }
+// the payroll cap room is counted from: salaries, dead money, the cap holds and the empty-roster charges
+export const capPayroll = (F, short, year = capYear(F)) => payroll(F, short, year, { holds: true })
 
 export const OVER_TEXT = { under: 'UNDER THE CAP', cap: 'OVER THE CAP', tax: 'IN THE TAX', a1: 'OVER THE FIRST APRON', a2: 'OVER THE SECOND APRON' }
 export function overOf(pay, year) {
@@ -202,19 +209,23 @@ export function overOf(pay, year) {
   return 'under'
 }
 export const NO_CAP_ROOM = 999
-// { pay, cap, tax, a1, a2, room (under the cap; 0 over it), over, bill (the tax this payroll would cost), repeater,
-//   toTax, toA1, toA2 (room under each line), year, holds, dead }
+// { pay (salaries and dead money: the tax, the aprons), capPay (pay with the cap holds: cap room only), hold (the
+//   holds and empty-roster charges in capPay), cap, tax, a1, a2, room (under the cap, holds counted; 0 over it), over
+//   (the line the salaries sit past; 'cap' when only the holds take it over the cap), bill (the tax this payroll would
+//   cost), repeater, toTax, toA1, toA2 (room under each line), year, holds, dead }
 export function capSheet(F, short = F?.team, year = capYear(F)) {
   const team = F?.teams?.[short]
   const pay = payroll(F, short, year)
+  const capPay = capPayroll(F, short, year)
   const cap = capOf(year), tax = taxOf(year), a1 = apron1Of(year), a2 = apron2Of(year)
   const rep = isRepeater(team, year)
   const free = F?.noCap && short === F.team
-  const over = free ? 'under' : overOf(pay, year)
+  const o = overOf(pay, year)
+  const over = free ? 'under' : o === 'under' && capPay > exact(year, 0) ? 'cap' : o
   const bill = free ? 0 : taxBill(pay - exact(year, 1), year, rep)
   return {
-    year, pay, cap, tax, a1, a2, over, bill, repeater: rep,
-    room: free ? NO_CAP_ROOM : r1(Math.max(0, exact(year, 0) - pay)),
+    year, pay, capPay, hold: r1(capPay - pay), cap, tax, a1, a2, over, bill, repeater: rep,
+    room: free ? NO_CAP_ROOM : r1(Math.max(0, exact(year, 0) - capPay)),
     toTax: r1(exact(year, 1) - pay), toA1: r1(exact(year, 2) - pay), toA2: r1(exact(year, 3) - pay),
     holds: holdsOf(F, short, year), dead: r1((team?.dead ?? []).reduce((a, d) => a + deadIn(d, year, capYear(F)), 0)), free: !!free,
   }
@@ -241,7 +252,7 @@ export function assessTax(F, year = F.year) {
   for (const s of Object.keys(F.teams ?? {})) {
     if (F.noCap && s === F.team) continue
     const team = F.teams[s]
-    const pay = payroll(F, s, year, { holds: false })
+    const pay = payroll(F, s, year)
     const over = r1(pay - exact(year, 1))
     if (over > 0) {
       const rep = isRepeater(team, year)
@@ -249,8 +260,10 @@ export function assessTax(F, year = F.year) {
       team.txh = [...taxYearsOf(team).filter(y => y >= year - 5 && y !== year), year]
       out.push({ s, pay, over, bill, repeater: rep })
     }
+    // (the seasons it finished past the second apron: a front office doesn't stay there two years running)
+    if (pay > exact(year, 3)) team.a2h = [...(team.a2h ?? []).filter(y => y >= year - 3 && y !== year), year]
   }
-  const short = Object.keys(F.teams ?? {}).map(s => ({ s, $: r1(floorOf(year) - payroll(F, s, year, { holds: false })) })).filter(x => x.$ > 0)
+  const short = Object.keys(F.teams ?? {}).map(s => ({ s, $: r1(floorOf(year) - payroll(F, s, year)) })).filter(x => x.$ > 0)
   const pot = out.reduce((a, x) => a + x.bill, 0)
   const under = Object.keys(F.teams ?? {}).filter(s => !out.some(x => x.s === s))
   const share = under.length ? r1(pot * 0.5 / under.length) : 0

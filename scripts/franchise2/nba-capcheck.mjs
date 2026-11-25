@@ -48,11 +48,14 @@ const fa = F => [...F.fa].filter(p => p.fr !== 'BOS' && p.fr !== T && !p.rfa && 
   const r3 = C.canSign(H, T, fa(H)[2], { $: CP.excOf('nt', y), y: 3, r: 0.05 })
   ok(r3.ok && r3.via === 'mle', '#7 over the cap with no room used: the non-taxpayer MLE', JSON.stringify(r3))
   // (just under the first apron: the NT-MLE would pass it; the message says so; the taxpayer MLE fits)
-  const J = clone(F0); J.teams[T].exc = null; K.excFor(J, T); setPay(J, T, C.apron1Of(y) - 5)
+  // (a roster of 13: an exception's hard cap has to leave room for the minimum deals a 14-man roster still needs)
+  const J = clone(F0); J.teams[T].exc = null; K.excFor(J, T)
+  for (const x of [...J.fa].filter(x => !x.fr && !x.wvb).sort((a, b) => a.o - b.o)) { if (J.teams[T].r.filter(q => !q.tw).length >= 13) break; C.signMan(J, T, x, { $: C.minOf(x.ys ?? 0, y), y: 1, r: 0 }) }
+  setPay(J, T, C.apron1Of(y) - 5)
   const r4 = C.canSign(J, T, fa(J)[2], { $: CP.excOf('nt', y), y: 3, r: 0.05 }), r5 = C.canSign(J, T, fa(J)[2], { $: CP.excOf('tp', y), y: 2, r: 0 })
   ok(!r4.ok && /first apron/.test(r4.why ?? '') && r5.ok && r5.via === 'tmle', '#7 the NT-MLE past the first apron is refused for the apron (hard cap), the taxpayer MLE fits', `${r4.why} / ${JSON.stringify(r5)}`)
   // (a signing with room sets the flag, then the room MLE is all that's left)
-  const L = clone(F0); for (const x of L.fa.filter(x => x.fr === T)) C.renounce(L, T, x.i); L.teams[T].exc = null; K.excFor(L, T); setPay(L, T, C.capOf(y) - 25)
+  const L = clone(F0); for (const x of L.fa.filter(x => x.fr === T)) C.renounce(L, T, x.i); L.teams[T].exc = null; K.excFor(L, T); setPay(L, T, C.capOf(y) - 25 - (CP.capPayroll(L, T) - C.payroll(L, T)))   // ($25M of room, the empty-roster charges counted)
   const q = fa(L)[1]
   const r6 = C.signMan(L, T, q, { $: 20, y: 2, r: 0 })
   ok(r6.via === 'room' && L.teams[T].exc.room === 1 && K.mleFor(L, T)?.k === 'room', '#7 a team that signs with its room gets the room MLE', `${JSON.stringify(r6)} ${JSON.stringify(K.mleFor(L, T))}`)
@@ -161,6 +164,7 @@ const fa = F => [...F.fa].filter(p => p.fr !== 'BOS' && p.fr !== T && !p.rfa && 
 {
   const F = clone(F0)
   const mine = F.fa.find(p => p.fr === 'BOS' && p.rfa) ?? (() => { const p = fa(F)[5]; p.fr = 'BOS'; p.rfa = 1; p.qo = 5; p.hy = y; p.bird = 3; p.$l = 4; return p })()
+  setPay(F, 'BOS', C.taxOf(y) - 20)   // (room under the owner's ceiling to match: #43 is the case where there isn't)
   F.rfq = [{ i: mine.i, s: 'NYK', d: { $: 12, y: 3, r: 0.05 } }]
   const r = N.signFA(F, mine.i, { $: 20, y: 4 })
   const c = C.canSign(F, 'BOS', mine, { $: 20, y: 4, r: 0 })
