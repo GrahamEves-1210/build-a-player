@@ -228,7 +228,8 @@ button.cr-devnote--go { width: 100%; min-height: 44px; text-align: left; cursor:
 .cr-lt .sq-table-head { font-size: 13px; }
 .cr-lt .sq-table-row { font-size: 14px; }
 .cr-lt-crest { width: 20px; height: 20px; object-fit: contain; flex: none; }
-.cr-lt .cr-club-init.cr-lt-crest { font-size: 9px; }
+/* (a club with no crest on file: a plain roundel beside its name, no three-letter code at 9px) */
+.cr-lt .cr-club-init.cr-lt-crest { font-size: 0; border-width: 1px; background: rgba(255,255,255,.08); }
 .cr-lt .sq-table-row.is-ucl > span:first-child { box-shadow: inset 3px 0 0 #3b82f6; }
 .cr-lt .sq-table-row.is-uel > span:first-child { box-shadow: inset 3px 0 0 #f97316; }
 .cr-lt .sq-table-row.is-uecl > span:first-child { box-shadow: inset 3px 0 0 #22c55e; }

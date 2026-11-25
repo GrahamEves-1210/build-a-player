@@ -2264,8 +2264,10 @@ export const ordinalOf = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['t
 export const seasonOf = y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`
 // a club's crest (a side outside the data has none: its initials)
 export function ClubLogo({ S, short, extra, className = '' }) {
-  if (extra) return <span className={`cr-club-init ${className}`}>{String(short ?? '?').slice(0, 3)}</span>
-  return <img src={S.logo(short)} alt="" className={className} />
+  // (a crest that isn't on file falls back to the initials too, never a broken image)
+  const [bad, setBad] = useState(null)
+  if (extra || bad === short) return <span className={`cr-club-init ${className}`}>{String(short ?? '?').slice(0, 3)}</span>
+  return <img src={S.logo(short)} alt="" className={className} onError={() => setBad(short)} />
 }
 // a tie's score: one match, or both legs and the aggregate, and penalties when it went that far
 export const tieText = x => {
