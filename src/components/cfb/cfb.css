@@ -100,8 +100,8 @@ html:not(.is-app) .cfb-screen { padding-bottom: calc(var(--web-rail, 0px) + 28px
 
 @media (min-width: 769px) {
   .cfb-entry .ag-screen-head, .cfb-entry .ag-screen-body { max-width: 860px; margin-left: auto; margin-right: auto; width: 100%; }
-  .cfb-pos-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .cfb-pos { height: 300px; }
+  .cfb-pos-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }   /* (QB WR RB, then TE DL DB: two rows, so no card is squeezed; owner 11-25) */
+  .cfb-pos { height: 232px; }
   .cfb-pos-txt b { font-size: 46px; }
   .cfb-conf-chip { min-width: 25%; }
 }
