@@ -243,12 +243,10 @@ const Art = ({ src, cls }) => <img className={`ag-art ${cls}`} src={`/modes/${sr
 // College Football, a football mode: first in MORE WAYS TO PLAY, on its own row, in NCAA blue. A few
 // school logos only (lib/cfbLive.js): the college rosters never load on Home. The line is where the last
 // season ended, read off this device (components/cfb/cfbShared.js keeps it)
-const cfbLine = () => 'All FBS schools · Spin by conference'   // (always: owner 11-25)
 function CFBCard({ onClick, small = false }) {
-  const [line] = useState(cfbLine)
   return (
     <button className={`ag-way ag-mc ag-mc--cfb${small ? ' ag-mc--cfb-sm' : ''}`} onClick={onClick}>
-      <span className="ag-mc-head"><b>COLLEGE FOOTBALL</b>{line && <small>{line}</small>}</span>
+      <span className="ag-mc-head"><b>COLLEGE FOOTBALL</b><small>All FBS schools<span className="ag-cfb-l2"><i> · </i>Spin by conference</span></small></span>
       <span className="ag-cfb-band" aria-hidden="true">
         {(small ? CFB_CARD_SCHOOLS.slice(0, 4) : CFB_CARD_SCHOOLS).map(s => <img key={s} src={`/logos/cfb/${s}.png`} alt="" width="56" height="56" loading="lazy" decoding="async" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />)}
       </span>

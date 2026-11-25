@@ -8109,10 +8109,19 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 /* Phone Home: COLLEGE FOOTBALL on one line on its half-width card (owner 11-25) */
-@media (max-width: 520px) { .ag-mc--cfb .ag-mc-head b { white-space: nowrap; font-size: 27px !important; letter-spacing: 0 !important; } }
-@media (max-width: 370px) { .ag-mc--cfb .ag-mc-head b { font-size: 25px !important; } }
+@media (max-width: 520px) { .ag-mc--cfb:not(.ag-mc--cbb) .ag-mc-head b { white-space: nowrap; font-size: 27px !important; letter-spacing: 0 !important; } .ag-mc--cbb .ag-mc-head b { white-space: nowrap; font-size: 22px !important; letter-spacing: 0 !important; } }
+@media (max-width: 370px) { .ag-mc--cfb:not(.ag-mc--cbb) .ag-mc-head b { font-size: 25px !important; } .ag-mc--cbb .ag-mc-head b { font-size: 20px !important; } }
 /* Home's position bar (owner 11-25): no lines between the positions, no line along its top, and the picked block
    rounded, inset a little so its corners show */
 .ag-stage .ag-positions { border-top: 0 !important; }
 .ag-stage .ag-pos, .ag-stage .ag-side-panel > .ag-pos { border-left: 0 !important; }
-.ag-stage .ag-positions::before, .ag-side-panel::before { border-radius: 8px; background-clip: content-box; padding: 5px; box-sizing: border-box; }
+.ag-stage .ag-positions::before, .ag-side-panel::before { border-radius: 12px; background-clip: content-box; padding: 3px; box-sizing: border-box; }
+/* (hover: the same rounded block, faint, never a square tint) */
+.ag-stage .ag-pos { background: none !important; }
+.ag-stage .ag-pos::after { content: ''; position: absolute; inset: 3px; z-index: -1; border-radius: 12px; background: transparent; transition: background .15s ease; pointer-events: none; }
+@media (hover: hover) { .ag-stage .ag-pos:not(.ag-pos--on):not(.ag-pos--locked):hover::after { background: rgba(255,255,255,.08); } }
+/* College Football's line: "Spin by conference" on a line of its own on a phone */
+@media (max-width: 520px) { .ag-cfb-l2 { display: block; } .ag-cfb-l2 i { display: none; } }
+.ag-cfb-l2 i { font-style: normal; }
+/* NEW / POPULAR on Home's cards: the sport's own colour, not gold (owner 11-25) */
+.ag-home .ag-mc-tag:not(.ag-mc-tag--soon) { background: var(--hm-a); color: var(--hm-on); }
