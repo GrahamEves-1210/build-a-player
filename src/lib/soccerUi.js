@@ -6,7 +6,9 @@
 // PLACEHOLDER: the owner draws soccer's own silhouette. Until then the build screen uses the
 // basketball T-pose (same image, same overlay). Swap the image here when the art lands; the
 // dots and the coloured kit parts below ride on the basketball figure's points until then.
-export const SOCCER_SILHOUETTE = { src: '/basketballsilhouette.png', headless: '/basketballsilhouetteheadless.png', placeholder: 'bucket' }
+// the striker's own art (2026-11-24): through the ball, 1024x1536; its parts are src/assets/st-figure-color.svg and
+// components/StrikerFigureOverlay.jsx colours them. (It took the basketball figure's place: `striker` says so)
+export const SOCCER_SILHOUETTE = { src: '/st-silhouette.webp', headless: '/st-silhouette.webp', striker: true, w: 1024, h: 1536 }
 
 // Each striker trait takes one of the basketball figure's spots and body parts:
 // heading on the head (and his face), composure on the shirt (crest, name and number),

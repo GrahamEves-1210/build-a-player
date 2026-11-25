@@ -44,6 +44,7 @@ import KFigureOverlay from './KFigureOverlay'
 import { useFigureFace, usesDrawnHead } from '../lib/useFigureFace'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { SOCCER_SILHOUETTE, SOCCER_AS_BUCKET, soccerAsBucketBuild } from '../lib/soccerUi'
+import StrikerFigureOverlay, { ST_FIG_W, ST_FIG_H } from './StrikerFigureOverlay'
 import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
 
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
@@ -389,6 +390,23 @@ const BUCKET_ZONES = [
   { type: 'bounce',          ax: 390, ay:  820, side: 'left',  cy: 0.87 },
 ]
 
+// The striker's own figure (lib/soccerUi.js SOCCER_SILHOUETTE.striker; the parts: src/assets/st-figure-color.svg).
+// The cards keep the basketball figure's sides and heights (the build arrives under the basketball keys); each dot
+// sits on the striker: Heading on his head, Composure on the shirt, Shot Power on the trailing boot, Pace on the
+// sock of the leg on the ball; the four that colour nothing point at the arm, the chest, the shorts and the knee,
+// top to bottom so no two lines cross.
+const STRIKER_ZONES = [
+  { type: 'basketballIQ',    ax: 690, ay:  135, side: 'left',  cy: 0.015 },
+  { type: 'passing',         ax: 500, ay:  430, side: 'left',  cy: 0.360 },
+  { type: 'clutch',          ax: 590, ay:  610, side: 'left',  cy: 0.690 },
+  { type: 'bounce',          ax:  90, ay:  868, side: 'left',  cy: 0.87 },
+  { type: 'size',            ax: 410, ay:  765, side: 'right', cy: 0.044, noDot: true },
+  { type: 'handles',         ax: 700, ay:  430, side: 'right', cy: 0.360 },
+  { type: 'finishing',       ax: 745, ay:  840, side: 'right', cy: 0.526 },
+  { type: 'perimeterDefense',ax: 770, ay:  985, side: 'right', cy: 0.690 },
+  { type: 'speed',           ax: 800, ay: 1180, side: 'right', cy: 0.87 },
+]
+
 const BUCKET_BIG_ZONES = [
   { type: 'basketballIQ',   ax: 415, ay:   -5, side: 'left',  cy: 0.015 },
   { type: 'clutch',         ax: 440, ay:  180, side: 'left',  cy: 0.690 },
@@ -450,9 +468,10 @@ function BaseballSilhouette(props) {
 function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isK = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
-  const figW   = isBucket ? BUCKET_FIG_W : isK ? K_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
-  const zones  = isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
+  const isStriker = isSoccer && !isBaseball && !!SOCCER_SILHOUETTE.striker   // the striker's own art, on the basketball figure's layout
+  const figW   = isStriker ? ST_FIG_W : isBucket ? BUCKET_FIG_W : isK ? K_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isStriker ? ST_FIG_H : isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const zones  = isStriker ? STRIKER_ZONES : isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -511,7 +530,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   // Headshot only from basketballIQ slot for bucket builds
   // (the app shows no photos: a drawn face in his skin tone instead, lib/useFigureFace.js)
   const drawnHead = useFigureFace(isBucket ? build['basketballIQ'] : null)
-  const bucketPhoto = isBucket ? (usesDrawnHead(build['basketballIQ']?.photo) ? drawnHead : (build['basketballIQ']?.photo || null)) : null
+  const bucketPhoto = isStriker ? null : isBucket ? (usesDrawnHead(build['basketballIQ']?.photo) ? drawnHead : (build['basketballIQ']?.photo || null)) : null
   // the figure scales that make it fill the build screen; a model fits its box as-is
   const appBucket = (IS_APP || APP_LOOK) && isBucket && isMobile && !modelOnly
   // (the model keeps the build screen's bucket scale: the jersey overlay and the face
@@ -579,7 +598,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   const appRows = useMemo(() => {
     if (!appBucket) return null
     const rows = {}, top = new Set()
-    const arm = z => (z.side === 'left' ? z.ax < 300 : z.ax > BUCKET_FIG_W - 300)
+    const arm = z => !isStriker && (z.side === 'left' ? z.ax < 300 : z.ax > BUCKET_FIG_W - 300)   // (the striker has no arm out to the side)
     for (const side of ['left', 'right']) {
       const out = z => (side === 'left' ? z.ax : -z.ax)   // smaller = further out
       // a trait with no dot (Size: the height and wingspan read off the whole body) takes
@@ -900,7 +919,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             : undefined
           }
         />
-        {isBucket && (appBucket
+        {isStriker && <StrikerFigureOverlay build={build} logoDir={logoDirProp} scale={bucketScale} />}
+        {isBucket && !isStriker && (appBucket
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
           // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
           // the silhouette png (z 4) and hide the jersey colours)
