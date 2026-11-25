@@ -81,7 +81,7 @@ export function make({ v, seed, cast = null, situation = null }) {
       if (k.tick(g.t) && !g.shot) strike()
       if (g.shot && !g.res) {
         const s = g.shot, a = g.t - s.at
-        if (s.save?.saved && a >= s.save.f * s.T) resolve('saved', s.save.held ? (s.chip ? 'He stood up and caught the dink' : (s.save.stretch ?? 0) < 0.5 ? 'Too close to him: he held it' : 'He went the right way and held it') : g.read ? 'He read it and got there' : 'Guessed right and got a hand to it')
+        if (s.save?.saved && a >= s.save.f * s.T) resolve('saved', s.save.held ? (s.chip ? 'He stood up and caught the dink' : (s.save.stretch ?? 0) < 0.5 ? 'Too close to him: he held it' : g.kdive == null ? 'He stood up, got across and held it' : 'He went the right way and held it') : g.kdive == null ? 'He stood up and got a hand to it' : g.read ? 'He read it and got there' : 'Guessed right and got a hand to it')
         else if (a >= s.T) {
           if (s.over) resolve('over', 'Leaned back: over the bar')
           else if (s.wide) resolve('wide', Math.abs(s.to.x) > POST ? 'Went for the corner and missed it' : 'Hit the post')
