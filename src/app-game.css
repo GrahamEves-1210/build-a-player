@@ -8096,3 +8096,9 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
    bar doesn't drop a pixel while it slides and snap back after) */
 .ag-side-track, .ag-side-panel::before { will-change: transform; backface-visibility: hidden; }
 .ag-stage .ag-positions { transform: translateZ(0); }
+/* Phone Home: the sport bar's words and balls a size up (owner 11-25) */
+@media (max-width: 520px) {
+  .ag-home .ag-sport.ag-sport--four .ag-sport-btn:not(.is-soon) .ag-sport-txt b { font-size: 17px !important; letter-spacing: .3px !important; }
+  .ag-home .ag-sport.ag-sport--four .ag-sport-ico, .ag-home .ag-sport.ag-sport--four .ag-sport-ico svg { width: 21px; height: 21px; }
+  .ag-home .ag-sport .ag-sport-btn.is-soon .ag-sport-txt b { font-size: 14px !important; }
+}
