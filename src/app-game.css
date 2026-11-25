@@ -8205,3 +8205,6 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 .bap-wm .wm-d { position: relative; z-index: 2; font-style: normal; }
 .bap-wm em > .wm-g1 { position: relative; z-index: 1; }
 @media (min-width: 769px) { .bap-wm em > .wm-g1 { margin-left: calc(-.033em - .3px); } }
+/* the soccer build screen's striker, the whole figure (the art and its colour layers together) a little darker (owner 11-25) */
+.sil-wrap--st > div:has(> .sil-img) { filter: brightness(.82); }
+.ag-banner small, .ag-banner b { text-align: center; }   /* (a two-line word, BALLON D'ORS, centred in its banner) */
