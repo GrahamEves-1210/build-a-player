@@ -88,7 +88,7 @@ const Group = ({ ids, fill, opacity, mask }) => (
   </g>
 )
 
-const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }
+const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none', opacity: 0.9 }   // (every layer 10% lighter, owner 11-25)
 const ART = '/st-silhouette.webp'
 
 // the face's features, on the art's own face (art pixels), kept to the scale and softness of the render: he looks
@@ -127,7 +127,7 @@ const NUMBER = { cx: 655, y: 555, size: 118, tf: plane(655, 512, 0.9, -7, 4) }  
 // standing leg's thigh), traced on the art's own edges: the art there is near-black, the shorts' fill is kept off it
 // (screen only lightens), so it stays the black of the lining with the art's own shading. The sides on the thighs
 // and the outline run a little past them: the thighs are on the other layer, the outline is masked by the art.
-const UNDER_SHORTS = 'M324.2 858.3 L333.3 850.3 L335 865 L340.8 881.7 L351.7 898.3 L366.7 910.8 L385 920 L405 926.7 L431.7 930 L433.3 940 L403.3 945 L381.7 938.3 L363.3 926.7 L347.5 912.5 L334.2 895.8 L325.3 880 Z M720 878.3 L715 882.5 L693.3 888.3 L671.7 895 L655 901.7 L645 910 L636.7 920 L630 933.3 L627.5 945 L629.2 958.3 L633.3 965.8 L638.3 970 L650 978.3 L663.3 981.7 L686.7 983.3 L675 968.3 L665.8 958.3 L661.7 945 L660.8 928.3 L665.8 915.8 L677.5 904.2 L695 895 L723.3 886.7 L724.2 880 Z'
+const UNDER_SHORTS = 'M324.2 858.3 L333.3 850.3 L335 865 L340.8 881.7 L351.7 898.3 L366.7 910.8 L385 920 L405 926.7 L431.7 930 L433.3 940 L403.3 945 L381.7 938.3 L363.3 926.7 L347.5 912.5 L334.2 895.8 L325.3 880 Z M720 878.3 L715 882.5 L693.3 890 L672.5 897 L657.5 904.5 L649 913 L642 923 L636.5 934.5 L634 945.5 L635 957 L638 964.5 L642 969.5 L652 977 L663.3 981.7 L686.7 983.3 L675 968.3 L665.8 958.3 L661.7 945 L660.8 928.3 L665.8 915.8 L677.5 904.2 L695 895 L723.3 886.7 L724.2 880 Z'
 const SHORTS_CREST = { cx: 760, cy: 850, size: 24, tf: 'translate(760 850) rotate(-3) skewX(14) scale(0.9 1) translate(-760 -850)', shade: [2.2, 0.3] }
 
 // a crest (or flag) set into the cloth at `at`: drawn flat, put in the cloth's plane, and the art's own folds and
@@ -251,10 +251,10 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
             <g clipPath={url('c-face')}>
               {/* the right side of his face in shadow (the light is on his left): a soft fall-off across the face, in a
                   dark of his own skin, no edge anywhere (owner 11-25) */}
-              <linearGradient id={id('fshade')} x1="686" y1="0" x2="776" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="rotate(12 730 250)">
+              <linearGradient id={id('fshade')} x1="672" y1="0" x2="776" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="rotate(12 730 250)">
                 <stop offset="0" stopColor={shadeOf(face, 0.3)} stopOpacity="0" />
-                <stop offset="0.55" stopColor={shadeOf(face, 0.3)} stopOpacity="0.36" />
-                <stop offset="1" stopColor={shadeOf(face, 0.3)} stopOpacity="0.62" />
+                <stop offset="0.55" stopColor={shadeOf(face, 0.3)} stopOpacity="0.55" />
+                <stop offset="1" stopColor={shadeOf(face, 0.3)} stopOpacity="0.82" />
               </linearGradient>
               <rect x="620" y="170" width="170" height="160" fill={url('fshade')} />
               {/* the eyes: small, narrow and soft, deep in the shadow under his brow (EYES) */}
