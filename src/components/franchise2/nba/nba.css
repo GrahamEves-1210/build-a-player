@@ -362,6 +362,10 @@
 .nb-run-bar i { display: block; height: 100%; background: var(--tca, #fff); transition: width .1s linear; }
 .nb-builds { display: grid; gap: 10px; }
 .nb-build-row { display: grid; gap: 6px; }
+/* (a build's line, REPLACES BRUNSON 90 · PICK 30 · $3.0M, runs onto a second line at any width rather than lose its money) */
+.nb-build-row .fk-l3:not(.fk-l3--l) { height: auto; min-height: var(--h); }
+.nb-build-row .fk-l3:not(.fk-l3--l) .fk-l3-meta { display: block; padding: 1px 0; white-space: normal; line-height: 1.25; }
+.nb-build-row .fk-l3:not(.fk-l3--l) .fk-l3-bar { padding-top: 4px; padding-bottom: 4px; }
 .nb-build-cap { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 13px; line-height: 1.35; color: var(--fk-mute); }
 .nb-build-add { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .nb-link { justify-self: start; min-height: 36px; padding: 0 4px; border: 0; background: none; color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
