@@ -520,7 +520,8 @@ function canSignOf(F, short, p, d) {
   const say = why => ({ ok: false, why: nb + why, ...(nb && { k: 'rights' }) })
   if (capPay < capOf(year) && !L.length) return say(`Only $${r1(capOf(year) - capPay)}M of room`)
   // (the line the exception would cross, else the most it pays)
-  const fits = L.find(m => first <= m.$ + 0.01 && yrs <= m.y)
+  // (of the exceptions big enough for it, the one with the most room under its line)
+  const fits = [...L].reverse().find(m => first <= m.$ + 0.01 && yrs <= m.y)
   const apron = fits && (fits.line === apron1Of(year) ? 'the first apron' : 'the second apron')
   if (fits && after <= fits.line + 0.01) return { ok: false, why: `${nb}The ${EXC_TEXT[fits.k]} hard-caps the ${short} at ${apron} ($${r1(fits.line)}M): this deal would leave no room under it for the minimum deals a 14-man roster still needs ($${r1(need)}M). Fill out the roster first, or offer less`, k: 'apron' }
   if (fits) return { ok: false, why: `${nb}The ${EXC_TEXT[fits.k]} would take the ${short} past ${apron} ($${r1(fits.line)}M), the hard cap that comes with it`, k: 'apron' }
@@ -554,7 +555,6 @@ export function signMan(F, short, p, d, { check = true } = {}) {
   putDeal(F, p, { ...d, sc }, { year })
   if (!team.r.includes(p)) team.r.push(p)
   fixNumbers(F, short)
-  globalThis.__DBG?.('sign ' + c.via, short, p)
   return { ok: true, via: c.via }
 }
 

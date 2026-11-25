@@ -1,36 +1,40 @@
 // NBA FRANCHISE: free agency (the 2023 CBA's rules, the real market's habits).
 //
 // THE DAYS (faDay): free agency runs FA_DAYS rounds. On the first, the league's teams re-sign the men they want to
-// keep (Bird rights let them go over the cap to do it: a star into the tax and past the aprons) and renounce the rest
-// if they need the room; a few of the men want to test the market first. The teams over the tax shed salary to teams
-// with room (trades.js salaryDumps). Then every round:
+// keep inside the line their ownership spends to (contracts.js spendLines: Bird rights let them go over the cap, but
+// the tax is for contenders; a star is kept whatever the line, the room made by moving other salary) and renounce
+// the rest if they need the room; a few of the men want to test the market first. The teams past their lines move
+// salary (trades.js salaryDumps). Then every round:
 //   1. each team that needs a man makes an offer, with the money it can use: its cap room, else its mid-level
-//      (non-taxpayer, taxpayer or room), else the bi-annual, else the minimum. Its front office won't add a man past
-//      the line it spends to (contracts.js taxTolerance: a contender into the tax or the apron, a rebuilder never
-//      over the cap). The GM's offers (F.fao) are in with the league's, the same way.
+//      (non-taxpayer, taxpayer or room), else the bi-annual, else the minimum, never past the line it adds men to,
+//      the money it's holding for a star of its own, or the room a hard cap leaves it to fill out its roster. The
+//      GM's offers (F.fao) are in with the league's, the same way.
 //   2. each free agent weighs his offers (offerScore): the money first (a year's salary against his ask, and the years:
 //      an older man wants the security), then winning and his role, for some men the market (the big cities), and
 //      home. He signs the best one when it reaches what he'll take that day (takeOf); otherwise he waits. His ask comes
 //      down each day he's unsigned, and toward what the league can still pay when the room is gone.
-//   3. a restricted free agent's offer sheet goes to his old team, which matches (and keeps him at those terms) when
-//      he's worth it to them and they'll pay it. A sheet the GM's team signed (p.osh) is answered the next day; a sheet
-//      on the GM's own RFA (F.rfq) is his to match or not (matchSheet) before the next day (unanswered: matched when his
-//      team can). A matched sheet: no trade for a year (p.osm).
-//   An RFA with no offer by the last day re-signs with his team at his price then, or signs his qualifying offer.
+//   3. a restricted free agent's offer sheet (the league's teams sign few: they tie up room and get matched) goes to
+//      his old team, which matches a good young player nearly always. A sheet the GM's team signed (p.osh) is answered
+//      the next day; a sheet on the GM's own RFA (F.rfq) is his to match or not (matchSheet) before the next day
+//      (unanswered: matched when his team can). A matched sheet: no trade for a year (p.osm).
+//   4. from the third day, sign-and-trades between the league's teams (signAndTrades); from the second to the fourth,
+//      a team clears the room for a star nobody holds the rights to (clearRoom).
+//   An RFA with no offer by the last day settles with his team (rfaDeal), or signs his qualifying offer (the end of
+//   the bench, and the few who bet on themselves).
 // THE GM'S TEAM: F.fao { [manId]: deal } its offers (and offer sheets) standing; F.rfq [{ i, s, d }] the offer sheets
 // its own RFAs signed; F.fan { y, d, r: [{ i, n, k, s, d, why }] } what came of its offers in the last round.
-// THE REST OF THE SUMMER (cpuOffseason): the rounds left, the sheets answered, the last calls (a star back to his own
-// team or to the team with the most to pay him; good players for what the contenders have left), then every league
-// team fills its roster to at least 14 standard deals (the minimum, from the pool; core's `make` makes a man when the
-// pool runs dry), cuts down to 15, signs two-way men to two or three spots, and extends the young men and veterans it
-// wants to keep.
+// THE REST OF THE SUMMER (cpuOffseason): the rounds left, the sheets answered, the last calls (the late market: one
+// rule for the league's teams and the GM's late offers), then every league team fills its roster to at least 14
+// standard deals (the minimum, from the pool; core's `make` makes a man when the pool runs dry), cuts down to 15,
+// signs two-way men to two or three spots, extends the young men and veterans it wants to keep, and moves salary if
+// it's still past its line.
 import { coachPull } from './coach'
 import { rngOf, clamp, r1 } from '../rng'
 import { signText, termsText } from './news'
 import { capOf, minOf, maxOf, twoWayOf, payroll, capPayroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf, apron1Of, apron2Of, indexed } from './cap'
 import {
   marketValue, worthOf, rankOf, termOf, canSign, signMan, rightsOf, resignOffer, renounce, situationOf,
-  spendLines, teamStrength, BIG_MARKET, mleFor, excFor, cutMan, cutCost, extensionAsk, extendMan,
+  spendLines, strengthRank, teamStrength, BIG_MARKET, mleFor, excFor, cutMan, cutCost, extensionAsk, extendMan,
   ROSTER_MAX, ROSTER_MIN, TWO_WAY_MAX, OFF_MAX, raiseMax, schedOf, legalRoster, outsideBest, sheetOf, superMaxOk,
 } from './contracts'
 import { salaryDumps, shedTo, summerTrades, doTrade, matchLimit, teamSide, whyNot } from './trades'
@@ -167,8 +171,11 @@ export const keepsOwn = (F, s, p) => { const k = keepCheck(F, s, p); return k.no
 // the same, with the reason it won't: { ask, no: null | 'ask' | 'role' | 'reb' | 'worth' | 'line' | 'hard', over }
 // (over: how far past its line keeping him would take it)
 function keepCheck(F, s, p) {
-  const ask = resignOffer(F, p)
-  if (!ask) return { ask: null, no: 'ask' }
+  const ask0 = resignOffer(F, p)
+  if (!ask0) return { ask: null, no: 'ask' }
+  // (the deal has to be one its rights allow: ownDeal)
+  const ask = ownDeal(F, s, p, ask0)
+  if (!ask) return { ask: ask0, no: 'rights' }
   const year = capYear(F)
   const sit = situationOf(F, s)
   const w = worthOf(F, p, year)
@@ -184,6 +191,30 @@ function keepCheck(F, s, p) {
   if (!fitsHard(F, s, ask.$)) return { ask, no: 'hard' }
   return { ask, no: null }
 }
+// HIS OWN TEAM'S DEAL, WHEN ITS RIGHTS FALL SHORT OF HIS PRICE. A man two seasons with his team (Early Bird rights)
+// can be paid about the average salary by it, one season in (Non-Bird) 120% of his last salary: a second-round find
+// who has become a starter is worth far more, and his team can't pay it. With nobody holding the cap room for him
+// either, he does what the real league's do (Austin Reaves, 2023): he takes the most his own team can give him (its
+// rights, or its mid-level if that's more), for two seasons, and gets paid when his Bird rights are full. He only
+// passes on it when another team can pay him clearly more. Returns the deal (his ask, when that's legal), or null.
+function ownDeal(F, s, p, ask) {
+  if (ask.tw) return ask
+  const year = capYear(F)
+  const own = rightsOf(p, s)
+  if (own === 'bird' || !own) return ask
+  const mn = minOf(p.ys ?? 0, year)
+  const lim = own === 'ebird' ? Math.max((p.$l ?? 0) * 1.75, indexed(12.5, year) * 1.05) : Math.max((p.$l ?? 0) * 1.2, mn * 1.2)
+  if (ask.$ <= lim + 0.01 || canSign(F, s, p, ask).ok) return ask
+  const outside = outsideBest(F, p)
+  for (const v of [lim, mleFor(F, s, year)?.$ ?? 0].map(x => Math.floor(x * 10) / 10).sort((a, b) => b - a)) {
+    if (v < mn || v >= ask.$ || v < outside * 0.85) continue
+    const d = { $: v, y: Math.max(2, Math.min(ask.y, 2)), r: 0.05, via: own }
+    if (canSign(F, s, p, d).ok) return d
+  }
+  return null
+}
+// a good young player: the kind a team keeps through restricted free agency
+const goodYoung = (F, p) => (p.ag ?? 27) <= 26 && (rankOf(F, p) <= 170 || (p.o ?? 0) >= 76)
 // a star of its own a team means to keep (one of the league's forty best, in his prime)
 const isStar = (F, p) => rankOf(F, p) <= 40 && (p.ag ?? 27) <= 32
 // keep him, making the room if the payroll is the only thing in the way: a front office that can't fit a star of its
@@ -191,19 +222,36 @@ const isStar = (F, p) => rankOf(F, p) <= 40 && (p.ag ?? 27) <= 32
 function keepStar(F, s, p, news) {
   let k = keepCheck(F, s, p)
   if (k.no === 'line' && isStar(F, p) && k.over <= capOf(capYear(F)) * 0.2) {
-    news.push(...shedTo(F, s, payroll(F, s, capYear(F)) - k.over - 0.5))
+    news.push(...shedTo(F, s, payroll(F, s, capYear(F)) - k.over - 0.5, { held: heldBy(F) }))
     k = keepCheck(F, s, p)
   }
   return k.no ? null : k.ask
+}
+// THE LAST CALL ON A STAR OF ITS OWN. The summer is ending, nobody has the room for him and no sign-and-trade came
+// together: a real contender (one of the league's six best rosters) that hasn't just spent a season past the second
+// apron brings him back at what he asks now rather than lose him for nothing, well past the second apron for a
+// season if it has to (the 2024-25 Suns' kind of payroll), and sells down from there. Anyone else lets him go.
+function lastKeep(F, s, p) {
+  const year = capYear(F)
+  if (!isStar(F, p) || wantsOut(F, s, p)) return null
+  const k = keepCheck(F, s, p)
+  if (k.no !== 'line') return null
+  const L = spendLines(F, s, year)
+  if (L.sit !== 'win' || strengthRank(F, s) > 6 || (F.teams[s].a2h ?? []).includes(year - 1)) return null
+  const $ = Math.min(k.ask.$, Math.max(askFor(F, p).$, k.ask.$ * 0.8))
+  if (payroll(F, s, year) + $ + reserveOf(F, s, 1) > apron2Of(year) + capOf(year) * 0.13) return null
+  return fitsHard(F, s, $) ? k.ask : null
 }
 // the money a team is holding for stars of its own still unsigned (their asks today): it doesn't spend that, or take
 // on a hard cap, until they've decided
 function pendingOf(F, s, but = null) {
   const year = capYear(F)
   let sum = 0
-  for (const p of F.fa ?? []) if (p.fr === s && !p.rn && p.hy === year && p !== but && isStar(F, p)) sum += askFor(F, p).$
+  for (const p of F.fa ?? []) if (p.fr === s && !p.rn && p.hy === year && p !== but && (isStar(F, p) || (p.rfa && goodYoung(F, p) && rankOf(F, p) <= 150))) sum += askFor(F, p).$
   return sum
 }
+// (for trades.js: a team holding money for its own doesn't take on another team's salary meanwhile)
+const heldBy = F => s => pendingOf(F, s)
 // the best deal team s would offer free agent p now (or null): his ask, inside what it can use and will spend
 function bidFor(F, s, p, day, ctx) {
   const year = capYear(F)
@@ -279,7 +327,7 @@ function openMarket(F) {
       if (p.rfa && (rankOf(F, p) > 150 || F.fao?.[p.i])) continue
       if (wantsOut(F, s, p)) continue
       // (a good young restricted man is settled now, before the team spends its summer elsewhere: rfaDeal)
-      const ask = keepStar(F, s, p, news) ?? (p.rfa && rankOf(F, p) <= 90 ? rfaDeal(F, s, p) : null)
+      const ask = keepStar(F, s, p, news) ?? (p.rfa ? rfaDeal(F, s, p, news) : null)
       if (ask && signMan(F, s, p, ask).ok && (p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'RE-SIGNED', s, text: signText('re-signs with', p, s) })
     }
     // the rest: renounced when the team wants its room, held (Bird rights for later) when it's over the cap anyway (a
@@ -287,7 +335,7 @@ function openMarket(F) {
     const pay = payroll(F, s, year)
     if (pay < capOf(year) - 5) for (const p of (F.fa ?? []).filter(x => x.fr === s && !x.rn && x.hy === year && !x.rfa && !keeperOf(F, s, x))) renounce(F, s, p.i)
   }
-  news.push(...salaryDumps(F))
+  news.push(...salaryDumps(F, { held: heldBy(F) }))
   return news
 }
 const sumOf = p => r1([p.$ ?? 0, ...(p.sc ?? [])].slice(0, p.y ?? 0).reduce((a, v) => a + v, 0))
@@ -451,7 +499,7 @@ function faRound(F, day) {
     // qualifying offer (one season, unrestricted after)
     if (!signed && day >= FA_DAYS && p.rfa && p.qo && p.fr && !p.rn) {
       const was = p.fr
-      const keep = was !== F.team && rfaDeal(F, was, p)
+      const keep = was !== F.team && rfaDeal(F, was, p, news)
       // (the offer's amount is read before he signs: signing clears it off him)
       const qo = p.qo
       if (keep && signMan(F, was, p, keep).ok) { if ((p.o ?? 0) >= 76) news.push({ k: 'sign', tag: 'RE-SIGNED', s: was, text: signText('re-signs with', p, was) }) }
@@ -463,35 +511,38 @@ function faRound(F, day) {
   // (from the third day: the sign-and-trades, for the good players no team could sign outright; from the second to
   // the fourth, a team clears the room for a star nobody holds the rights to)
   if (day >= 3) news.push(...signAndTrades(F, day, ctx))
-  if (day >= 2 && day <= 4) news.push(...clearRoom(F, day, ctx))
+  if (day >= 2 && day <= 5) news.push(...clearRoom(F, day, ctx))
   return news
 }
-const goodYoung = (F, p) => (p.ag ?? 27) <= 26 && (rankOf(F, p) <= 170 || (p.o ?? 0) >= 76)
 // a restricted free agent no team signed to a sheet, and his own team, on the last day. They settle: his price as it
 // stands, when the team would keep him at it (keepsOwn); a good young player the team's sums turned down still
 // re-signs, at what it can pay him (his worth, the most his rights or its exception allow), because a front office
 // doesn't let a young starter play out a qualifying offer and walk a year later: it pays him and moves salary
 // elsewhere. A few bet on themselves and take the qualifying offer anyway (one to three a summer in the real
 // league); the end of the bench plays on it. Returns the deal, or null (the qualifying offer).
-function rfaDeal(F, s, p) {
+function rfaDeal(F, s, p, news = []) {
   const year = capYear(F)
   const k = keepsOwn(F, s, p)
   if (k && canSign(F, s, p, k).ok) return k
   if (!goodYoung(F, p) || roleOn(F, s, p) === 0) return null
-  if (rngOf(`${F.seed}-${year}-qo-${p.i}`).u() < 0.06) return null
+  if (rngOf(`${F.seed}-${year}-qo-${p.i}`).u() < 0.05) return null
   const ask = resignOffer(F, p)
   if (!ask) return null
   const w = worthOf(F, p, year), qo = p.qo ?? 0
   const top = Math.min(ask.$, Math.max(w, qo * 1.1))
   const m = mleFor(F, s, year)
   const line = Math.max(keepLine(F, s, p, year), apron2Of(year))
+  // (the payroll in the way: it moves other salary first, as it would for a star)
+  const over = payroll(F, s, year) + top + reserveOf(F, s, 1) - line
+  if (over > 0 && over <= capOf(year) * 0.12) news.push(...shedTo(F, s, payroll(F, s, year) - over - 0.5, { held: heldBy(F) }))
   // (what the team can pay: his price, or what his rights or its mid-level allow (a man two years in, on Early Bird
   // rights, is held to about the average salary: the real league's second-round finds sign for that); a deal well
   // short of his price is a two-year bridge, never a long one)
   for (const v of [top, top * 0.85, m?.$ ?? 0, indexed(12.5, year) * 1.05, top * 0.7].map(r1).filter(v => v > qo + 0.05 && v <= top + 0.01).sort((a, b) => b - a)) {
     for (const y of [ask.y, 3, 2].filter((y, j, A) => y <= (v < top * 0.75 ? 2 : ask.y) && A.indexOf(y) === j)) {
       const d = { ...ask, $: v, y }
-      if (!canSign(F, s, p, d).ok || !fitsHard(F, s, v, canSign(F, s, p, d).via)) continue
+      const c = canSign(F, s, p, d)
+      if (!c.ok || !fitsHard(F, s, v, c.via)) continue
       if (payroll(F, s, year) + v + reserveOf(F, s, 1) > line) continue
       return d
     }
@@ -592,24 +643,29 @@ function clearRoom(F, day, ctx) {
   const news = []
   const year = capYear(F), cap = capOf(year)
   const S = shortsOf(F).filter(s => s !== F.team)
-  const stars = (F.fa ?? []).filter(p => isStar(F, p) && !p.fl && !p.rfa && !sheetOf(F, p) && !F.fao?.[p.i] && !(p.fr && !p.rn && p.fr !== F.team))
+  // (a star nobody holds the rights to, or one his own team can't keep)
+  const loose = p => !(p.fr && !p.rn && p.fr !== F.team) || (day >= 3 && !!keepCheck(F, p.fr, p).no)
+  const stars = (F.fa ?? []).filter(p => isStar(F, p) && !p.fl && !p.rfa && !sheetOf(F, p) && !F.fao?.[p.i] && loose(p))
     .sort((a, b) => rankOf(F, a) - rankOf(F, b))
   const drop = (G, B) => { for (const x of G.fa ?? []) if (x.fr === B && !x.rn && !x.rfa && !isStar(G, x)) renounce(G, B, x.i) }
   for (const p of stars.slice(0, 2)) {
     const mv = marketValue(F, p, year), w = worthOf(F, p, year)
-    const d = { $: r1(Math.min(mv, Math.max(askFor(F, p).$, mv * 0.85))), y: Math.min(4, Math.max(2, termOf(F, p))), r: 0.05 }
+    // (his price: what he asks today; a man with no team behind him still gets most of his market from a team
+    // that makes the room for him)
+    const held = !!(p.fr && !p.rn && p.fr !== F.team)
+    const d = { $: r1(held ? askFor(F, p).$ : Math.min(mv, Math.max(askFor(F, p).$, mv * 0.85))), y: Math.min(4, Math.max(2, termOf(F, p))), r: 0.05 }
     // (a team with the room already will bid for him in the round)
     if (S.some(B => capPayroll(F, B, year) + d.$ <= cap + 0.01)) continue
     const buyers = S.filter(B => roleOn(F, B, p) === 1 && !(ctx.sit[B] === 'reb' && (p.ag ?? 27) >= 28) && w * 1.1 >= d.$ && !pendingOf(F, B))
-      .map(B => ({ B, gap: payroll(F, B, year) + reserveOf(F, B, 1) + d.$ - cap })).filter(x => x.gap > 0 && x.gap <= cap * 0.25).sort((x, y) => x.gap - y.gap || (x.B < y.B ? -1 : 1))
+      .map(B => ({ B, gap: payroll(F, B, year) + reserveOf(F, B, 1) + d.$ - cap })).filter(x => x.B !== p.fr && x.gap > 0 && x.gap <= cap * 0.25).sort((x, y) => x.gap - y.gap || (x.B < y.B ? -1 : 1))
     for (const { B, gap } of buyers.slice(0, 3)) {
+      // (the room is counted with the empty-roster charges in: a second and third pass move what the first left)
+      const clear = X => { drop(X, B); const out = []; for (let k = 0; k < 3; k++) { const need = capPayroll(X, B, year) + d.$ - cap; if (need <= 0.01) break; out.push(...shedTo(X, B, payroll(X, B, year) - need - 0.3)) } return out }
       const G = JSON.parse(JSON.stringify(F))
-      drop(G, B)
-      shedTo(G, B, payroll(G, B, year) - gap - 0.3)
+      clear(G)
       const pc = (G.fa ?? []).find(x => x.i === p.i)
       if (!pc || canSign(G, B, pc, d).via !== 'room') continue
-      drop(F, B)
-      news.push(...shedTo(F, B, payroll(F, B, year) - gap - 0.3))
+      news.push(...clear(F))
       if (signMan(F, B, p, d).ok) news.push({ k: 'sign', tag: 'FREE AGENCY', s: B, big: true, text: signText('signs with', p, B) })
       return news
     }
@@ -837,7 +893,7 @@ function lateSignings(F) {
     // (his own team, if it still holds his rights and wants him at his price now)
     const own = p.fr && !p.rn && p.fr !== F.team && rightsOf(p, p.fr) ? p.fr : null
     if (own && tier >= 1) {
-      const k = keepStar(F, own, p, news)
+      const k = keepStar(F, own, p, news) ?? lastKeep(F, own, p)
       const d = k && { ...k, $: r1(Math.max(mn, Math.min(k.$, Math.max(ask, k.$ * 0.8)))) }
       if (d && signMan(F, own, p, d).ok) { if ((p.o ?? 0) >= 78) news.push({ k: 'sign', tag: 'RE-SIGNED', s: own, text: signText('re-signs with', p, own) }); continue }
     }

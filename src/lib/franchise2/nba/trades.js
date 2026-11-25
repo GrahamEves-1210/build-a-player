@@ -919,8 +919,7 @@ export function summerTrades(F, n = 4) {
 // The seller's core stays (its three best men), and so does anyone it traded for this league year. The taker stays
 // under its own line. Both sides answer by their own books (teamSide, decide); the seller, under orders to cut
 // payroll, takes a small loss on value to do it. Returns wire items.
-const DBG = k => { const T = globalThis.__SHED; if (T) T[k] = (T[k] ?? 0) + 1 }
-function shedOne(F, R, a, S, line) {
+function shedOne(F, a, S, line) {
   const year = capYear(F), ly = lyOf(F)
   const payA = payroll(F, a, year)
   const need = payA - line(a)
@@ -940,7 +939,7 @@ function shedOne(F, R, a, S, line) {
     .slice(0, 7)
   for (const { p, sal } of cand) {
     // the takers: the teams with the most space under their own lines first
-    const takers = S.filter(b => b !== a).map(b => ({ b, sp: line(b) - payroll(F, b, year) })).filter(x => x.sp > 1).sort((x, y) => y.sp - x.sp || (x.b < y.b ? -1 : 1))
+    const takers = S.filter(b => b !== a).map(b => ({ b, sp: line(b, true) - payroll(F, b, year) })).filter(x => x.sp > 1).sort((x, y) => y.sp - x.sp || (x.b < y.b ? -1 : 1))
     for (const { b, sp } of takers.slice(0, 14)) {
       // what it sends back: nothing if it can take him whole, else one of its men on a smaller salary (not one of its
       // best four, not a man it just traded for), the smallest that makes the deal legal
@@ -952,28 +951,28 @@ function shedOne(F, R, a, S, line) {
         .sort((x, y) => hitOf(x, year, year) - hitOf(y, year, year) || x.i - y.i).slice(0, 8)]
       for (const q of backs) {
         const back = q ? hitOf(q, year, year) : 0
-        if (sal - back > sp - 0.5) { DBG('space'); continue }
+        if (sal - back > sp - 0.5) continue
         const base = { a, b, ga: [p.i], gb: q ? [q.i] : [], pa: [], pb: [] }
-        if (!checkTrade(F, base).ok) { DBG('legal:' + checkTrade(F, base).k); continue }
+        if (!checkTrade(F, base).ok) continue
         const inn = { pl: [p], pk: [] }, out = { pl: q ? [q] : [], pk: [] }
         const sideB = teamSide(F, b, inn, out)
         // (the taker's price: what it's short by its own book, in the seller's picks)
         const want = -sideB.gain + marginOf(F, b, Math.max(sideB.out, Math.abs(sideB.in)), false)
         const pa = want > 0 ? picksCover(F, a, want, b) : []
-        if (pa == null) { DBG('picksA'); continue }
+        if (pa == null) continue
         // (the seller: under orders to cut payroll, it gives up about a point of value for every $1M it clears, no
         // more: a real asset doesn't go for nothing, it brings a pick back)
         const sideA = teamSide(F, a, { pl: q ? [q] : [], pk: [] }, { pl: [p], pk: pa.map(i => F.picks[i]) })
         const short = sideA.out - sideA.in - (5 + 0.9 * Math.min(need + 2, sal - back))
         let pb = []
         if (short > 0) {
-          if (pa.length) { DBG('painA'); continue }
+          if (pa.length) continue
           pb = picksCover(F, b, short, a)
-          if (pb == null) { DBG('picksB'); continue }
+          if (pb == null) continue
         }
         const deal = { ...base, pa, pb }
-        if ((pa.length || pb.length) && !checkTrade(F, deal).ok) { DBG('legal2'); continue }
-        if (!decide(F, deal, { user: false }).yes) { DBG('decide:' + decide(F, deal, { user: false }).why); continue }
+        if ((pa.length || pb.length) && !checkTrade(F, deal).ok) continue
+        if (!decide(F, deal, { user: false }).yes) continue
         doTrade(F, deal, { user: false })
         return true
       }
@@ -983,35 +982,37 @@ function shedOne(F, R, a, S, line) {
 }
 // one team moves salary until its payroll is down to `target` (a front office making room to keep a star of its
 // own): the same trades, the other teams inside their own lines. Returns wire items; the caller reads the payroll.
-export function shedTo(F, a, target) {
+export function shedTo(F, a, target, { held = null } = {}) {
   if (a === F.team) return []
   SINK = []
   const year = capYear(F)
   const S = shortsOf(F).filter(s => s !== F.team)
-  const L = Object.fromEntries(S.map(s => [s, spendLines(F, s, year).keep]))
+  const L = Object.fromEntries(S.map(s => [s, spendLines(F, s, year).keep - (held?.(s) ?? 0)]))
   const line = s => (s === a ? target : L[s])
   let n = 0
-  while (n++ < 5 && payroll(F, a, year) > target + 0.05) if (!shedOne(F, null, a, S, line)) break
+  while (n++ < 5 && payroll(F, a, year) > target + 0.05) if (!shedOne(F, a, S, line)) break
   const out = SINK
   SINK = null
   return out
 }
-export function salaryDumps(F) {
+// (held(s): money team s is holding for free agents of its own, market.js: it takes on no salary past that)
+export function salaryDumps(F, { held = null } = {}) {
   SINK = []
   const year = capYear(F)
-  const R = rngOf(`${F.seed}-${year}-dumps-${F.phase === 'season' ? F.day ?? 0 : `s${F.fad ?? 0}`}`)
   const S = shortsOf(F).filter(s => s !== F.team)
-  // (the line each team sells down to and takes salary up to: at the deadline the tax line itself is the mark for
-  // everyone under orders to duck it)
-  const L = Object.fromEntries(S.map(s => [s, spendLines(F, s, year).keep]))
-  const line = s => L[s]
+  // (the line each team sells down to, and takes salary up to)
+  // (in the season the tax line itself is the mark for a team that means to stay under it: nobody moves a man in
+  // February to be $2M further under a line it's already under)
+  const duck = F.phase === 'season' ? taxOf(year) - 0.4 : 0
+  const K = Object.fromEntries(S.map(s => { const k = spendLines(F, s, year).keep; return [s, k < taxOf(year) ? Math.max(k, duck) : k] }))
+  const H = Object.fromEntries(S.map(s => [s, held?.(s) ?? 0]))
+  // (as a seller its own line; as a taker that line less the money it's holding)
+  const line = (s, taker = false) => K[s] - (taker ? H[s] : 0)
   const over = s => payroll(F, s, year) - line(s)
   for (const a of S.filter(s => over(s) > 0.05).sort((x, y) => over(y) - over(x) || (x < y ? -1 : 1))) {
     let n = 0
-    const o0 = over(a)
-    if (globalThis.__SHED) globalThis.__SHED = {}
-    while (n++ < 5 && over(a) > 0.05) if (!shedOne(F, R, a, S, line)) break
-    if (globalThis.__SHED) console.log('  shed', a, spendLines(F, a, year).sit, 'over', o0.toFixed(1), '->', over(a).toFixed(1), JSON.stringify(globalThis.__SHED))
+    // (a couple of moves a team at the deadline, three in the summer)
+    while (n++ < (F.phase === 'season' ? 2 : 3) && over(a) > 0.05) if (!shedOne(F, a, S, line)) break
   }
   const out = SINK
   SINK = null

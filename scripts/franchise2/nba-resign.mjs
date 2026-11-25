@@ -163,6 +163,8 @@ function booksCheck(F, tag) {
   const y = C.capYear(F), T = F.teams.BOS
   // thirteen men, the payroll $1M under the first apron, hard-capped there (as after the non-taxpayer mid-level)
   T.r = T.r.filter(p => !p.tw).sort((a, b) => b.o - a.o).slice(0, 13)
+  for (const p of F.fa.filter(x => !x.fr || x.rn).sort((a, b) => a.o - b.o)) { if (T.r.length >= 13) break; C.signMan(F, 'BOS', p, { $: C.minOf(p.ys ?? 0, y), y: 1, r: 0 }) }
+  ok(T.r.length === 13, 'setup: thirteen men', T.r.length)
   const top = T.r[0]
   top.$ = r1(top.$ + (C.apron1Of(y) - 1 - CP.payroll(F, 'BOS', y)))
   K.excFor(F, 'BOS', y).hc = 'a1'
