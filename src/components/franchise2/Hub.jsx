@@ -193,9 +193,10 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy, front }) 
 }
 
 // the front office, a tap away from the Season tab: the trade finder (while the window is open) and the free agents
-// (free agency's own days are the Offseason tab itself: no row then). Both open on the Team tab.
+// (always on the Team tab's own rows, Team.jsx). Both open on the Team tab.
 function FrontRows({ F, onGo }) {
-  const market = marketWindow(F).k !== 'market'
+  // (no row while the market is the Offseason tab itself, or shut until the new league year)
+  const k = marketWindow(F).k, market = k !== 'market' && k !== 'shut'
   return (
     <>
       {tradeWindow(F).open && (

@@ -35,6 +35,10 @@
 // gauge. A few trades a season between league teams (a rebuilding team's veteran to a contender for picks) go on the
 // wire.
 //
+// THE TRADE FINDER (finder.js) reads this book to answer "what would each team give?" and "what does he cost?":
+// inValue, outValue, pickMod, marginOf, picksFor, callsLeft and dealsWith are exported for it; every result it shows
+// goes back through checkTrade and decide.
+//
 // State (all optional: a save from before trades loads with none):
 //   F.tpk  { 'year-round-team': owner } a future pick that's changed hands (the draft's own order, F.dr.own, once it's set)
 //   F.tro  [offer]  the offers to the player's team: { id, s, give: { pl, pk } (the player's side), get, k, w, exp }

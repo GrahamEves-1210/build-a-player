@@ -10,9 +10,10 @@ import { CapNote, Said, nick, NONE, has, flip, toTop } from './tradebits'
 import Finder, { newFinder } from './Finder'
 import './trades.css'
 
-// TRADES (lib/franchise2/trades.js): the league's offers, a trade built with any team (players and picks from both
-// sides, five a side at most), and the year's deals. One entry: the Team tab (TradeStrip). The gauge is the only
-// number-free read of a deal's value; the other team's answer is its own (its needs, its cap, its plans).
+// TRADES (lib/franchise2/trades.js): the trade finder (Finder.jsx: shop a player, find a player), the league's
+// offers, a trade built with any team (players and picks from both sides, five a side at most), and the year's deals.
+// The ways in: the Team tab (TradeStrip), a man on the depth chart (FIND A TRADE), the Season tab's rows. The gauge is
+// the only number-free read of a deal's value; the other team's answer is its own (its needs, its cap, its plans).
 
 // the window in a few words, for the strip and the screen's header
 function windowLine(F) {
