@@ -443,7 +443,9 @@ export function coachCarousel(F, recs, po = new Set()) {
   F.cpool = F.cpool.filter(c => !(c.ag >= 70 || (c.out ?? 0) >= 4 || (!c.real && (c.out ?? 0) >= 2 && R.u() < 0.5)))
   if (F.cpool.length > 45) F.cpool = F.cpool.sort((a, b) => (b.real ? 1 : 0) - (a.real ? 1 : 0) || (a.out ?? 0) - (b.out ?? 0)).slice(0, 45)
   // the wire
+  // (an assistant hired as a head coach is one item, the hire's: it says where he came from)
   for (const e of ev) {
+    if (e.k === 'leave') continue
     const t = e.k === 'fire' ? `The ${NK(e.s)} have fired head coach ${e.n} after a ${e.rec} season${e.yrs > 1 ? `, his ${ordinal(e.yrs)} with the team` : ''}`
       : e.k === 'ret' ? `${NK(e.s)} head coach ${e.n} is retiring at ${e.ag}`
         : e.k === 'hire' ? (e.from ? `The ${NK(e.s)} have hired ${e.from} ${e.n} as head coach` : e.hy ? `The ${NK(e.s)} have hired ${e.n} as head coach${e.was ? ` (${e.was})` : ''}` : `The ${NK(e.s)} have hired ${e.n}${e.was ? `, ${/^(a|e(?!uro)|i|o)/i.test(e.was) ? 'an' : 'a'} ${e.was},` : ''} as head coach`)

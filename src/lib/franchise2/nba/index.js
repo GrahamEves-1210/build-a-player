@@ -5,7 +5,7 @@ import { CAR_K } from './offseason'
 import { makeSchedule } from './schedule'
 import { makePicks, makeClass } from './draft'
 import { records, recText } from './season'
-import { addNews } from './news'
+import { addNews, fixWire } from './news'
 import { placeBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
 import { numberAll, needsNumbers } from './numbers'
@@ -32,7 +32,7 @@ export const SLOTS_N = 3
 export function createNbaFranchise(setup) {
   const F = {
     v: NBA_SAVE_V, sport: 'nba', seed: setup.seed, slot: setup.slot ?? 0, owner: setup.owner ?? 'Guest', sandbox: !!setup.sandbox,
-    team: setup.team, year: FIRST_YEAR, nid: 1, builds: [], hist: [], retired: [], rings: 0, news: [], board: [], sp: 4,
+    team: setup.team, year: FIRST_YEAR, nid: 1, builds: [], hist: [], retired: [], rings: 0, news: [], wv: 1, board: [], sp: 4,
     moments: setup.moments ?? 'advanced',
     // the setup's MODE: 'full' (every night, every offseason stop) or 'light' (the season and the summer in a few steps)
     pace: setup.pace === 'light' ? 'light' : 'full',
@@ -146,6 +146,7 @@ export function loadNba(slot) {
 export function upgradeNba(F) {
   if (F.pace !== 'light' && F.pace !== 'full') F.pace = 'full'
   ensureStaff(F)
+  fixWire(F)   // (the wire's one style: news.js)
   return F
 }
 export function clearNba(slot) { try { localStorage.removeItem(KEY(slot)) } catch {}; dropFranchiseCloud(KEY(slot)) }

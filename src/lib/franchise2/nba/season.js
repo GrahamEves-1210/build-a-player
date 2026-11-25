@@ -4,7 +4,7 @@
 // 2-2-1-1-1, the better record at home in games 1, 2, 5 and 7.
 import { SHORTS, TEAM, DIV_OF, CONF_OF, DIVS, nick, manOf, teamOfMan, depthOrder, makeFiller, thinSpot } from './league'
 import { b2bOf, dateText } from './schedule'
-import { addNews, injuryText, signText } from './news'
+import { addNews, injuryText, signText, roundSetText, champText } from './news'
 import { scoutTick } from './draft'
 import * as X from './seams'
 import { rngOf } from '../rng'
@@ -385,7 +385,7 @@ export function startPostseason(F) {
   F.po = { live: 1, stage: 'pi1', seeds, pi: {}, rd: -1, all: [], champ: null, cur: [], night: 0 }
   F.phase = 'playin'
   F.ps = {}
-  for (const c of ['E', 'W']) addNews(F, { k: 'po', tag: 'PLAY-IN', text: `${CONF_NAME_SHORT[c]}: ${nick(seeds[c][6])} host ${nick(seeds[c][7])}, ${nick(seeds[c][8])} host ${nick(seeds[c][9])}` })
+  for (const c of ['E', 'W']) addNews(F, { k: 'po', tag: 'PLAY-IN', text: `The ${CONF_NAME_SHORT[c]}'s play-in is set: the ${nick(seeds[c][6])} host the ${nick(seeds[c][7])} for the No. 7 seed, and the ${nick(seeds[c][8])} host the ${nick(seeds[c][9])}` })
   piNight(F)
   return F.po
 }
@@ -450,14 +450,14 @@ function poEnd(F, mine) {
       if (g.k === 'last') { x.wl = w; x.ll = l; x.gl = g }
     }
     if (P.stage === 'pi1') {
-      for (const c of ['E', 'W']) addNews(F, { k: 'po', tag: 'PLAY-IN', text: `${nick(P.pi[c].w78)} clinch the No. 7 seed in the ${CONF_NAME_SHORT[c]}; ${nick(P.pi[c].l910)} are eliminated` })
+      for (const c of ['E', 'W']) addNews(F, { k: 'po', tag: 'PLAY-IN', text: `The ${nick(P.pi[c].w78)} clinch the No. 7 seed in the ${CONF_NAME_SHORT[c]}; the ${nick(P.pi[c].l910)} are eliminated` })
       P.stage = 'pi2'; piNight(F)
     } else {
       for (const c of ['E', 'W']) {
         const x = P.pi[c], S = P.seeds[c]
         P.final = P.final ?? {}
         P.final[c] = [...S.slice(0, 6), x.w78, x.wl]
-        addNews(F, { k: 'po', tag: 'PLAY-IN', text: `${nick(x.wl)} take the No. 8 seed in the ${CONF_NAME_SHORT[c]}` })
+        addNews(F, { k: 'po', tag: 'PLAY-IN', text: `The ${nick(x.wl)} take the No. 8 seed in the ${CONF_NAME_SHORT[c]}` })
       }
       startRound(F, 0)
     }
@@ -475,7 +475,7 @@ function poEnd(F, mine) {
       if (fm) (fm.aw ??= []).push({ y: F.year, k: 'FMVP' })
       for (const p of F.teams[S.done].r) (p.aw ??= []).push({ y: F.year, k: 'CHAMP' })
       if (S.done === F.team) F.rings = (F.rings ?? 0) + 1
-      addNews(F, { k: 'champ', tag: 'NBA FINALS', s: S.done, text: `The ${TEAM[S.done].name} win the NBA championship, beating the ${nick(S.done === S.hi ? S.lo : S.hi)} in ${S.g.length}${fm ? `. ${fm.n} is Finals MVP` : ''}` })
+      addNews(F, { k: 'champ', tag: 'NBA FINALS', s: S.done, text: champText(S, fm?.n) })
     } else startRound(F, P.rd + 1)
   } else nextNight(F)
   return { mine, po: true }
@@ -510,7 +510,7 @@ function startRound(F, rd) {
     }
   }
   for (const S of P.S) S.c === 'F' ? null : null
-  addNews(F, { k: 'po', tag: ROUND_NAME[rd], text: P.S.map(S => `${nick(S.hi)}-${nick(S.lo)}`).join(', ') })
+  addNews(F, { k: 'po', tag: ROUND_NAME[rd], text: roundSetText(rd, P.S, s => P.final[CONF_OF[s]].indexOf(s) + 1) })
   nextNight(F)
 }
 // the GM's series this round, or null

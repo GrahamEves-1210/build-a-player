@@ -5,6 +5,7 @@
 // qualifying offer stay off it; the GM's own team's news always makes it. What stays (trimNews): this season's items
 // in full; older seasons' passing items (injuries, play-in lines, small moves) go first when the wire is full, so the
 // stories that last (champions, awards, the draft, trades, big signings, records) are there a few summers on.
+// One style (wireText): every item is a sentence that ends with a period.
 import { TEAM, manOf } from './league'
 import { dateOf } from './schedule'
 export const NEWS_MAX = 240
@@ -106,9 +107,49 @@ export function trimNews(F, L) {
   for (let k = L.length - 1; k >= 0 && over > 0; k--) if (L[k].y < F.year && !lasting(F, L[k])) { drop.add(k); over-- }
   return (drop.size ? L.filter((_, k) => !drop.has(k)) : L).slice(0, NEWS_MAX)
 }
+// ── One style for every item ─────────────────────────────────────────────────
+// A wire item is a sentence, or a few: it ends with a period (one: "Derrick Jones Jr." already has his, and a list of
+// names ending on a "Jr." mid-item doesn't get a second), with no space before it.
+export const wireText = t => {
+  let x = String(t ?? '').trim().replace(/\s+/g, ' ').replace(/([A-Za-z0-9)])\.\.(?!\.)/g, '$1.').replace(/\s+([.,;:])/g, '$1')
+  if (x && !/[.!?]["')\]]?$/.test(x)) x += '.'
+  return x
+}
+// The postseason as the wire says it. A round that's set is a sentence with its matchups in it (never the bare
+// "Rockets-76ers"); the Finals' result carries the series score.
+const CONF_WORD = { E: 'East', W: 'West' }
+const listOf = a => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`)
+const nickOf = s => TEAM[s]?.nick ?? s
+// rd 0..3 (first round, conference semifinals, conference finals, the Finals); S: the round's series ({ hi, lo, c });
+// seed(s): a team's seed in its conference, for the first round
+export function roundSetText(rd, S, seed = null) {
+  const by = c => S.filter(x => x.c === c)
+  const vs = x => `the ${nickOf(x.hi)} against the ${nickOf(x.lo)}`
+  if (rd >= 3) { const x = S[0]; return x ? `The NBA Finals are set: the ${nickOf(x.hi)} have home-court advantage against the ${nickOf(x.lo)}` : '' }
+  if (rd === 2) return `The conference finals are set: ${['E', 'W'].filter(c => by(c).length).map(c => `${vs(by(c)[0])} in the ${CONF_WORD[c]}`).join(', ')}`
+  if (rd === 1) return `The conference semifinals are set. ${['E', 'W'].filter(c => by(c).length).map(c => `${CONF_WORD[c]}: ${listOf(by(c).map(vs))}`).join('. ')}`
+  const one = x => `the ${seed ? `No. ${seed(x.hi)} ` : ''}${nickOf(x.hi)} against the ${seed ? `No. ${seed(x.lo)} ` : ''}${nickOf(x.lo)}`
+  return `The playoff field is set. ${['E', 'W'].filter(c => by(c).length).map(c => `${CONF_WORD[c]}: ${listOf(by(c).map(one))}`).join('. ')}`
+}
+// the title: who beat whom, the series score, the Finals MVP
+export function champText(S, mvp = null) {
+  const w = S.done, l = w === S.hi ? S.lo : S.hi, lw = Math.min(S.wh ?? 0, S.wl ?? 0)
+  return `The ${TEAM[w]?.name ?? w} are NBA champions, ${lw === 0 ? `sweeping the ${nickOf(l)}` : `beating the ${nickOf(l)} 4-${lw}`} in the Finals${mvp ? `. ${mvp} is the Finals MVP` : ''}`
+}
+// an older save's wire, brought to the one style: every item a sentence with its period, the bare matchup lines
+// ("Rockets-76ers") and the second item a coaching hire used to post ("... leaves the Suns bench to become head
+// coach of the Kings", beside "The Kings have hired Suns lead assistant ...") dropped
+const NICK = '[A-Z0-9][A-Za-z0-9]*(?: [A-Z][a-z]+)?'
+const BARE = new RegExp(`^${NICK}-${NICK}(?:, ${NICK}-${NICK})*\\.?$`)
+export function fixWire(F) {
+  if (!Array.isArray(F?.news) || F.wv === 1) return
+  F.news = F.news.filter(n => n?.text && !(n.k === 'po' && BARE.test(n.text)) && !(n.k === 'coach' && n.tag === 'STAFF' && / bench to become head coach of the /.test(n.text)))
+  for (const n of F.news) n.text = wireText(n.text)
+  F.wv = 1
+}
 export function addNews(F, item) {
   if (!item?.text) return
-  const n = { d: F.phase === 'season' ? F.day : null, y: F.year, ...item, text: teamWords(item.text) }
+  const n = { d: F.phase === 'season' ? F.day : null, y: F.year, ...item, text: wireText(teamWords(item.text)) }
   const t = wireTime(F)
   if (t != null && n.t == null) n.t = Math.floor(t / DAY)
   if (!newsWorthy(F, n)) return
