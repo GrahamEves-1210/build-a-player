@@ -7433,7 +7433,7 @@ html.app-look:not(.is-app) .spin-panel .attr-category-lbl { color: #fff !importa
 html.app-look:not(.is-app) .spin-panel .attr-category-line { background: #fff !important; opacity: 1 !important; }
 
 /* phones: a pixel less between the D and the first dash (owner, 11-13) */
-@media (max-width: 768px) { .bap-wm em > .wm-g1 { margin-left: calc(-.033em - .25px); } }
+@media (max-width: 768px) { .bap-wm em > .wm-g1 { margin-left: calc(-.033em - .55px); } }
 /* phones: and a pixel less between the second dash and the P */
 @media (max-width: 768px) { .bap-wm em > .wm-g3 { margin-right: calc(-.067em - 1px); } }
 /* phones: half the space above the first row of chips on the card (8px to 4px) */
@@ -8191,11 +8191,17 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
    P's 0.362-0.502em, the upright ends 0.321em in. */
 .wm-cb, .wm-cp { position: relative; font-style: normal; }
 .wm-cb::after, .wm-cp::after { content: ''; position: absolute; left: .06em; width: .29em; background: var(--wm-bg, #070b0a); pointer-events: none; }
-.wm-cb::after { top: .3495em; height: .119em; }
-.wm-cp::after { top: .3695em; height: .147em; }
+.wm-cb::after, .wm-cp::after { top: 0; height: 1em; transform-origin: 0 0; transform: translateY(var(--t)) scaleY(var(--h)); }   /* (a transform, not top/height: those snap to whole pixels, so the block could never sit exactly on the bowl) */
+.wm-cb::after { --t: .3488em; --h: .1128; }   /* (B's upper bowl, 0.361-0.477em down the letter's box, measured at phone density; a hair over each edge) */
+.wm-cp::after { --t: .3699em; --h: .1374; }   /* (P's, 0.382-0.523em) */
 .ag-home { --wm-bg: #080d0c; } .ag-home--bucket { --wm-bg: #0b0806; } .ag-home--soccer { --wm-bg: #08090b; }
 
 /* Home: no light shining down on the player figures (owner 11-25) */
 .ag-home .ag-stage-beam { display: none !important; }
 /* phone soccer Home: the photo down so the pitch shows under the striker (the roof lights are painted out now) */
 @media (max-width: 1023px) { .ag-home--soccer .ag-stage-photo { background-size: auto 135% !important; background-position: center 78% !important; } }
+/* the D in front of the first dash where they meet (the dash sits behind it, owner 11-25); and the D-dash gap 0.1px
+   tighter on desktop too (phones: the 768 rule above) */
+.bap-wm .wm-d { position: relative; z-index: 2; font-style: normal; }
+.bap-wm em > .wm-g1 { position: relative; z-index: 1; }
+@media (min-width: 769px) { .bap-wm em > .wm-g1 { margin-left: calc(-.033em - .3px); } }

@@ -8,7 +8,7 @@
 export default function Wordmark({ tail = null, emStyle }) {
   return (
     <span className="bap-wm">
-      <i className="wm-cb">B</i>UI<i className="wm-k wm-k2">L</i>D<em className={emStyle ? undefined : 'wm-a'} style={emStyle}><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>
+      <i className="wm-cb">B</i>UI<i className="wm-k wm-k2">L</i><i className="wm-d">D</i><em className={emStyle ? undefined : 'wm-a'} style={emStyle}><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>
       {tail ?? <><i className="wm-k wm-p wm-cp">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-e">E</i>R</>}
     </span>
   )
