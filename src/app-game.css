@@ -7897,3 +7897,8 @@ html.low-power .sil-wrap .st-fx { display: none; }
 .splash-stack-band { background: rgba(236,240,238,.4) !important; }
 /* (just the blocks: no ghost of the figure behind them) */
 .ag-figure-base, .ag-figure--nba .splash-figure, .st-home-fig > .splash-figure { display: none !important; }
+/* (the pieces carry the mask themselves: the figure's box is just where they land) */
+.splash-stack-figure--pieces { -webkit-mask-image: none !important; mask-image: none !important; }
+/* (the ghost's see-through is the whole figure's, the pieces solid under it: where two pieces meet there's no line) */
+.splash-stack-figure--pieces { opacity: .4; }
+.splash-stack-figure--pieces .splash-stack-band { background: rgb(236,240,238) !important; }

@@ -56,8 +56,7 @@ import { BASEBALL_SILHOUETTE, BASEBALL_POOL, BASEBALL_POS, BASEBALL_MODES, BASEB
 import { encodeBaseballBuild, decodeBaseballBuild } from '../lib/baseballShare'
 import { switchSport } from './app/AppHome'
 
-// the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
-const BAND_STEP = 85
+import { pieceStyle } from './SplashScreen'   // (the figure's pieces: their shape, their fall, their pace)
 
 // ═════════════════════════════════════════════════════════════════════════════
 // BASEBALL: the fourth game, at /baseball (main.jsx mounts it while lib/baseballLive.js is on).
@@ -191,17 +190,10 @@ function useRevealOnMount(ready) {
 function BaseballStackedSilhouette({ pos, ready, fast = false }) {
   const visible = useRevealOnMount(ready)
   const attrs = SPLASH_ATTRS[baseballPosOf(pos)]
+  const flexes = attrs.map(a => a.flex ?? 1)
   return (
-    <div className="splash-stack-figure" style={{ WebkitMaskImage: `url(${BASEBALL_SILHOUETTE.src})`, maskImage: `url(${BASEBALL_SILHOUETTE.src})` }}>
-      {attrs.map((a, i) => (
-        <div key={a.label} className="splash-stack-band" style={{
-          background: a.col, flex: a.flex, alignItems: a.at === 'end' ? 'flex-end' : a.at === 'start' ? 'flex-start' : 'center', opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
-          transitionDelay: visible ? `${(attrs.length - 1 - i) * BAND_STEP}ms` : '0ms',
-        }}>
-          <span className={`splash-stack-band-label bb-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}`} style={a.off ? { marginTop: `${a.off}em` } : undefined}>{a.label}</span>
-        </div>
-      ))}
+    <div className="splash-stack-figure splash-stack-figure--pieces">
+      {attrs.map((a, i) => <div key={a.label} className="splash-stack-band" style={pieceStyle({ src: BASEBALL_SILHOUETTE.src, flexes, i, visible })} />)}
     </div>
   )
 }

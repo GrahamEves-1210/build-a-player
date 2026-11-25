@@ -79,8 +79,7 @@ import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/a
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 
-// the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
-const BAND_STEP = 85
+import { pieceStyle } from './SplashScreen'   // (the figure's pieces: their shape, their fall, their pace)
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -246,33 +245,10 @@ function useRevealOnMount(ready) {
 // silhouette's outline via a CSS mask.
 function BucketStackedSilhouette({ attrs, ready, fast = false }) {
   const visible = useRevealOnMount(ready)
+  const flexes = attrs.map(a => a.grow ?? (a.tall ? 1.4 : 1))
   return (
-    <div
-      className="splash-stack-figure"
-      style={{
-        WebkitMaskImage: 'url(/basketballsilhouette.png)',
-        maskImage: 'url(/basketballsilhouette.png)',
-      }}
-    >
-      {attrs.map((a, i) => (
-        <div
-          key={a.label}
-          className="splash-stack-band"
-          style={{
-            background: a.col,
-            flex: a.grow ?? (a.tall ? 1.4 : 1),
-            opacity: visible ? 1 : 0,
-            // Starts stacked at the very top (i band-heights up) and falls
-            // down to its own row — lower bands fall further.
-            transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
-            // Fully sequential — each band only starts once the previous one
-            // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * BAND_STEP}ms` : '0ms',
-          }}
-        >
-          <span className="splash-stack-band-label">{a.label}</span>
-        </div>
-      ))}
+    <div className="splash-stack-figure splash-stack-figure--pieces">
+      {attrs.map((a, i) => <div key={a.label} className="splash-stack-band" style={pieceStyle({ src: '/basketballsilhouette.png', flexes, i, visible })} />)}
     </div>
   )
 }
