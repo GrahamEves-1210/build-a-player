@@ -6231,6 +6231,13 @@ html:is(.is-app, .app-look) .sc-card-first { font-family: var(--ag-body); font-s
 html:is(.is-app, .app-look) .sc-card-last { font-family: var(--ag-font); font-weight: 400; font-size: clamp(13px, 1.5vw, 16px); letter-spacing: .4px; line-height: 1.05; }
 /* a long surname (BELLINGHAM) a size down instead of cut off with an ellipsis */
 html:is(.is-app, .app-look) .sc-card-last.is-long { font-size: 13px; letter-spacing: -.2px; }
+/* soccer's board (2026-11-24): every word on a card at 13px or more. The first name in the display face, in capitals,
+   so it fits a 58px card; the date's month and the column headings too (a two-word heading takes two lines) */
+html:is(.is-app, .app-look) .sc-screen--soccer .sc-card-first { font-family: var(--ag-font); font-weight: 400; font-size: 13px; line-height: 1.1; letter-spacing: -.2px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,255,255,.72); }
+html:is(.is-app, .app-look) .sc-screen--soccer .sc-card-name-wrap { padding-left: 1px; padding-right: 1px; }
+html:is(.is-app, .app-look) .sc-screen--soccer .sc-date-month { font-size: 13px; letter-spacing: .5px; line-height: 1; }
+html:is(.is-app, .app-look) .sc-screen--soccer .sc-date-day { line-height: 1; }
+html:is(.is-app, .app-look) .sc-screen--soccer .sc-col-label { font-size: clamp(13px, 2.9vw, 17px) !important; letter-spacing: .3px !important; white-space: normal; line-height: 1.05; text-align: center; }
 /* the bottom bar */
 html:is(.is-app, .app-look) .sc-back-btn { border-radius: 5px !important; border: 1px solid rgba(255,255,255,.16); background: #111816; color: #fff; }
 html:is(.is-app, .app-look) .sc-confirm-btn { border-radius: 5px !important; background: var(--sc-a); box-shadow: none !important; }

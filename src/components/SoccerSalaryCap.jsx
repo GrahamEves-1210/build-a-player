@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { SkRows } from './app/Skeleton'
 import { NameTag } from './app/NameTag'
-import { SOCCER_CLUBS } from '../data/soccer-clubs'
+import { SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
+import { SOCCER_ALL_STRIKERS } from '../data/soccer-strikers'
 import { WC_ALL_NATIONS } from '../data/soccer-nations'
 import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
 import { migrateSoccerKeys } from '../data/soccer-attrs'
@@ -42,10 +43,19 @@ function getESTDate(daysOffset = 0) {
 }
 
 // ─── The cards: club crest (or nation flag), club colours, ESPN photo or none ───
-const CLUB_META = Object.fromEntries(SOCCER_CLUBS.map(t => [t.short, t]))
+const CLUB_META = Object.fromEntries(SOCCER_ALL_CLUBS.map(t => [t.short, t]))
 const NATION_META = Object.fromEntries(WC_ALL_NATIONS.map(t => [t.short, t]))   // (its nation cards are the 2026 squads')
-const metaOf = p => (p.teamKind === 'nation' ? NATION_META : CLUB_META)[p.team]
-const logoOf = p => `${p.teamKind === 'nation' ? '/logos/nations/' : '/logos/soccer/'}${p.team}.png`
+// The crest a card wears is his club's, every time the data knows his club: a club card's own, and a nation card's
+// when its player is at a club in the data (Balogun at Monaco, McKennie at Juventus, De Bruyne at Napoli: in the pool
+// through their countries, since their leagues aren't on the wheel yet). A flag only where the data has no club for
+// him (Messi, Ronaldo). The card's colours go with the crest. (Drawing only: the pool and the board are unchanged.)
+const CLUB_OF_PLAYER = new Map(SOCCER_ALL_STRIKERS.map(p => [p.name, p.team]))
+const crestOf = p => {
+  const club = p.teamKind === 'nation' ? CLUB_OF_PLAYER.get(p.name) : p.team
+  return club && CLUB_META[club] ? { src: `/logos/soccer/${club}.png`, meta: CLUB_META[club] } : { src: `/logos/nations/${p.team}.png`, meta: NATION_META[p.team] }
+}
+const metaOf = p => crestOf(p).meta
+const logoOf = p => crestOf(p).src
 const photoOf = p => { const f = p?.espn != null ? SOCCER_HEADSHOTS[String(p.espn)] : null; return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null }
 const look = p => { const t = metaOf(p); return { teamColor: t?.color ?? '#444', teamColor2: t?.color2 ?? '#222', photo: photoOf(p) } }
 const _playerMap = new Map(ALL_PLAYERS.map(p => [p.name, p]))
@@ -121,11 +131,13 @@ function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, sh
   const animClass = shufflePhase === 'out' ? ' sc-card--flip-out' : shufflePhase === 'in' ? ' sc-card--flip-in' : ''
   const hlClass = shuffleHighlight === 'col' ? ' sc-card--hl-col' : shuffleHighlight === 'row' ? ' sc-card--hl-row' : ''
   const logo = logoOf(player)
+  // (the colour goes with the crest: a day's board frozen before the crests changed still carries the flag's)
+  const tc = metaOf(player)?.color ?? player.teamColor
   return (
     <button
       onClick={viewOnly ? undefined : onClick}
       className={`sc-card${isSelected ? ' sc-card--sel' : ''}${dimmed ? ' sc-card--dim' : ''}${viewOnly ? ' sc-card--view' : ''}${animClass}${hlClass}`}
-      style={{ '--tc': player.teamColor, '--sel': isNearBlack(player.teamColor) ? '#888' : player.teamColor, '--sd': `${shuffleDelay}ms` }}
+      style={{ '--tc': tc, '--sel': isNearBlack(tc) ? '#888' : tc, '--sd': `${shuffleDelay}ms` }}
     >
       <div className="sc-card-visual">
         <img src={logo} alt="" aria-hidden="true" className="sc-card-logo-bg"

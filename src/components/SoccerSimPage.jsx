@@ -1126,7 +1126,7 @@ export default function SoccerSimPage({ result, build, types, pool = 'current', 
                   <span className="sts-city">{sub}</span>
                   <span className="sts-nickname">{team.name}</span>
                 </div>
-                {sz?.height ? <span className="ssp-strip-size">{Math.floor(sz.height / 12)}'{sz.height % 12}"{sz.weight ? ` · ${sz.weight} lbs` : ''}</span> : null}
+                {sz?.height ? <span className="ssp-strip-size">{Math.round(sz.height * 2.54)} cm{sz.weight ? ` · ${Math.round(sz.weight * 0.45359)} kg` : ''}</span> : null}
               </div>
               <div className="sts-grades">
                 {[['ATT', team.att], ['DEF', team.def]].map(([k, v]) => (

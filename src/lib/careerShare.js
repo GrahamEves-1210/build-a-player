@@ -13,6 +13,11 @@ const accentOf = S => S.card?.accent ?? (S.isSoccer ? '#f4f4f5' : S.isBucket ? '
 const glowOf = S => S.card?.glow ?? (S.isSoccer ? '#a1a1aa' : S.isBucket ? '#fb923c' : '#1fc98a')
 const siteOf = S => S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com')
 
+// soccer's big numbers, spelled out on a card (the tables' G and A are too short for a headline)
+const SOCCER_BIG = { goals: 'GOALS', assists: 'ASSISTS', apps: 'APPS' }
+const bigLabel = (S, k) => (S.isSoccer ? SOCCER_BIG[k] : null) ?? STAT_LABEL[k]
+// a soccer season the way football writes it: 2026-27 (a career: its first season to its last)
+const seasonOf = y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`
 const W = 1080, H = 1920, PAD = 84
 const ANTON = "'BAP Anton', Anton, Impact, sans-serif"
 const BEBAS = "'BAP Bebas', 'Bebas Neue', Impact, sans-serif"
@@ -159,7 +164,8 @@ export async function careerShareCanvas(c, { username } = {}) {
   backdrop(ctx, team ? teamColor(S, team) : accent, glowOf(S))
   const cb = comebackYear(c)
   topLine(ctx, 'CAREER', [cb ? 'COMEBACK' : null, c.sandbox ? 'SANDBOX' : null].filter(Boolean), accent)
-  const years = c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : ''
+  const y0 = c.seasons[0]?.season, y1 = c.seasons[c.seasons.length - 1]?.season
+  const years = !c.seasons.length ? '' : S.isSoccer ? (y0 === y1 ? seasonOf(y0) : `${seasonOf(y0)} TO ${seasonOf(y1)}`) : `${y0}–${y1}`
   nameBlock(ctx, c.name, `${POS_NAME[c.pos].toUpperCase()} · ${years}`, accent)
 
   // the legacy: the tier, the points, the ladder
@@ -181,7 +187,7 @@ export async function careerShareCanvas(c, { username } = {}) {
   text(ctx, String(L.score), IR, PY + 172, { font: `116px ${ANTON}`, color: '#fff', align: 'right' })
   // his place on the all-time list, small and gold, raised over the points (a top-list career only)
   let rankW = 0
-  if (L.ranked) {
+  if (L.ranked && !S.isSoccer) {
     const rk = `#${L.rank}`
     ctx.font = `46px ${ANTON}`; rankW = ctx.measureText(rk).width + 12
     text(ctx, rk, IR - scoreW - 10, PY + 124, { font: `46px ${ANTON}`, color: GOLD, align: 'right' })
@@ -217,7 +223,7 @@ export async function careerShareCanvas(c, { username } = {}) {
 
   // the career's big numbers
   const NY = RY + 96 + 150
-  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, t.stats[k]), STAT_LABEL[k]]), NY)
+  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, t.stats[k]), bigLabel(S, k)]), NY)
   // the hardware: seasons, rings, the award, the honors
   const award = AWARD_NAME[c.pos]
   const TY = NY + 100
@@ -229,11 +235,28 @@ export async function careerShareCanvas(c, { username } = {}) {
     { v: String(t.proBowls), k: t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, icon: 'star' },
   ], TY)
 
+  // soccer: his country and the two biggest cups, a line under the hardware
+  let extra = 0
+  if (S.isSoccer) {
+    const cells = [[t.caps ?? 0, (t.caps ?? 0) === 1 ? 'CAP' : 'CAPS'], [t.wc ?? 0, t.wc === 1 ? 'WORLD CUP' : 'WORLD CUPS'], [t.ucl ?? 0, t.ucl === 1 ? 'CHAMPIONS LEAGUE' : 'CHAMPIONS LEAGUES']]
+    const cw = (W - PAD * 2) / cells.length, by = TY + TILE_H + 80
+    cells.forEach(([v, k], i) => {
+      const cx = PAD + cw * i + cw / 2, won = i > 0 && v > 0
+      ctx.font = `60px ${ANTON}`; const vw = ctx.measureText(String(v)).width
+      const ks = fit(ctx, k, BEBAS, 30, cw - vw - 44, 3)
+      ctx.font = `${ks}px ${BEBAS}`; const kw = ctx.measureText(k).width + k.length * 3
+      const x0 = cx - (vw + 14 + kw) / 2
+      text(ctx, String(v), x0, by, { font: `60px ${ANTON}`, color: won ? GOLD : '#fff' })
+      text(ctx, k, x0 + vw + 14, by - 4, { font: `${ks}px ${BEBAS}`, color: 'rgba(255,255,255,.62)', spacing: 3 })
+      if (i) { ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD + cw * i, by - 50); ctx.lineTo(PAD + cw * i, by + 8); ctx.stroke() }
+    })
+    extra = 68
+  }
   // the teams he played for, and how long with each
-  const LY = TY + TILE_H + 64
+  const LY = TY + TILE_H + 64 + extra
   const teams = t.teams.map(s => ({ s, n: c.seasons.filter(x => x.team === s).length })).slice(0, 7)
   text(ctx, teams.length === 1 ? (S.isSoccer ? 'ONE CLUB, START TO FINISH' : 'ONE TEAM, START TO FINISH') : 'PLAYED FOR', W / 2, LY, { font: `30px ${BEBAS}`, color: 'rgba(255,255,255,.6)', align: 'center', spacing: 6 })
-  const sz = teams.length <= 4 ? 96 : teams.length <= 5 ? 88 : 74
+  const sz = S.isSoccer ? (teams.length <= 5 ? 78 : 72) : teams.length <= 4 ? 96 : teams.length <= 5 ? 88 : 74
   const tg = teams.length <= 4 ? 60 : 34
   const rowW = teams.length * sz + (teams.length - 1) * tg
   const logos = await Promise.all(teams.map(x => loadImage(S.logo(x.s))))
@@ -261,7 +284,7 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
   const accent = accentOf(S)
   backdrop(ctx, teamColor(S, s.team), glowOf(S))
   const back = c.unretired && s.year >= c.unretired.year
-  topLine(ctx, `SEASON ${s.season}`, [back ? 'COMEBACK' : null, c.sandbox ? 'SANDBOX' : null].filter(Boolean), accent)
+  topLine(ctx, `SEASON ${S.isSoccer ? seasonOf(s.season) : s.season}`, [back ? 'COMEBACK' : null, c.sandbox ? 'SANDBOX' : null].filter(Boolean), accent)
   // the team's logo, top right, beside the name
   const logo = await loadImage(S.logo(s.team))
   if (logo) { const sz = 200, r = Math.min(sz / logo.width, sz / logo.height); ctx.drawImage(logo, W - PAD - logo.width * r, 196 + (sz - logo.height * r) / 2, logo.width * r, logo.height * r) }
@@ -284,7 +307,7 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
 
   // the season's numbers
   const NY = PY + PH + 240
-  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, s.stats[k]), STAT_LABEL[k]]), NY)
+  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, s.stats[k]), bigLabel(S, k)]), NY)
   // the honors (only the ones won), then the overall, the goals, the role
   const honors = [
     s.award && { v: s.awardName, k: 'WINNER', icon: 'trophy', gold: true },
