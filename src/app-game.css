@@ -8219,6 +8219,12 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
    at 16px (phone) / 25px (desktop); Home gets the same tucks as em so they hold at its larger size, and desktop goes back to type (not the picture) */
 .ag-wordmark-img { display: none !important; }
 @media (min-width: 1024px) { .ag-home .ag-wordmark > .bap-wm { display: inline !important; } }
+/* phones and tablets: the spin screen's own nav wordmark as a picture (public/wordmark/*-m.webp: its 16px type, cut out), the type's size */
+@media (max-width: 1023px) {
+  .ag-home .ag-wordmark > .bap-wm { display: none !important; }
+  .ag-home .ag-wordmark-img { display: block !important; height: .7083em; width: auto; max-width: 100%; margin: .097em auto .2em; }
+  .ag-home .ag-wordmark-img--bucket { height: .8333em; margin-top: .03em; }
+}
 @media (max-width: 768px) {
   .ag-home .bap-wm em > .wm-g1 { margin-left: -.0674em; }   /* (-.033em - .55px at 16px) */
   .ag-home .bap-wm em > .wm-g3 { margin-right: -.1295em; }  /* (-.067em - 1px at 16px) */
