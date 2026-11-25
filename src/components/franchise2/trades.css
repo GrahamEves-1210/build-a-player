@@ -153,3 +153,4 @@ html.bap-reduce-motion .tr-gauge-bar i { transition: none; }
   .tr-acts { grid-template-columns: 1fr 1fr; }
   .tr-acts > :first-child { grid-column: 1 / -1; }
 }
+@media (min-width: 900px) { .dl-filter.tf-pos { grid-template-columns: repeat(11, minmax(0, 1fr)); } }

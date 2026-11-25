@@ -102,7 +102,7 @@ function Shop({ F, owner, st, up, make, onOpen, onMan }) {
           <Chyron tone="ink" size="s" title="OFFERS" right={R.teams ? `${R.teams} ${R.teams === 1 ? 'TEAM' : 'TEAMS'}` : null} />
           {kinds.size > 1 && (
             <div className="tf-opt" role="radiogroup" aria-label="What comes back">
-              <span>BACK</span>
+              <span>GET</span>
               {[['all', 'ANY'], ['picks', 'PICKS'], ['player', 'PLAYERS']].map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={st.kind === k} className={st.kind === k ? 'is-on' : ''} onClick={() => { up({ kind: k, n: PAGE }); sfx('tap') }}>{l}</button>)}
             </div>
           )}

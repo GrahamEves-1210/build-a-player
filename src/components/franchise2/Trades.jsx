@@ -90,7 +90,7 @@ export default function TradeScreen({ F, act, owner, onBack, open = null, back: 
           <YearDeals F={F} />
         </>
       )}
-      {s && <Builder F={F} act={act} owner={owner} s={s} give={give} get={get} setGive={setGive} setGet={setGet} res={res} setRes={setRes} onDone={() => { setS(null); setGive(NONE); setGet(NONE); toTop() }} />}
+      {s && <Builder F={F} act={act} owner={owner} s={s} give={give} get={get} setGive={setGive} setGet={setGet} res={res} setRes={setRes} doneLabel={fs ? 'Back to the finder' : 'Back to trades'} onDone={() => { setS(null); setGive(NONE); setGet(NONE); toTop() }} />}
     </div>
   )
 }
@@ -156,7 +156,7 @@ function TeamList({ F, onPick }) {
 }
 
 // ── Building a trade ─────────────────────────────────────────────────────────
-function Builder({ F, act, owner, s, give, get, setGive, setGet, res, setRes, onDone }) {
+function Builder({ F, act, owner, s, give, get, setGive, setGet, res, setRes, onDone, doneLabel = 'Back to trades' }) {
   const [side, setSide] = useState('them')
   const mineA = useMemo(() => tradeAssets(F, F.team), [F, F.wk, F.stage, F.teams[F.team].r.length, res?.line]) // eslint-disable-line react-hooks/exhaustive-deps
   const theirA = useMemo(() => tradeAssets(F, s), [F, s, F.wk, F.stage, F.teams[s].r.length, res?.line]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -204,7 +204,7 @@ function Builder({ F, act, owner, s, give, get, setGive, setGet, res, setRes, on
         </div>
       )}
       {done ? (
-        <ActionBar><Go onClick={onDone}>Back to trades</Go></ActionBar>
+        <ActionBar><Go onClick={onDone}>{doneLabel}</Go></ActionBar>
       ) : (
         <>
           <div className="fd-seg tr-seg" role="tablist">

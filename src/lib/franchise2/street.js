@@ -85,7 +85,7 @@ export function signStreet(F, id) {
   if (fl) t.r = t.r.filter(x => x !== fl)
   t.r.push(p)
   try { fixNumbers(F, F.team) } catch { /* (a number is cosmetic) */ }
-  const text = `${nick(F.team)} sign ${posTxt(p)} ${p.n} to a one-year, ${moneyText(c.deal.$)} deal`
+  const text = `${nick(F.team)} sign ${posTxt(p)} ${p.n} to a one-year, $${c.deal.$} million deal`
   addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text })
   return { ok: true, text, p, deal: c.deal, cut: c.cut }
 }
