@@ -3,9 +3,9 @@
 //   1v1    two people, one each side
 //   2v2    four people, two a side: each one moves his own man, always (no switching)
 //   koth   KING OF THE HILL, three people, every man for himself (cutthroat). The man with the ball (the king) plays
-//          against the other two, who both defend. Ones and twos, make it take it. A stop (a defensive board, a steal,
-//          a block that the defense comes up with) is a live ball: whoever secures it has to clear it past the arc
-//          before he can score, and then he's the king. Out of bounds or the shot clock: the ball goes to whichever
+//          against the other two, who both defend. Ones and twos, make it take it. A stop is a live ball, as in every
+//          mode (sim.js s.mustClear): whoever secures it takes it back past the arc, and then he's the king (a make
+//          before that is waved off). Out of bounds or the shot clock: the ball goes to whichever
 //          of the other two men is closer to it, and he checks it at the top (behind the arc, so no clear). First to
 //          11, win by 2 over the next man, capped at 15. No passing.
 export const MODES = {

@@ -54,6 +54,61 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv .btlv-play:active { transform: translateY(1px); }
 .btlv .btlv-ghost { display: block; width: 100%; height: 46px; border-radius: 6px; border: 1px solid var(--line-hi); font-size: 17px; letter-spacing: 1.6px; color: var(--muted); }
 
+/* the menu's CONTROLS row: a plain list row, under the choices */
+.btlv-menu-body > section.btlv-menu-ctl { order: -1; margin-top: 16px; }
+.btlv .btlv-row { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; width: 100%; padding: 10px 12px; text-align: left; border: 1px solid var(--line-hi); border-radius: 6px; }
+.btlv-row > span { font-size: 18px; letter-spacing: 1.4px; line-height: 1.1; color: var(--text); }
+.btlv-row > small { grid-column: 1; font-size: 13px; letter-spacing: 1px; color: var(--muted); }
+.btlv-row > i { grid-column: 2; grid-row: 1 / 3; width: 9px; height: 9px; border-top: 2px solid var(--muted); border-right: 2px solid var(--muted); transform: rotate(45deg); margin-right: 4px; }
+
+/* ── CONTROLS ──────────────────────────────────────────────────────────────────────────────────── */
+.btlv-ctl .btlv-menu-body { padding-bottom: calc(24px + var(--rail)); }
+.btlv-ctl .btlv-menu-body > * { flex: none; }
+.btlv-ctl-seg { margin-top: 14px; }
+.btlv-ctl h2 { margin-top: 22px; }
+.btlv-ctl-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.btlv-ctl-c { display: flex; align-items: center; justify-content: flex-start; min-height: 30px; }
+.btlv-ctl-t { display: grid; gap: 2px; min-width: 0; }
+.btlv-ctl-t b { font-weight: 400; font-size: 17px; letter-spacing: 1.2px; line-height: 1.1; }
+.btlv-ctl-t small { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; letter-spacing: 0; line-height: 1.35; color: var(--muted); }
+.btlv-ctl-pill { display: inline-block; padding: 5px 8px 4px; border-radius: 5px; border: 1px solid var(--line-hi); background: var(--panel); font-size: 13px; letter-spacing: 1px; line-height: 1; color: var(--text); white-space: nowrap; }
+.btlv-ctl-mv { font-size: 15px; letter-spacing: 1px; color: var(--acc); }
+.btlv .btlv-ctl-p { margin: 0 0 10px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; letter-spacing: 0; line-height: 1.45; color: var(--muted); }
+.btlv-ctl-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.btlv-ctl-rules li { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; letter-spacing: 0; line-height: 1.45; color: var(--muted); }
+.btlv-ctl-rules b { font-family: var(--cap); font-weight: 400; font-size: 16px; letter-spacing: 1px; color: var(--text); }
+/* the pads, drawn as they are in a game */
+.btlv-ctl-pads { display: grid; gap: 10px; margin-top: 14px; }
+.btlv-demo { position: relative; margin: 0; height: 176px; border: 1px solid var(--line); border-radius: 8px; background: var(--asphalt); overflow: hidden; }
+.btlv-demo figcaption { position: absolute; left: 12px; top: 9px; font-size: 13px; letter-spacing: 2px; color: var(--muted); }
+.btlv-demo-stick { position: absolute; left: 6%; top: 34px; width: 92px; height: 92px; border-radius: 50%; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .035); }
+.btlv-demo-stick i { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px; border-radius: 50%; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .55); }
+.btlv-demo-stick span { position: absolute; left: 50%; top: calc(100% + 7px); transform: translateX(-50%); font-size: 14px; letter-spacing: 2px; color: var(--muted); }
+.btlv-demo-pad { position: absolute; right: calc(14px + 80px + 10px); top: 50%; width: 138px; height: 138px; margin-top: -60px; border-radius: 50%; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); overflow: hidden; }
+.btlv-demo-pad .btlv-ds-w { display: block; }
+.btlv-demo-pad > i { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px; border-radius: 50%; background: rgba(243, 246, 248, .22); border: 2px solid rgba(243, 246, 248, .45); }
+.btlv-demo-h { position: absolute; left: 0; right: 0; height: 50%; display: grid; place-items: center; font-size: 18px; letter-spacing: 1.6px; }
+.btlv-demo-h.is-up { top: 0; padding-top: 10px; border-bottom: 1px solid var(--line-hi); }
+.btlv-demo-h.is-dn { bottom: 0; padding-bottom: 10px; }
+.btlv-demo-a { position: absolute; right: 14px; bottom: 14px; width: 80px; height: 80px; border-radius: 50%; display: grid; place-content: center; justify-items: center; gap: 2px; background: var(--acc); color: #140a02; border: 2px solid rgba(0, 0, 0, .35); }
+.btlv-demo-a b { font-family: var(--num); font-weight: 400; font-size: 19px; letter-spacing: 1px; line-height: 1; }
+.btlv-demo-a small { font-size: 13px; letter-spacing: .5px; opacity: .78; line-height: 1; }
+.btlv-demo-a.is-dim { opacity: .38; }
+.btlv-demo-b { position: absolute; right: 24px; top: 12px; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-hi); border: 2px solid var(--line-hi); font-size: 16px; letter-spacing: 1.2px; }
+@media (max-width: 360px) { .btlv-demo-pad { right: 96px; width: 126px; height: 126px; margin-top: -56px; } .btlv-demo-stick { left: 3%; } }
+/* the moves round the basket, big */
+.btlv-dial { display: grid; justify-items: center; gap: 6px; margin: 6px 0 10px; }
+.btlv-dial-rim { font-size: 13px; letter-spacing: 2px; color: var(--muted); padding-bottom: 12px; position: relative; }
+.btlv-dial-rim::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--muted); transform: rotate(180deg); transform-origin: 50% 50%; }
+.btlv-dial-pad { position: relative; width: 236px; height: 236px; border-radius: 50%; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
+.btlv-dial-w { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--wx), var(--wy)); display: grid; justify-items: center; gap: 3px; font-size: 14px; letter-spacing: .8px; line-height: 1.05; text-align: center; color: var(--text); white-space: nowrap; }
+.btlv-dial-w.is-0 { --wx: 0px; --wy: -82px; } .btlv-dial-w.is-2 { --wx: 72px; --wy: 0px; } .btlv-dial-w.is-4 { --wx: 0px; --wy: 82px; }
+.btlv-dial-w.is-5 { --wx: -56px; --wy: 58px; } .btlv-dial-w.is-6 { --wx: -70px; --wy: 0px; } .btlv-dial-w.is-7 { --wx: -56px; --wy: -58px; }
+.btlv-dial-man { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px; border-radius: 50%; border: 2px solid var(--line-hi); background: var(--panel-hi); }
+.btlv-dial-ball { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 16px; border-radius: 50%; background: #e9772c; border: 1.5px solid #2a1004; }
+.btlv-dial-cap { font-size: 13px; letter-spacing: 1.6px; color: var(--muted); }
+.btlv-dial .btlv-key { min-width: 24px; height: 24px; font-size: 13px; }
+
 /* ── the game: scorebug, court, pad ────────────────────────────────────────────────────────────── */
 .btlv-game { --bug: 48px; --note: 24px; touch-action: none; }
 /* the scorebug: QUIT | the sides (the one with the ball lit) | the shot clock; under it, whose ball and the game's length */
@@ -105,55 +160,86 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-court canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* the controls: a zone of their own under the court, sized for thumbs. Left thumb: the stick (it lands where the
-   thumb does, anywhere on the left). Right thumb: the right stick, SHOOT (big), PASS (in a team game) */
-.btlv-game { --pad-h: 206px; }
+   thumb does, anywhere on the left), MOVE under it. Right thumb: the right pad (the moves named round it with the
+   ball; JUMP over STEAL without it), SHOOT (big), PASS (in a team game). Every control says what it does now */
+.btlv-game { --pad-h: 206px; --warn: #f2b33d; }
 .btlv-pad { flex: none; height: var(--pad-h); position: relative; touch-action: none; overflow: hidden; background: var(--asphalt); border-top: 1px solid var(--line); }
-.btlv-stick-home { position: absolute; left: 23%; top: 50%; width: 2px; height: 2px; pointer-events: none; }
+.btlv-stick-home { position: absolute; left: 20%; top: 50%; width: 2px; height: 2px; pointer-events: none; }
 .btlv-stick-base, .btlv-stick-knob { position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: none; will-change: transform; }
 .btlv-stick-base { width: 108px; height: 108px; margin: -54px 0 0 -54px; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .035); }
-.btlv-stick-knob { width: 52px; height: 52px; margin: -26px 0 0 -26px; background: rgba(243, 246, 248, .32); border: 2px solid rgba(243, 246, 248, .55); }
+.btlv-stick-base::after { content: 'MOVE'; position: absolute; left: 50%; top: calc(100% + 7px); transform: translateX(-50%); font-style: normal; font-size: 14px; letter-spacing: 2px; line-height: 1; color: var(--muted); }
+.btlv-stick-base.is-on::after { visibility: hidden; }
+.btlv-stick-knob { width: 50px; height: 50px; margin: -25px 0 0 -25px; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .55); }
 .btlv-stick-base.is-on { border-color: rgba(243, 246, 248, .5); }
 .btlv-stick-knob.is-on { background: rgba(243, 246, 248, .8); border-color: #fff; }
 .btlv-btns { position: absolute; inset: 0; pointer-events: none; }
-.btlv .btlv-btn { position: absolute; display: grid; place-items: center; border-radius: 50%; pointer-events: auto; touch-action: none;
-  background: var(--panel-hi); border: 2px solid var(--line-hi); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); font-size: 17px; letter-spacing: 1.2px; color: var(--text); }
-.btlv .btlv-btn-a { right: 14px; bottom: 16px; width: 90px; height: 90px; font-family: var(--num); font-size: 19px; letter-spacing: 1px; background: var(--acc); border-color: rgba(0, 0, 0, .35); color: #140a02; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -3px 0 rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .6); }
-.btlv .btlv-btn-b { right: 28px; top: 14px; width: 62px; height: 62px; font-size: 16px; }
-.btlv-game:not(.is-team) .btlv-btn-a { bottom: auto; top: 50%; margin-top: -45px; }
+.btlv .btlv-btn { position: absolute; display: grid; place-content: center; justify-items: center; border-radius: 50%; pointer-events: auto; touch-action: none; text-align: center;
+  background: var(--panel-hi); border: 2px solid var(--line-hi); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); font-size: 17px; letter-spacing: 1.2px; line-height: 1; color: var(--text); }
+.btlv .btlv-btn-a { right: 14px; bottom: 14px; width: 88px; height: 88px; gap: 3px; background: var(--acc); border-color: rgba(0, 0, 0, .35); color: #140a02; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -3px 0 rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .6); }
+.btlv .btlv-btn-a b { font-family: var(--num); font-weight: 400; font-size: 21px; letter-spacing: 1px; }
+.btlv .btlv-btn-a small { font-size: 13px; letter-spacing: .6px; opacity: .78; white-space: nowrap; }
+.btlv .btlv-btn-a small:empty { display: none; }
+/* his side still has to take it back: SHOOT says so (the shot still goes, but a make won't count) */
+.btlv .btlv-btn-a.is-warn { background: var(--panel-hi); border-color: var(--warn); color: var(--text); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); }
+.btlv .btlv-btn-a.is-warn small { color: var(--warn); opacity: 1; }
+.btlv .btlv-btn-b { right: 27px; top: 12px; width: 62px; height: 62px; font-size: 17px; }
+.btlv .btlv-btn-b.is-two { font-size: 14px; line-height: 1.05; letter-spacing: .8px; }
+.btlv .btlv-btn-b.is-two span { display: block; white-space: pre-line; }
+.btlv-game:not(.is-team) .btlv-btn-a { bottom: auto; top: 50%; margin-top: -44px; }
 .btlv .btlv-btn.is-down { background: var(--text); color: var(--ink); transform: translateY(1px); }
 .btlv .btlv-btn.is-off { display: none; }
 .btlv .btlv-btn.is-dim { opacity: .38; }
-/* the right stick: where the right thumb rests, left of SHOOT (a flick starts where the thumb lands on it) */
-.btlv-ds { position: absolute; right: 122px; top: 50%; width: 100px; height: 100px; margin-top: -50px; border-radius: 50%; pointer-events: auto; touch-action: none;
-  border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .035); }
-.btlv-ds > span { position: absolute; left: 50%; transform: translateX(-50%); font-size: 14px; letter-spacing: 1.4px; line-height: 1; color: var(--muted); white-space: nowrap; pointer-events: none; }
-.btlv-ds > .btlv-rs-up, .btlv-ds > .btlv-rs-mid { bottom: calc(100% + 6px); }
-.btlv-ds > .btlv-rs-dn { top: calc(100% + 6px); }
-.btlv-ds > .btlv-rs-dn.is-cd { opacity: .4; }
-.btlv-ds.is-ball { border-color: rgba(243, 246, 248, .42); }
-.btlv-ds.is-ball > .btlv-rs-mid { color: var(--text); }
-.btlv-ds-knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .5); pointer-events: none; will-change: transform; }
+/* the right pad: where the right thumb rests, left of SHOOT. With the ball, a flick toward a name does that move (the
+   names change with where he is and the hand the ball is in); without it, the top half is JUMP, the bottom STEAL */
+.btlv-ds { position: absolute; right: 110px; top: 50%; width: 138px; height: 138px; margin-top: -69px; border-radius: 50%; pointer-events: auto; touch-action: none; overflow: hidden;
+  border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
+.btlv-ds-w { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--wx), var(--wy)); display: none; font-size: 13px; letter-spacing: .5px; line-height: 1.02; text-align: center; white-space: pre-line; color: rgba(243, 246, 248, .86); pointer-events: none; }
+.btlv-ds-w.is-0 { --wx: 0px; --wy: -47px; } .btlv-ds-w.is-1 { --wx: 33px; --wy: -33px; } .btlv-ds-w.is-2 { --wx: 43px; --wy: 0px; } .btlv-ds-w.is-3 { --wx: 33px; --wy: 33px; }
+.btlv-ds-w.is-4 { --wx: 0px; --wy: 47px; } .btlv-ds-w.is-5 { --wx: -33px; --wy: 33px; } .btlv-ds-w.is-6 { --wx: -43px; --wy: 0px; } .btlv-ds-w.is-7 { --wx: -33px; --wy: -33px; }
+.btlv-ds[data-k='ball'] .btlv-ds-w { display: block; }
+.btlv-ds-half { position: absolute; left: 0; right: 0; height: 50%; display: none; place-items: center; font-size: 18px; letter-spacing: 1.6px; line-height: 1; color: var(--text); pointer-events: none; transition: background-color .12s; }
+.btlv-ds-half.is-up { top: 0; padding-top: 10px; border-bottom: 1px solid var(--line-hi); }
+.btlv-ds-half.is-dn { bottom: 0; padding-bottom: 10px; }
+.btlv-ds[data-k='def'] .btlv-ds-half, .btlv-ds[data-k='none'] .btlv-ds-half { display: grid; }
+.btlv-ds-half.is-dim, .btlv-ds-half.is-cd { color: var(--faint); }
+.btlv-ds-half.is-hit { background: rgba(243, 246, 248, .14); }
+.btlv-ds[data-k='none'] { opacity: .38; }
+.btlv-ds-knob { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: rgba(243, 246, 248, .22); border: 2px solid rgba(243, 246, 248, .45); pointer-events: none; will-change: transform; }
+.btlv-ds:not([data-k='ball']) .btlv-ds-knob { display: none; }
 .btlv-ds.is-on { border-color: rgba(243, 246, 248, .6); }
 .btlv-ds.is-on .btlv-ds-knob { background: rgba(243, 246, 248, .8); border-color: #fff; }
-/* a very narrow phone: the right stick tucks in */
-@media (max-width: 360px) { .btlv-ds { right: 112px; width: 90px; height: 90px; margin-top: -45px; } .btlv .btlv-btn-a { width: 82px; height: 82px; } }
+/* a very narrow phone: the pad and SHOOT a touch smaller */
+@media (max-width: 360px) { .btlv-ds { right: 98px; width: 128px; height: 128px; margin-top: -64px; } .btlv .btlv-btn-a { width: 80px; height: 80px; } .btlv-game:not(.is-team) .btlv-btn-a { margin-top: -40px; } }
 
-/* with a keyboard: no thumbs on the screen, a small legend of the keys beside the court (what does something now is lit) */
+/* with a keyboard: no thumbs on the screen. Beside the court, the left hand's keys on the left (WASD, SPACE, E) and
+   the arrows on the right, each as it looks on a keyboard; only what does something right now shows */
 .btlv-keys { display: none; }
 .btlv-game.has-keys { --chk: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--rail) - 16px), calc((100vw - 380px) * 3 / 4)); }
 .btlv-game.has-keys .btlv-court { --ch: var(--chk); width: calc(var(--chk) * 4 / 3); }
 .btlv-game.has-keys .btlv-pad { position: absolute; inset: auto 0 var(--rail) 0; height: auto; background: none; border: 0; pointer-events: none; overflow: visible; }
 .btlv-game.has-keys .btlv-stick-home, .btlv-game.has-keys .btlv-stick-base, .btlv-game.has-keys .btlv-stick-knob, .btlv-game.has-keys .btlv-btns { display: none; }
-.btlv-game.has-keys .btlv-keys { display: grid; position: absolute; left: 20px; bottom: 22px; width: calc((100vw - var(--chk) * 4 / 3) / 2 - 36px); max-width: 230px; gap: 10px; margin: 0; padding: 12px 12px 13px; color: var(--muted);
-  background: rgba(12, 16, 22, .9); border: 1px solid var(--line); border-radius: 8px; }
-.btlv-keys-row { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 3px; align-items: center; transition: opacity .15s; }
-.btlv-keys-row > .btlv-kk { grid-column: 1 / -1; }
-.btlv-keys-row b { font-weight: 400; font-size: 15px; letter-spacing: 1.3px; color: var(--text); white-space: nowrap; }
-.btlv-keys-row small { font-size: 13px; letter-spacing: .8px; color: var(--faint); line-height: 1.1; }
-.btlv-kk { display: flex; gap: 3px; min-width: 0; }
-.btlv-keys kbd { font: inherit; font-size: 13px; line-height: 1; min-width: 21px; text-align: center; padding: 4px 5px 3px; border-radius: 4px; border: 1px solid var(--line-hi); color: var(--text); background: rgba(255, 255, 255, .06); box-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
-.btlv-keys kbd.is-wide { padding: 4px 12px 3px; }
-.btlv-game[data-mode='def'] .btlv-keys-row:is(.is-o, .is-b), .btlv-game[data-mode='ball'] .btlv-keys-row.is-d, .btlv-game[data-mode='off'] .btlv-keys-row:is(.is-b, .is-d:not(:last-child)) { opacity: .38; }
+.btlv-game.has-keys .btlv-keys { display: grid; align-content: start; position: absolute; bottom: 22px; width: calc((100vw - var(--chk) * 4 / 3) / 2 - 32px); max-width: 236px; gap: 12px; margin: 0; padding: 14px 14px 15px;
+  background: rgba(12, 16, 22, .9); border: 1px solid var(--line); border-radius: 8px; transition: opacity .15s; }
+.btlv-game.has-keys .btlv-keys.is-l { left: 16px; }
+.btlv-game.has-keys .btlv-keys.is-r { right: 16px; }
+.btlv-game[data-mode='none'] .btlv-keys { opacity: .5; }
+.btlv .btlv-keys-title { margin: 0 0 -2px; font-size: 13px; letter-spacing: 2px; line-height: 1; color: var(--muted); }
+.btlv-keys-row { display: flex; align-items: center; gap: 10px; }
+.btlv-kt { display: grid; gap: 2px; min-width: 0; }
+.btlv-keys-row b { font-weight: 400; font-size: 17px; letter-spacing: 1.2px; line-height: 1.05; color: var(--text); }
+.btlv-keys-row small { font-size: 13px; letter-spacing: .7px; line-height: 1.1; color: var(--muted); }
+.btlv-keys-row small:empty { display: none; }
+.btlv-keys-row small.is-warn { color: var(--warn); }
+.btlv-keys-row.is-off { display: none; }
+.btlv-keys-row.is-dim, .btlv-keys-row.is-cd { opacity: .4; }
+.btlv-game:not([data-mode='ball']) .btlv-keys-row.is-shoot { display: none; }
+.btlv-game[data-mode='def'] .btlv-keys-row.is-pass { display: none; }
+.btlv-kk { display: flex; gap: 3px; }
+.btlv-wasd { display: grid; justify-items: center; gap: 3px; }
+.btlv-wasd > span { display: flex; gap: 3px; }
+.btlv .btlv-key { display: inline-grid; place-items: center; box-sizing: border-box; min-width: 28px; height: 28px; padding: 1px 6px 0; border-radius: 5px; font: inherit; font-size: 15px; letter-spacing: .5px; line-height: 1; color: var(--text);
+  background: #1f2833; border: 1px solid rgba(255, 255, 255, .2); border-bottom: 3px solid rgba(0, 0, 0, .55); }
+.btlv .btlv-key.is-wide { min-width: 64px; }
 /* a big screen: a bigger scorebug */
 @media (min-width: 900px) {
   .btlv-game { --bug: 60px; --note: 30px; }
@@ -193,10 +279,11 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   .btlv-bug-note > span:first-child:empty { display: none; }
   .btlv-bug-goal { display: none; }
   .btlv-pad { position: absolute; inset: 0 0 var(--rail) 0; height: auto; background: none; border: 0; }
-  .btlv-stick-home { left: calc((100% - var(--cwl)) / 4 + var(--sal) / 2); top: auto; bottom: 86px; }
-  .btlv-ds { right: calc(var(--sar) + 90px); top: auto; bottom: 104px; margin: 0; width: 86px; height: 86px; }
-  .btlv .btlv-btn-a, .btlv-game:not(.is-team) .btlv-btn-a { right: calc(var(--sar) + 12px); top: auto; bottom: 16px; margin: 0; width: 80px; height: 80px; }
-  .btlv .btlv-btn-b { right: calc(var(--sar) + 18px); top: auto; bottom: 116px; width: 58px; height: 58px; }
+  .btlv-stick-home { left: calc((100% - var(--cwl)) / 4 + var(--sal) / 2); top: auto; bottom: 96px; }
+  /* the right margin: the pad over SHOOT, PASS beside SHOOT */
+  .btlv-ds { right: calc(var(--sar) + max(6px, (100vw - var(--sal) - var(--sar) - var(--cwl)) / 4 - 69px)); top: auto; bottom: 110px; margin: 0; }
+  .btlv .btlv-btn-a, .btlv-game:not(.is-team) .btlv-btn-a { right: calc(var(--sar) + 12px); top: auto; bottom: 14px; margin: 0; width: 84px; height: 84px; }
+  .btlv .btlv-btn-b { right: calc(var(--sar) + 104px); top: auto; bottom: 22px; width: 56px; height: 56px; }
 }
 
 /* ── QUIT's question and the final ─────────────────────────────────────────────────────────────── */

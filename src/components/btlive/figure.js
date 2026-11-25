@@ -86,15 +86,33 @@ function dot2(ctx, x, y, r, col, dark, ink) {
   ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x - r * LIT, y - r * LIT, r * 0.7, 0, TAU); ctx.fill()
 }
 
-// an arm from the shoulder to where the pose puts the hand; the elbow bends out from his side, never across him
-function armPts(side, hand) {
+// An arm from the shoulder to where the pose puts the hand, bent at the elbow the way a real arm bends: worked out in
+// three dimensions (the hand's height counts) and then seen from above. The elbow points down at the floor, tucked by
+// his ribs with a low hand (a dribble, a stance, arms at his sides) and under the ball with a raised one (a shot, a
+// contest). Seen from straight above, most of a bent arm's bend goes into the floor, so the elbow stays in
+// close: it is never drawn wider than the shoulder or the hand (a chicken wing is a 2D arm's mistake).
+const SHZ = 0.55, ZH = 1.0                        // a hand's height over his shoulder is z * ZH - SHZ (his size): z 0.2-0.35 is his hip, 1 over his head
+export function armPts(side, hand) {
   const sx = 0.0, sy = side * SH
-  let dx = hand[0] - sx, dy = hand[1] - sy, d = Math.hypot(dx, dy) || 0.001
-  if (d > REACH) { dx *= REACH / d; dy *= REACH / d; d = REACH }
-  const hgt = Math.sqrt(Math.max(0, UARM * UARM - d * d / 4)), ux = dx / d, uy = dy / d
-  let ox = -uy, oy = ux
-  if (ox * -0.5 + oy * side < 0) { ox = -ox; oy = -oy }               // (out to his side and a little back)
-  return [sx, sy, sx + dx / 2 + ox * hgt, sy + dy / 2 + oy * hgt, sx + dx, sy + dy]
+  let dx = hand[0] - sx, dy = hand[1] - sy, h = Math.hypot(dx, dy) || 0.001
+  if (h > REACH) { dx *= REACH / h; dy *= REACH / h; h = REACH }
+  // (the hand stays where the pose puts it across the floor; its height gives way when the arm can't reach both)
+  const zMax = Math.sqrt(Math.max(0, REACH * REACH - h * h))
+  const dz = clamp(clamp(hand[2] || 0, 0, 1.2) * ZH - SHZ, -zMax, zMax)
+  const d = Math.hypot(h, dz) || 0.001, ux = dx / d, uy = dy / d, uz = dz / d
+  // where the elbow points: down (the floor), a touch back with a low hand, a touch forward under a raised one
+  const up = clamp(((hand[2] || 0) - 0.5) / 0.4, 0, 1)
+  let px = -0.3 * (1 - up) + 0.15 * up, py = side * 0.12, pz = -1
+  const dot = px * ux + py * uy + pz * uz
+  px -= dot * ux; py -= dot * uy; pz -= dot * uz
+  const pl = Math.hypot(px, py, pz)
+  if (pl < 1e-4) { px = 0; py = side; pz = 0 } else { px /= pl; py /= pl; pz /= pl }
+  const bend = Math.sqrt(Math.max(0, UARM * UARM - d * d / 4))
+  let ex = sx + dx / 2 + px * bend, ey = sy + dy / 2 + py * bend
+  // never out past the shoulder or the hand (whichever is wider) by more than a sliver
+  const wide = Math.max(sy * side, (sy + dy) * side) + 0.02
+  if (ey * side > wide) ey = wide * side
+  return [sx, sy, ex, ey, sx + dx, sy + dy]
 }
 function arm(ctx, side, hand, L, ink) {
   const [sx, sy, ex, ey, hx, hy] = armPts(side, hand)

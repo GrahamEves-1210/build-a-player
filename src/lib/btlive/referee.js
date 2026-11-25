@@ -17,6 +17,11 @@ export function isThree(x, y) {
   if (y <= COURT.arcSideY) return Math.abs(x - RIM.x) > COURT.arcSideX
   return Math.hypot(x - COURT.arcC.x, y - COURT.arcC.y) > COURT.arcR
 }
+// behind the line by at least m feet (a man taking it back: his feet behind it, not only his middle)
+export function behindArc(x, y, m = 0) {
+  if (y <= COURT.arcSideY) return Math.abs(x - RIM.x) > COURT.arcSideX + m
+  return Math.hypot(x - COURT.arcC.x, y - COURT.arcC.y) > COURT.arcR + m
+}
 export const inPaint = (x, y) => x >= COURT.paint.x0 && x <= COURT.paint.x1 && y <= COURT.paint.y1
 export const inBounds = (x, y, pad = 0) => x >= COURT.minX - pad && x <= COURT.maxX + pad && y >= COURT.minY - pad && y <= COURT.maxY + pad
 

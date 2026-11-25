@@ -228,18 +228,19 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
       }
       return o
     }
-    // walks to one spot and shoots, every time
+    // walks to one spot and shoots, every time (after a stop he takes it back first, as anyone learns to: a basket
+    // before that doesn't count)
     const spot = (x, y) => (s, i) => {
       const o = base(s, i), p = s.players[i]
-      if (s.ball.st === 'held' && s.ball.holder === i && p.act !== 'gather') {
+      if (s.ball.st === 'held' && s.ball.holder === i && p.act !== 'gather' && s.mustClear !== p.team) {
         const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy)
         o.dx = o.dy = 0; o.pass = false; o.q = null
         if (d > 0.8) { o.mx = dx / d; o.my = dy / d; o.shoot = false } else { o.mx = 0; o.my = 0; o.shoot = true }
       }
       return o
     }
-    // shoots the moment the ball is live
-    const chuck = (s, i) => { const o = base(s, i), p = s.players[i]; if (s.ball.st === 'held' && s.ball.holder === i && p.act !== 'gather') { o.shoot = true; o.dx = o.dy = 0; o.pass = false } return o }
+    // shoots the moment the ball is live (and the moment he has taken it back after a stop)
+    const chuck = (s, i) => { const o = base(s, i), p = s.players[i]; if (s.ball.st === 'held' && s.ball.holder === i && p.act !== 'gather' && s.mustClear !== p.team) { o.shoot = true; o.dx = o.dy = 0; o.pass = false } return o }
     // jumps at everything on defense
     const jumpSpam = (s, i) => { const o = base(s, i); if (s.players[i].team !== s.poss && s.ball.st === 'held') o.jump = s.tick % 2 === 0; return o }
     // never uses a button on defense, just stays in front

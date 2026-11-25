@@ -74,6 +74,7 @@ export const T = {
   footIn: 0.75,                      // the man with the ball is out when his centre is this close to a line (his foot on it:
                                      // the dot reaches radius past the centre, a foot about half that)
   lineKeep: 0.9,                     // everyone else stays this far inside (eased back, never past the line itself)
+  clearPast: 0.8,                    // taking it back after a stop: his centre this far behind the arc (his feet behind it)
   shootBuffer: 0.5,                  // a SHOOT press this recent starts the shot the moment he can (a catch, a board)
 
   // ── The shot meter (judged on the shooter's own device: only the quality 0-1 is sent) ──────────

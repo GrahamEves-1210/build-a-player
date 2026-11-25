@@ -7,8 +7,14 @@
 //
 //   const s = createGame({ teams: [[p, ...], [p, ...]], seed })      p = { id, name, pos: 'guard' | 'big', build }
 //   King of the Hill (modes.js): three sides of one, teams: [[a], [b], [c]]. Then players[i].team === i, s.score[i]
-//   is his score, s.poss is the king's side (= his index), s.king the king, s.mustClear the man who has to take it
-//   past the arc before he can shoot (or null)
+//   is his score, s.poss is the king's side (= his index), s.king the king
+//   s.mustClear                     the side (team index) that has to take it back past the arc before a basket counts,
+//                                   or null. Every mode: a stop (a defensive board, a steal, a pick, a block the defense
+//                                   comes up with) is a live ball, no check; whoever secures it has to take it back
+//                                   behind the arc first (a pass out to a teammate behind it does it too). A basket
+//                                   before that is waved off and it's the other side's ball at the check. An offensive
+//                                   board needs no clear. The check stays for the start, a make, out of bounds and the
+//                                   shot clock
 //   step(s, inputs)                 inputs[i] for s.players[i] (missing: standing still)
 //   input = { mx, my,               the stick, -1..1 each (length <= 1): a little push walks, all the way runs
 //             shoot, pass,          held buttons with the ball (pass without it: call for the ball)
@@ -73,7 +79,7 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
   const s = {
     v: 1, seed: hashSeed(seed), rn: 0, tick: 0, size, rules, mode,
     players, score: teams.map(() => 0), poss: 0, phase: 'check', phaseT: ticks(rules.checkTime),
-    king: null, mustClear: null,             // King of the Hill: the king (index), the man who must clear it (index)
+    king: null, mustClear: null,             // King of the Hill: the king (index); every mode: the side that must take it back (team)
     clock: 0, next: null, winner: null, gamePoint: false, possN: 0,
     ball: { st: 'held', holder: 0, x: 0, y: 0, z: 3, vx: 0, vy: 0, vz: 0, from: -1, to: -1, t: 0, n: 0, sx: 0, sy: 0, sz: 0, tx: 0, ty: 0, verdict: null, near: [], tried: [], lastTeam: 0, reb: false, grabAt: 0, speed: 0, kind: null,
       fd: -1, fD: 0, fl: false },            // a dead ball on its way to the man who checks it: to whom, from how far; has it hit the floor
@@ -166,19 +172,21 @@ function kingIs(s, i) {
   for (const p of s.players) p.man = p.i === i ? -1 : i
 }
 
-// King of the Hill: a stop (a defensive board, a steal, a block the defense comes up with). The ball stays live: the
-// man who has it is on the attack at once, but he has to clear it past the arc before he can shoot
-function kothStop(s, p, why) {
+// A stop (a defensive board, a steal, a pick, a block the defense comes up with), in every mode. No check: the ball
+// stays live and the man who has it is on the attack at once, but his side has to take it back past the arc before a
+// basket counts (King of the Hill: and then he's the king)
+function stop(s, p, why) {
   s.events.push({ e: 'poss', team: s.poss, pts: 0, why })
   s.possN++
-  s.poss = p.team; kingIs(s, p.i); s.mustClear = p.i
+  s.poss = p.team; s.mustClear = p.team
+  if (s.mode === 'koth') kingIs(s, p.i)
   s.call = null
   for (const o of s.players) { o.burst = 0; o.mv = 0; o.bs = 0; o.mqT = -1; if (o.act === 'gather') { o.act = 'free'; o.actT = 0; o.shot = null } }
   s.ball.holder = p.i; holdBall(s)
   p.noAct = ticks(0.2); p.catchFrom = -1
   if (p.act === 'jump') { p.act = 'land'; p.actT = 0 }
   s.clock = rticks(s.rules.shotClock[s.size - 1])
-  s.events.push({ e: 'clear', pid: p.i, why })
+  s.events.push({ e: 'clear', pid: p.i, team: p.team, why })
 }
 
 // King of the Hill: a dead ball (out of bounds, the shot clock) goes to whichever of the men who didn't touch it
@@ -241,7 +249,7 @@ function release(s, p, q) {
   b.st = 'shot'; b.sx = p.x; b.sy = p.y; b.sz = sh.kind === 'dunk' ? 10.5 : 8; b.x = p.x; b.y = p.y; b.z = b.sz
   b.t = 0; b.n = ticks(sh.kind === 'dunk' ? 0.16 : sh.kind === 'layup' ? 0.36 : 0.5 + sh.d * 0.014)
   b.tx = spot.x; b.ty = spot.y
-  b.verdict = { made: v.made, pts: v.pts, poster: !!v.poster, deep: !!v.deep, three: sh.three, kind: sh.kind, d: sh.d, c: v.c, p: v.p, q, by: v.by ?? null }
+  b.verdict = { made: v.made, pts: v.pts, poster: !!v.poster, deep: !!v.deep, three: sh.three, kind: sh.kind, d: sh.d, c: v.c, p: v.p, q, by: v.by ?? null, uncl: s.mustClear === p.team }
   s.events.push({ e: 'release', pid: p.i, kind: sh.kind, three: sh.three, d: sh.d, q, c: v.c, p: v.p, cs: cs != null })
 }
 
@@ -271,6 +279,16 @@ function swat(s, p, d) {
 
 function shotLands(s) {
   const b = s.ball, v = b.verdict, p = s.players[b.from], st = s.stats[p.i]
+  if (v.made && v.uncl) {
+    // it went in, but his side never took it back past the arc: no basket, and it's the other side's ball (King of
+    // the Hill: the closer of the other two men)
+    b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = b.vy = 0; b.vz = v.kind === 'dunk' ? -26 : -3
+    st.tov++
+    s.events.push({ e: 'waved', pid: p.i, pts: v.pts, kind: v.kind, three: v.three })
+    const by = s.mode === 'koth' ? kothNext(s, p.i, RIM) : -1
+    endPossession(s, 0, by >= 0 ? s.players[by].team : 1 - p.team, by >= 0 ? by : null, 'waved')
+    return
+  }
   if (v.made) {
     s.score[p.team] += v.pts
     st.pts += v.pts; st.fgm++; if (v.three) st.tpm++
@@ -427,8 +445,7 @@ function doSteal(s, p) {
     s.stats[p.i].stl++; s.stats[h.i].tov++
     b.holder = p.i; holdBall(s)
     s.events.push({ e: 'steal', pid: p.i, from: h.i })
-    if (s.mode === 'koth') kothStop(s, p, 'steal')
-    else endPossession(s, 0, p.team, p.i, 'steal')
+    stop(s, p, 'steal')
     return
   }
   p.act = 'frozen'; p.actT = 0; p.actN = ticks(v.reach ? T.stealReachFreeze : T.stealMiss)
@@ -455,8 +472,7 @@ function act(s, p, inp) {
   if (has) {
     if (p.noAct > 0) return
     // SHOOT pressed in the last half second (on the catch, on the board, a beat before the ball got there) goes now
-    // (King of the Hill: not while he still has to clear it; a press then doesn't wait for it)
-    if (s.mustClear === p.i) p.sq = -1
+    // (before his side has taken it back it still goes up: a make then is waved off, shotLands)
     if (p.sq >= 0 && s.tick - p.sq <= rticks(T.shootBuffer)) { p.sq = -1; startGather(s, p) }
     else if ((edge & B_PASS) && s.size > 1) doPass(s, p, inp)
     else {
@@ -582,12 +598,7 @@ function collide(s, walk = false, slip = null) {
   }
 }
 
-function change(s, p, why, reb) {
-  if (s.mode === 'koth') { kothStop(s, p, why); return }
-  s.ball.holder = p.i; holdBall(s)
-  endPossession(s, 0, p.team, p.i, why)
-  void reb
-}
+function change(s, p, why) { stop(s, p, why) }
 
 function ballStep(s) {
   const b = s.ball, P = s.players
@@ -829,8 +840,8 @@ function tick(s, inputs) {
       endPossession(s, 0, to, by >= 0 ? by : null, 'oob')
       return s
     }
-    // King of the Hill: past the arc with it, he's the king
-    if (s.mustClear === h.i && ref.isThree(h.x, h.y)) { s.mustClear = null; s.events.push({ e: 'cleared', pid: h.i }) }
+    // taken back: behind the arc with it, both feet (King of the Hill: then he's the king)
+    if (s.mustClear === h.team && ref.behindArc(h.x, h.y, T.clearPast)) { s.mustClear = null; s.events.push({ e: 'cleared', pid: h.i, team: h.team }) }
   }
   if (b.st === 'held' || b.st === 'pass') {
     if (--s.clock <= 0) {

@@ -151,7 +151,7 @@ function pickPlan(s, p, m, only = null) {
   } else if (m.plan === 'post') m.spot = { x: RIM.x + (p.x < RIM.x ? -5.5 : 5.5), y: 9.5 }
 }
 
-// King of the Hill: where to take it to clear it, a couple of feet past the arc and away from the two defenders
+// After a stop: where to take it back to, a couple of feet past the arc and away from the two defenders
 function pickClear(s, p, m) {
   m.plan = 'clear'; m.planT = s.tick + Math.round(1.2 * GHZ)
   if (!m.side) m.side = roll(s) < 0.5 ? -1 : 1
@@ -181,8 +181,8 @@ function withBall(s, p, m, lvl, out) {
   }
   m.rel = null
   m.driveOnly = !!lvl.driveOnly
-  // King of the Hill, off a stop: he has to take it past the arc before he can shoot
-  const clearing = s.mustClear === p.i
+  // off a stop (every mode): his side has to take it back past the arc before a basket counts, so no shot till then
+  const clearing = s.mustClear === p.team
   if (clearing) { if (m.plan !== 'clear' || s.tick >= m.planT) pickClear(s, p, m) }
   else if (m.plan === 'clear') m.plan = null
   if (m.plan == null) { m.gotT = s.tick; m.sag = nearestDef(s, p).d }
@@ -219,18 +219,20 @@ function withBall(s, p, m, lvl, out) {
   if (m.plan === 'three' && mine.kind === 'jumper' && !mine.three && clockS > 4) need = Math.max(need, Math.min(0.6, mine.v * T.twoValue))
   if (mine.kind === 'jumper' && need >= T.cpuDriveV && clockS < 5.5 && m.plan !== 'drive' && mine.v < need) m.plan = 'drive'
   // a better look for a teammate
-  if (!clearing && s.size > 1 && p.noAct <= 0) {
+  // (taking it back: a teammate already behind the arc is a way to do it)
+  if (s.size > 1 && p.noAct <= 0) {
     let to = null, tv = 0
     const called = s.call && s.tick - s.call.tick < 24 ? s.call.pid : -1
     for (const o of s.players) {
       if (o.team !== p.team || o === p) continue
+      if (clearing && !ref.behindArc(o.x, o.y, T.clearPast + 1)) continue
       if (!laneOpen(s, p, o, p.team)) continue
       if (o.i === called) { to = o; tv = 9; break }
       const v = shotValue(s, o, lvl, defs, Math.hypot(o.x - p.x, o.y - p.y) / p.R.passSpeed * 9).v      // his man closes while the pass is in the air
       if (v > tv) { tv = v; to = o }
     }
     const held = s.tick - Math.max(p.catchT, m.gotT ?? 0) > 0.7 * GHZ
-    const want = tv >= 9 || (held && tv > mine.v + 0.15 + m.noise && tv > need - 0.05) || (clockS < 4 && tv > mine.v + 0.05)
+    const want = tv >= 9 || (clearing && to && ref.rimDist(p) < 18) || (held && tv > mine.v + 0.15 + m.noise && tv > need - 0.05) || (clockS < 4 && tv > mine.v + 0.05)
     if (to && want && clockS > 2.2 && (tv >= 9 || m.go < 0.5 + 0.4 * p.R.iq)) {
       const dx = to.x - p.x, dy = to.y - p.y, d = Math.hypot(dx, dy) || 1
       out.mx = dx / d; out.my = dy / d; out.pass = true
