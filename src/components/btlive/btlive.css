@@ -117,7 +117,17 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   background: var(--panel); border: 2px solid var(--line-hi); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 2px 0 rgba(0, 0, 0, .6); font-size: 17px; letter-spacing: 1.2px; color: var(--text); }
 .btlv .btlv-btn-a { right: 16px; bottom: 54px; width: 88px; height: 88px; font-size: 20px; border-color: var(--text); }
 .btlv .btlv-btn-b { right: 116px; bottom: 18px; width: 72px; height: 72px; }
-.btlv .btlv-btn-c { right: 110px; bottom: 104px; width: 64px; height: 64px; font-size: 15px; }
+/* the small stick, for dribble moves: where the right thumb is, up and in from SHOOT and over PASS (a flick starts
+   where the thumb lands on it, so it needn't land dead centre) */
+.btlv-ds { position: absolute; right: 104px; bottom: 100px; width: 84px; height: 84px; border-radius: 50%; pointer-events: auto; touch-action: none;
+  border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
+.btlv-ds > span { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); padding-bottom: 4px; font-size: 14px; letter-spacing: 1.2px; line-height: 1; color: var(--muted); white-space: nowrap; pointer-events: none; }
+.btlv-ds-knob { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .5); pointer-events: none; will-change: transform; }
+.btlv-ds.is-on { border-color: rgba(243, 246, 248, .5); }
+.btlv-ds.is-on .btlv-ds-knob { background: rgba(243, 246, 248, .78); border-color: #fff; }
+.btlv-ds.is-off { opacity: 0; pointer-events: none; }
+.btlv-ds.is-cd { opacity: .45; }
+.btlv-game.has-keys .btlv-ds { display: none; }
 .btlv .btlv-btn.is-down { background: var(--text); color: var(--ink); transform: translateY(1px); }
 .btlv .btlv-btn.is-off { opacity: 0; pointer-events: none; }
 .btlv .btlv-btn.is-cd { opacity: .45; }
@@ -125,10 +135,10 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-btn.is-down kbd { color: var(--ink); border-color: rgba(0, 0, 0, .4); }
 /* with a keyboard: the moves on the left, J K L in a row (only the ones that do something right now: no gaps) */
 .btlv-game.has-keys .btlv-pad { display: flex; align-items: center; justify-content: center; gap: 36px; }
-.btlv-keys { display: grid; justify-items: center; gap: 5px; margin: 0; color: var(--muted); }
-.btlv-keys b { font-weight: 400; font-size: 14px; letter-spacing: 1.6px; }
+.btlv-keys { display: flex; align-items: flex-start; gap: 22px; margin: 0; color: var(--muted); }
+.btlv-keys > div { display: grid; justify-items: center; gap: 5px; }
+.btlv-keys b { font-weight: 400; font-size: 14px; letter-spacing: 1.6px; white-space: nowrap; }
 .btlv-keys span { display: flex; gap: 4px; }
-.btlv-keys small { font-size: 13px; letter-spacing: 1.2px; }
 .btlv-game.has-keys .btlv-btns { position: static; width: auto; height: auto; display: flex; gap: 10px; }
 .btlv-game.has-keys .btlv-btn { position: static; flex-direction: row; gap: 10px; width: 140px; height: 58px; border-radius: 8px; font-size: 19px; margin: 0; }
 .btlv-game.has-keys .btlv-btn-a { border-color: var(--text); }
@@ -154,7 +164,7 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   .btlv-game.has-keys .btlv-court { --ch: var(--chk); }
   .btlv-game.has-keys .btlv-stage { flex: 1; }
   .btlv-game.has-keys .btlv-pad { position: absolute; left: 0; right: 0; top: calc(var(--sat) + var(--bug) + var(--note)); bottom: var(--rail); background: none; border: 0; pointer-events: none; display: block; }
-  .btlv-game.has-keys .btlv-keys { position: absolute; left: 0; bottom: 28px; width: calc((100% - var(--cwk)) / 2); }
+  .btlv-game.has-keys .btlv-keys { position: absolute; left: 0; bottom: 28px; width: calc((100% - var(--cwk)) / 2); flex-direction: column; align-items: center; gap: 16px; }
   .btlv-game.has-keys .btlv-btns { position: absolute; right: 0; bottom: 28px; width: calc((100% - var(--cwk)) / 2); flex-direction: column; align-items: center; }
   .btlv-game.has-keys .btlv-btn { width: min(140px, calc(100% - 24px)); }
 }
@@ -183,6 +193,7 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   .btlv-pad { position: absolute; inset: 0 0 var(--rail) 0; background: none; border: 0; }
   .btlv-stick-home { left: calc((100% - var(--cwl)) / 4 + var(--sal) / 2); bottom: 84px; }
   .btlv-btns { right: var(--sar); transform: scale(.84); transform-origin: 100% 100%; }
+  .btlv-ds > span { font-size: 16px; }   /* (scaled with the buttons: still 13px on the screen) */
 }
 
 /* ── QUIT's question and the final ─────────────────────────────────────────────────────────────── */

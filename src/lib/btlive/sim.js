@@ -1,4 +1,5 @@
-// BLACKTOP LIVE: the simulation. A fixed step (30 a second): step(state, inputs) moves the game one tick on.
+// BLACKTOP LIVE: the simulation. A fixed step (tune.js: 30 to one of the game's seconds, 36 of them in a real second):
+// step(state, inputs) moves the game one tick on.
 // The next state is a function of the state, every player's input for the tick and the seed, and of nothing
 // else: no clock, no Math.random, no DOM. The state is plain data (JSON-safe), so it can be copied, sent, replayed
 // and run in Node (scripts/btlive/balance.mjs) or on the live server. Everything discrete is decided by the
@@ -10,8 +11,11 @@
 //   past the arc before he can shoot (or null)
 //   step(s, inputs)                 inputs[i] for s.players[i] (missing: standing still)
 //   input = { mx, my,               the stick, -1..1 each (length <= 1): a little push walks, all the way runs
-//             shoot, pass, move,    held buttons with the ball (pass without it: call for the ball)
+//             shoot, pass,          held buttons with the ball (pass without it: call for the ball)
 //             steal, jump,          held buttons without it
+//             dx, dy,               a dribble move: the small stick's flick, -1..1 each, sent on the one tick it's made
+//                                   (pushed T.moveAt or more). Which move it is: where it points (referee.moveKind);
+//                                   a second one a quarter turn round while the first is still on: a spin
 //             q,                    the release quality 0-1 from the shooter's own meter, on the tick shoot is let go
 //             t,                    the tick the input was made on (online: for ordering; the step doesn't read it)
 //             pos }                 online: { x, y, vx, vy } where his own device has him. His device is the authority
@@ -20,7 +24,7 @@
 //                                   him, and his shot waits for the release quality his device timed (q)
 //   s.events                        what happened this tick (emptied at the start of the next): the screen and the
 //                                   balance script read it. { e: 'release' | 'make' | 'miss' | 'block' | 'steal' | ... }
-import { HZ, DT, COURT, RULES, T } from './tune.js'
+import { HZ, DT, gticks, rticks, COURT, RULES, T, MOVES, MOVE_KEYS } from './tune.js'
 import { derive } from './ratings.js'
 import { rollAt, hashSeed } from './rng.js'
 import { meterSpec, meterQuality } from './meter.js'
@@ -30,13 +34,13 @@ import { modeOfTeams } from './modes.js'
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const RIM = COURT.rim
 const G = 32                                   // gravity, ft/s²
-const ticks = sec => Math.max(1, Math.round(sec * HZ))
-const B_SHOOT = 1, B_PASS = 2, B_MOVE = 4, B_STEAL = 8, B_JUMP = 16
+const ticks = gticks                           // a time in the game's seconds (tune.js PACE) as ticks; rticks: a real one
+const B_SHOOT = 1, B_PASS = 2, B_STEAL = 8, B_JUMP = 16
 const IDLE = { mx: 0, my: 0 }
 
 const rnd = s => rollAt(s.seed, s.rn++)
 // what the referee is handed about a player
-const fact = p => ({ id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, fx: p.fx, fy: p.fy, act: p.act, actT: p.actT * DT, burst: p.burst, R: p.R })
+const fact = p => ({ id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, fx: p.fx, fy: p.fy, act: p.act, actT: p.actT * DT, burst: p.burst, mv: p.mv, bdx: p.bdx, bdy: p.bdy, R: p.R })
 const stat0 = () => ({ pts: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ast: 0, reb: 0, oreb: 0, stl: 0, blk: 0, tov: 0 })
 
 export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
@@ -48,7 +52,8 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
     id: p.id, i: players.length, team, slot, name: p.name || p.id, pos: p.pos === 'big' ? 'big' : 'guard', R: derive(p.build, p.pos),
     x: 0, y: 0, vx: 0, vy: 0, fx: 0, fy: -1,
     act: 'free', actT: 0, actN: 0,           // 'free' | 'gather' | 'follow' | 'jump' | 'land' | 'frozen' | 'down'
-    burst: 0, bdx: 0, bdy: 0,                // a MOVE in progress: ticks left, its direction
+    burst: 0, bdx: 0, bdy: 0,                // a dribble move in progress: ticks left, the way it goes (a spin: ends up going)
+    mv: 0, bn: 0, bs: 0,                     // ...which one (MOVES[..].n), how many ticks it lasts, a spin's turn (radians, signed)
     moveCd: 0, stealCd: 0, noAct: 0, pb: 0,  // cooldowns (ticks), the buttons held last tick
     sq: -1,                                  // the tick of his latest SHOOT press that hasn't started a shot (-1: none)
     shot: null,                              // going up: { kind, spec, d, three, run, read }
@@ -81,7 +86,7 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
   setSpots(s, s.poss, pointOf(s, s.poss))
   for (const p of players) { p.x = p.sx; p.y = p.sy }
   s.ball.holder = pointOf(s, s.poss)
-  s.clock = ticks(rules.shotClock[size - 1])
+  s.clock = rticks(rules.shotClock[size - 1])
   holdBall(s)
   s.events.push({ e: 'check', team: s.poss, pid: s.ball.holder })
   return s
@@ -137,7 +142,7 @@ function endPossession(s, pts, nextTeam, carrier, why) {
   s.possN++
   const st = ref.scoreState(s.score, s.rules)
   s.gamePoint = st.gamePoint
-  for (const p of s.players) { p.burst = 0; p.shot = null; if (p.act !== 'down') { p.act = 'free'; p.actT = 0 } p.pb = 0 }
+  for (const p of s.players) { p.burst = 0; p.mv = 0; p.bs = 0; p.shot = null; if (p.act !== 'down') { p.act = 'free'; p.actT = 0 } p.pb = 0 }
   s.call = null; s.mustClear = null
   if (st.over) {
     s.phase = 'over'; s.winner = st.winner
@@ -166,11 +171,11 @@ function kothStop(s, p, why) {
   s.possN++
   s.poss = p.team; kingIs(s, p.i); s.mustClear = p.i
   s.call = null
-  for (const o of s.players) { o.burst = 0; if (o.act === 'gather') { o.act = 'free'; o.actT = 0; o.shot = null } }
+  for (const o of s.players) { o.burst = 0; o.mv = 0; o.bs = 0; if (o.act === 'gather') { o.act = 'free'; o.actT = 0; o.shot = null } }
   s.ball.holder = p.i; holdBall(s)
   p.noAct = ticks(0.2); p.catchFrom = -1
   if (p.act === 'jump') { p.act = 'land'; p.actT = 0 }
-  s.clock = ticks(s.rules.shotClock[s.size - 1])
+  s.clock = rticks(s.rules.shotClock[s.size - 1])
   s.events.push({ e: 'clear', pid: p.i, why })
 }
 
@@ -206,7 +211,7 @@ function startGather(s, p) {
   if (r > 0.45 + 0.55 * p.R.iq) read = clamp(read + (r > 0.8 ? 1 : -1), 0, 2)
   const top = p.R.topBall
   p.shot = { kind, spec, d, three: kind === 'jumper' && ref.isThree(p.x, p.y), run: clamp(Math.hypot(p.vx, p.vy) / top, 0, 1), read, cUp }
-  p.act = 'gather'; p.actT = 0; p.burst = 0
+  p.act = 'gather'; p.actT = 0; p.burst = 0; p.mv = 0; p.bs = 0
   s.events.push({ e: 'gather', pid: p.i, kind })
 }
 
@@ -268,10 +273,11 @@ function shotLands(s) {
     s.score[p.team] += v.pts
     st.pts += v.pts; st.fgm++; if (v.three) st.tpm++
     let ast = -1
-    if (p.catchFrom >= 0 && s.tick - p.catchT <= 4 * HZ && s.players[p.catchFrom].team === p.team) { ast = p.catchFrom; s.stats[ast].ast++ }
+    if (p.catchFrom >= 0 && s.tick - p.catchT <= ticks(4) && s.players[p.catchFrom].team === p.team) { ast = p.catchFrom; s.stats[ast].ast++ }
     // through the net: it drops straight down under the rim (the screen draws it through the net while it's right
     // under it), bounces, and from the bounce it goes out to whoever checks it (betweenPlays)
-    b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = b.vy = 0; b.vz = -3
+    // (a dunk is thrown down through it: it hits the floor hard under the rim)
+    b.st = 'dead'; b.x = RIM.x; b.y = RIM.y; b.z = 9.4; b.vx = b.vy = 0; b.vz = v.kind === 'dunk' ? -26 : -3
     s.events.push({ e: 'make', pid: p.i, pts: v.pts, kind: v.kind, three: v.three, poster: v.poster, deep: v.deep, on: v.by, ast, score: [...s.score] })
     const keep = s.rules.makeItTakeIt || s.mode === 'koth'
     endPossession(s, v.pts, keep ? p.team : 1 - p.team, keep ? p.i : null, 'make')
@@ -312,15 +318,62 @@ function doPass(s, p, inp) {
   const to = s.players[ti]
   b.st = 'pass'; b.from = p.i; b.to = to.i; b.x = p.x; b.y = p.y; b.z = 4.5; b.t = 0; b.speed = p.R.passSpeed
   b.near = s.players.map(() => null); b.tried = s.players.map(() => false); b.lastTeam = p.team
-  p.act = 'follow'; p.actT = 0; p.actN = ticks(0.15); p.burst = 0
+  p.act = 'follow'; p.actT = 0; p.actN = ticks(0.15); p.burst = 0; p.mv = 0; p.bs = 0
   s.call = null
   s.events.push({ e: 'pass', pid: p.i, to: to.i })
 }
 
-function doMove(s, p, inp) {
-  const m = Math.hypot(inp.mx || 0, inp.my || 0)
-  const dir = m >= T.walk ? { x: inp.mx / m, y: inp.my / m } : { x: p.fx, y: p.fy }
-  p.burst = ticks(T.moveTime); p.bdx = dir.x; p.bdy = dir.y; p.moveCd = ticks(p.R.moveCd)
+// A dribble move starts: which one (where the flick points), its burst. No roll in here: a device calls it too, to
+// move its own man before the referee has heard (moveLocal). dir: the flick (unit). Returns the move's key
+export function moveBegin(p, dir) {
+  const kind = ref.moveKind(p, dir), M = MOVES[kind]
+  p.mv = M.n; p.bn = p.burst = ticks(M.time); p.bdx = dir.x; p.bdy = dir.y; p.bs = 0
+  return kind
+}
+// ...and turns into a spin: the burst bends round from the way it was going to the new way, over the spin's time
+export function moveSpin(p, dir) {
+  const a0 = Math.atan2(p.bdy, p.bdx)
+  let turn = Math.atan2(dir.y, dir.x) - a0
+  if (turn > Math.PI) turn -= 2 * Math.PI; else if (turn < -Math.PI) turn += 2 * Math.PI
+  // (the short way round; all but a half turn goes round by his back, away from the basket: a real spin)
+  if (Math.abs(turn) > 2.6) {
+    const m = a0 + turn / 2
+    if (Math.cos(m) * (RIM.x - p.x) + Math.sin(m) * (RIM.y - p.y) > 0) turn += turn > 0 ? -2 * Math.PI : 2 * Math.PI
+  }
+  p.mv = MOVES.spin.n; p.bn = p.burst = ticks(MOVES.spin.time); p.bdx = dir.x; p.bdy = dir.y; p.bs = turn
+}
+// a tick of a move's clock; the step-back ends with his feet set
+function burstTick(p) {
+  if (p.burst <= 0) return
+  if (--p.burst > 0) return
+  const M = MOVES[MOVE_KEYS[p.mv]]
+  if (M?.set != null) { p.vx *= M.set; p.vy *= M.set }
+  p.mv = 0; p.bs = 0
+}
+// how fast and which way a move has him going this tick: [x, y] of top speed
+const BV = [0, 0]
+function burstVel(p) {
+  const M = MOVES[MOVE_KEYS[p.mv]] ?? MOVES.cross, done = p.bn - p.burst
+  let sp = M.speed, x = p.bdx, y = p.bdy
+  if (M.stall && done < ticks(M.stall)) sp = M.stallSpeed
+  if (p.bs) {
+    // a spin: from the way it was going round to the way it ends up
+    const f = p.bn > 1 ? done / (p.bn - 1) : 1, a = Math.atan2(p.bdy, p.bdx) - p.bs * (1 - f)
+    x = Math.cos(a); y = Math.sin(a)
+  }
+  BV[0] = x * sp; BV[1] = y * sp
+  return BV
+}
+
+function doMove(s, p, dir) {
+  if (p.burst > 0) {
+    // a second flick while a move is on: a quarter turn or more round, and it's a spin (once a move)
+    if (p.mv !== MOVES.spin.n && ref.spinTurn(p, dir)) { moveSpin(p, dir); s.events.push({ e: 'move', pid: p.i, def: -1, freeze: false, ankles: false, kind: 'spin' }) }
+    return
+  }
+  if (p.moveCd > 0) return
+  const kind = moveBegin(p, dir)
+  p.moveCd = ticks(p.R.moveCd)
   // his man: the nearest defender
   let def = null, dd = T.moveRange
   for (const o of s.players) if (o.team !== p.team) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d <= dd) { dd = d; def = o } }
@@ -328,7 +381,7 @@ function doMove(s, p, inp) {
   if (v.freeze) {
     def.act = v.ankles ? 'down' : 'frozen'; def.actT = 0; def.actN = ticks(v.ankles ? T.ankleDown : T.moveFreeze); def.vx = def.vy = 0
   }
-  s.events.push({ e: 'move', pid: p.i, def: def ? def.i : -1, freeze: v.freeze, ankles: v.ankles })
+  s.events.push({ e: 'move', pid: p.i, def: def ? def.i : -1, freeze: v.freeze, ankles: v.ankles, kind })
 }
 
 function doSteal(s, p) {
@@ -349,7 +402,7 @@ function doSteal(s, p) {
 
 function act(s, p, inp) {
   const b = s.ball
-  const now = (inp.shoot ? B_SHOOT : 0) | (inp.pass ? B_PASS : 0) | (inp.move ? B_MOVE : 0) | (inp.steal ? B_STEAL : 0) | (inp.jump ? B_JUMP : 0)
+  const now = (inp.shoot ? B_SHOOT : 0) | (inp.pass ? B_PASS : 0) | (inp.steal ? B_STEAL : 0) | (inp.jump ? B_JUMP : 0)
   const edge = now & ~p.pb
   p.pb = now
   // (a press on defense is a swipe, not a shot that waits for the ball)
@@ -369,9 +422,12 @@ function act(s, p, inp) {
     // SHOOT pressed in the last half second (on the catch, on the board, a beat before the ball got there) goes now
     // (King of the Hill: not while he still has to clear it; a press then doesn't wait for it)
     if (s.mustClear === p.i) p.sq = -1
-    if (p.sq >= 0 && s.tick - p.sq <= ticks(T.shootBuffer)) { p.sq = -1; startGather(s, p) }
+    if (p.sq >= 0 && s.tick - p.sq <= rticks(T.shootBuffer)) { p.sq = -1; startGather(s, p) }
     else if ((edge & B_PASS) && s.size > 1) doPass(s, p, inp)
-    else if ((edge & B_MOVE) && p.moveCd <= 0) doMove(s, p, inp)
+    else {
+      const dl = Math.hypot(+inp.dx || 0, +inp.dy || 0)
+      if (dl >= T.moveAt) doMove(s, p, { x: inp.dx / dl, y: inp.dy / dl })
+    }
     return
   }
   const ballUp = b.st === 'shot' || b.st === 'loose'
@@ -388,7 +444,7 @@ function timers(p) {
   if (p.moveCd > 0) p.moveCd--
   if (p.stealCd > 0) p.stealCd--
   if (p.noAct > 0) p.noAct--
-  if (p.burst > 0) p.burst--
+  burstTick(p)
   if (p.act === 'free') return
   p.actT++
   if (p.act === 'jump') { if (p.actT >= ticks(T.jumpTime)) { p.act = 'land'; p.actT = 0 } }
@@ -422,7 +478,7 @@ function move(s, p, inp) {
   if (m > 1) { mx /= m; my /= m; m = 1 }
   if (m < T.walk) { mx = my = 0 }
   if (p.act === 'frozen' || p.act === 'down') { p.vx = p.vy = 0 }
-  else if (p.burst > 0) { p.vx = p.bdx * top * T.moveSpeed; p.vy = p.bdy * top * T.moveSpeed }
+  else if (p.burst > 0) { const v = burstVel(p); p.vx = v[0] * top; p.vy = v[1] * top }
   else {
     if (p.act === 'gather') {
       if (p.shot.kind === 'jumper') {
@@ -439,7 +495,9 @@ function move(s, p, inp) {
   }
   p.x += p.vx * DT; p.y += p.vy * DT
   const sp = Math.hypot(p.vx, p.vy)
-  if (sp > 1) { p.fx = p.vx / sp; p.fy = p.vy / sp }
+  // (a step-back goes backwards: he still faces the way he was going, his man in front of him)
+  if (p.burst > 0 && p.mv === MOVES.back.n) { p.fx = -p.bdx; p.fy = -p.bdy }
+  else if (sp > 1) { p.fx = p.vx / sp; p.fy = p.vy / sp }
   else if (has) { const d = ref.rimDist(p) || 1; p.fx = (RIM.x - p.x) / d; p.fy = (RIM.y - p.y) / d }
   if (!has) keepIn(p, T.lineKeep)
   else if (p.act === 'gather') keepIn(p, 0)    // in the air with it: a shot that goes before he lands is good (step()), but he comes down on the court
@@ -523,7 +581,7 @@ function ballStep(s) {
       }
       b.near[o.i] = dd
     }
-    if (b.t > 2.5 * HZ) { b.st = 'loose'; b.vx = b.vy = b.vz = 0; b.reb = false; b.grabAt = s.tick }
+    if (b.t > ticks(2.5)) { b.st = 'loose'; b.vx = b.vy = b.vz = 0; b.reb = false; b.grabAt = s.tick }
     return
   }
   if (b.st === 'shot') {
@@ -563,7 +621,7 @@ function ballStep(s) {
     ;(cands ??= []).push({ id: p.i, R: p.R, d, jump: p.act === 'jump' })
   }
   // nobody got to it: after a while it goes to whoever is nearest
-  if (!cands && b.t > 6 * HZ) {
+  if (!cands && b.t > ticks(6)) {
     let near = P[0]
     for (const p of P) if (Math.hypot(p.x - b.x, p.y - b.y) < Math.hypot(near.x - b.x, near.y - b.y)) near = p
     cands = [{ id: near.i, R: near.R, d: 0, jump: false }]
@@ -577,7 +635,7 @@ function ballStep(s) {
     b.holder = p.i; holdBall(s)
     p.noAct = ticks(0.2); p.catchFrom = -1
     if (p.act === 'jump') { p.act = 'land'; p.actT = 0 }
-    if (b.reb) s.clock = Math.max(s.clock, ticks(s.rules.orebClock))
+    if (b.reb) s.clock = Math.max(s.clock, rticks(s.rules.orebClock))
     b.reb = false
   } else change(s, p, b.reb ? 'dreb' : 'loose')
 }
@@ -604,7 +662,8 @@ function betweenPlays(s) {
   collide(s, true, late ? p => Math.hypot(p.sx - p.x, p.sy - p.y) > T.spotNear : null)
   for (const p of P) keepIn(p, 0)
   if (b.st === 'held') holdBall(s)
-  else if (b.st === 'dead') deadBall(s, dead ? s.next.carrier : b.fd, !dead || since >= ticks(0.2))
+  // (a dunk: the ball is left under the rim a beat longer, while the man who threw it down is still on his way down)
+  else if (b.st === 'dead') deadBall(s, dead ? s.next.carrier : b.fd, !dead || since >= ticks(b.kind === 'dunk' && b.verdict?.made ? 0.6 : 0.2))
   s.phaseT--
   if (dead) {
     if (s.phaseT > 0) return
@@ -632,7 +691,7 @@ function betweenPlays(s) {
     faceCheck(p, p.team === s.poss)
     p.catchFrom = -1
   }
-  s.phase = 'live'; s.clock = ticks(s.rules.shotClock[s.size - 1])
+  s.phase = 'live'; s.clock = rticks(s.rules.shotClock[s.size - 1])
   holdBall(s)
   s.events.push({ e: 'live', team: s.poss })
 }
@@ -750,11 +809,11 @@ function tick(s, inputs) {
 }
 
 // Online, on a player's own device: his own body moves now, with the same rules as the step (speed, the ball, a
-// MOVE's burst, rising for a shot), against everyone else where the screen has them (they don't give way here; the
+// dribble move's burst, rising for a shot), against everyone else where the screen has them (they don't give way here; the
 // referee settles real contact). Nothing else in the state changes.
 export function moveLocal(s, i, inp) {
   const p = s.players[i]
-  if (p.burst > 0) p.burst--
+  burstTick(p)
   const wasRemote = p.remote
   move(s, p, { mx: inp.mx, my: inp.my })
   p.remote = wasRemote

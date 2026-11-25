@@ -1,6 +1,6 @@
 // BLACKTOP LIVE online (a prototype: nothing in the app reaches it yet; tested only under `wrangler dev`): one room per
-// game, and the room is the referee. Every device sends its stick, its buttons, where it has its own player and, for a
-// shot, the release quality its own meter timed; the room runs the one simulation (src/lib/btlive, the same code the
+// game, and the room is the referee. Every device sends its stick, its buttons, the dribble moves its small stick
+// flicked (and which way), where it has its own player and, for a shot, the release quality its own meter timed; the room runs the one simulation (src/lib/btlive, the same code the
 // practice screen runs on a phone) at 30 ticks a second with those inputs and sends everyone the state about 15 times
 // a second. Every discrete thing (a make, a block, a steal, a pick, a board, the score, the shot clock) is decided
 // here with the game's seeded rolls, so nobody's phone decides its own makes. A seat whose device goes quiet is played
@@ -28,7 +28,9 @@ function cleanBuild(b, pos) {
   for (const k of pos === 'big' ? BIG_KEYS : GUARD_KEYS) { const v = b?.[k]; const n = typeof v === 'number' ? v : v?.val; out[k] = { val: Number.isFinite(+n) ? Math.min(11, Math.max(0, +n)) : 5 } }
   return out
 }
-const cleanLook = l => ({ photo: /^(https:\/\/|\/)[\w\-./%?=&:]{1,300}$/.test(l?.photo ?? '') ? l.photo : null, faceCenter: Array.isArray(l?.faceCenter) ? l.faceCenter.slice(0, 2).map(v => Math.min(100, Math.max(0, +v || 50))) : null })
+// (skin: his skin tone, num: his jersey number: what the screen draws his man with)
+const cleanLook = l => ({ photo: /^(https:\/\/|\/)[\w\-./%?=&:]{1,300}$/.test(l?.photo ?? '') ? l.photo : null, faceCenter: Array.isArray(l?.faceCenter) ? l.faceCenter.slice(0, 2).map(v => Math.min(100, Math.max(0, +v || 50))) : null,
+  skin: /^#[0-9a-f]{6}$/i.test(l?.skin ?? '') ? l.skin : null, num: /^\d{1,2}$/.test(String(l?.num ?? '')) ? String(l.num) : null })
 
 export class BtLiveRoom {
   constructor(state, env) {
@@ -132,7 +134,7 @@ export class BtLiveRoom {
       const pos = MODES[this.mode].perTeam > 1 ? (mate ? (mate.pos === 'big' ? 'guard' : 'big') : x.slot ? 'big' : 'guard') : first
       const i = pool.findIndex(c => c.pos === pos)
       const c = i >= 0 ? pool.splice(i, 1)[0] : { name: 'CPU', pos, build: null, look: null }
-      Object.assign(x, { name: c.name, pos, look: c.look ?? { photo: null, faceCenter: null }, build: cleanBuild(c.build, pos), cpu: true })
+      Object.assign(x, { name: c.name, pos, look: c.look ?? { photo: null, faceCenter: null, skin: null, num: null }, build: cleanBuild(c.build, pos), cpu: true })
     }
   }
   begin() {

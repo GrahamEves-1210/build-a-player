@@ -5,7 +5,7 @@
 //   &mode=1v1|2v2|koth (King of the Hill)  &level=rookie|pro|allstar|legend  &pick=<player name>  &seed=abc
 //   &go=1 (straight into a game). An old &size=1|2 still works; &size=3 (3v3, gone) opens 1v1
 // The game itself is lib/btlive (pure code); engine.js runs and draws it. On the dev server the running game is
-// on window.__btlive (state, pause, run, auto, press, stick, wait) for screenshots and tests.
+// on window.__btlive (state, pause, run, auto, press, stick, flick, wait) for screenshots and tests.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCourt } from '../app/BlacktopCourt'
 import { buildFromPlayer } from '../../lib/hoops'
@@ -74,7 +74,8 @@ export default function BtLive({ pools, user }) {
         teams: sides.map((list, t) => list.map((x, i) => mk(x, t, i))),
         levels: all.map((_, i) => (i === 0 ? null : level)),
         me: 0, seed: sd, size: MODES[mode].perTeam, mode, level,
-        looks: all.map((x, i) => ({ label: i === 0 ? name : (x.p.short || x.p.name), photo: x.p.photo, faceCenter: x.p.faceCenter })),
+        // (who, skin, num: the real player the build is from, his skin tone and number: how his man is drawn on the court)
+        looks: all.map((x, i) => ({ label: i === 0 ? name : (x.p.short || x.p.name), photo: x.p.photo, faceCenter: x.p.faceCenter, who: x.p.name, skin: x.p.skin ?? null, num: x.p.number ?? null })),
         names: mode === 'koth' ? all.map((x, i) => (i === 0 ? name : (x.p.short || x.p.name))) : [name, `CPU ${LEVELS[level].label}`],
       },
     })
@@ -150,10 +151,10 @@ function Online({ cfg, q, mine, pools, mode, name }) {
     if (!vid) { try { vid = sessionStorage.getItem('bap_btlive_vid') || `v${Math.random().toString(36).slice(2, 10)}`; sessionStorage.setItem('bap_btlive_vid', vid) } catch { vid = `v${Math.random().toString(36).slice(2, 10)}` } }
     // the CPUs for the empty seats, if this device is the first one in: real builds near this one
     const r = seeded(`btlv-cpu-${cfg.room}`), used = new Set([mine.p.name])
-    const near = pos => { const list = pools[pos].filter(p => !used.has(p.name) && p.photo && Math.abs(ovrOf(p, pos) - mine.ovr) <= 4); const p = (list.length ? list : pools[pos])[Math.floor(r() * (list.length || pools[pos].length))]; used.add(p.name); return { name: p.short || p.name, pos, build: gradesOf(buildFromPlayer(p, keysFor(pos))), look: { photo: p.photo, faceCenter: p.faceCenter } } }
+    const near = pos => { const list = pools[pos].filter(p => !used.has(p.name) && p.photo && Math.abs(ovrOf(p, pos) - mine.ovr) <= 4); const p = (list.length ? list : pools[pos])[Math.floor(r() * (list.length || pools[pos].length))]; used.add(p.name); return { name: p.short || p.name, pos, build: gradesOf(buildFromPlayer(p, keysFor(pos))), look: { photo: p.photo, faceCenter: p.faceCenter, skin: p.skin ?? null, num: p.number ?? null } } }
     const cpus = ['guard', 'big', 'guard', 'guard', 'big', 'big'].map(near)
     // (humans, dev only: start before every seat has a person)
-    const hello = { vid, name, pos: mine.pos, mode, size: MODES[mode].perTeam, humans: Number(q.get('humans')) || null, build: gradesOf(buildFromPlayer(mine.p, keysFor(mine.pos))), look: { photo: mine.p.photo, faceCenter: mine.p.faceCenter }, cpus }
+    const hello = { vid, name, pos: mine.pos, mode, size: MODES[mode].perTeam, humans: Number(q.get('humans')) || null, build: gradesOf(buildFromPlayer(mine.p, keysFor(mine.pos))), look: { photo: mine.p.photo, faceCenter: mine.p.faceCenter, skin: mine.p.skin ?? null, num: mine.p.number ?? null }, cpus }
     const L = { eng: null, queue: [], net: null, attach(eng) { L.eng = eng; for (const m of L.queue.splice(0)) eng.onNet(m) } }
     L.net = openNet({
       server: cfg.server, room: cfg.room, hello, lag: cfg.lag,
@@ -181,7 +182,7 @@ function Online({ cfg, q, mine, pools, mode, name }) {
     const lead = t => byTeam[t].find(x => !x.cpu)?.name ?? byTeam[t][0]?.name ?? 'CPU'
     return {
       online: true, teams, levels: seat.seats.map(() => null), me: seat.i, seed: seat.seed, size: MODES[sm].perTeam, mode: sm,
-      looks: seat.seats.map(x => ({ label: x.name, photo: x.look?.photo ?? null, faceCenter: x.look?.faceCenter ?? null })),
+      looks: seat.seats.map(x => ({ label: x.name, photo: x.look?.photo ?? null, faceCenter: x.look?.faceCenter ?? null, who: x.look?.photo || x.name, skin: x.look?.skin ?? null, num: x.look?.num ?? null })),
       names: byTeam.map((_, t) => (t === mineTeam ? name : lead(t))),
     }
   }, [seat, name])
@@ -213,7 +214,7 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
     const r = refs.current
     const eng = createEngine({
       setup, net: link?.net ?? null,
-      els: { canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, btn: { a: r.a, b: r.b, c: r.c }, lab: { a: r.la, b: r.lb, c: r.lc } },
+      els: { canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, ds: r.ds, dk: r.dk, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb } },
       on: { final: res => setTimeout(() => { setAsk(false); setFinal(res) }, 900) },
     })
     link?.attach(eng)
@@ -251,11 +252,17 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
       <div className="btlv-pad" ref={set('pad')}>
         <i className="btlv-stick-home" ref={set('home')} />
         <i className="btlv-stick-base" ref={set('base')} /><i className="btlv-stick-knob" ref={set('knob')} />
-        {caps && <div className="btlv-keys"><b>MOVE</b><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><small>OR THE ARROWS</small></div>}
+        {caps && (
+          <div className="btlv-keys">
+            <div><b>MOVE</b><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></div>
+            <div><b>DRIBBLE MOVES</b><span><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd></span></div>
+          </div>
+        )}
         <div className="btlv-btns">
+          {/* the small stick: a flick is a dribble move (engine.js), by the right thumb with SHOOT and PASS */}
+          <div className="btlv-ds is-off" ref={set('ds')}><span>DRIBBLE</span><i className="btlv-ds-knob" ref={set('dk')} /></div>
           <button className="btlv-btn btlv-btn-a" ref={set('a')}>{caps && <kbd>J</kbd>}<span ref={set('la')} /></button>
           <button className="btlv-btn btlv-btn-b" ref={set('b')}>{caps && <kbd>K</kbd>}<span ref={set('lb')} /></button>
-          <button className="btlv-btn btlv-btn-c" ref={set('c')}>{caps && <kbd>L</kbd>}<span ref={set('lc')} /></button>
         </div>
       </div>
       {ask && !final && (
