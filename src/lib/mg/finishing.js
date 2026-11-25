@@ -20,7 +20,10 @@ export const how = {
   finishing: 'Five balls from five spots. Draw each one from the ball to the lit target: the quicker the stroke the harder it’s hit, bend it to curl it. Three of five in the target. On a keyboard: aim with the arrows, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',
 }
 
-const N = 5, NEED = 3, GAP = 900
+const N = 5, NEED = 3, GAP = 900, JOG = 600   // (the gap between balls; its last JOG ms he's jogging to the next one)
+// the lens for a spot: behind the ball on its line to the middle of the goal, turned to look down it, so the ball and
+// the whole goal are in the picture from out in a channel too
+const lensOf = sp => { const L = Math.hypot(sp.x, sp.z), fx = -sp.x / L, fz = -sp.z / L; return { x: sp.x - fx * 7.4, z: sp.z - fz * 7.4, yaw: Math.atan2(fx, fz) } }
 // where the balls are taken from, and the targets: the four corners and the two posts at the middle height
 const SPOTS = [{ x: 0, z: -16.5, name: 'EDGE OF THE BOX' }, { x: -8.5, z: -13, name: 'LEFT CHANNEL' }, { x: 8.5, z: -13.5, name: 'RIGHT CHANNEL' }, { x: 0, z: -11, name: 'THE SPOT' }, { x: -2.5, z: -15, name: 'FIRST TIME', roll: true }]
 export const TARGETS = [[-(POST - 0.7), 1.9], [POST - 0.7, 1.9], [-(POST - 0.7), 0.45], [POST - 0.7, 0.45], [-(POST - 0.7), 1.2], [POST - 0.7, 1.2]]
@@ -36,7 +39,7 @@ export function make({ v, seed }) {
   const g = {
     t: 0, game: 'finishing', zones: 'none', stick: true, pads: null, fx: [], done: null, outro: 1900, stamp: null,
     shots, i: 0, R, made: 0, k, phase: 'set', at: 700, shot: null, nextAt: null, rollAt: null, doneAt: null,
-    ctl: padCtl(), vh: 640, st: stroke(), lastView: null, camX: shots[0].spot.x * 0.85, camZ: shots[0].spot.z - 7.4,
+    ctl: padCtl(), vh: 640, st: stroke(), lastView: null, camX: lensOf(shots[0].spot).x, camZ: lensOf(shots[0].spot).z, camYaw: lensOf(shots[0].spot).yaw,
     hud: { prompt: 'SET', dots: shots.map(() => null) },
     tick(dt) {
       g.t += dt
@@ -52,9 +55,10 @@ export function make({ v, seed }) {
       }
       if (g.phase === 'fly' && g.t >= g.shot.at + g.shot.T) land()
       if (g.phase === 'gap' && g.t >= g.nextAt) { if (g.i + 1 >= N) finish(); else { g.i++; start() } }
-      const want = shots[g.i].spot
-      const kk = 1 - Math.exp(-dt / 260)
-      g.camX += (want.x * 0.85 - g.camX) * kk; g.camZ += (want.z - 7.4 - g.camZ) * kk
+      // (the lens goes to the next spot with him as he jogs over to it)
+      const want = lensOf(shots[jogging(g) ? g.i + 1 : g.i].spot)
+      const kk = 1 - Math.exp(-dt / 200)
+      g.camX += (want.x - g.camX) * kk; g.camZ += (want.z - g.camZ) * kk; g.camYaw += (want.yaw - g.camYaw) * kk
     },
     input(a) {
       if (skipOutro(g, a)) return
@@ -66,7 +70,7 @@ export function make({ v, seed }) {
     },
   }
   // ── drawing it: from the ball (the rolled one from the spot it's coming to) ──
-  const camNow = () => camOf(g.lastView ?? { w: 360, h: g.vh }, { x: g.camX, y: 3.4, z: g.camZ, F: 600, hzAt: 0.2 })
+  const camNow = () => camOf(g.lastView ?? { w: 360, h: g.vh }, { x: g.camX, y: 3.4, z: g.camZ, yaw: g.camYaw, F: 600, hzAt: 0.2 })
   g.aimView = () => { const C = camNow(), sp = shots[g.i].spot; return { C, ball: P(C, sp.x, 0.11, sp.z) } }
   function drawIn(a) {
     if (a.kind !== 'down' && a.kind !== 'move' && a.kind !== 'up') return false
@@ -129,6 +133,8 @@ export function make({ v, seed }) {
   }
   return g
 }
+// between balls: he's jogging over to the next one
+const jogging = g => g.phase === 'gap' && g.i + 1 < N && g.t > g.nextAt - JOG
 // the first-time ball: rolled across from the coach on the right, to the spot
 function rollPos(g, t) {
   const sh = g.shots[g.i], to = sh.spot, from = { x: to.x + 9, z: to.z + 3 }
@@ -163,8 +169,8 @@ function ballNow(g) {
   return { x: s.to.x * (1 + f * 0.3), y: Math.max(0.11, s.to.y + f * 0.6), z: f * 5, spin: 14 }
 }
 export function draw(ctx, g, view) {
-  g.vh = view.h; g.lastView = { w: view.w, h: view.h }
-  const C = camOf(view, { x: g.camX, y: 3.4, z: g.camZ, F: 600, hzAt: 0.2 }), K = kitsOf(view), team = [view.colors.us, view.colors.trim]
+  g.vh = view.h; g.lastView = { w: view.w, h: view.h }; g.hud.y = view.keys ? promptY(view) : undefined
+  const C = camOf(view, { x: g.camX, y: 3.4, z: g.camZ, yaw: g.camYaw, F: 600, hzAt: 0.2 }), K = kitsOf(view), team = [view.colors.us, view.colors.trim]
   stadium(ctx, view, C, { team, board: `FINISHING  ${g.made}/${N}`, empty: true })
   const s = g.shot, b = ballNow(g)
   const ripple = s && s.onTarget && !s.miss ? { x: s.to.x, y: s.to.y, at: s.at + s.T } : null
@@ -178,7 +184,7 @@ export function draw(ctx, g, view) {
   }
   // the staff: the coach with the balls on the right of the box, scouts with clipboards on the touchline
   const staff = dress(K.staff, { skin: '#c09060' })
-  man(ctx, C, sh.spot.x + 9.4, sh.spot.z + 3.2, g.phase === 'over' && g.done?.hit ? POSE.point : sh.spot.roll && g.rollAt && g.t < g.rollAt - 1300 ? kickPose(0.8, -1) : POSE.stand, { ...staff, front: true })
+  man(ctx, C, SPOTS[4].x + 9.4, SPOTS[4].z + 3.2, g.phase === 'over' && g.done?.hit ? POSE.point : sh.spot.roll && g.rollAt && g.t < g.rollAt - 1300 ? kickPose(0.8, -1) : POSE.stand, { ...staff, front: true })
   for (const [X, Z, sk] of [[-21.5, -8, '#6d4229'], [-22.4, -11.5, '#f0c4a0'], [21.8, -6, '#8d5a3b']]) scout(ctx, C, X, Z, { ...staff, skin: sk, front: true }, g.t)
   // you, the ball at your feet
   let pose = POSE.ready
@@ -186,7 +192,14 @@ export function draw(ctx, g, view) {
     const a = g.t - s.at
     pose = s.miss ? POSE.drop : a < 300 ? kickPose(0.45 + 0.55 * easeOut(a / 300), 1, { high: s.type === 'chip' }) : a < 700 ? kickPose(1) : sh.res ? mix(kickPose(1), POSE.fist, easeOut(prog(a, 700, 950))) : mix(kickPose(1), POSE.hips, easeOut(prog(a, 700, 1000)))
   } else if (g.k.phase === 'power' || g.k.phase === 'strike') pose = kickPose(0.42 * clamp((g.t - g.k.at) / 600, 0, 1))
-  const me = sh.spot.roll && b && g.phase === 'aim' ? { x: sh.spot.x - 0.42, z: sh.spot.z - 0.3 } : { x: sh.spot.x - 0.42, z: sh.spot.z - 0.3 }
+  const me = { x: sh.spot.x - 0.42, z: sh.spot.z - 0.3 }
+  if (jogging(g)) {
+    // over to the next ball at a jog (it's there waiting for him, unless it's the one the coach rolls across)
+    const nx = g.shots[g.i + 1].spot, f = prog(g.t, g.nextAt - JOG, g.nextAt), e = f * f * (3 - 2 * f)
+    me.x = lerp(me.x, nx.x - 0.42, e); me.z = lerp(me.z, nx.z - 0.3, e)
+    pose = f < 0.9 ? runPose((g.t / 300) % 1, 0.7) : mix(runPose((g.t / 300) % 1, 0.7), POSE.ready, (f - 0.9) / 0.1)
+    if (!nx.roll) ball(ctx, C, nx.x, 0.11, nx.z, 0)
+  }
   man(ctx, C, me.x, me.z, pose, dress(K.train, { number: null, skin: view.cast?.me?.skin ?? '#8d5a3b' }))
   if (b && b.z <= 0.05) ball(ctx, C, b.x, b.y, b.z, b.spin)
   if (g.phase === 'aim' && g.k.drawn && g.k.phase === 'strike') aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
