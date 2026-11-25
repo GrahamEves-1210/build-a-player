@@ -8130,3 +8130,4 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 .ag-home { --hm-r: 10px; }
 .ag-home :is(.ps, .ps-tile, .pro-card, .ag-potd, .ag-potd-row, .ag-mc-shot, .pp-claim, .pp-banner) { border-radius: 10px !important; }
 .pp-wrap { padding-bottom: 22px; }   /* (more room under the partner offer before the footer, owner 11-25) */
+@media (max-width: 1023px) { .ag-home .ag-sport { height: 64px !important; } }   /* (the sport bar a little taller on a phone, owner 11-25) */
