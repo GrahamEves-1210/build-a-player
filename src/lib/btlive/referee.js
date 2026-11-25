@@ -165,7 +165,8 @@ export function judgeShot(shooter, defenders, shot, rolls) {
   return {
     blocked: null, made, pts: made ? (shot.three ? 2 : 1) : 0, c, by, p,
     // a poster: a dunk made on a man who went up to stop it, square in it
-    poster: made && shot.kind === 'dunk' && c >= T.posterContest && defenders.some(d => d.id === by && d.act === 'jump'),
+    // (and only by a man who gets up over him: more Bounce and Size than the man who went up)
+    poster: made && shot.kind === 'dunk' && c >= T.posterContest && defenders.some(d => d.id === by && d.act === 'jump' && shooter.R.bnc + shooter.R.size > d.R.bnc + d.R.size + 0.04),
     deep: made && shot.three && shot.d >= T.deepWord,
   }
 }
