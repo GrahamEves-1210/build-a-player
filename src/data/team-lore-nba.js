@@ -154,7 +154,7 @@ export const NBA_LORE = {
       LAL: 'Warriors and Lakers have shared California since the Warriors moved west in 1962.',
     },
     g: {
-      guard: [L('Stephen Curry', 'won four championships and two MVP awards here', { n: 30, rings: 4, on: 'has won four championships and two MVP awards here' }), L('Klay Thompson', 'scored 37 points in one quarter in 2015', { n: 11, rings: 4 })],
+      guard: [L('Stephen Curry', 'won four championships and two MVP awards here', { n: 30, rings: 4, on: 'has won four championships and two MVP awards here' }), L('Klay Thompson', 'won four championships here and once scored 37 points in a quarter', { n: 11, rings: 4 })],
       wing: [L('Rick Barry', 'was the MVP of the 1975 Finals', { n: 24, ret: true, rings: 1 }), L('Chris Mullin', 'made five straight All-Star teams', { n: 17, ret: true }), L('Kevin Durant', 'was the Finals MVP in 2017 and 2018', { rings: 2 })],
       big: [L('Wilt Chamberlain', 'scored 100 points in a game in 1962', { n: 13, ret: true }), L('Nate Thurmond', 'made seven All-Star teams as a Warrior', { n: 42, ret: true }), L('Draymond Green', 'was the Defensive Player of the Year in 2017 and won four championships', { n: 23, rings: 4, on: 'has won four championships here' })],
     },
@@ -185,7 +185,7 @@ export const NBA_LORE = {
       DET: 'Pacers and Pistons met in the conference finals in 2004 and the second round in 2005.',
     },
     g: {
-      guard: [L('Reggie Miller', 'scored eight points in 8.9 seconds to beat the Knicks in 1995', { n: 31, ret: true }), L('Tyrese Haliburton', 'took the Pacers to the 2025 Finals', { n: 0, on: 'took this team to the 2025 Finals' })],
+      guard: [L('Reggie Miller', 'played all 18 of his seasons for the Pacers and once scored eight points in 8.9 seconds to beat the Knicks', { n: 31, ret: true }), L('Tyrese Haliburton', 'took the Pacers to the 2025 Finals', { n: 0, on: 'took this team to the 2025 Finals' })],
       wing: [L('Paul George', 'made four All-Star teams here'), L('Roger Brown', 'was the MVP of the 1970 ABA playoffs', { n: 35, ret: true })],
       big: [L('Jermaine O\'Neal', 'made six straight All-Star teams'), L('Rik Smits', 'played all 12 of his seasons for the Pacers'), L('Mel Daniels', 'won two ABA MVP awards', { n: 34, ret: true })],
     },
@@ -299,7 +299,7 @@ export const NBA_LORE = {
       CHI: 'Knicks and Bulls met in the playoffs six times between 1989 and 1996.',
     },
     g: {
-      guard: [L('Walt Frazier', 'had 36 points and 19 assists in Game 7 of the 1970 Finals', { n: 10, ret: true, rings: 2 }), L('Jalen Brunson', 'scored 45 points in the game that clinched the 2026 title and was the Finals MVP', { n: 11, rings: 1, on: 'has been a Finals MVP here' }), L('Earl Monroe', 'won the 1973 title in the Knicks backcourt', { n: 15, ret: true, rings: 1 })],
+      guard: [L('Walt Frazier', 'won two championships here and had 36 points and 19 assists in Game 7 of the 1970 Finals', { n: 10, ret: true, rings: 2 }), L('Jalen Brunson', 'scored 45 points in the game that clinched the 2026 title and was the Finals MVP', { n: 11, rings: 1, on: 'has been a Finals MVP here' }), L('Earl Monroe', 'won the 1973 title in the Knicks backcourt', { n: 15, ret: true, rings: 1 })],
       wing: [L('Bill Bradley', 'won two championships here and later served in the United States Senate', { n: 24, ret: true, rings: 2 }), L('Bernard King', 'won the 1985 scoring title'), L('Carmelo Anthony', 'won the 2013 scoring title', { n: 7 })],
       big: [L('Willis Reed', 'was the Finals MVP in 1970 and 1973', { n: 19, ret: true, rings: 2 }), L('Patrick Ewing', 'made 11 All-Star teams as a Knick', { n: 33, ret: true, dr: 'with the first pick in 1985' })],
     },

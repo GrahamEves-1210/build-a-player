@@ -126,7 +126,7 @@ function frame(x0) {
     ...x0, lore, us, key, W: WORDS[x0.sport], P: POS_WORD[key] ?? POS_WORD[x0.pos] ?? ['player', 'players'],
     the: us ? `the ${x0.nick}` : x0.name, The: us ? `The ${x0.nick}` : x0.name, theirs: us ? `the ${poss(x0.nick)}` : poss(x0.name),
     town: lore.town, on: l => roster.has(l.name),
-    past: legs.filter(l => !roster.has(l.name)), now: legs.filter(l => roster.has(l.name)),
+    past: legs.filter(l => !roster.has(l.name)), now: legs.filter(l => roster.has(l.name)), lead: legs[0]?.name ?? null,
     icons: any.filter(l => !roster.has(l.name)),
     league: LEAGUES[x0.league] ?? null,
     // still playing, somewhere else in the league (nobody has been "measured against him since": he only just left)
@@ -238,7 +238,7 @@ const ROOM_ANSWERS = {
   beside: x => [g('I\'d learn more from him in a month than I did in three years of school.', 2), c('I can help him win right now.', 1), k('He\'d be lucky to have me.', -1)],
   bad: x => [g('Somebody has to turn it around. I want to be the reason.', 2), c('You\'re a couple of players away. I\'m one of them.', 1), k('Honestly, I\'d rather go to a winner.', -2)],
   good: x => [g(`A team that wins has things to teach me. I'll earn my ${x.sport === 'bucket' ? 'minutes' : 'snaps'}.`, 2), c('I can help a good team right away.', 1), k(`You won't be able to keep me off the ${x.W.field}.`, -1)],
-  rival: x => [g('I know it matters more here than the others. I\'ll learn the rest from the men who\'ve played in it.', 2), c('I know I want to be the reason you win it.', 1), k(x.us ? 'It\'s one game on the schedule.' : 'It\'s three points, the same as any other.', -1)],
+  rival: x => [g('I know it matters more here than the others. I\'ll learn the rest from the men who\'ve played in it.', 2), c('I know I want to be the reason you win it.', 1), k(x.us ? 'It\'s a game like any other.' : 'It\'s three points, the same as any other.', -1)],
   league: x => [g('I\'m not ready yet. Put me in training with them every day and I will be.', 2), c('I\'ve scored at every level I\'ve played. This is the next one.', 1), k('Defenders are defenders. I score against all of them.', -1)],
 }
 const ROOM_WHO = {
@@ -261,10 +261,11 @@ function legacyQs(x, { draft = false } = {}) {
   const out = []
   const P = x.P[0], lg = x.sport === 'soccer', plays = PLAYS[x.key] ?? P
   for (const l of x.past) {
-    out.push(Q(`knew|${l.name}`, 'legacy', major(l) ? 2 : 3, `${line(x, l)} You play ${plays} for the same ${x.W.here} now. How much of that history did you know before ${howWord(x)}?`, [l.name], 'mark'))
-    if (!major(l)) { if (!x.away(l)) out.push(Q(`talk|${l.name}`, 'legacy', 3, `${line(x, l)} ${cap(fansOf(x))} still talk about him. What would you like them to say about you when you are done?`, [l.name], 'remember')); continue }
-    out.push(Q(`reach|${l.name}`, 'legacy', 4, `${line(x, l)} Do you think you can reach that legacy ${lg ? 'at this club' : 'here'}?`, [l.name], 'legacy', l.name))
-    if (!x.away(l)) out.push(Q(`measure|${l.name}`, 'legacy', 3, lg ? `${line(x, l)} Every ${P} who has worn this shirt since has been compared with him. Is that fair on a new signing?` : `${line(x, l)} Every ${P} who has played here since has been measured against him. Is that fair to you?`, [l.name], 'legacy', l.name))
+    const first = l.name === x.lead   // (a team's lists lead with the man the position is measured by: he is asked about most)
+    out.push(Q(`knew|${l.name}`, 'legacy', first || !major(l) ? 2 : 1.5, `${line(x, l)} You play ${plays} for the same ${x.W.here} now. How much of that history did you know before ${howWord(x)}?`, [l.name], 'mark'))
+    if (!major(l)) { if (!x.away(l)) out.push(Q(`talk|${l.name}`, 'legacy', 2, `${line(x, l)} ${cap(fansOf(x))} still talk about him. What would you like them to say about you when you are done?`, [l.name], 'remember')); continue }
+    out.push(Q(`reach|${l.name}`, 'legacy', first ? 10 : 1.5, `${line(x, l)} Do you think you can reach that legacy ${lg ? 'at this club' : 'here'}?`, [l.name], 'legacy', l.name))
+    if (!x.away(l)) out.push(Q(`measure|${l.name}`, 'legacy', first ? 5 : 1.5, lg ? `${line(x, l)} Every ${P} who has worn this shirt since has been compared with him. Is that fair on a new signing?` : `${line(x, l)} Every ${P} who has played here since has been measured against him. Is that fair to you?`, [l.name], 'legacy', l.name))
     if (l.ret && l.n != null && x.us) out.push(Q(`number|${l.name}`, 'legacy', 2, x.sport === 'bucket' ? `${x.The} hung No. ${l.n} in the rafters for ${l.name}. What goes through your mind when you look up at it?` : `${x.The} retired No. ${l.n} for ${l.name}. What goes through your mind when you see it?`, [l.name], 'number'))
     if (draft && l.dr && x.us) out.push(Q(`drafted|${l.name}`, 'legacy', 3, `${x.The} drafted ${l.name} ${l.dr}, and he ${l.did}. Now they have drafted you. What does that history ask of a rookie?`, [l.name], 'legacy', l.name))
   }
@@ -279,7 +280,7 @@ function besideQs(x) {
   const out = []
   for (const l of x.now) {
     out.push(Q(`learn|${l.name}`, 'beside', 3, `${l.name} ${did(x, l)}, and he is still in this ${x.W.room}. What do you want to learn from him?`, [l.name], 'beside'))
-    out.push(Q(`after|${l.name}`, 'beside', 4, `${line(x, l)} One day this ${x.W.here} will need the ${x.P[0]} who comes after him. Do you think you can reach that legacy?`, [l.name], 'next', l.name))
+    out.push(Q(`after|${l.name}`, 'beside', l.name === x.lead ? 10 : 4, `${line(x, l)} One day this ${x.W.here} will need the ${x.P[0]} who comes after him. Do you think you can reach that legacy?`, [l.name], 'next', l.name))
     if (!ONE_JOB.has(x.pos)) out.push(Q(`pair|${l.name}`, 'beside', 2, `${line(x, l)} How do the two of you fit ${ROOM_IN[x.key] ?? 'in'} the same ${ROOM_WORD[x.key] ?? 'lineup'}?`, [l.name], 'fit'))
     else if (!x.starter) out.push(Q(`behind|${l.name}`, 'beside', 2, `${line(x, l)} You play the same position. Are you here to learn from him or to take his job?`, [l.name], 'job'))
   }

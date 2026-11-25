@@ -483,7 +483,8 @@ function careerDeadline(c, d) {
 // ═════════════════════════════════════════════════════════════════════════════
 // Career, the podium before the playoffs: a team that has waited a long time for a title (or never won one) is asked
 // about it (the wait, as lib/careerPress.js works it out from the real titles and the ones this career won there)
-const PO_WAIT = { id: 'po-wait', at: ['playoffs'], w: 4, when: c => !!c.cr?.lore?.wait && c.cr.role === 'starter' && c.roleHas('nerve'),
+// (every other year at most: asked every January, it stops being a question)
+const PO_WAIT = { id: 'po-wait', at: ['playoffs'], w: 2, when: c => !!c.cr?.lore?.wait && c.cr.year % 2 === 0 && c.cr.role === 'starter' && c.roleHas('nerve'),
   make: c => {
     const L = c.cr.lore
     return { kicker: 'PLAYOFF MEDIA DAY', title: 'The question about the wait',

@@ -305,7 +305,7 @@ export const NFL_LORE = {
       te: [L('Tony Gonzalez', 'caught 916 passes for the Chiefs', { n: 88 }), L('Travis Kelce', 'won three Super Bowls and had seven straight 1,000-yard seasons at tight end', { n: 87, rings: 3, on: 'has won three Super Bowls here' })],
       ol: [L('Will Shields', 'made 12 straight Pro Bowls at guard and played in every game for 14 seasons')],
       dl: [L('Buck Buchanan', 'was the first pick of the 1963 AFL draft', { n: 86, ret: true }), L('Neil Smith', 'led the league in sacks in 1993')],
-      lb: [L('Derrick Thomas', 'had seven sacks in one game in 1990', { n: 58, ret: true }), L('Willie Lanier', 'won Super Bowl IV at middle linebacker', { n: 63, ret: true })],
+      lb: [L('Derrick Thomas', 'had 126.5 sacks for the Chiefs, seven of them in one game', { n: 58, ret: true }), L('Willie Lanier', 'won Super Bowl IV at middle linebacker', { n: 63, ret: true })],
       db: [L('Emmitt Thomas', 'intercepted 58 passes for the Chiefs', { n: 18, ret: true })],
     },
     rec: { rushYds: ['Jamaal Charles', 7260] },

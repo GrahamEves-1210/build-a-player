@@ -233,14 +233,16 @@ console.log(`  ${rooms} rooms, ${loreRooms} with the team's own question (${Math
 {
   const c0 = C.runDraft((() => { let c = start('bucket', 'guard', 'PG', 99); for (let k = 0; k < c.draft.interviews.length; k++) c = C.answerInterview(c, k, 0); return c })())
   const old = { team: c0.team, season: c0.season, wins: 41, losses: 41, stats: {}, goals: [], champion: false }
-  for (const [label, yrs] of [['traded to Golden State in his third year', 2], ['traded to Golden State in his sixteenth year', 15]]) {
-    const seen = new Set()
-    for (let i = 0; i < 40; i++) {
+  for (const [label, yrs] of [['traded to Golden State in his second year', 1], ['traded to Golden State in his fourth year', 3], ['traded to Golden State in his sixteenth year', 15]]) {
+    const seen = new Map(), N = 200
+    for (let i = 0; i < N; i++) {
       const c = { ...c0, seed: `gsw-${i}`, phase: 'preseason', team: 'GSW', roster: undefined, seasons: Array.from({ length: yrs }, (_, k) => ({ ...old, team: c0.team === 'GSW' ? 'LAL' : c0.team, season: c0.season + k })), year: yrs, season: c0.season + yrs, age: c0.age + yrs, press: null, decisions: [...c0.decisions, { year: yrs, text: 'Traded to the Warriors' }] }
-      const q = C.pressFor(c); if (q) seen.add(q.q)
+      const q = C.pressFor(c); if (q) seen.set(q.q, (seen.get(q.q) ?? 0) + 1)
     }
-    console.log(`\n  A point guard ${label}:`); for (const q of seen) console.log('    ' + q)
-    if (![...seen].some(q => /Stephen Curry/.test(q) && /legacy/.test(q))) fail('the Curry question never came up', label)
+    console.log(`\n  A point guard ${label} (how often, of ${N} careers):`); for (const [q, n] of [...seen].sort((a, b) => b[1] - a[1])) console.log(`    ${String(n).padStart(3)}  ${q}`)
+    const curry = [...seen].filter(([q]) => /Stephen Curry/.test(q)).reduce((a, [, n]) => a + n, 0)
+    if (![...seen.keys()].some(q => /Stephen Curry/.test(q) && /legacy/.test(q))) fail('the Curry question never came up', label)
+    if (curry < N * 0.5) fail('a guard traded to Golden State is asked about Stephen Curry less than half the time:', curry, 'of', N, label)
   }
 }
 
@@ -267,7 +269,7 @@ function playCareer(sport, pos, spot, i, toTeam = null) {
       log.push(`    ${c.season} ${c.team} ${q.sit.padEnd(8)} ${q.q}\n               → ${q.a[k].t} [${q.a[k].tone}${c.rep !== rep0 ? `, reputation ${rep0} → ${c.rep}` : ''}]`)
     }
     let D; [c, D] = C.startSeason(c)
-    for (let g = 0; g < 1500 && c.phase === 'season' && c.active.k < D.total; g++) {
+    for (let g = 0; g < 1500 && c.phase === 'season' && (c.active.k < D.total || c.active.moment || c.active.injury); g++) {
       if (C.byeNow?.(c)) { c = C.byeRest(c, D); continue }
       if (c.active.injury) { c = C.resolveInjury(c, D, false, false)[0]; continue }
       if (c.active.moment) {
