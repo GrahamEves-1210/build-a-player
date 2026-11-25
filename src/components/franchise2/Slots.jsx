@@ -71,7 +71,17 @@ export function Slots({ owner, onOpen, onHome, onSquad = null, lg = null }) {
               </div>
             )
           })}
-          {onSquad && <Go ghost className="fsu-squad" onClick={() => { sfx('tap'); onSquad() }}>SQUAD BUILDER</Go>}
+          {onSquad && (
+            <button type="button" className="fsu-slot fsu-squad" onClick={() => { sfx('tap'); onSquad() }}>
+              <span className="fsu-slot-n" aria-hidden="true">+</span>
+              <span className="fsu-slot-txt">
+                <small>ALSO IN THE FRONT OFFICE</small>
+                <b>SQUAD BUILDER</b>
+                <em>BUILD A WHOLE TEAM · PLAY A SEASON</em>
+              </span>
+              <span className="fsu-squad-go" aria-hidden="true">›</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
