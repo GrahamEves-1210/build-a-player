@@ -58,12 +58,6 @@ const featureOf = tone => { const c = hexRgb(tone); return rgbHex(c.map(v => v *
 // the lash line and the iris, near-black brown
 const LASH = '#120c09'
 const IRIS = '#20140f'
-// the brows: hair, a little lighter than the hair itself and taken toward the skin so they sit in the face's light
-// (the curls' own colour for a player with tight-curled hair, the art's dark brown otherwise)
-const browOf = (tone, curl) => {
-  const s = hexRgb(tone), h = hexRgb(curl ? '#17110e' : '#1a1411')
-  return rgbHex(h.map((v, i) => v * 0.35 + s[i] * 0.3))
-}
 
 // Hair. The art's hair is a combed quiff, its comb lines drawn in. On a player with tight-curled hair (whose:
 // lib/soccerHair.js, from the players' photos) those lines look wrong, so his hair is drawn over the art's: solid,
@@ -104,17 +98,6 @@ const LASHES = [
   ['M745.6 244.8 Q751 245.8 756.2 243.6 L756.2 245.2 Q751 248.4 745.8 246.6 Z', 0.78],
 ]
 const IRISES = [[719.5, 246.4, 3.9, 1.7], [751.5, 247.3, 1.9, 0.95]]   // the sliver of iris under each lid
-const BROWS = [
-  // [d, opacity]: each brow twice, a wider soft one under a narrower core, so its edges fade into the skin.
-  // The near brow's head is by the nose (thicker), its tail thins out toward the temple
-  ['M692 232 Q712 220.6 738.8 227.6 Q740 232.6 737 234.6 Q714 228.2 692.6 233.2 Z', 0.22],
-  ['M695 231.4 Q713 223 737.8 228.8 Q738.8 232.4 736.4 233.6 Q714 227 695.4 232.4 Z', 0.34],
-  ['M722 227.4 Q731 226.6 737.4 229.2 Q738 232 736.2 232.8 Q730 230.4 722 229.6 Z', 0.22],   // the brow's fuller head
-  ['M743 236.6 Q752 229.8 763 230.4 L762.8 233.6 Q752 234.2 744 238 Z', 0.18],      // far brow
-  ['M744 236.2 Q752 231 762.4 231.2 L762.2 233 Q752 233.4 744.6 237.2 Z', 0.32],
-]
-const LINES = [
-  // [d, stroke width, opacity]
   ['M716 278.4 Q724 282.2 732 279.4', 1.6, 0.3],      // under the nose
   ['M699 290 Q712 292.8 725 290.6', 1.7, 0.38],       // mouth
 ]
@@ -249,9 +232,7 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               ))}
               {IRISES.map(([cx, cy, rx, ry]) => <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} fill={IRIS} opacity="0.72" />)}
               {LASHES.map(([d, o]) => <path key={d} d={d} fill={LASH} opacity={o} />)}
-              <filter id={id('soft')} x="-0.1" y="-0.5" width="1.2" height="2"><feGaussianBlur stdDeviation="0.6" /></filter>
-              <g filter={url('soft')}>{BROWS.map(([d, o]) => <path key={d} d={d} fill={browOf(face, curl)} opacity={o} />)}</g>
-              <g fill="none" stroke={featureOf(face)} strokeLinecap="round">{LINES.map(([d, w, o]) => <path key={d} d={d} strokeWidth={w} opacity={o} />)}</g>
+              {/* (only the eyes are drawn: no brows, nose or mouth lines, owner 11-25) */}
               {/* the sideburn is hair: the art's own, or the curls below */}
               {!curl && <g clipPath={url('c-burn')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} /></g>}
             </g>
