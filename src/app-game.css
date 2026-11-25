@@ -8102,3 +8102,9 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
   .ag-home .ag-sport.ag-sport--four .ag-sport-ico, .ag-home .ag-sport.ag-sport--four .ag-sport-ico svg { width: 21px; height: 21px; }
   .ag-home .ag-sport .ag-sport-btn.is-soon .ag-sport-txt b { font-size: 14px !important; }
 }
+/* a long trait name (PLAY RECOGNITION) on a phone's attribute chip breaks only between words and stays on two lines,
+   a size smaller, so the grade next to it shows (player report, Samsung 360 wide: it broke mid-word onto three) */
+html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-name.is-long {
+  font-size: 9px !important; letter-spacing: 0 !important; overflow-wrap: normal !important; word-break: keep-all;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
