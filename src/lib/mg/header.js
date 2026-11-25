@@ -28,14 +28,14 @@ const KEEP_Z = -0.6
 
 export function make({ v, seed, cast = null, situation = null }) {
   const r = rngOf(seed), tv = clamp((v - 1) / 10, 0, 1)
-  const W = byV(v, 70, 150)
+  const W = byV(v, 100, 170)
   const runMs = 2700 + r() * 1100            // the winger, from picking it up to the cross
   // when the marker watches the ball: a few looks, longer the better your movement, and a last long one as he crosses
   const looks = []
   let t = 700 + r() * 500
-  while (t < runMs - 1100) { const d = byV(v, 260, 520) * (0.8 + r() * 0.4); looks.push({ at: t, end: t + d }); t += d + 650 + r() * 700 }
-  looks.push({ at: runMs - 560, end: runMs + byV(v, 120, 380) })
-  const mSpeed = byV(v, 5.5, 4.6), mLag = byV(v, 200, 340)
+  while (t < runMs - 1100) { const d = byV(v, 380, 580) * (0.8 + r() * 0.4); looks.push({ at: t, end: t + d }); t += d + 650 + r() * 700 }
+  looks.push({ at: runMs - 650, end: runMs + byV(v, 220, 420) })
+  const mSpeed = byV(v, 5.1, 4.4), mLag = byV(v, 260, 380)
   const k = shooter(v, { windup: 0 })
   k.type = 'header'
   const g = {
@@ -48,13 +48,13 @@ export function make({ v, seed, cast = null, situation = null }) {
     sep: 0, free: false, ctl: padCtl(), vh: 640, cam: 0, camX: CAM.x + ME0.x * 0.7, mkJumpAt: null,
     who: { me: manOf(cast, 'us', 'st', 0), gk: manOf(cast, 'them', 'gk', 0), mark: manOf(cast, 'them', 'cb', 0), mate: manOf(cast, 'us', 'st', 1) },
     dirt: particles(24, 3), nudge: nudge(),
-    hud: { prompt: 'LOSE THE MARKER' },
+    hud: { prompt: 'MAKE YOUR RUN WHEN HE BALL-WATCHES' },
     tick(dt) {
       g.t += dt
       const s = dt / 1000, o = padStick(g.ctl)
       const look = looks.find(l => g.t >= l.at && g.t < l.end)
       g.watching = !!look && g.phase === 'mark'
-      if (g.t > 1600 && g.hud.prompt === 'LOSE THE MARKER') g.hud.prompt = null
+      if (g.t > 2200 && g.hud.prompt === 'MAKE YOUR RUN WHEN HE BALL-WATCHES') g.hud.prompt = null
       // the winger: down the line with it, then the cross
       if (g.phase === 'mark') {
         const f = clamp(g.t / runMs, 0, 1)
@@ -65,6 +65,9 @@ export function make({ v, seed, cast = null, situation = null }) {
       if (!g.res && g.jumpAt == null) {
         const sp = byV(v, 4.6, 5.8), acc = 1 - Math.exp(-s / 0.12)
         g.me.vx += (o.x * sp - g.me.vx) * acc; g.me.vz += (o.y * sp - g.me.vz) * acc
+        // (with it in the air and him near where it's dropping, he's drawn on to it: the stick's aiming the header now,
+        // and a striker attacking a cross gets himself under it)
+        if (g.phase === 'cross' && g.to) { const dx = g.to.x - g.me.x, dz = g.to.z - g.me.z, d = Math.hypot(dx, dz); if (d < 3.2 && d > 0.05) { const pull = Math.min(d, 3.6 * s); g.me.x += (dx / d) * pull; g.me.z += (dz / d) * pull } }
         g.me.x = clamp(g.me.x + g.me.vx * s, ZONE.x0, ZONE.x1); g.me.z = clamp(g.me.z + g.me.vz * s, ZONE.z0, ZONE.z1)
       } else { g.me.vx *= 0.9; g.me.vz *= 0.9 }
       g.me.cycle += Math.hypot(g.me.vx, g.me.vz) * s / 2.4
@@ -130,7 +133,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.apex = near ? 3.0 : 4.6
     g.free = g.sep > 1.3; g.sepX = g.sep
     g.fx.push('tap')
-    g.hud.prompt = g.free ? 'LOST HIS MARKER' : null
+    g.hud.prompt = g.free ? 'LOST HIS MARKER · HEAD IT AS THE RING CLOSES' : 'HEAD IT AS THE RING CLOSES'
     g.hud.hot = g.free
   }
   function head() {
@@ -143,9 +146,9 @@ export function make({ v, seed, cast = null, situation = null }) {
     // (how far off you he was as it was crossed counts: he's had to turn and find you)
     const sep = Math.max(g.sep, (g.sepX ?? 0) * 0.8)
     if (Math.abs(e) > g.W * 1.6) return settle(e < 0 ? 'missed' : 'missed', e < 0 ? 'Went up too early: it went over his head' : 'Too late: it was past him', true)
-    if (reach > 1.55) return settle('missed', 'Couldn’t get there: wrong side of the ball', true)
-    if (sep < 0.8 && r() < lerp(0.62, 0.3, tv)) return settle('cleared', 'His marker got there first and cleared it', true)
-    const q = clamp(1 - Math.abs(e) / g.W, 0, 1) * (reach > 0.8 ? 0.8 : 1)
+    if (reach > 1.9) return settle('missed', 'Couldn’t get there: wrong side of the ball', true)
+    if (sep < 0.8 && r() < lerp(0.45, 0.2, tv)) return settle('cleared', 'His marker got there first and cleared it', true)
+    const q = clamp(1 - Math.abs(e) / (g.W * 1.3), 0, 1) * (reach > 1.0 ? 0.85 : 1)
     const o = padStick(g.ctl)
     k.press(0, 'header'); k.phase = 'strike'
     k.aimAt(Math.abs(o.x) > 0.2 ? o.x : -(Math.sign(g.gk.x - g.to.x * 0.4) || 1) * 0.6, o.y)
@@ -156,7 +159,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.shot = { ...s, at: g.arriveAt }
     const K = g.gk
     const react = s.bounce ? 290 : 230
-    g.shot.save = s.onTarget ? keeperSave(g.shot, { x: K.x, z: KEEP_Z, react, reach: 0.8, up: 2.45, dive: 3.8, read: Math.sign(K.vx) * 0.4 }, r) : null
+    g.shot.save = s.onTarget ? keeperSave(g.shot, { x: K.x, z: KEEP_Z, react, reach: 0.8, up: 2.4, dive: 3.4, read: Math.sign(K.vx) * 0.3 }, r) : null
     // the keeper goes for one on target: soccer.js's keeperShot draws it (on to it for a save, short of it when beaten)
     const sv = g.shot.save
     if (sv) g.kShot = { x0: K.x, z: KEEP_Z, go: g.arriveAt + react, cross: g.arriveAt + sv.f * s.T, ball: { x: sv.x, y: sv.y }, saved: !!sv.saved, held: !!sv.held }
@@ -186,7 +189,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.done = outcome(q, goal, g.why); g.doneAt = g.t
     g.outro = goal ? celebMs() + 300 : lightMode() ? 1100 : 2200
     const word = { goal: 'GOAL', saved: 'SAVED', over: 'OVER THE BAR', wide: 'WIDE', cleared: 'CLEARED', missed: 'MISSED IT' }[g.res]
-    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 40 : 50 }
+    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 40 : 50, sub: g.why }
     if (goal) { g.popAt = g.t; g.fx.push('h:success') } else g.fx.push(g.res === 'saved' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g

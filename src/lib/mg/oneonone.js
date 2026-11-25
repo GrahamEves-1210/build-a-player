@@ -47,11 +47,11 @@ export function make({ v, seed, cast = null, situation = null }) {
   const style = r() < 0.34 ? 'rusher' : r() < 0.5 ? 'stayer' : 'sweeper'
   const x0 = where * (9 + r() * 4) + (r() - 0.5) * 2, z0 = -29 - r() * 4
   const dSide = where ? -where : r() < 0.5 ? -1 : 1
-  const jog = byV(v, 5.5, 6.5), sprint = byV(v, 6.9, 8.7), slow = 3.3
-  const dSpeed = 6.75 * paceOf(cast, 'them', 'cb', 0)
+  const jog = byV(v, 6.0, 6.7), sprint = byV(v, 7.6, 8.9), slow = 3.3
+  const dSpeed = 6.4 * paceOf(cast, 'them', 'cb', 0)
   // the touch: how far ahead a sprinting touch goes (first touch and dribbling: a good one keeps it closer)
-  const heavyLead = byV(v, 4.3, 2.5), jogLead = byV(v, 1.35, 0.95)
-  const readK = lerp(0.95, 0.35, tv)      // how much the keeper reads the hips
+  const heavyLead = byV(v, 3.4, 2.3), jogLead = byV(v, 1.2, 0.9)
+  const readK = lerp(0.6, 0.25, tv)      // how much the keeper reads the hips
   const pressure = situation?.clockText && /(\d+)/.test(situation.clockText) && +RegExp.$1 >= 80 ? 0.7 : 0.3
   const k = shooter(v, { pressure })
   const g = {
@@ -69,7 +69,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     ctl: { tid: null, ox: 0, oy: 0, tx: 0, ty: 0, ax: 0, ay: 0, ext: false, keys: { L: 0, R: 0, U: 0, D: 0 }, sid: null, cid: null, chipAt: null, shootAt: null, side: 0, sideAt: -999 },
     stickOut: { x: 0, y: 0 }, vh: 640, keysView: false, st: stroke(), lastView: null,
     nudge: nudge(),
-    hud: { prompt: 'THROUGH ON GOAL' },
+    hud: { prompt: 'THROUGH ON GOAL: RUN AT HIM' },
     tick(dt) {
       g.t += dt
       const s = dt / 1000
@@ -247,7 +247,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     // out of play, or into the side netting
     if (m.z > 0.3 || Math.abs(m.x) > BOX_W + 6) resolve('out', 'Ran it out of play')
     if (b.owner === 'me' && (b.z > 0.2 || Math.abs(b.x) > HALF_W_)) resolve('out', 'Ran it out of play')
-    if (g.t - g.liveAt > 12000) resolve('tackled', 'Took too long: they got back')
+    if (g.t - g.liveAt > 14000) resolve('tackled', 'Took too long: they got back')
   }
   function touch(ux, uz, spd, lead) {
     const b = g.bl, du = Math.sqrt(2 * FRICTION * lead)
@@ -327,10 +327,10 @@ export function make({ v, seed, cast = null, situation = null }) {
     }
     // close in with the ball under control: he goes down at your feet
     const kb = Math.hypot(b.x - K.x, b.z - K.z), km = Math.hypot(m.x - K.x, m.z - K.z)
-    if (kb < 3.3 && km < 4.0) { K.st = 'down'; K.at = g.t; K.side = Math.sign(b.x - K.x) || 1; K.tx = b.x + b.vx * 0.25; K.tz = b.z + b.vz * 0.25 - 0.4; g.word = { text: 'HE’S GONE DOWN', at: g.t }; g.fx.push('h:light'); return }
+    if (kb < 2.7 && km < 3.4) { K.st = 'down'; K.at = g.t; K.side = Math.sign(b.x - K.x) || 1; K.tx = b.x + b.vx * 0.25; K.tz = b.z + b.vz * 0.25 - 0.4; g.word = { text: 'HE’S GONE DOWN', at: g.t }; g.fx.push('h:light'); return }
     // where he wants to be: on the line from the ball to the middle of the goal, as far out as his style says,
     // leaning the way you were running a moment ago
-    const out = style === 'rusher' ? clamp(D * 0.4, 0.5, 11) : style === 'stayer' ? clamp(D * 0.17, 0.5, 4.2) : clamp(D * 0.29, 0.5, 7.5)
+    const out = style === 'rusher' ? clamp(D * 0.34, 0.5, 9.5) : style === 'stayer' ? clamp(D * 0.17, 0.5, 4.2) : clamp(D * 0.29, 0.5, 7.5)
     const ux = b.x / (D || 1), uz = b.z / (D || 1)
     const seen = g.hist[0]?.vx ?? 0
     K.lean += (clamp(seen / 7, -1, 1) * readK - K.lean) * (1 - Math.exp(-s / 0.25))
@@ -367,7 +367,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     const lead = Math.hypot(b.x - m.x, b.z - m.z)
     // (never through the back of him: he has to be alongside, or goal-side)
     const alongside = d.z > m.z - 0.7
-    if (db < 2.0 && alongside && (lead > 1.9 || mySp < 4.0) && g.t - g.liveAt > 600) {
+    if (db < 1.7 && alongside && (lead > 2.2 || mySp < 3.6) && g.t - g.liveAt > 600) {
       d.st = 'slide'; d.at = g.t; const n = db || 1; d.dx = (b.x + b.vx * 0.2 - d.x) / n; d.dz = (b.z + b.vz * 0.2 - d.z) / n
       const nn = Math.hypot(d.dx, d.dz) || 1; d.dx /= nn; d.dz /= nn
       g.fx.push('h:light')
@@ -397,7 +397,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     const from = { x: b.x, z: b.z }
     const dPress = Math.hypot(g.df.x - m.x, g.df.z - m.z)
     const weak = b.x < m.x - 0.25
-    const s = strikeOf(k, from, { v, r, foot: 1, weak, speed: clamp((Math.hypot(m.vx, m.vz) - jog) / (sprint - jog), 0, 1), pressure: clamp((3.2 - dPress) / 2.4, 0, 1) })
+    const s = strikeOf(k, from, { v, r, foot: 1, weak, speed: clamp((Math.hypot(m.vx, m.vz) - jog) / (sprint - jog), 0, 1), pressure: clamp((2.6 - dPress) / 2.4, 0, 1) })
     if (far > CONTROL) { s.to.x += (r() - 0.5) * 2.4; s.to.y += 0.5; s.wide = Math.abs(s.to.x) > POST - 0.12; s.onTarget = s.onTarget && !s.wide; g.why = 'Stretching for it' }
     g.shot = { ...s, at: g.t }
     b.owner = null
@@ -410,8 +410,8 @@ export function make({ v, seed, cast = null, situation = null }) {
     }
     // the keeper: what he can do about it, from where he is and what he's doing
     const K = g.gk
-    const kk = { x: K.x, z: K.z, read: K.lean, react: K.st === 'set' || K.st === 'line' ? byV(v, 170, 230) : 290, reach: K.st === 'set' ? 1.12 : 0.95, up: K.st === 'down' ? 0.55 : K.st === 'rush' ? 1.5 : 2.45, dive: K.st === 'down' || K.st === 'rush' ? 1.5 : 4.4 }
-    if (K.st === 'down' || K.st === 'rush') kk.reach = 1.45
+    const kk = { x: K.x, z: K.z, read: K.lean, react: K.st === 'set' || K.st === 'line' ? byV(v, 230, 290) : 320, reach: K.st === 'set' ? 0.92 : 0.85, up: K.st === 'down' ? 0.55 : K.st === 'rush' ? 1.5 : 2.4, dive: K.st === 'down' || K.st === 'rush' ? 1.5 : 3.6 }
+    if (K.st === 'down' || K.st === 'rush') kk.reach = 1.25
     g.shot.save = s.onTarget && !g.shot.block ? keeperSave(g.shot, kk, r) : null
     keeperGoes(kk.react)
   }
@@ -508,7 +508,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.done = outcome(q, goal, g.why); g.doneAt = g.t
     g.outro = goal ? celebMs() + 300 : lightMode() ? 1100 : 2200
     const word = { goal: 'GOAL', saved: 'SAVED', wide: 'WIDE', over: 'OVER THE BAR', tackled: 'TACKLED', claimed: 'CLAIMED', smothered: 'SMOTHERED', blocked: 'BLOCKED', out: 'OUT OF PLAY' }[g.res]
-    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 38 : 50 }
+    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 38 : 50, sub: g.why }
     if (goal) { g.popAt = g.t; g.fx.push('h:success') } else g.fx.push(g.res === 'saved' || g.res === 'claimed' || g.res === 'smothered' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g
@@ -659,7 +659,7 @@ export function draw(ctx, g, view) {
   }
   strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, origin: P(C, g.bl.x, 0.11, g.bl.z) })
   // the first chance: how it's drawn, off to the right of the screen, and the line under it
-  if (!g.res && !g.shot && !g.pass && g.phase === 'live' && g.k.phase === 'idle' && !g.k.drawn && g.me.z > -24 && drawnSoFar() < 2) {
+  if (!g.res && !g.shot && !g.pass && g.phase === 'live' && g.k.phase === 'idle' && !g.k.drawn && drawnSoFar() < 2) {
     g.ghostAt ??= g.t
     const from = view.keys ? P(C, g.bl.x, 0.11, g.bl.z) : { x: 284, y: view.h - 116 }, to = { x: from.x - 24, y: from.y - 112 }
     ghostStroke(ctx, from, to, 0.12, g.t - g.ghostAt)

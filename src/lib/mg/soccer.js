@@ -1417,7 +1417,7 @@ export const aimTo = (sx, sy) => ({ x: (POST - 0.7) * clamp(sx, -1, 1), y: lerp(
 export const DRAW = {
   minLen: 22,                // px: shorter than this is a tap, not a shot
   s0: 0.15, s1: 1.9,         // px/ms: a stroke this quick is no power, this quick full power (quicker balloons)
-  maxP: 1.25,
+  maxP: 1.4, soft: 0.7, softK: 0.4,   // (past soft, the power climbs at softK: maxP is 0.98)
   dead: 0.08, full: 0.32,    // the bend (its bow over its length) that starts to curl it, and the most he can put on it
   chipP: 0.42, chipY: 1.0,   // softer than this, up into the goal: the chip
   lowY: 0.5, yLow: 0.22,     // under this it's driven along the grass; a short stroke goes in at this height
@@ -1460,7 +1460,10 @@ function paceOf(pts, now = null) {
   for (let i = 1; i < n; i++) { len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); if (t0 == null && Math.hypot(pts[i].x - P0.x, pts[i].y - P0.y) > 6) t0 = pts[i - 1].t }
   const t1 = now ?? pts[n - 1].t, dur = Math.max(24, t1 - (t0 ?? P0.t))
   const speed = len / dur
-  return { len, dur, speed, power: clamp((speed - DRAW.s0) / (DRAW.s1 - DRAW.s0), 0, DRAW.maxP) }
+  // (past a firm stroke it climbs slower: a natural quick swipe is a hard shot, and only a real slash of a stroke
+  // balloons over the bar)
+  const raw = clamp((speed - DRAW.s0) / (DRAW.s1 - DRAW.s0), 0, DRAW.maxP)
+  return { len, dur, speed, power: raw > DRAW.soft ? DRAW.soft + (raw - DRAW.soft) * DRAW.softK : raw }
 }
 export function readStroke(st, C, o = {}) {
   const pts = st.pts, n = pts.length, P0 = pts[0]
