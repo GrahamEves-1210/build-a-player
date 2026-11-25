@@ -7891,3 +7891,5 @@ html.low-power .sil-wrap .st-fx { display: none; }
 /* (with four sports soccer isn't the last: its highlight stops at its own edge; and the balls stay on a phone) */
 .ag-home .ag-sport.ag-sport--four.ag-sport--soccer .ag-sport-thumb::after { opacity: 0; }
 @media (max-width: 520px) { .ag-home .ag-sport.ag-sport--four .ag-sport-btn:not(.is-soon) .ag-sport-ico { display: inline-grid; } }
+/* the splash figures' colour bands carry no words (owner 11-25): every sport, both Home looks */
+.splash-stack-band-label { display: none !important; }
