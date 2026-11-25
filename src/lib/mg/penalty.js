@@ -16,7 +16,7 @@
 // one, or a shootout, is pressure, and pressure shrinks the window and costs accuracy (composure fights it).
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, particles, nudge, manOf, lightMode } from './kit.js'
 import { placeStamp } from './read.js'
-import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
+import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, keeperReady, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
   shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperDive, keeperLanded, keeperUp, heldBall, parried, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar, padLayout } from './soccer.js'
 import { tip } from './soccerPads.js'
@@ -254,15 +254,14 @@ function keeperAt(g) {
   if (!going && !(kd && kd.K === 0) && g.kdive !== 0) {
     // (stood up, about to go late: set, where he was)
     if (kd) return { x: g.kx0, z: KEEP_Z, lift: 0, pose: POSE.set }
-    const bounce = Math.abs(Math.sin(t / 170)) * 3
-    const base = g.phase === 'run' && g.arriveAt - t < 450 ? POSE.set : POSE.ready
-    return { x: swayX(g), z: KEEP_Z, lift: 0, pose: { ...base, hy: base.hy + bounce, lean: g.lean * 0.15, hlx: base.hlx - 5, hrx: base.hrx + 5 } }
+    const r = keeperReady(t, g.phase === 'run' ? clamp(1 - (g.arriveAt - t - 150) / 400, 0, 1) : 0, g.lean)
+    return { x: swayX(g), z: KEEP_Z, lift: r.lift, pose: r.pose }
   }
   if (!going) {
     // stood big: his hands go to it as it comes
     const s = g.shot, at = s ? s.at + 60 : Infinity, f = easeOut(prog(t, at, at + 260)), off = kd?.off ?? 0, y = kd?.y ?? 1
     const shift = clamp(off, -1, 1) * 0.55, hx = clamp((off - shift) / 0.0164, -34, 34), hy = -clamp(y / 0.0164, 22, 118)
-    const pose = { ...POSE.set, hy: lerp(44, y > 1.5 ? 53 : 48, f), hlx: lerp(-22, hx - 7, f), hly: lerp(-62, hy, f), hrx: lerp(22, hx + 7, f), hry: lerp(-62, hy, f) }
+    const pose = { ...POSE.set, hy: lerp(45, y > 1.5 ? 53 : 48, f), hlx: lerp(-17.5, hx - 7, f), hly: lerp(-51, hy, f), hrx: lerp(17.5, hx + 7, f), hry: lerp(-51, hy, f) }
     const me = { x: (g.kx0 ?? 0) + shift * f, z: KEEP_Z, lift: y > 2 ? Math.sin(f * Math.PI) * 0.25 : 0, pose }
     if (goal) { const kb = keeperBeaten(g.cel, t - g.endAt, { ...me, rot: 0, lift: 0, ball: ballIn }); g.kHold = kb.holds ? { x: kb.x, z: kb.z } : null; return kb }
     if (g.res && t - g.resAt > 380) { const u = keeperUp(t - g.resAt - 380, { rot: 0, pose }, true, !!g.shot?.save?.held); return { ...me, lift: 0, pose: u.pose } }
