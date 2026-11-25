@@ -210,7 +210,8 @@ export default function MiniGameLab({ onClose }) {
   )
 }
 
-// The Slam Dunk Contest in practice: the dunk's called on the board in the game; AGAIN opens the board on the last one
+// The Slam Dunk Contest in practice: the dunk's called on the board in the game, three tries at it in the one game (?tries=1:
+// one); AGAIN opens the board on the last one
 function DunkLab({ v, go, cast, run, q, back, again, onDone, res }) {
   const last = useRef(DUNKS.some(d => d.id === q.get('dunk')) ? q.get('dunk') : null)
   const label = String(getUsername(getProgress().user) || 'Guest').toUpperCase()

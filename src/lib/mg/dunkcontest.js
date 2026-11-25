@@ -960,7 +960,8 @@ export function draw(ctx, g, view) {
     ctx.restore()
   }
   if (!behind && !inRim) drawBall()
-  if (g.phase !== 'pick') nameTag(ctx, view, clamp(hipX, 34, view.w - 34), floorY + 5 * U, name, 1)
+  // (his name under him, but not under the call of how it went: that line sits there)
+  if (g.phase !== 'pick' && !((g.done || g.missed) && g.phase !== 'back' && t - g.doneAt > 160)) nameTag(ctx, view, clamp(hipX, 34, view.w - 34), floorY + 5 * U, name, 1)
 
   // the hit: a white flash off the iron and a burst of strokes out from the rim, gone in a blink (not with Reduce
   // Motion or low power)
