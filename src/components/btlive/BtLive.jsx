@@ -33,6 +33,13 @@ const ovrOf = (p, pos) => calcBucketOVR(buildFromPlayer(p, keysFor(pos)), keysFo
 // his three best ratings, as the build screens name them
 const best3 = (p, pos) => keysFor(pos).map(k => [k, p.attrs?.[k] ?? 0]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${BUCKET_ATTR[k]?.shortLabel ?? k} ${v}`)
 
+// the right pad's eight ways (0 up, clockwise) and the arrow keys (up, left, right, down)
+const SLOTS = [0, 1, 2, 3, 4, 5, 6, 7]
+const ARROWS = ['\u2191', '\u2190', '\u2192', '\u2193']
+// a key as it looks on a keyboard; WASD as the keys sit (W over A S D)
+export const Key = ({ children, wide = false }) => <kbd className={`btlv-key${wide ? ' is-wide' : ''}`}>{children}</kbd>
+export const Wasd = () => <span className="btlv-wasd"><Key>W</Key><span><Key>A</Key><Key>S</Key><Key>D</Key></span></span>
+
 function Face({ p, size = 38 }) {
   const fc = p.faceCenter
   return <span className="btlv-face" style={{ width: size, height: size }}>{p.photo && <img src={p.photo} alt="" draggable={false} style={fc ? { objectPosition: `${fc[0]}% ${fc[1]}%` } : undefined} />}</span>
@@ -216,7 +223,9 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
     const r = refs.current
     const eng = createEngine({
       setup, net: link?.net ?? null,
-      els: { root: r.root, canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, ds: r.ds, dk: r.dk, rs: { up: r.rsu, dn: r.rsd, mid: r.rsm }, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb } },
+      els: { root: r.root, canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, ds: r.ds, dk: r.dk,
+        slots: SLOTS.map(i => r[`w${i}`]), half: { up: r.hu, dn: r.hd }, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb, sa: r.sa },
+        keys: { pass: r.kpass, shootSub: r.ksub, title: r.ktitle, arrows: ARROWS.map((_, i) => r[`ka${i}`]), subs: ARROWS.map((_, i) => r[`ks${i}`]), rows: ARROWS.map((_, i) => r[`kr${i}`]) } },
       on: { final: res => setTimeout(() => { setAsk(false); setFinal(res) }, 900) },
     })
     link?.attach(eng)
@@ -254,23 +263,30 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
       <div className="btlv-pad" ref={set('pad')}>
         <i className="btlv-stick-home" ref={set('home')} />
         <i className="btlv-stick-base" ref={set('base')} /><i className="btlv-stick-knob" ref={set('knob')} />
+        {/* a keyboard: the left hand's keys beside the court on the left, the right hand's (the arrows) on the right;
+            only what does something right now shows (engine.js hud) */}
         {caps && (
-          <div className="btlv-keys" aria-label="Keys">
-            <div className="btlv-keys-row"><span className="btlv-kk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><b>MOVE</b></div>
-            <div className="btlv-keys-row is-o"><span className="btlv-kk"><kbd className="is-wide">SPACE</kbd></span><b>SHOOT</b><small>HOLD, LET GO</small></div>
-            {setup.size > 1 && !koth && <div className="btlv-keys-row is-o"><span className="btlv-kk"><kbd>E</kbd></span><b>PASS</b><small>CALL FOR IT</small></div>}
-            <div className="btlv-keys-row is-b"><span className="btlv-kk"><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd></span><b>DRIBBLE MOVES</b></div>
-            <div className="btlv-keys-row is-d"><span className="btlv-kk"><kbd>&darr;</kbd></span><b>STEAL</b></div>
-            <div className="btlv-keys-row is-d"><span className="btlv-kk"><kbd>&uarr;</kbd></span><b>JUMP</b><small>CONTEST, BLOCK, BOARD</small></div>
-          </div>
+          <>
+            <div className="btlv-keys is-l" aria-label="Keys">
+              <div className="btlv-keys-row"><Wasd /><span className="btlv-kt"><b>MOVE</b></span></div>
+              <div className="btlv-keys-row is-shoot"><span className="btlv-kk"><Key wide>SPACE</Key></span><span className="btlv-kt"><b>SHOOT</b><small ref={set('ksub')} /></span></div>
+              {setup.size > 1 && !koth && <div className="btlv-keys-row is-pass"><span className="btlv-kk"><Key>E</Key></span><span className="btlv-kt"><b ref={set('kpass')}>PASS</b></span></div>}
+            </div>
+            <div className="btlv-keys is-r" aria-label="Arrow keys">
+              <p className="btlv-keys-title" ref={set('ktitle')} />
+              {ARROWS.map((a, i) => <div key={a} className="btlv-keys-row" ref={set(`kr${i}`)}><span className="btlv-kk"><Key>{a}</Key></span><span className="btlv-kt"><b ref={set(`ka${i}`)} /><small ref={set(`ks${i}`)} /></span></div>)}
+            </div>
+          </>
         )}
         <div className="btlv-btns">
-          {/* the right stick: dribble moves with the ball; without it, up a jump and down a swipe at the ball (engine.js) */}
+          {/* the right pad: with the ball, flick toward a move's name (the names are what each way does from where he
+              stands, with the hand the ball is in); without it, the top half jumps and the bottom half steals (engine.js) */}
           <div className="btlv-ds" ref={set('ds')}>
-            <span className="btlv-rs-up" ref={set('rsu')} /><span className="btlv-rs-dn" ref={set('rsd')} /><span className="btlv-rs-mid" ref={set('rsm')} />
+            {SLOTS.map(i => <span key={i} className={`btlv-ds-w is-${i}`} ref={set(`w${i}`)} />)}
+            <span className="btlv-ds-half is-up" ref={set('hu')} /><span className="btlv-ds-half is-dn" ref={set('hd')} />
             <i className="btlv-ds-knob" ref={set('dk')} />
           </div>
-          <button className="btlv-btn btlv-btn-a" ref={set('a')}><span ref={set('la')} /></button>
+          <button className="btlv-btn btlv-btn-a" ref={set('a')}><b ref={set('la')} /><small ref={set('sa')} /></button>
           <button className="btlv-btn btlv-btn-b" ref={set('b')}><span ref={set('lb')} /></button>
         </div>
       </div>

@@ -5,8 +5,9 @@
 // in-and-out, the hesitation, the step-back, the spin), the jumper and its follow-through, the layup, the dunk,
 // a defensive stance, a swipe, a contest, a man frozen by a move or sat down by one. Only the picture.
 //
-// Arms move only as a real player's do: the dribbling hand at his side working the ball, the off arm out a little to
-// protect it, a small swing running without it, both arms wide and steady guarding, both up only on a shot, a
+// Arms move only as a real player's do, elbows in by his sides (figure.js bends them): the dribbling hand at his side
+// working the ball, the off arm a little out in front to protect it, a small swing running without it, both hands out
+// and active in front guarding, both up only on a shot, a
 // contest or a block, a quick reach on a steal. Every pose is a target the drawn hands and feet ease to (no snaps).
 import { COURT, T, MOVES, MOVE_KEYS, HZ, gticks } from '../../lib/btlive/index.js'
 
@@ -40,7 +41,7 @@ export function createPoser(N) {
   function on(e, s, now) {
     const p = e.pid != null ? A[e.pid] : null
     if (e.e === 'release') p.rel = { t0: now, kind: e.kind, air: p.gAir, side: p.gSide, slam: 0, out: 0 }
-    else if (e.e === 'make') {
+    else if (e.e === 'make' || e.e === 'waved') {
       if (p.rel) { p.rel.out = now; if (e.kind === 'dunk') p.rel.slam = now }
       // a poster: the man under it goes down
       if (e.poster && e.on != null) {
@@ -120,7 +121,7 @@ export function createPoser(N) {
     z.rf[0] = rest - stx * sw; z.rf[1] = 0.15 - sty * sw
     // the arms: at his sides, a small swing against his stride when he runs
     const swing = 0.1 * amp * sw * (lx >= -0.2 ? 1 : -1)
-    set3(TL, 0.03 + swing, -0.5, 0.18); set3(TR, 0.03 - swing, 0.5, 0.18)
+    set3(TL, 0.04 + swing, -0.47, 0.18); set3(TR, 0.04 - swing, 0.47, 0.18)
 
     // ── a man on defense: low, wide, both arms out and steady ──
     if (guarding && p.act === 'free') {
@@ -128,13 +129,13 @@ export function createPoser(N) {
       const wide = c01((10 - dm) / 4) * (1 - c01((a.sp - 8) / 3))              // squared up on him; running when he chases
       z.lf[1] -= 0.1 * wide; z.rf[1] += 0.1 * wide; z.lf[0] *= 1 - 0.5 * wide; z.rf[0] *= 1 - 0.5 * wide
       z.toeL = -0.25 * wide; z.toeR = 0.25 * wide
-      mix3(TL, 0.16, -0.66, 0.3, wide); mix3(TR, 0.16, 0.66, 0.3, wide)
+      mix3(TL, 0.26, -0.56, 0.36, wide); mix3(TR, 0.26, 0.56, 0.36, wide)
       z.lean = Math.max(z.lean, 0.03 * wide)
       if (onBall && dm < 8) {
         // the hand on the ball's side a little out in front of it, low (where a swipe comes from)
         const ballSide = (P[man.i].hand || 1) * (Math.cos(a.ang - A[man.i].ang) < 0 ? -1 : 1)
         const w = c01((8 - dm) / 2)
-        mix3(ballSide > 0 ? TR : TL, 0.3, ballSide > 0 ? 0.6 : -0.6, 0.36, w)
+        mix3(ballSide > 0 ? TR : TL, 0.4, ballSide > 0 ? 0.48 : -0.48, 0.4, w)
       }
     }
     // off the ball, on offense: hands ready for a pass on its way; one arm up, held, when he calls for it
@@ -186,7 +187,7 @@ export function createPoser(N) {
       a.land = now; fast = true
     } else if (p.act === 'land' || (a.land && now - a.land < 150)) {
       // the knees take the landing
-      z.scale = 0.96; z.lf[1] = -0.22; z.rf[1] = 0.22; set3(TL, 0.15, -0.6, 0.28); set3(TR, 0.15, 0.6, 0.28)
+      z.scale = 0.96; z.lf[1] = -0.22; z.rf[1] = 0.22; set3(TL, 0.18, -0.5, 0.3); set3(TR, 0.18, 0.5, 0.3)
       if (p.act !== 'land' && now - a.land >= 150) a.land = 0
     }
 
@@ -195,7 +196,7 @@ export function createPoser(N) {
       const t = (p.actT + env.a) * STEP, w = c01(1 - t / 420)
       z.ang = a.ang + a.wob * 0.32 * Math.sin(Math.min(1, t / 160) * Math.PI * 0.5) * (0.4 + 0.6 * w)
       z.lean = -0.06
-      set3(TL, 0.0, -0.62, 0.26); set3(TR, 0.0, 0.62, 0.26)
+      set3(TL, 0.06, -0.53, 0.28); set3(TR, 0.06, 0.53, 0.28)
       z.lf[0] = 0.1 * a.wob; z.lf[1] = -0.17; z.rf[0] = -0.1 * a.wob; z.rf[1] = 0.17
     } else if (p.act === 'down') floor(z, c01((p.actT + env.a) * STEP / 170), c01((p.actN - p.actT - env.a) * STEP / 220))
     // ── dunked on ──
@@ -294,7 +295,7 @@ export function createPoser(N) {
     if (key === 'btb' && mid > 0.25) set3(bh, -0.12, sg * 0.42, 0.2)                       // reaching round behind him
     else if (key === 'btl' && mid > 0.25) set3(bh, 0.12, sg * 0.3, 0.12)                    // down through his legs
     if ((key === 'cross' || key === 'btl' || key === 'btb') && mid > 0.3) set3(oh, bx - 0.02, -sg * 0.34, 0.24)   // the other hand takes it
-    else set3(oh, 0.16, -sg * 0.5, 0.3)
+    else set3(oh, 0.22, -sg * 0.44, 0.36)
   }
 
   // rising for a shot: by its kind. g: 0 as he starts, 1 where the green is
@@ -368,7 +369,7 @@ export function createPoser(N) {
       const swing = slam ? Math.sin(Math.PI * c01(since / (DUNK.hang + DUNK.drop * 0.6))) : 0
       z.lf[0] = -0.22 + 0.46 * swing; z.rf[0] = -0.28 + 0.5 * swing; z.lf[1] = -0.14; z.rf[1] = 0.14
       z.lean = 0.08 - 0.14 * swing
-      if (up <= 0.02) { const l = c01((since - (total - DUNK.land)) / DUNK.land); z.scale = 0.93 + 0.07 * l; z.lf[0] = 0.06; z.rf[0] = 0.06; z.lf[1] = -0.24 + 0.08 * l; z.rf[1] = 0.24 - 0.08 * l; set3(bh, 0.16, sd * 0.56, 0.3); set3(oh, 0.16, -sd * 0.56, 0.3); z.lean = 0.04 }
+      if (up <= 0.02) { const l = c01((since - (total - DUNK.land)) / DUNK.land); z.scale = 0.93 + 0.07 * l; z.lf[0] = 0.06; z.rf[0] = 0.06; z.lf[1] = -0.24 + 0.08 * l; z.rf[1] = 0.24 - 0.08 * l; set3(bh, 0.18, sd * 0.5, 0.3); set3(oh, 0.18, -sd * 0.5, 0.3); z.lean = 0.04 }
       glide(z, env, toRim, dRim, (0.55 + 0.45 * thr) * Math.min(1, up * 1.6))
       if (!slam && !miss) { z.ball = true; z.two = false; set3(z.bl, -0.22 + 0.8 * thr + 0.05, sd * 0.16 * (1 - thr), 10.6) }
       a.gAir = z.air
