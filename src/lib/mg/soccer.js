@@ -526,11 +526,12 @@ export function ball(ctx, C, X, Y, Z, spin = 0, roll = 0, shadow = true) {
 //   hy the hips' height · hx the hips across · lean the body across (radians, + to the screen's right)
 //   bow how far he's folded toward or away from the camera (0-0.8: the body shortens)
 //   lx ly / rx ry the feet (screen left / right) · lk / rk the knees: +1 driven up and forward, -1 a heel kicked up
-//   hlx hly / hrx hry the hands · elbow 0 hanging, 1 out wide (hands on the hips, on the head) · fore 0-1 how much the
+//   hlx hly / hrx hry the hands · elbow 0 hanging, 1 out wide (hands on the hips, on the head); el / er added to it for
+//   one arm · fore 0-1 how much the
 //   elbows bend toward or away from the camera (a runner's arms: foreshortened, not out to the sides)
 //   rot the whole man turned about his hips (a dive, a slide, a flip) · head the head turned (-1..1) · tilt up + / down -
 //   face 0 set, 1 a roar, 2 gutted, 3 a finger on the lips · fl / fr a finger out of that hand (pointing)
-const DEF = { hy: 53, hx: 0, lean: 0, bow: 0, lx: -8, ly: 0, rx: 8, ry: 0, lk: 0, rk: 0, hlx: -16.5, hly: -47.5, hrx: 16.5, hry: -47.5, elbow: 0, fore: 0, rot: 0, head: 0, tilt: 0, face: 0, fl: 0, fr: 0 }
+const DEF = { hy: 53, hx: 0, lean: 0, bow: 0, lx: -8, ly: 0, rx: 8, ry: 0, lk: 0, rk: 0, hlx: -16.5, hly: -47.5, hrx: 16.5, hry: -47.5, elbow: 0, el: 0, er: 0, fore: 0, rot: 0, head: 0, tilt: 0, face: 0, fl: 0, fr: 0 }
 const pz = o => ({ ...DEF, ...o })
 export const mix = (a, b, f) => {
   const o = {}
@@ -539,9 +540,10 @@ export const mix = (a, b, f) => {
 }
 export const POSE = {
   stand: pz({}),
-  ready: pz({ hy: 50, bow: 0.06, lx: -11, rx: 11, hlx: -19, hly: -56, hrx: 19, hry: -56, elbow: 0.25 }),
+  // on his toes, knees soft, arms loose and a little out from his sides
+  ready: pz({ hy: 50, bow: 0.1, lx: -11, rx: 11, lk: 0.2, rk: 0.2, hlx: -18.5, hly: -51, hrx: 18.5, hry: -51, elbow: 0.1, fore: 0.45 }),
   // a keeper set: knees bent, weight forward, hands out in front of him ready
-  set: pz({ hy: 44, bow: 0.16, lx: -15, rx: 15, lk: 0.3, rk: 0.3, hlx: -22, hly: -62, hrx: 22, hry: -62, elbow: 0.45, fore: 0.4 }),
+  set: pz({ hy: 45, bow: 0.18, lx: -13.5, rx: 13.5, lk: 0.35, rk: 0.35, hlx: -19, hly: -58, hrx: 19, hry: -58, elbow: 0.3, fore: 0.55, tilt: 0.1 }),
   hips: pz({ lx: -9, rx: 9, hlx: -11, hly: -57, hrx: 11, hry: -57, elbow: 1 }),
   knees: pz({ hy: 41, bow: 0.5, lx: -11, rx: 11, lk: 0.5, rk: 0.5, hlx: -10, hly: -32, hrx: 10, hry: -32, elbow: 0.4, tilt: -0.6 }),
   headHands: pz({ lx: -8, rx: 8, hlx: -5, hly: -103, hrx: 5, hry: -103, elbow: 1, tilt: 0.3 }),
@@ -557,7 +559,8 @@ export const POSE = {
   landed: pz({ hy: 45, lx: -19, rx: 19, lk: 0.2, rk: 0.2, hlx: -40, hly: -58, hrx: 40, hry: -58, face: 1, tilt: 0.6 }),
   badge: pz({ hlx: 3, hly: -89, hrx: 16.5, hry: -48, elbow: 0.7, tilt: -0.4 }),
   shush: pz({ hlx: -34, hly: -66, hrx: 1, hry: -93, fr: 1, elbow: 0.5, face: 3 }),
-  jump: pz({ hy: 50, lx: -7, ly: -14, rx: 7, ry: -16, lk: 1, rk: 1, hlx: -30, hly: -76, hrx: 30, hry: -76, elbow: 0.5 }),
+  // up for a header, or off the ground in a celebration: one knee driven up, the other leg hanging, the elbows out
+  jump: pz({ hy: 52, bow: 0.06, lx: -6, ly: -3, lk: 0.1, rx: 5, ry: -17, rk: 1, hlx: -29, hly: -82, hrx: 28, hry: -86, elbow: 0.6, fore: 0.2, tilt: 0.3 }),
   tuck: pz({ hy: 50, lx: -8, ly: -36, rx: 8, ry: -36, lk: 1, rk: 1, hlx: -12, hly: -52, hrx: 12, hry: -52, elbow: 0.3 }),
   dive: pz({ lx: -6, rx: 6, ry: -4, hlx: -7, hly: -126, hrx: 7, hry: -126 }),
   down: pz({ lx: -7, rx: 7, hlx: -10, hly: -112, hrx: 10, hry: -112 }),
@@ -575,61 +578,82 @@ export const POSE = {
   appeal: pz({ lx: -10, rx: 10, hlx: -30, hly: -66, hrx: 30, hry: -66, elbow: 0.7, face: 2 }),
   clip: pz({ hlx: -6, hly: -66, hrx: 7, hry: -68, elbow: 0.8 }),   // a coach with his clipboard
 }
-// Running: the legs through a real stride (the trailing heel comes up, then the knee drives through), the arms
-// pumping opposite them with the elbows bent, the hips rising and falling. phase 0-1 through a stride; k 0-1 how hard.
+// Running: a real stride. Each foot is down under him for the first part of its cycle (the knee soft as he takes his
+// weight), then the heel flicks up behind him toward his backside (from behind, you see the sole), the knee drives
+// through and the foot reaches out for the grass again. The hips drop over the planted foot and rise in the flight,
+// sway a touch over each foot; the arms pump opposite the legs, elbows bent at a right angle: the one going back
+// comes out past his side with the elbow up, the one going forward drives up to his chest (from behind, out of sight).
+// phase 0-1 through a stride (the left foot lands at 0); k 0-1 how hard.
 // o: { lean (a bank into a turn), arms: 'pump' | 'out' | 'fist' | 'wide' }
+const smooth = f => { f = clamp(f, 0, 1); return f * f * (3 - 2 * f) }
+const STANCE = 0.36
+function strideLeg(u, k) {
+  u = ((u % 1) + 1) % 1
+  if (u < STANCE) { const f = u / STANCE; return { y: 0, kn: 0.12 + 0.18 * Math.sin(f * Math.PI) * k, x: 0 } }
+  const f = (u - STANCE) / (1 - STANCE)
+  // the foot: up fast behind him, peaking a third of the way through the swing, then down and out in front
+  const rise = Math.sin(Math.PI * Math.pow(f, 0.62))
+  const y = -rise * (10 + 30 * k) * k
+  // the knee: folded behind (heel up), then driven through, then nearly straight as the foot reaches the grass
+  const kn = f < 0.42 ? -1 * smooth(f / 0.16) * Math.min(1, 0.4 + k) : f < 0.8 ? lerp(-1 * Math.min(1, 0.4 + k), 0.85 * k, smooth((f - 0.42) / 0.3)) : lerp(0.85 * k, 0.12, smooth((f - 0.8) / 0.2))
+  // the swinging foot comes in under him, toward the line he's running on
+  return { y, kn, x: Math.sin(f * Math.PI) * 2.2 }
+}
 export function runPose(phase, k = 1, base = null, o = null) {
   const out = { ...DEF, ...(base ?? null) }
-  const leg = u => {
-    u = ((u % 1) + 1) % 1
-    if (u < 0.42) return { y: 0, kn: 0.2 }
-    const f = (u - 0.42) / 0.58
-    return { y: -Math.sin(f * Math.PI) * (16 + 12 * k) * k, kn: -Math.cos(f * Math.PI) }
-  }
-  const L = leg(phase), R = leg(phase + 0.5), s = Math.sin(phase * Math.PI * 2)
-  out.lx = -6.5; out.rx = 6.5; out.ly = L.y; out.ry = R.y; out.lk = L.kn; out.rk = R.kn
-  out.hy = 52 + Math.abs(Math.cos(phase * Math.PI * 2)) * 2.2 * k
-  out.bow = 0.08 * k
-  out.lean = s * 0.025 * k + (o?.lean ?? 0)
-  out.hx = (o?.lean ?? 0) * -10
+  const L = strideLeg(phase, k), R = strideLeg(phase + 0.5, k)
+  const c = Math.cos((phase - STANCE / 2) * Math.PI * 2)      // +1 over the left foot, -1 over the right
+  out.lx = -5.6 + L.x; out.rx = 5.6 - R.x; out.ly = L.y; out.ry = R.y; out.lk = L.kn; out.rk = R.kn
+  out.hy = 52.4 - 2.6 * k * Math.cos((phase - STANCE / 2) * Math.PI * 4)
+  out.bow = 0.1 * k
+  out.lean = -c * 0.035 * k + (o?.lean ?? 0)
+  out.hx = -c * 1.6 * k + (o?.lean ?? 0) * -10
+  out.tilt = -0.15 * k
   const arms = o?.arms ?? 'pump'
-  // pumping: the hand coming forward rises to the chest and in, the one going back drops and out
-  const fwdL = (1 - s) / 2, fwdR = (1 + s) / 2
-  out.hlx = lerp(-15, -6, fwdL * k); out.hly = lerp(-58, -70, fwdL * k)
-  out.hrx = lerp(15, 6, fwdR * k); out.hry = lerp(-58, -70, fwdR * k)
-  out.elbow = 0; out.fore = 0.85
-  if (arms === 'out') { out.hlx = -46; out.hly = -86 + s * 3; out.hrx = 46; out.hry = -86 - s * 3; out.elbow = 0; out.fore = 0; out.face = 1 }
-  if (arms === 'wide') { out.hlx = -42; out.hly = -94; out.hrx = 42; out.hry = -94; out.elbow = 0; out.fore = 0; out.face = 1 }
-  if (arms === 'fist') { const pump = Math.abs(Math.sin(phase * Math.PI)); out.hrx = 15; out.hry = lerp(-96, -118, pump); out.elbow = 0.3; out.fore = 0.3; out.face = 1 }
+  // the left arm forward while the right leg comes through (over the left foot), and back as the left leg does
+  const fL = (1 + c) / 2, fR = 1 - fL, a = Math.min(1, 0.35 + k)
+  // forward: the hand up by the chest and in; back: the hand by the hip, out past his side, the elbow up behind him
+  const arm = (f, sd) => ({ x: sd * lerp(lerp(15, 13.5, a), lerp(15.5, 5, a), f), y: lerp(lerp(-50, -59, a), lerp(-56, -77, a), f), el: (1 - f) * 0.22 * a })
+  const AL = arm(fL, -1), AR = arm(fR, 1)
+  out.hlx = AL.x; out.hly = AL.y; out.hrx = AR.x; out.hry = AR.y; out.el = AL.el; out.er = AR.el
+  out.elbow = 0; out.fore = 0.7
+  const s = Math.sin(phase * Math.PI * 2)
+  if (arms === 'out') { out.hlx = -46; out.hly = -86 + s * 3; out.hrx = 46; out.hry = -86 - s * 3; out.elbow = 0; out.el = out.er = 0; out.fore = 0; out.face = 1; out.tilt = 0.2 }
+  if (arms === 'wide') { out.hlx = -42; out.hly = -94; out.hrx = 42; out.hry = -94; out.elbow = 0; out.el = out.er = 0; out.fore = 0; out.face = 1; out.tilt = 0.3 }
+  if (arms === 'fist') { const pump = Math.abs(Math.sin(phase * Math.PI)); out.hrx = 15; out.hry = lerp(-96, -118, pump); out.elbow = 0.3; out.er = 0; out.fore = 0.3; out.face = 1; out.tilt = 0.3 }
   return out
 }
-// on the ball: a shorter stride, the head down a touch, the arms out a little for balance
+// on the ball: a shorter, quicker-looking stride, the head down over it, the arms out a little for balance
 export function dribblePose(phase, k = 1, o = null) {
-  const p = runPose(phase, k * 0.75, null, o)
-  p.bow = 0.12; p.tilt = -0.35
-  p.hlx -= 4; p.hrx += 4; p.hly += 3; p.hry += 3
+  const p = runPose(phase, k * 0.72, null, o)
+  p.bow = 0.14; p.tilt = -0.5
+  p.hlx -= 5; p.hrx += 5; p.hly += 2; p.hry += 2; p.el += 0.15; p.er += 0.15
   return p
 }
-// The strike, from behind him: f 0-1 from the last step to the follow-through. foot: 1 the right foot, -1 the left.
-// The standing foot planted by the ball, the kicking leg back (the heel up), then through and up across him, the
-// far arm out wide for balance.
+// The strike, from behind him: f 0-1 from the last stride to the follow-through; the foot meets the ball at about 0.47
+// (a game's shot goes at 0.45). foot: 1 the right foot, -1 the left. The last stride is a long one, the standing foot
+// planted beside the ball, the body leaning away over it; the kicking leg drawn back with the heel high, the far arm
+// out wide and up for balance; then the leg whips through the ball, the head still down over it, and on up and across
+// him, his weight up on the toes of the standing foot. o: { high (a chip, a volley: the leg finishes higher) }
+const KICK = [
+  // [f, pose for the right foot]
+  [0, { hy: 52, bow: 0.1, lx: -5, ly: -9, lk: 0.6, rx: 5.5, ry: 0, rk: 0.2, hlx: -13, hly: -70, hrx: 15, hry: -52, el: 0, er: 0.4, fore: 0.7, lean: 0.02, tilt: -0.2 }],
+  [0.2, { hy: 49, bow: 0.12, lx: -10, ly: -2, lk: 0.35, rx: 6, ry: -14, rk: -0.9, hlx: -26, hly: -72, hrx: 17, hry: -54, el: 0.1, er: 0.45, fore: 0.5, lean: -0.08, tilt: -0.35 }],
+  [0.4, { hy: 48, bow: 0.13, lx: -10, ly: 0, lk: 0.3, rx: 10, ry: -40, rk: -1, hlx: -41, hly: -83, hrx: 21, hry: -55, el: 0, er: 0.35, fore: 0.3, lean: -0.17, tilt: -0.55 }],
+  [0.47, { hy: 50, bow: 0.14, lx: -10, ly: 0, lk: 0.25, rx: 3, ry: -5, rk: 0.15, hlx: -43, hly: -80, hrx: 15, hry: -60, el: 0, er: 0.25, fore: 0.3, lean: -0.11, tilt: -0.65 }],
+  [0.7, { hy: 53, bow: 0.18, lx: -9, ly: -2, lk: 0.1, rx: -1, ry: -34, rk: 1, hlx: -37, hly: -77, hrx: 2, hry: -68, el: 0, er: 0, fore: 0.6, lean: 0.04, tilt: -0.25 }],
+  [1, { hy: 53.5, bow: 0.16, lx: -8.5, ly: -3, lk: 0.15, rx: -2, ry: -26, rk: 0.85, hlx: -31, hly: -71, hrx: 5, hry: -64, el: 0.1, er: 0, fore: 0.6, lean: 0.08, tilt: 0 }],
+]
+const HIGH = { 0.7: { ry: -50, lean: 0.12, bow: 0.1, tilt: 0.1 }, 1: { ry: -42, lean: 0.14, bow: 0.08, tilt: 0.2 } }
 export function kickPose(f, foot = 1, o = null) {
-  const out = { ...DEF }, F = foot
-  const back = clamp(f / 0.45, 0, 1), thru = clamp((f - 0.45) / 0.55, 0, 1), e = 1 - (1 - thru) * (1 - thru)
-  const plantX = -F * 8
-  const kx = F * lerp(lerp(9, 13, back), 2, e), ky = lerp(lerp(0, -30, back), -(o?.high ? 62 : 48), e)
-  const kk = thru > 0 ? lerp(-1, 1, e) : -back
-  if (F > 0) { out.lx = plantX; out.ly = 0; out.rx = kx; out.ry = ky; out.rk = kk; out.lk = 0.3 }
-  else { out.rx = plantX; out.ry = 0; out.lx = kx; out.ly = ky; out.lk = kk; out.rk = 0.3 }
-  out.hy = 52 - back * 4 + e * 2
-  out.lean = -F * (0.06 + 0.12 * back) + F * 0.14 * e
-  out.bow = 0.12 + 0.12 * e
-  out.tilt = -0.4 * (1 - e)
-  const wide = lerp(30, 44, back)
-  if (F > 0) { out.hlx = -wide; out.hly = lerp(-64, -82, back); out.hrx = lerp(18, -2, e); out.hry = lerp(-54, -62, e) }
-  else { out.hrx = wide; out.hry = lerp(-64, -82, back); out.hlx = lerp(-18, 2, e); out.hly = lerp(-54, -62, e) }
-  out.elbow = 0.2
-  return out
+  f = clamp(f, 0, 1)
+  let i = 0; while (i < KICK.length - 2 && f > KICK[i + 1][0]) i++
+  const [f0, a0] = KICK[i], [f1, a1] = KICK[i + 1]
+  const A = o?.high && HIGH[f0] ? { ...a0, ...HIGH[f0] } : a0, B = o?.high && HIGH[f1] ? { ...a1, ...HIGH[f1] } : a1
+  const p = mix({ ...DEF, ...A }, { ...DEF, ...B }, smooth((f - f0) / (f1 - f0)))
+  if (foot > 0) return p
+  // the left foot: the same strike, mirrored
+  return { ...p, lx: -p.rx, ly: p.ry, lk: p.rk, rx: -p.lx, ry: p.ly, rk: p.lk, hlx: -p.hrx, hly: p.hry, hrx: -p.hlx, hry: p.hly, el: p.er, er: p.el, lean: -p.lean, hx: -p.hx }
 }
 
 const TH = 27, SH = 26, UA = 18.5, FA = 17.5, TORSO = 33, HR = 7.4, SHW = 10.6, HIPW = 5
@@ -687,6 +711,53 @@ function hairFor(L) {
   return { col, cut }
 }
 const BOOTS = ['#15181c', '#f2f2ee', '#f08a24', '#2bd4c5', '#e84fa1', '#15181c', '#c6ec3a', '#2a64d8']
+// Ink, then colour: one outline round the whole of a part and none inside it, so a leg is one shape (thigh, knee, calf,
+// sock and boot) and not a string of beads. A part: [ax, ay, ra, bx, by, rb].
+function inkT(x, list, grow = OL) { x.fillStyle = INK; x.beginPath(); for (const l of list) taper(x, l[0], l[1], l[2] + grow, l[3], l[4], l[5] + grow); x.fill() }
+// the colour: its shade first, then the lit side, inset up and to the left (the light's over his left shoulder)
+function fillT(x, list, col, shade = true) {
+  x.fillStyle = shade ? tone(col, 0.76) : col; x.beginPath(); for (const l of list) taper(x, l[0], l[1], l[2], l[3], l[4], l[5]); x.fill()
+  if (!shade) return
+  x.fillStyle = col; x.beginPath(); for (const l of list) taper(x, l[0] - l[2] * 0.26, l[1] - l[2] * 0.12, l[2] * 0.72, l[3] - l[5] * 0.26, l[4] - l[5] * 0.12, l[5] * 0.72); x.fill()
+}
+// a band across a limb at a point along it (a sock's top, a sleeve's cuff, the shorts' hem)
+function band(x, ax, ay, bx, by, at, r, col, w) {
+  const dx = bx - ax, dy = by - ay, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl, px = lerp(ax, bx, at), py = lerp(ay, by, at)
+  x.strokeStyle = col; x.lineWidth = w; x.lineCap = 'butt'
+  x.beginPath(); x.moveTo(px + nx * r, py + ny * r); x.lineTo(px - nx * r, py - ny * r); x.stroke(); x.lineCap = 'round'
+}
+// One leg, hip to boot. From behind, a heel kicked up shows the sole and its studs.
+function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k) {
+  const thigh = [lerp(H[0], K[0], 0.25), lerp(H[1], K[1], 0.25), 5.3 * bw, K[0], K[1], 3.9 * bw]
+  const calf = [lerp(K[0], A[0], 0.12), lerp(K[1], A[1], 0.12), 4.0 * bw, lerp(K[0], A[0], 0.42), lerp(K[1], A[1], 0.42), 3.7 * bw]
+  const shin = [K[0], K[1], 3.9 * bw, A[0], A[1], 2.4]
+  const st = [lerp(K[0], A[0], 0.2), lerp(K[1], A[1], 0.2)]
+  const sock = [st[0], st[1], 4.15 * bw, A[0], A[1], 2.6]
+  const sockC = [st[0], st[1], 4.15 * bw, lerp(K[0], A[0], 0.42), lerp(K[1], A[1], 0.42), 3.85 * bw]
+  // the boot: the heel from behind, the toe from the front; a heel flicked up behind him shows the sole
+  const up = -A[1] - 2.6, sole = !front && k < -0.25 && up > 7
+  const bx0 = A[0], by0 = A[1] + 0.4, bx1 = A[0] + out * (sole ? 0.4 : 1.7), by1 = sole ? A[1] - 2.6 : A[1] + 3.3
+  const bt = [bx0, by0, 3.2, bx1, by1, 2.9]
+  inkT(x, [thigh, calf, shin, sock, sockC, bt])
+  fillT(x, [thigh, shin, calf], skin)
+  // the knee: a soft crease, not a joint
+  x.strokeStyle = tone(skin, 0.7); x.lineWidth = 0.7; x.beginPath(); x.arc(K[0] - out * 0.3, K[1] + 0.6, 2.2, Math.PI * 0.15, Math.PI * 0.85); x.stroke()
+  fillT(x, [sock, sockC], L.socks)
+  // the shin pad's ridge under the sock, from the front
+  if (front) { x.fillStyle = tone(L.socks, 1.12); x.beginPath(); taper(x, lerp(st[0], A[0], 0.14), lerp(st[1], A[1], 0.14), 1.7, lerp(st[0], A[0], 0.7), lerp(st[1], A[1], 0.7), 1.1); x.fill() }
+  // the turned-over top of the sock, in the trim
+  band(x, K[0], K[1], A[0], A[1], 0.235, 4.05 * bw, L.trim, 1.9)
+  fillT(x, [bt], boot)
+  if (sole) {
+    // the sole and its studs, toward us
+    x.fillStyle = boot === '#15181c' ? '#3a3f45' : tone(boot, 0.55); x.beginPath(); x.ellipse((bx0 + bx1) / 2, (by0 + by1) / 2, 2.4, 3.3, Math.atan2(by1 - by0, bx1 - bx0) + Math.PI / 2, 0, 6.2832); x.fill()
+    x.fillStyle = '#d9dbd6'; for (const [sx, sy] of [[-0.9, -1.6], [0.9, -1.6], [-0.9, 0.4], [0.9, 0.4], [0, 2]]) { x.beginPath(); x.arc((bx0 + bx1) / 2 + sx, (by0 + by1) / 2 + sy, 0.45, 0, 6.2832); x.fill() }
+  } else {
+    // the sole's edge, and a flash of colour at the heel
+    x.fillStyle = boot === '#15181c' ? '#f2f2ee' : '#15181c'; x.beginPath(); x.ellipse(bx1, by1 + 2.1, 2.6, 0.7, 0, 0, 6.2832); x.fill()
+    if (!front) { x.fillStyle = boot === '#15181c' ? '#e84fa1' : tone(boot, 0.6); x.beginPath(); x.ellipse(bx0, by0 + 0.6, 1.1, 1.5, 0, 0, 6.2832); x.fill() }
+  }
+}
 // One man, painted in his own units at 0, 0 (his feet). look: { shirt, trim, shorts, socks, num, gloves, skin, hair
 // (a cut), hairColor, number, front (facing the camera), sleeves (long: a keeper), boot, build (0 slim - 1 strong),
 // clipboard }
@@ -697,96 +768,105 @@ export function paintMan(x, o, L) {
   const T = TORSO * (1 - 0.4 * bow)
   const cl = Math.cos(lean), sl = Math.sin(lean), hipX = o.hx ?? 0, hipY = -(o.hy ?? 53)
   const sxx = hipX + sl * T, syy = hipY - cl * T, W = SHW * bw
-  const lS = [sxx - cl * W, syy - sl * W + 3.2], rS = [sxx + cl * W, syy + sl * W + 3.2]
+  const lS = [sxx - cl * W - sl * 3.2, syy - sl * W + cl * 3.2], rS = [sxx + cl * W - sl * 3.2, syy + sl * W + cl * 3.2]
   const lH = [hipX - cl * HIPW, hipY - sl * HIPW], rH = [hipX + cl * HIPW, hipY + sl * HIPW]
   const lA = [o.lx, o.ly - 2.6], rA = [o.rx, o.ry - 2.6]
   const lK = kneeOf(lH[0], lH[1], lA[0], lA[1], o.lk ?? 0, -1), rK = kneeOf(rH[0], rH[1], rA[0], rA[1], o.rk ?? 0, 1)
-  const el = o.elbow ?? 0
-  const pole = (S, hy, out) => { const up = clamp((S[1] - hy) / 28, 0, 1); return [out * lerp(0.3 + 0.5 * up, 1, el), lerp(0.95 - 0.55 * up, 0.1, el)] }
-  const lp = pole(lS, o.hly, -1), rp = pole(rS, o.hry, 1)
+  const elL = clamp((o.elbow ?? 0) + (o.el ?? 0), 0, 1), elR = clamp((o.elbow ?? 0) + (o.er ?? 0), 0, 1)
+  const pole = (S, hy, out, el) => { const up = clamp((S[1] - hy) / 28, 0, 1); return [out * lerp(0.3 + 0.5 * up, 1, el), lerp(0.95 - 0.55 * up, 0.1, el)] }
+  const lp = pole(lS, o.hly, -1, elL), rp = pole(rS, o.hry, 1, elR)
   const lArm = armOf(lS[0], lS[1], o.hlx, o.hly, lp[0], lp[1], o.fore ?? 0), rArm = armOf(rS[0], rS[1], o.hrx, o.hry, rp[0], rp[1], o.fore ?? 0)
   const tilt = o.tilt ?? 0, turnH = o.head ?? 0
-  const nl = 4.5 * (1 - 0.3 * bow), hx = sxx + sl * (nl + HR) + turnH * 1.2, hy = syy - cl * (nl + HR) + (bow > 0.3 ? bow * 4 : 0) - tilt * 0.6
-  const gk = !!L.gloves, handR = gk ? 3.7 : 2.6
+  const nl = 3.6 * (1 - 0.3 * bow), hx = sxx + sl * (nl + HR) + turnH * 1.2, hy = syy - cl * (nl + HR) + (bow > 0.3 ? bow * 4 : 0) - tilt * 0.6
+  const gk = !!L.gloves, handR = gk ? 3.7 : 2.5
   const { col: hairC, cut } = hairFor({ ...L, cut: L.hair && L.hair[0] !== '#' ? L.hair : L.cut, hairColor: L.hairColor ?? (L.hair && L.hair[0] === '#' && L.hair !== '#17120e' ? L.hair : undefined) })
   x.save(); x.lineCap = 'round'; x.lineJoin = 'round'
   if (o.rot) { x.translate(hipX, hipY); x.rotate(o.rot); x.translate(-hipX, -hipY) }
-  // which arms go behind the body: from behind, a hand in front of him (inside the shirt's outline) is hidden
+  // which arms go where: from behind, a hand in front of him (inside the shirt's outline) is hidden; one over his head
+  // goes over it; one across his front, from the front, over the shirt; the rest hang at his sides, under the shirt's edge
   const inside = a => Math.abs(a.ex - sxx) < 9 && a.ey > syy + 2 && a.ey < hipY + 4
-  const armBehind = a => !front && inside(a)
   const armOverHead = a => a.ey < hy + 4 && Math.abs(a.ex - hx) < 11
-  // 1. the arms behind him
-  for (const [a, out] of [[lArm, -1], [rArm, 1]]) if (armBehind(a)) paintArm(x, a, out, L, skin, handR, gk, o, front)
-  // 2. the legs: boots, socks over the shin pads, the knees, the thighs
-  const legs = [[lH, lK, lA, -1], [rH, rK, rA, 1]]
+  const arms = [[lArm, -1], [rArm, 1]].map(([a, out]) => ({ a, out, at: !front && inside(a) ? 'back' : armOverHead(a) || (front && Math.abs(a.ex - hx) < 9 && Math.abs(a.ey - hy) < 12) ? 'late' : front && inside(a) ? 'front' : 'side' }))
+  for (const r of arms) if (r.at === 'back') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
+  // the legs: the far one first (from behind, the one swinging through; from the front, the one going back)
   const boot = L.boot ?? BOOTS[hashOf(`${L.number}|${L.skin}`) % BOOTS.length]
-  for (const [H, K, A, out] of legs) {
-    // the boot: from behind his heel, from the front the toe, a little out
-    const fx = A[0] + out * 2.4, fy = A[1] + 3.1
-    x.fillStyle = INK; x.beginPath(); taper(x, A[0], A[1] + 0.6, 3.0 + OL, fx, fy, 2.7 + OL); x.fill()
-    x.fillStyle = boot; x.beginPath(); taper(x, A[0], A[1] + 0.6, 3.0, fx, fy, 2.7); x.fill()
-    x.fillStyle = boot === '#15181c' ? '#f2f2ee' : '#15181c'; x.fillRect(Math.min(A[0], fx) - 1.5, fy + 0.9, Math.abs(fx - A[0]) + 3, 1.1)
+  const legs = [[lH, lK, lA, -1, o.lk ?? 0], [rH, rK, rA, 1, o.rk ?? 0]].sort((p, q) => (front ? p[4] - q[4] : q[4] - p[4]))
+  const later = []
+  for (const g of legs) { if (front && g[4] > 0.45) later.push(g); else paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4]) }
+  // the body: the shorts, the shirt and the sleeves, inked as one
+  const shortsL = [lH, rH].map((H, i) => { const K = i ? rK : lK; return [lerp(H[0], K[0], 0.08), lerp(H[1], K[1], 0.08), 5.6 * bw, lerp(H[0], K[0], 0.5), lerp(H[1], K[1], 0.5), 5.9 * bw, K] })
+  const waist = d => {
+    const w0 = 6.6 * bw + d, w1 = HIPW + 4.6 * bw + d, nx = -sl, ny = cl
+    x.moveTo(hipX - cl * w0 - nx * (5 + d), hipY - sl * w0 - ny * (5 + d)); x.lineTo(hipX + cl * w0 - nx * (5 + d), hipY + sl * w0 - ny * (5 + d))
+    x.lineTo(hipX + cl * w1 + nx * (2.5 + d), hipY + sl * w1 + ny * (2.5 + d)); x.lineTo(hipX - cl * w1 + nx * (2.5 + d), hipY - sl * w1 + ny * (2.5 + d)); x.closePath()
   }
-  const sockTop = (K, A) => [lerp(K[0], A[0], 0.2), lerp(K[1], A[1], 0.2)]
-  limbs(x, legs.map(([H, K, A]) => { const s = sockTop(K, A); return [s[0], s[1], 4.3 * bw, A[0], A[1], 2.7] }), L.socks)
-  // the shin pad under the sock: a slight ridge down the front of it
-  if (front) { x.fillStyle = tone(L.socks, 1.12); x.beginPath(); for (const [, K, A] of legs) { const s = sockTop(K, A); taper(x, lerp(s[0], A[0], 0.12), lerp(s[1], A[1], 0.12), 1.7, lerp(s[0], A[0], 0.72), lerp(s[1], A[1], 0.72), 1.1) } x.fill() }
-  // the turn-over at the top of the sock, in the trim
-  x.fillStyle = L.trim; x.beginPath(); for (const [, K, A] of legs) { const s = sockTop(K, A), e = [lerp(K[0], A[0], 0.29), lerp(K[1], A[1], 0.29)]; taper(x, s[0], s[1], 4.4 * bw, e[0], e[1], 4.2 * bw) } x.fill()
-  limbs(x, legs.map(([H, K, A]) => { const s = sockTop(K, A); return [K[0], K[1], 4.1 * bw, s[0], s[1], 4.0 * bw] }), skin)
-  limbs(x, legs.map(([H, K]) => [lerp(H[0], K[0], 0.4), lerp(H[1], K[1], 0.4), 5.2 * bw, K[0], K[1], 4.2 * bw]), skin)
-  // 3. the shorts: the legs of them and the seat, the hem in the trim
-  limbs(x, legs.map(([H, K]) => [H[0], H[1], 6.1 * bw, lerp(H[0], K[0], 0.46), lerp(H[1], K[1], 0.46), 5.9 * bw]), L.shorts)
-  const waist = (d) => {
-    const ww = HIPW + 4.6 * bw + d, nx = -sl, ny = cl
-    x.beginPath()
-    x.moveTo(hipX - cl * ww - nx * (6 + d), hipY - sl * ww - ny * (6 + d)); x.lineTo(hipX + cl * ww - nx * (6 + d), hipY + sl * ww - ny * (6 + d))
-    x.lineTo(hipX + cl * (ww + 0.6) + nx * (3 + d), hipY + sl * (ww + 0.6) + ny * (3 + d)); x.lineTo(hipX - cl * (ww + 0.6) + nx * (3 + d), hipY - sl * (ww + 0.6) + ny * (3 + d)); x.closePath()
-  }
-  waist(OL); x.fillStyle = INK; x.fill(); waist(0); x.fillStyle = L.shorts; x.fill()
-  x.strokeStyle = L.trim; x.lineWidth = 1.1; x.lineCap = 'butt'; x.beginPath()
-  for (const [H, K, , out] of legs) {
-    const a = [lerp(H[0], K[0], 0.46), lerp(H[1], K[1], 0.46)], dx = K[0] - H[0], dy = K[1] - H[1], dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl
-    x.moveTo(a[0] + nx * 5.2, a[1] + ny * 5.2); x.lineTo(a[0] - nx * 5.2, a[1] - ny * 5.2)
-    void out
-  }
-  x.stroke(); x.lineCap = 'round'
-  // 4. the shirt: fitted, cut in at the waist, the far side in shade; the collar; the number
-  x.save(); x.translate(sxx, syy); x.rotate(lean)
+  const wa = W - 1.5, ww = 7.9 * bw, wh = 9.4 * bw
   const shirt = () => {
-    const w = W, wa = W * 0.82, ww = 8.4 * bw, wh = 8.9 * bw
-    x.beginPath()
-    x.moveTo(-w + 2.5, -0.8); x.quadraticCurveTo(-w - 0.6, -0.4, -w - 0.4, 4.6); x.lineTo(-wa, 10.5)
-    x.quadraticCurveTo(-ww - 0.6, T * 0.62, -ww, T - 2.5); x.lineTo(-wh, T + 2.2); x.lineTo(wh, T + 2.2); x.lineTo(ww, T - 2.5)
-    x.quadraticCurveTo(ww + 0.6, T * 0.62, wa, 10.5); x.lineTo(w + 0.4, 4.6); x.quadraticCurveTo(w + 0.6, -0.4, w - 2.5, -0.8); x.closePath()
+    x.moveTo(-3.9, -1.5)
+    x.quadraticCurveTo(-W + 3.2, -1.2, -W + 0.8, 1.0)
+    x.quadraticCurveTo(-W - 1.1, 3.0, -W - 0.3, 7.4)
+    x.lineTo(-wa, 11.2)
+    x.quadraticCurveTo(-wa + 0.8, T * 0.6, -ww, T - 2.2)
+    x.quadraticCurveTo(-wh - 0.4, T + 0.4, -wh, T + 2.6)
+    x.quadraticCurveTo(0, T + 3.7, wh, T + 2.6)
+    x.quadraticCurveTo(wh + 0.4, T + 0.4, ww, T - 2.2)
+    x.quadraticCurveTo(wa - 0.8, T * 0.6, wa, 11.2)
+    x.lineTo(W + 0.3, 7.4)
+    x.quadraticCurveTo(W + 1.1, 3.0, W - 0.8, 1.0)
+    x.quadraticCurveTo(W - 3.2, -1.2, 3.9, -1.5)
+    x.quadraticCurveTo(0, 0.2, -3.9, -1.5)
+    x.closePath()
   }
-  shirt(); x.strokeStyle = INK; x.lineWidth = OL * 2; x.stroke(); x.fillStyle = L.shirt; x.fill()
-  x.save(); shirt(); x.clip()
-  x.fillStyle = tone(L.shirt, 0.8); x.beginPath(); x.moveTo(4.2, -2); x.quadraticCurveTo(6.8, T * 0.5, 4.6, T + 3); x.lineTo(14, T + 3); x.lineTo(14, -2); x.closePath(); x.fill()
-  // the fold where it tucks in at the waist
-  x.fillStyle = 'rgba(0,0,0,.12)'; x.fillRect(-10, T - 0.4, 20, 2.8)
+  const sleeve = a => { const m = [lerp(a.sx, a.jx, 0.58), lerp(a.sy, a.jy, 0.58)]; return [a.sx, a.sy, 4.5, m[0], m[1], 3.9, m] }
+  const sides = arms.filter(r => r.at === 'side'), sleeves = sides.map(r => sleeve(r.a))
+  x.fillStyle = INK
+  x.beginPath(); waist(OL); x.fill()
+  inkT(x, shortsL.concat(sleeves))
+  x.save(); x.translate(sxx, syy); x.rotate(lean); x.beginPath(); shirt(); x.strokeStyle = INK; x.lineWidth = OL * 2; x.stroke(); x.fill(); x.restore()
+  // the arms at his sides, under the sleeves' edges
+  for (const r of sides) paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'bare')
+  // the shorts: loose, the hem a shade darker
+  fillT(x, shortsL, L.shorts)
+  x.beginPath(); waist(0); x.fillStyle = L.shorts; x.fill()
+  for (const s of shortsL) band(x, s[0], s[1], s[3], s[4], 0.93, 5.7 * bw, tone(L.shorts, 0.66), 0.9)
+  // the shirt: fitted, in at the waist, hanging a touch loose over the shorts; the far side in shade
+  x.save(); x.translate(sxx, syy); x.rotate(lean)
+  x.beginPath(); shirt(); x.fillStyle = L.shirt; x.fill()
+  x.save(); x.beginPath(); shirt(); x.clip()
+  x.fillStyle = tone(L.shirt, 0.8); x.beginPath(); x.moveTo(4.6, -2); x.quadraticCurveTo(7.2, T * 0.5, 4.4, T + 4); x.lineTo(15, T + 4); x.lineTo(15, -2); x.closePath(); x.fill()
+  // the shoulder blades' shadow from behind, the chest's from the front; the fold over the shorts
+  x.fillStyle = 'rgba(0,0,0,.09)'; x.beginPath(); x.ellipse(-W + 3.6, 12.5, 2.2, 4.5, 0.2, 0, 6.2832); x.ellipse(W - 3.6, 12.5, 2.2, 4.5, -0.2, 0, 6.2832); x.fill()
+  x.fillStyle = 'rgba(0,0,0,.14)'; x.fillRect(-12, T + 0.6, 24, 3.2)
   x.restore()
-  // the collar
-  x.strokeStyle = L.trim; x.lineWidth = 1.5
-  x.beginPath()
-  if (front) { x.moveTo(-4.4, -0.6); x.quadraticCurveTo(0, 5.2, 4.4, -0.6) } else { x.moveTo(-4.6, -0.4); x.quadraticCurveTo(0, 1.8, 4.6, -0.4) }
-  x.stroke()
-  if (front) { x.fillStyle = skinD; x.beginPath(); x.moveTo(-3.6, -0.7); x.quadraticCurveTo(0, 4.2, 3.6, -0.7); x.closePath(); x.fill() }
+  // where the shirt hangs over the shorts
+  x.strokeStyle = INK; x.lineWidth = OL * 0.9; x.beginPath(); x.moveTo(-wh, T + 2.6); x.quadraticCurveTo(0, T + 3.7, wh, T + 2.6); x.stroke()
+  x.restore()
+  // the sleeves over the arms at his sides, the cuff in the trim (a keeper's runs on down to the glove)
+  fillT(x, sleeves, L.shirt)
+  if (!L.sleeves) for (const s of sleeves) band(x, s[0], s[1], s[3], s[4], 0.94, 4.0, L.trim, 1.3)
+  // the collar and the number
+  x.save(); x.translate(sxx, syy); x.rotate(lean)
   if (L.number != null && bow < 0.55) {
     const n = String(L.number)
     if (front) {
-      text(x, n, -4.6, 8.4, { font: DISPLAY, size: 6.2, color: L.num })
+      text(x, n, -4.6, 9.2, { font: DISPLAY, size: 6.2, color: L.num })
       // the badge, over his heart (his left: the screen's right)
-      x.fillStyle = L.trim; x.beginPath(); x.moveTo(3.2, 5.6); x.lineTo(6.8, 5.6); x.lineTo(6.8, 8.6); x.quadraticCurveTo(5, 10.6, 3.2, 8.6); x.closePath(); x.fill()
-      x.fillStyle = tone(L.shirt, 0.7); x.fillRect(4.3, 6.8, 1.4, 1.6)
-    } else text(x, n, 0, 12.5 + (T - TORSO) * 0.3, { font: DISPLAY, size: n.length > 1 ? 14 : 15.5, color: L.num, track: n.length > 1 ? -0.4 : 0 })
+      x.fillStyle = L.trim; x.beginPath(); x.moveTo(3.2, 6.2); x.lineTo(6.8, 6.2); x.lineTo(6.8, 9.2); x.quadraticCurveTo(5, 11.2, 3.2, 9.2); x.closePath(); x.fill()
+      x.fillStyle = tone(L.shirt, 0.7); x.fillRect(4.3, 7.4, 1.4, 1.6)
+    } else text(x, n, 0, 13.5 + (T - TORSO) * 0.3, { font: DISPLAY, size: n.length > 1 ? 14 : 15.5, color: L.num, track: n.length > 1 ? -0.4 : 0 })
   }
   x.restore()
-  // 5. the arms in front, the head, then any hand up at the head
-  const late = []
-  for (const [a, out] of [[lArm, -1], [rArm, 1]]) { if (armBehind(a)) continue; if (armOverHead(a) || (front && Math.abs(a.ex - hx) < 9 && Math.abs(a.ey - hy) < 12)) late.push([a, out]); else paintArm(x, a, out, L, skin, handR, gk, o, front) }
-  paintHead(x, sxx, syy, hx, hy, skin, skinD, hairC, cut, front, o, tilt, turnH)
-  for (const [a, out] of late) paintArm(x, a, out, L, skin, handR, gk, o, front)
+  // a knee coming up toward us, from the front, over the shorts
+  for (const g of later) paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4])
+  // the arms across his front, the head, then any hand up at the head
+  for (const r of arms) if (r.at === 'front') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
+  const collar = () => {
+    x.save(); x.translate(sxx, syy); x.rotate(lean); x.strokeStyle = L.trim; x.lineWidth = 1.3; x.beginPath()
+    if (front) { x.moveTo(-3.9, -1.3); x.quadraticCurveTo(0, 3.6, 3.9, -1.3) } else { x.moveTo(-3.9, -1.2); x.quadraticCurveTo(0, 0.6, 3.9, -1.2) }
+    x.stroke(); x.restore()
+  }
+  paintHead(x, sxx, syy, hx, hy, skin, skinD, hairC, cut, front, o, tilt, turnH, collar)
+  for (const r of arms) if (r.at === 'late') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
   // a clipboard held in front of him
   if (L.clipboard) {
     const cx = (lArm.ex + rArm.ex) / 2, cy = (lArm.ey + rArm.ey) / 2 - 2
@@ -798,35 +878,38 @@ export function paintMan(x, o, L) {
   }
   x.restore()
 }
-function paintArm(x, a, out, L, skin, handR, gk, o, front) {
-  // the sleeve: short, fitted, ends halfway down the upper arm with a cuff in the trim (a keeper's runs to the wrist)
+// An arm. 'full': the sleeve and all, with its own outline (an arm behind him, or across his front); 'bare': from under
+// the sleeve's cuff down (an arm at his side: the body's sleeve goes over its top).
+function paintArm(x, a, out, L, skin, handR, gk, o, front, part = 'full') {
   const m = [lerp(a.sx, a.jx, 0.55), lerp(a.sy, a.jy, 0.55)]
-  if (L.sleeves) {
-    limbs(x, [[a.jx, a.jy, 3.1, a.ex, a.ey, 2.6], [a.sx, a.sy, 4.1, a.jx, a.jy, 3.2]], L.shirt)
-  } else {
-    limbs(x, [[a.jx, a.jy, 2.9, a.ex, a.ey, 2.2], [m[0], m[1], 3.3, a.jx, a.jy, 3.0]], skin)
-    limbs(x, [[a.sx, a.sy, 4.2, m[0], m[1], 3.7]], L.shirt)
-    x.strokeStyle = L.trim; x.lineWidth = 1.2; x.lineCap = 'butt'
-    const dx = a.jx - a.sx, dy = a.jy - a.sy, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl
-    x.beginPath(); x.moveTo(m[0] + nx * 3.6 - dx / dl * 0.6, m[1] + ny * 3.6 - dy / dl * 0.6); x.lineTo(m[0] - nx * 3.6 - dx / dl * 0.6, m[1] - ny * 3.6 - dy / dl * 0.6); x.stroke(); x.lineCap = 'round'
-  }
-  // the hand (a glove: bigger, with its cuff), and a finger out if he's pointing
-  const hc = gk ? L.gloves : skin
-  x.fillStyle = INK; x.beginPath(); x.arc(a.ex, a.ey, handR + OL, 0, 6.2832); x.fill()
-  x.fillStyle = tone(hc, 0.8); x.beginPath(); x.arc(a.ex, a.ey, handR, 0, 6.2832); x.fill()
-  x.fillStyle = hc; x.beginPath(); x.arc(a.ex - handR * 0.22, a.ey - handR * 0.22, handR * 0.74, 0, 6.2832); x.fill()
-  if (gk) { x.strokeStyle = tone(L.gloves, 0.55); x.lineWidth = 1.2; const dx = a.ex - a.jx, dy = a.ey - a.jy, dl = Math.hypot(dx, dy) || 1; x.beginPath(); x.moveTo(a.ex - dx / dl * 3 - dy / dl * 3, a.ey - dy / dl * 3 + dx / dl * 3); x.lineTo(a.ex - dx / dl * 3 + dy / dl * 3, a.ey - dy / dl * 3 - dx / dl * 3); x.stroke() }
+  const col = L.sleeves ? L.shirt : skin
+  const lower = [[m[0], m[1], 3.4, a.jx, a.jy, 3.0], [a.jx, a.jy, 3.0, a.ex, a.ey, 2.3]]
+  const top = [a.sx, a.sy, 4.5, lerp(a.sx, a.jx, 0.58), lerp(a.sy, a.jy, 0.58), 3.9]
+  const dx = a.ex - a.jx, dy = a.ey - a.jy, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl
+  // the hand: a glove (a big mitt with its cuff) or a hand, along the forearm
+  const hand = gk ? [a.ex - ux * 1.2, a.ey - uy * 1.2, 3.3, a.ex + ux * 2.4, a.ey + uy * 2.4, 3.9] : [a.ex - ux * 0.4, a.ey - uy * 0.4, 2.2, a.ex + ux * 1.4, a.ey + uy * 1.4, 2.5]
+  inkT(x, part === 'full' ? [top, ...lower, hand] : [...lower, hand])
+  fillT(x, lower, col)
+  if (part === 'full') { fillT(x, [top], L.shirt); if (!L.sleeves) band(x, top[0], top[1], top[3], top[4], 0.94, 4.0, L.trim, 1.3) }
+  if (gk) {
+    fillT(x, [hand], L.gloves)
+    // the strap at the wrist and the fingers' seams
+    band(x, hand[0], hand[1], hand[3], hand[4], 0.12, 3.4, tone(L.gloves, 0.55), 1.6)
+    x.strokeStyle = tone(L.gloves, 0.62); x.lineWidth = 0.55
+    const nx = -uy, ny = ux
+    x.beginPath(); for (const s of [-1.3, 0, 1.3]) { x.moveTo(a.ex + ux * 3.2 + nx * s, a.ey + uy * 3.2 + ny * s); x.lineTo(a.ex + ux * 5.6 + nx * s * 1.1, a.ey + uy * 5.6 + ny * s * 1.1) } x.stroke()
+  } else fillT(x, [hand], skin)
   const finger = out < 0 ? o.fl : o.fr
   if (finger > 0.5) {
-    const dx = a.ex - a.jx, dy = a.ey - a.jy, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl
-    const tx = a.ex + ux * 5.2, ty = a.ey + uy * 5.2
-    x.strokeStyle = INK; x.lineWidth = 1.6 + OL * 2; x.beginPath(); x.moveTo(a.ex + ux * 1.5, a.ey + uy * 1.5); x.lineTo(tx, ty); x.stroke()
-    x.strokeStyle = skin; x.lineWidth = 1.6; x.beginPath(); x.moveTo(a.ex, a.ey); x.lineTo(tx, ty); x.stroke()
+    const tx = a.ex + ux * 6.2, ty = a.ey + uy * 6.2
+    x.strokeStyle = INK; x.lineWidth = 1.6 + OL * 2; x.beginPath(); x.moveTo(a.ex + ux * 2.5, a.ey + uy * 2.5); x.lineTo(tx, ty); x.stroke()
+    x.strokeStyle = skin; x.lineWidth = 1.6; x.beginPath(); x.moveTo(a.ex + ux * 1.5, a.ey + uy * 1.5); x.lineTo(tx, ty); x.stroke()
   }
 }
-function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH) {
-  // the neck, then the head: a skull and a jaw, the ears, the far cheek in shade
-  limbs(x, [[sxx, syy + 1, 3.9, hx, hy + 3.5, 3.3]], front ? skinD : tone(skin, 0.9), false)
+function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar = null) {
+  // the neck (the collar round it), then the head: a skull and a jaw, the ears, the far cheek in shade
+  limbs(x, [[sxx, syy + 1, 3.4, hx, hy + 3.5, 3.0]], front ? skinD : tone(skin, 0.9), false)
+  collar?.()
   const rx = HR * 0.9, ry = HR * 1.04
   x.fillStyle = INK; x.beginPath(); x.ellipse(hx, hy, rx + OL, ry + OL, 0, 0, 6.2832); x.fill()
   for (const sd of [-1, 1]) { x.beginPath(); x.ellipse(hx + sd * (rx - 0.2) - turnH * 1.2, hy + 0.8, 1.7 + OL, 2.2 + OL, 0, 0, 6.2832); x.fill() }
@@ -1045,7 +1128,7 @@ export function keeperBeaten(c, age, at) {
   // (at.lift: where his dive left him. keeperDive lays him on the grass, KEEPER_DOWN; a dive of a game's own ends at 0)
   const lie = at.lift ?? 0, r0 = at.rot ?? side * 1.4
   // his arms come down to his sides before he moves: a beaten keeper is never seen with his hands up
-  const flat = (rot, f) => ({ ...POSE.dive, rot, hlx: lerp(-7, -13, f), hrx: lerp(7, 13, f), hly: lerp(-126, -58, f), hry: lerp(-126, -58, f), tilt: -f, face: 2 })
+  const flat = (rot, f) => { const d = landedOf(Math.sign(rot) || 1, rot); return { ...armsIn(d, { ...d, hlx: -9.5, hrx: 9.5, hly: -50, hry: -50, elbow: 0, fore: 0 }, f), rot, tilt: -f, face: 2 } }
   // (still on his feet, beaten where he stood: his hands drop to his knees, then his hips)
   if (Math.abs(r0) < 0.6 && a < 1550) {
     const base = at.pose ?? POSE.set
@@ -1090,22 +1173,40 @@ const KNEEL = { ...POSE.knees, hy: 27, ly: 2, ry: 2, lk: -1, rk: -1, face: 2 }
 // (for a game's own keeper: on his knees with it, and up with it held to his chest)
 POSE.kneel = { ...KNEEL, face: 0, tilt: 0.2, hlx: -6, hrx: 6, hly: -46, hry: -46 }
 const smoothS = f => f * f * (3 - 2 * f)
+// a keeper in the air toward K (+1: the screen's right, which is his own right side down once he's turned over): the
+// bottom leg long, the top one bent at the knee, the hands together over his head, the top one reaching further
+// a man on the grass bringing his arms in from over his head: in close past his head and down his front, never
+// swung out through the air beside him
+function armsIn(a, b, f) {
+  const mid = { ...a, hlx: -3, hrx: 3, hly: -96, hry: -96, elbow: 0.5, fore: 0.6 }
+  return f < 0.5 ? mix(a, mid, smoothS(f * 2)) : mix(mid, b, smoothS(f * 2 - 1))
+}
+const landedOf = (K, rot = K * 1.52) => { const f = diveOf(K); return { ...f, lk: 0.3, rk: 0.3, ly: K > 0 ? -6 : -2, ry: K > 0 ? -2 : -6, rot } }
+function diveOf(K) {
+  const p = { ...POSE.dive, lx: -5, ly: 0, lk: 0, rx: 5, ry: 0, rk: 0, hlx: -6, hly: -127, hrx: 6, hry: -124, elbow: 0, fore: 0, face: 1, tilt: 0.3 }
+  if (K > 0) { p.lx = -4; p.ly = -19; p.lk = 0.95; p.hlx = -8; p.hly = -129; p.hrx = 3; p.hry = -121 }
+  else { p.rx = 4; p.ry = -19; p.rk = 0.95; p.hrx = 8; p.hry = -129; p.hlx = -3; p.hly = -121 }
+  return p
+}
 export function keeperDive(ms, K, o = {}) {
   const at = clamp(o.at ?? 520, 260, 780), reach = Math.max(0.2, Math.abs(o.hx ?? 2.6)), hy = clamp(o.hy ?? 1, 0.2, 2.6)
   // (a ball near him: he can't be flat and still have his hands on it)
   const rc = Math.min(lerp(1.5, 0.62, clamp((hy - 0.5) / 1.8, 0, 1)), Math.asin(clamp((reach - 0.05) / ARM_M, 0.2, 1)))
   const Lc = clamp(hy - HIP_M - Math.cos(rc) * ARM_M, KEEPER_DOWN, 0.9), xc = Math.max(0.05, reach - Math.sin(rc) * ARM_M)
   const PUSH = Math.min(130, at * 0.3)
-  const crouch = { ...POSE.set, hy: 37, lean: K * 0.26, hx: K * 5, hlx: -22 + K * 12, hrx: 22 + K * 12, hly: -72, hry: -72 }
+  // (the push: low, the weight on the near foot, the far one stepping across; then he flies, the bottom leg long, the
+  // top one bent up behind it, both hands going for it, the top one over)
+  const crouch = { ...POSE.set, hy: 37, lean: K * 0.26, hx: K * 5, hlx: -24 + K * 10, hrx: 24 + K * 10, hly: -49, hry: -49, elbow: 0.1, lx: K > 0 ? -9 : -17, rx: K > 0 ? 17 : 9 }
+  const fly = diveOf(K)
   const fall = 220 + Math.max(0, Lc - KEEPER_DOWN) * 190, end = at + fall
   if (ms <= PUSH) { const f = ease(clamp(ms / PUSH, 0, 1)); return { dx: K * 0.14 * f, lift: 0, pose: mix(POSE.set, crouch, f), down: false, end } }
   if (ms <= at) {
     const f = clamp((ms - PUSH) / (at - PUSH), 0, 1), e = f * (1.5 - 0.5 * f), hop = Lc < 0 ? 0.08 : 0.22
-    const pose = mix(crouch, { ...POSE.dive, rot: K * rc }, smoothS(clamp(f / 0.55, 0, 1)))
+    const pose = mix(crouch, { ...fly, rot: K * rc }, smoothS(clamp(f / 0.55, 0, 1)))
     return { dx: K * lerp(0.14, xc, e), lift: Lc * e + Math.sin(f * Math.PI) * hop * (1 - f * 0.5), pose, down: false, end }
   }
   const g = clamp((ms - at) / fall, 0, 1)
-  return { dx: K * (xc + 0.38 * ease(g)), lift: lerp(Lc, KEEPER_DOWN, g * g), pose: { ...POSE.dive, rot: K * lerp(rc, 1.52, ease(g)), ry: lerp(-4, -9, g) }, down: g >= 1, end }
+  return { dx: K * (xc + 0.38 * ease(g)), lift: lerp(Lc, KEEPER_DOWN, g * g), pose: { ...mix(fly, landedOf(K), ease(g)), rot: K * lerp(rc, 1.52, ease(g)) }, down: g >= 1, end }
 }
 export function handsOf(p, lift = 0) {
   const hip = p.hy ?? 53, r = p.rot ?? 0, ux = ((p.hlx ?? -16) + (p.hrx ?? 16)) / 2 - (p.hx ?? 0)
@@ -1125,12 +1226,18 @@ export function keeperUp(age, from = {}, roar = true, held = false) {
   if (held) roar = false
   const end = held ? CLUTCH : POSE.stand
   if (Math.abs(r0) < 0.5) return { pose: roar ? keeperRoar(age - 200, from.pose ?? POSE.set) : mix(from.pose ?? POSE.set, end, ease(prog(age, 0, 400))), lift: l0 * (1 - prog(age, 0, 200)) }
-  const lying = { ...POSE.dive, rot: r0, hlx: -12, hrx: 12, hly: -64, hry: -64 }
-  const kneel = { ...KNEEL, face: 0, tilt: 0.2, hlx: -16, hrx: 16, hly: -40, hry: -40 }
-  if (age < 380) return { pose: mix({ ...POSE.dive, rot: r0 }, lying, ease(prog(age, 160, 380))), lift: l0 }
-  if (age < 680) { const f = ease(prog(age, 380, 680)); return { pose: mix(lying, kneel, f), lift: l0 * (1 - f) } }
-  if (age < 920) return { pose: mix(held ? { ...kneel, hlx: -6, hrx: 6, hly: -46, hry: -46 } : kneel, end, ease(prog(age, 680, 920))), lift: 0 }
-  return { pose: roar ? keeperRoar(age - 920 + 280, POSE.stand) : end, lift: 0 }
+  // (down on his side: the arms in, rolled up to sitting (the hips stay on the grass the whole way), on to his feet
+  // from a crouch, then the roar)
+  const K = Math.sign(r0) || 1, down = landedOf(K, r0)
+  const hc = held ? [6, 22] : null
+  const lying = { ...down, hlx: hc ? -hc[0] : -9.5, hrx: hc ? hc[0] : 9.5, hly: hc ? -75 : -50, hry: hc ? -75 : -50, elbow: 0, fore: 0 }
+  const sitUp = { ...POSE.sit, face: 0, tilt: 0.25, hlx: hc ? -6 : -15, hrx: hc ? 6 : 15, hly: hc ? -38 : -24, hry: hc ? -38 : -24 }
+  const crouch = { ...POSE.knees, hy: 34, bow: 0.3, lx: -12, rx: 12, lk: 0.8, rk: 0.8, face: 0, tilt: 0.1, hlx: hc ? -6 : -12, hrx: hc ? 6 : 12, hly: hc ? -60 : -38, hry: hc ? -60 : -38 }
+  if (age < 380) return { pose: armsIn(down, lying, prog(age, 160, 380)), lift: l0 }
+  if (age < 640) { const f = smoothS(prog(age, 380, 640)); return { pose: mix(lying, sitUp, f), lift: l0 * (1 - f) } }
+  if (age < 860) return { pose: mix(sitUp, crouch, smoothS(prog(age, 640, 860))), lift: 0 }
+  if (age < 1060) return { pose: mix(crouch, end, smoothS(prog(age, 860, 1060))), lift: 0 }
+  return { pose: roar ? keeperRoar(age - 1060 + 280, POSE.stand) : end, lift: 0 }
 }
 // A keeper set on his line and a shot coming: the whole of it, from set to what he does after. One near him he takes
 // on his feet, his hands to it; one away from him he dives for (keeperDive): on to it when he saves it, short of it
