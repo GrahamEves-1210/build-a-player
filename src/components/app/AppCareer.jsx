@@ -14,7 +14,7 @@ import {
   GAMES_MODES, gamesMode, setGamesMode, legacyTiers, ensureSport, sportReady, careerBody, bodyText,
   byeNow, byeRest, byeTrain, byeDrill, byeHurt, byeTraits, byeTarget, stepCost, weekOfGame, seasonWeeks, BYE_REST, hoopSpot, hoopSpotOf, spotMove, answerSpotMove,
   breakNow, januaryNow, januaryOffers,
-  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord, loadDraftClass, draftCall, SKIP_TALK, talkSkipped, raceNow } from '../../lib/career'
+  canDeadlineTrade, deadlineTrade, deadlineGame, teamRecord, loadDraftClass, draftCall, SKIP_TALK, talkSkipped, raceNow, pressFor, answerPress, pressSaid, ensureLore, loreReady } from '../../lib/career'
 import { RACE_SHORT, RACE_NAME } from '../../lib/careerAwards'
 import { HOOP_SPOTS, HOOP_SPOT_NAME, hoopGroupOf } from '../../lib/hoopSpot'
 import { GAME_LINE } from '../../lib/seasonDirector'
@@ -67,10 +67,11 @@ const wageText = (n, short) => sx().wageText(n, short), soccerCur = short => sx(
 const theNation = n => sx().theNation?.(n) ?? nationName(n)
 const signAcademy = (c, o) => sx().signAcademy(c, o), soccerRole = c => sx().role(c), rememberNation = n => sx().rememberNation?.(n), lastNation = () => sx().lastNation?.()
 // a sport whose module loads on its own (soccer): the screen waits for it
+// (and for the sport's team lore, its own small download: what each team's writers ask him, lib/careerPress.js)
 function useSport(sport) {
   const [, bump] = useState(0)
-  const ready = sportReady(sport)
-  useEffect(() => { if (!ready) ensureSport(sport).then(() => bump(n => n + 1)) }, [sport, ready])
+  const ready = sportReady(sport) && loreReady(sport)
+  useEffect(() => { if (!ready) (sportReady(sport) ? ensureLore(sport) : ensureSport(sport)).then(() => bump(n => n + 1)) }, [sport, ready])
   return ready
 }
 // a contract's pay in the sport's own words: football and basketball a year in dollars, soccer a week in pounds or euros
@@ -873,6 +874,31 @@ function soccerAhead(c) {
   if (sum?.wc) out.push(`The season ends with the ${sum.wc} World Cup: a place in the ${nationName(c.nation)} squad is there to be won.`)
   if (sum?.cont) out.push(`The season ends with the ${sum.cont.year} ${sum.cont.name}: a place in the ${nationName(c.nation)} squad is there to be won.`)
   return out
+
+// The press conference before a season (lib/career.js pressFor, lib/careerPress.js): his first one with a team, or
+// media day when there is something to ask him. The team's own question, three answers and a no comment; the look of
+// the pre-draft interviews (cr-q)
+function PressCard({ c, q, onAnswer }) {
+  const S = sportOf(c)
+  return (
+    <div className="cr-q cr-press ag-pop">
+      <span className="ag-eyebrow">{q.kicker}</span>
+      <div className="cr-q-team"><img src={S.logo(c.team)} alt="" /><span><b>{c.fit?.name}</b><small>{q.who.toUpperCase()}</small></span></div>
+      <p className="cr-q-text">"{q.q}"</p>
+      <div className="cr-q-opts">{q.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => onAnswer(k, a)}>{a.t}</button>)}</div>
+      <button className="ag-btn ag-btn--ghost cr-q-skip" onClick={() => onAnswer(-1, null)}>NO COMMENT</button>
+      {/* (his first one: what an answer is worth) */}
+      {!c.press && <p className="cr-note">The coaches and the locker room read what he says. An answer can move his reputation or the team around him.</p>}
+    </div>
+  )
+}
+
+// soccer: the season's final table goes on the season it was (the recap's table), unless the engine put one there
+// ([short, W, D, L, GF, GA] in table order: about half a kilobyte a season)
+const withTable = (n, rows) => {
+  const s = n.seasons[n.seasons.length - 1]
+  if (!rows?.length || !s || s.table?.length) return n
+  return { ...n, seasons: [...n.seasons.slice(0, -1), { ...s, table: rows.map(r => [r.short, r.wins, r.draws, r.losses, r.gf, r.ga]) }] }
 }
 
 // ── Hub ─────────────────────────────────────────────────────────────────────
@@ -977,7 +1003,12 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
 
   // the pre-season card's two parts that move: his place in the team, and the kick-off
   const preDepth = c.phase === 'preseason' ? (() => { const dc = depthChart(c); if (S.x?.depthLine) return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{S.x.depthLine(c, dc)}</p>; if (S.isSoccer) { const role = soccerRole(c); return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{role === 'Starter' ? 'FIRST CHOICE · leads the line' : `${role.toUpperCase()} · behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> } return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{dc.starter ? `${dc.label} · the starter` : `${dc.label} · backup behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> })() : null
-  const preGo = c.phase !== 'preseason' ? null : move ? <SpotMove c={c} m={move} onAnswer={yes => { setCareer(answerSpotMove(c, yes)); sfx(yes ? 'claim' : 'tap'); haptic(yes ? 'success' : 'light') }} /> : <button className="ag-btn ag-btn--gold tk-intro-go" onClick={begin}>START THE SEASON <IconArrow size={16} /></button>
+  // the press conference comes first (his first with the team, or media day), then the camp's question, then the season
+  const press = c.phase === 'preseason' ? pressFor(c) : null, said = c.phase === 'preseason' ? pressSaid(c) : null
+  const preGo = c.phase !== 'preseason' ? null
+    : press ? <PressCard c={c} q={press} onAnswer={(k, a) => { setCareer(answerPress(c, k)); sfx(!a ? 'tap' : a.tone === 'brash' ? 'deny' : a.tone === 'bold' ? 'tap' : 'claim'); haptic('light') }} />
+    : move ? <SpotMove c={c} m={move} onAnswer={yes => { setCareer(answerSpotMove(c, yes)); sfx(yes ? 'claim' : 'tap'); haptic(yes ? 'success' : 'light') }} />
+    : <>{said && <div className="cr-howto cr-press-said ag-pop"><span className="ag-eyebrow">{said.tag}</span><p>"{said.t}" {said.line}</p></div>}<button className="ag-btn ag-btn--gold tk-intro-go" onClick={begin}>START THE SEASON <IconArrow size={16} /></button></>
   // soccer's hub leads with the season: the tabs and the primary action first (START THE SEASON above the fold on a
   // phone); the model and the traits are the PLAYER tab, the legacy meter the CAREER tab
   const lead = !!S.isSoccer
