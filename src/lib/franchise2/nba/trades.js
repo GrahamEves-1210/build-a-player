@@ -1249,8 +1249,8 @@ export function sellDown(F, { held = null } = {}) {
   const over = s => payroll(F, s, year) - line(s)
   for (const a of S.filter(s => over(s) > 0.05).sort((x, y) => over(y) - over(x) || (x < y ? -1 : 1))) {
     let n = 0
-    // (a couple of moves a team at the deadline, three in the summer)
-    while (n++ < (F.phase === 'season' ? 2 : 3) && over(a) > 0.05) if (!shedOne(F, a, S, line)) break
+    // (one move a team each of the deadline's last two days, three in the summer)
+    while (n++ < (F.phase === 'season' ? 1 : 3) && over(a) > 0.05) if (!shedOne(F, a, S, line)) break
   }
   const out = SINK
   SINK = null
