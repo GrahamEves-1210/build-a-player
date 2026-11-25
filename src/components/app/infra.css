@@ -8,9 +8,9 @@
 .inf-update-wall,
 .inf-update-card {
   --inf-a1: var(--ag-a1, #4fd6bf);
-  --inf-a2: var(--ag-a2, #4FB57A);
+  --inf-a2: var(--ag-a2, #37BF82);
   --inf-on: var(--ag-on, #07120a);
-  --inf-grad: var(--ag-grad, linear-gradient(135deg, #4fd6bf 0%, #4FB57A 100%));
+  --inf-grad: var(--ag-grad, linear-gradient(135deg, #4fd6bf 0%, #37BF82 100%));
   --inf-bg: var(--ag-bg, #050705);
   --inf-panel: var(--ag-panel, rgba(12,17,15,.78));
   --inf-line: var(--ag-line-hi, rgba(149,213,178,.30));

@@ -115,8 +115,11 @@ const resultOf = m => (m.shootout ? (m.shootout.won ? 'W' : 'L') : m.result)
 const ITEM_H = 44, CENTER = 2, COPIES = 8
 function TeamReel({ items, spinning, onStop, label, pool }) {
   const track = useRef(null)
-  const [pos, setPos] = useState(0)            // the row in the middle of the window
+  // the row in the middle of the window: one whole copy in, so the rows above it are filled before the first spin
+  // (from row 0 the window's top two rows were empty: the wheel looked unfinished)
+  const [pos, setPos] = useState(items.length)
   const [anim, setAnim] = useState(false)
+  useEffect(() => { if (!spinning) { setAnim(false); setPos(items.length) } }, [items]) // eslint-disable-line react-hooks/exhaustive-deps
   const stopRef = useRef(onStop); stopRef.current = onStop
   useEffect(() => {
     if (!spinning || !items.length) return

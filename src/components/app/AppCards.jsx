@@ -75,7 +75,7 @@ async function loadSoccer() {
     pools: { st: { classic: pl.UCL_STRIKERS, 'all-time': pl.WC_STRIKERS } },
     posLabel: { st: 'ST' },
     tagOf: p => p.role || 'ST',
-    poolSet: { classic: ['CHAMPIONS LEAGUE', 'Every player in this season’s Champions League'], 'all-time': ['WORLD CUP', 'The legends of the 48 greatest World Cup nations'] },
+    poolSet: { classic: ['CHAMPIONS LEAGUE', 'The stars of this season’s 36 Champions League clubs'], 'all-time': ['WORLD CUP', 'The legends of the 48 greatest World Cup nations'] },
     teams: [...clubs.UCL_CLUBS, ...nations.WC_NATIONS],
     logo: t => (isNation.has(t) ? `/logos/nations/${t}.png` : `/logos/soccer/${t}.png`),
     photo: (name, p) => { const k = hs.soccerFaceKey(p); return k ? `${HEADSHOT_BASE}/${k}.webp` : null },
@@ -202,7 +202,7 @@ function SetTile({ s, onOpen, i }) {
   const done = s.owned === s.total
   const cls = `ag-set${s.kind === 'team' ? '' : ' ag-set--text'}${done ? ' is-complete' : ''}${s.owned === 0 ? ' is-empty' : ''}${s.gold ? ' ag-set--gold' : ''}${s.purple ? ' ag-set--purple' : ''}`
   return (
-    <button className={cls} style={{ '--tc': s.color ?? (s.gold ? '#D4AF37' : s.purple ? '#a855f7' : '#8BD5A6'), '--d': `${Math.min(i, 16) * 18}ms` }} onClick={onOpen}>
+    <button className={cls} style={{ '--tc': s.color ?? (s.gold ? '#D4AF37' : s.purple ? '#a855f7' : '#74D8BF'), '--d': `${Math.min(i, 16) * 18}ms` }} onClick={onOpen}>
       {s.kind === 'team'
         ? <><img src={s.logo} alt="" className="ag-set-tile-logo" loading="lazy" /><span className="ag-set-tile-short">{s.short}</span></>
         : <><span className="ag-set-kind-title">{s.title}</span><span className="ag-set-kind-sub">{s.sub}</span></>}
@@ -352,7 +352,7 @@ export default function AppCards({ sport: startSport, onClose }) {
         {data && openSet ? (
           <section className="ag-set-view ag-pop" style={{ '--d': '0ms' }}>
             <button className="ag-set-back" onClick={() => setOpen(null)}><IconArrow size={16} style={{ transform: 'rotate(180deg)' }} /> ALL SETS</button>
-            <div className="ag-set-head" style={{ '--tc': openSet.color ?? (openSet.gold ? '#D4AF37' : openSet.purple ? '#a855f7' : '#8BD5A6') }}>
+            <div className="ag-set-head" style={{ '--tc': openSet.color ?? (openSet.gold ? '#D4AF37' : openSet.purple ? '#a855f7' : '#74D8BF') }}>
               {openSet.logo ? <img src={openSet.logo} alt="" className="ag-set-logo" /> : <span className="ag-set-logo ag-set-logo--icon">{openSet.gold ? <IconCrown size={22} /> : <IconStar size={22} />}</span>}
               <span className="ag-set-name">{openSet.title}</span>
               <span className="ag-set-count">{openSet.owned}/{openSet.total}</span>

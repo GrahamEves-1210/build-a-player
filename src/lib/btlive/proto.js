@@ -11,7 +11,7 @@
 //            k: his own count of messages (old ones are dropped). mx/my: the stick. x..vy: where his device has him.
 //            h: the buttons held now (bits: 1 SHOOT, 2 PASS). n: how many times each button has been pressed, ever,
 //            (m) how many dribble moves his right stick has flicked, ever, and how many times it has been flicked down
-//            for a steal (st) and up for a jump (jp) without the ball: a press or a flick is never lost to a
+//            for a steal (st) and up for a jump (jp, old devices: a jump is SHOOT without the ball now) without the ball: a press or a flick is never lost to a
 //            dropped or late message, the next one carries it. d: the way each of his latest flicks pointed (unit,
 //            the newest last, MOVE_KEEP of them at most; the last one is flick number m). rel: the release of his
 //            shot as his own device timed it (sn: his A-press count when that shot started, q: quality 0-1); sent
@@ -35,8 +35,8 @@ export const EVENT_KEEP = Math.round(1.5 * HZ)    // ...with the events of the l
 export const AWAY_MS = 1500                       // a player not heard from for this long is played by the CPU
 const r2 = v => Math.round(v * 100) / 100
 export const MOVE_KEEP = 3                        // a message carries his last 3 flicks (a move and the turn that made it a spin)
-const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs', 'bk']
-const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn', 'hand', 'frzCd', 'chn']
+const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs', 'bk', 'sta']
+const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn', 'hand', 'frzCd', 'chn', 'boost', 'man', 'out']
 export const SNAP_ACT = PF.length + PI.length     // where a snapshot's row for a player keeps what he's doing (act)
 
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────
@@ -106,13 +106,13 @@ export function seatInput(seat, s, i) {
 export function snapOf(s, events, acks) {
   const p = s.players.map(o => {
     const a = PF.map(f => r2(o[f])).concat(PI.map(f => o[f]))
-    a.push(o.act, o.shot ? [o.shot.kind, o.shot.three ? 1 : 0, o.shot.read, r2(o.shot.d)] : 0)
+    a.push(o.act, o.shot ? [o.shot.kind, o.shot.three ? 1 : 0, o.shot.read, r2(o.shot.d), r2(o.shot.run ?? 0), r2(o.shot.mx ?? 0), r2(o.shot.my ?? 0)] : 0)
     return a
   })
   const b = s.ball
   return {
     t: 's', k: s.tick, ph: s.phase, pT: s.phaseT, po: s.poss, pn: s.possN, cl: s.clock, sc: s.score, gp: s.gamePoint ? 1 : 0, w: s.winner,
-    nx: s.next, call: s.call, kg: s.king, mc: s.mustClear, p,
+    nx: s.next, call: s.call, kg: s.king, si: s.sit, mc: s.mustClear, p,
     b: { st: b.st, holder: b.holder, x: r2(b.x), y: r2(b.y), z: r2(b.z), vx: r2(b.vx), vy: r2(b.vy), vz: r2(b.vz), from: b.from, to: b.to, t: b.t, n: b.n,
       sx: r2(b.sx), sy: r2(b.sy), sz: r2(b.sz), tx: r2(b.tx), ty: r2(b.ty), kind: b.kind, speed: b.speed, lastTeam: b.lastTeam, reb: b.reb, d: b.verdict ? r2(b.verdict.d) : 0 },
     e: events, a: acks, st: s.phase === 'over' ? s.stats : undefined,
@@ -125,14 +125,14 @@ export function snapOf(s, events, acks) {
 // device moves (me) keeps his own position; everything else is the referee's word.
 export function applySnap(s, m, me) {
   s.tick = m.k; s.phase = m.ph; s.phaseT = m.pT; s.poss = m.po; s.possN = m.pn; s.clock = m.cl; s.score = m.sc; s.gamePoint = !!m.gp; s.winner = m.w
-  s.next = m.nx; s.call = m.call; s.king = m.kg ?? null; s.mustClear = m.mc ?? null
+  s.next = m.nx; s.call = m.call; s.king = m.kg ?? null; s.sit = m.si ?? -1; s.mustClear = m.mc ?? null
   m.p.forEach((a, i) => {
     const o = s.players[i]
     if (i !== me) PF.forEach((f, j) => { o[f] = a[j] })
     PI.forEach((f, j) => { o[f] = a[PF.length + j] })
     o.act = a[PF.length + PI.length]
     const sh = a[PF.length + PI.length + 1]
-    o.shot = sh ? { kind: sh[0], three: !!sh[1], read: sh[2], d: sh[3], spec: meterSpec(sh[0], o.R, s.gamePoint) } : null
+    o.shot = sh ? { kind: sh[0], three: !!sh[1], read: sh[2], d: sh[3], run: sh[4] ?? 0, mx: sh[5] ?? 0, my: sh[6] ?? 0, spec: meterSpec(sh[0], o.R, s.gamePoint) } : null
   })
   const b = s.ball
   Object.assign(b, m.b)

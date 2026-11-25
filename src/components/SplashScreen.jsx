@@ -16,6 +16,9 @@ import { K_LIVE } from '../lib/kLive'
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 
+// the figure's bands fall one after another at one steady pace, the first time and every switch after (owner 11-25)
+const BAND_STEP = 110   // (each piece lands before the next one starts: its fall lasts one step)
+
 export const POS_OPTIONS = [
   {
     pos: 'qb', label: 'QB', classic: true, alltime: true,
@@ -339,8 +342,8 @@ function useRevealOnMount(ready) {
 const STACK_MASK = {
   qb: { src: '/qb-silhouette.webp', scale: 1 },
   rb: { src: '/rb-silhouette.webp', scale: 1 },
-  wr: { src: '/wr-silhouette.png',  scale: 1.18 },
-  te: { src: '/wr-silhouette.png',  scale: 1.18 },
+  wr: { src: '/wr-silhouette.png',  scale: 1.2 },   // (grown from his feet: Home's CSS sets the origin)
+  te: { src: '/wr-silhouette.png',  scale: 1.2 },
   db: { src: '/db-silhouette.png',  scale: 1.05 },
   dl: { src: '/dl-silhouette.webp',  scale: 1 },
   lb: { src: '/lb-silhouette.webp',  scale: 1 },
@@ -353,37 +356,34 @@ const STACK_MASK = {
 // attribute, using each attribute's real in-game color — clipped to the
 // exact outline of the position's silhouette image via a CSS mask, so it
 // reads as the attributes "stacking up" into the body.
-export function StackedSilhouette({ position, attrs, ready, fast = false }) {
+// Each band is a piece of the figure: its own slice of the silhouette (the whole mask, cut to the band's rows), so it
+// falls from above already in the shape it lands in, and the pieces come in one at a time, each starting as the last
+// lands, the lowest first (owner 11-25). Shared by every sport's Home figure (BucketApp, BaseballApp, SoccerApp use pieceStyle).
+export function pieceStyle({ src, flexes, i, visible }) {
+  const total = flexes.reduce((s, f) => s + f, 0)
+  const top = flexes.slice(0, i).reduce((s, f) => s + f, 0) / total * 100
+  const h = flexes[i] / total * 100
+  const m = `url(${src})`
+  return {
+    position: 'absolute', inset: 0, flex: 'none',
+    WebkitMaskImage: m, maskImage: m, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+    WebkitMaskPosition: 'center bottom', maskPosition: 'center bottom', WebkitMaskSize: 'contain', maskSize: 'contain',
+    // (a hair of overlap at each cut, so no seam shows between pieces)
+    clipPath: `inset(${Math.max(0, top - 0.15)}% 0 ${Math.max(0, 100 - top - h - 0.15)}% 0)`,
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : `translateY(-${(top + 28).toFixed(1)}%)`,
+    // (it fades in as it nears its place: on the fall's clock, but held faint until the last stretch)
+    transition: `opacity ${BAND_STEP}ms cubic-bezier(0.5,0,0.75,0.9), transform ${BAND_STEP}ms cubic-bezier(0.33,1,0.68,1)`,
+    transitionDelay: visible ? `${(flexes.length - 1 - i) * BAND_STEP}ms` : '0ms',
+  }
+}
+export function StackedSilhouette({ position, attrs, ready, fast = false, src = null }) {
   const visible = useRevealOnMount(ready)
   const mask = STACK_MASK[position] ?? STACK_MASK.qb
+  const flexes = attrs.map(a => a.flex ?? 1)
   return (
-    <div
-      className="splash-stack-figure"
-      style={{
-        WebkitMaskImage: `url(${mask.src})`,
-        maskImage: `url(${mask.src})`,
-        transform: mask.scale !== 1 ? `scale(${mask.scale})` : undefined,
-      }}
-    >
-      {attrs.map((a, i) => (
-        <div
-          key={a.label}
-          className="splash-stack-band"
-          style={{
-            background: a.col,
-            ...(a.flex ? { flex: a.flex } : null),
-            opacity: visible ? 1 : 0,
-            // Starts stacked at the very top (i band-heights up) and falls
-            // down to its own row — lower bands fall further.
-            transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
-            // Fully sequential — each band only starts once the previous one
-            // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
-          }}
-        >
-          <span className={`splash-stack-band-label${a.sm ? ' is-sm' : a.xs ? ' is-xs' : ''}${a.v ? ' is-v' : ''}`} style={a.x || a.y ? { position: 'relative', ...(a.x ? { left: `${a.x}%` } : null), ...(a.y ? { top: a.y } : null), ...(a.fs ? { fontSize: a.fs } : null) } : undefined}>{a.label}</span>
-        </div>
-      ))}
+    <div className="splash-stack-figure splash-stack-figure--pieces" style={{ transform: mask.scale !== 1 && !src ? `scale(${mask.scale})` : undefined }}>
+      {attrs.map((a, i) => <div key={a.label} className="splash-stack-band" style={pieceStyle({ src: src ?? mask.src, flexes, i, visible })} />)}
     </div>
   )
 }

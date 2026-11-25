@@ -78,6 +78,8 @@ import { isTester } from '../lib/mimic'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
+
+import { pieceStyle } from './SplashScreen'   // (the figure's pieces: their shape, their fall, their pace)
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -243,33 +245,10 @@ function useRevealOnMount(ready) {
 // silhouette's outline via a CSS mask.
 function BucketStackedSilhouette({ attrs, ready, fast = false }) {
   const visible = useRevealOnMount(ready)
+  const flexes = attrs.map(a => a.grow ?? (a.tall ? 1.4 : 1))
   return (
-    <div
-      className="splash-stack-figure"
-      style={{
-        WebkitMaskImage: 'url(/basketballsilhouette.png)',
-        maskImage: 'url(/basketballsilhouette.png)',
-      }}
-    >
-      {attrs.map((a, i) => (
-        <div
-          key={a.label}
-          className="splash-stack-band"
-          style={{
-            background: a.col,
-            flex: a.grow ?? (a.tall ? 1.4 : 1),
-            opacity: visible ? 1 : 0,
-            // Starts stacked at the very top (i band-heights up) and falls
-            // down to its own row — lower bands fall further.
-            transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
-            // Fully sequential — each band only starts once the previous one
-            // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
-          }}
-        >
-          <span className="splash-stack-band-label">{a.label}</span>
-        </div>
-      ))}
+    <div className="splash-stack-figure splash-stack-figure--pieces">
+      {attrs.map((a, i) => <div key={a.label} className="splash-stack-band" style={pieceStyle({ src: '/basketballsilhouette.png', flexes, i, visible })} />)}
     </div>
   )
 }
@@ -741,6 +720,8 @@ export default function BucketApp() {
   // own in-page units. Home runs the bottom rail only; the left rail only runs on
   // the sim page and Salary Cap. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
+    // (DEV: Blacktop Live on a phone asks for no ads at all: components/btlive/BtLive.jsx)
+    if (import.meta.env.DEV && BT_LIVE_OPEN && window.matchMedia?.('(pointer: coarse), (max-width: 899px)').matches) return
     if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/bucket', soft: true }); return }
     const here = window.location.pathname
     const path = page === 'sim' ? '/bucket/simulate'

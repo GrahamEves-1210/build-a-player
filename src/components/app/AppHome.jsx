@@ -1,9 +1,9 @@
-import { lazy, memo, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, hsUrl, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
 import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday, POTD_COINS } from '../../lib/progress'
-import { IconProfile, IconGear, IconFootball, IconBasketball, IconSoccer, IconBaseball, IconPlay, IconCrown, IconCoin, IconTrophy, IconRing, IconMedal, IconLock, IconCaret } from './icons'
+import { IconProfile, IconGear, IconBaseball, IconPlay, IconCrown, IconCoin, IconTrophy, IconRing, IconMedal, IconLock, IconCaret } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
 import Tutorial, { startTutorial } from './Tutorial'
@@ -154,12 +154,44 @@ export function switchSport(to, { keyboard = false } = {}) {
   const keep = import.meta.env.DEV ? [/[?&]soccer=1\b/.test(window.location.search) && 'soccer=1', /[?&]baseball=1\b/.test(window.location.search) && 'baseball=1'].filter(Boolean).join('&') : ''
   setTimeout(() => { window.location.href = (to === 'bucket' ? '/bucket' : to === 'soccer' ? '/soccer' : to === 'baseball' ? '/baseball' : '/') + (keep ? `?${keep}` : '') }, 170)
 }
+// The sport bar's balls (owner 11-25), drawn from the ball's own construction, in the text's colour.
+// Football: the ball on its diagonal, its laces along the seam. Basketball: the ball with its four seams. Soccer: the
+// centre pentagon with the five seams running off it.
+// solid silhouettes (owner: no hollow shapes): each ball is one filled shape in the text's colour with its seams
+// cut out of it (an SVG mask; useId keeps each mask's id its own)
+const pent = (cx, cy, r, rot = -90) => Array.from({ length: 5 }, (_, i) => { const a = (rot + i * 72) * Math.PI / 180; return `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}` }).join(' ')
+const SOC_C = pent(12, 12, 3.9)
+const SOC_RIM = [0, 1, 2, 3, 4].map(i => { const a = (-90 + i * 72) * Math.PI / 180; return pent(12 + 10.6 * Math.cos(a), 12 + 10.6 * Math.sin(a), 3.3, -90 + i * 72 + 180) })
+const SOC_SPOKES = [0, 1, 2, 3, 4].map(i => { const a = (-90 + i * 72) * Math.PI / 180; return `M${(12 + 3.9 * Math.cos(a)).toFixed(2)} ${(12 + 3.9 * Math.sin(a)).toFixed(2)}L${(12 + 7.4 * Math.cos(a)).toFixed(2)} ${(12 + 7.4 * Math.sin(a)).toFixed(2)}` }).join('')
+const CUT = { fill: 'none', stroke: '#000', strokeLinecap: 'round', strokeLinejoin: 'round' }
+const Solid = ({ size, shape, cuts }) => {
+  const id = 'ball' + useId().replace(/[^a-zA-Z0-9]/g, '')
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <defs><mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">{shape('#fff')}{cuts}</mask></defs>
+      <rect width="24" height="24" fill="currentColor" mask={`url(#${id})`} />
+    </svg>
+  )
+}
+const FB = 'M3.6 20.4C2.4 14.3 5.1 8.3 9.6 5.7 12.9 3.9 16.7 3.2 20.4 3.6c1.2 6.1-1.5 12.1-6 14.7-3.3 1.8-7.1 2.5-10.8 2.1z'
+const BallFootball = ({ size = 20 }) => (
+  <Solid size={size} shape={f => <path d={FB} fill={f} />}
+    cuts={<g {...CUT}><path d="M8.4 15.6l7.2-7.2" strokeWidth="1.5" /><path d="M9.7 11.8l2.5 2.5M11.7 9.8l2.5 2.5" strokeWidth="1.4" /><path d="M4.6 16.3l3.1 3.1M16.3 4.6l3.1 3.1" strokeWidth="1.3" /></g>} />
+)
+const BallBasketball = ({ size = 20 }) => (
+  <Solid size={size} shape={f => <circle cx="12" cy="12" r="9.4" fill={f} />}
+    cuts={<path {...CUT} strokeWidth="1.4" d="M12 2.6v18.8M2.6 12h18.8M5.7 5.2c2.4 2 3.8 4.5 3.8 6.8s-1.4 4.8-3.8 6.8M18.3 5.2c-2.4 2-3.8 4.5-3.8 6.8s1.4 4.8 3.8 6.8" />} />
+)
+const BallSoccer = ({ size = 20 }) => (
+  <Solid size={size} shape={f => <circle cx="12" cy="12" r="9.4" fill={f} />}
+    cuts={<g {...CUT} strokeWidth="1.3"><polygon points={SOC_C} />{SOC_RIM.map((pts, i) => <polygon key={i} points={pts} />)}<path d={SOC_SPOKES} /></g>} />
+)
 // the sports, in order (soccer only once it's switched on)
 export const SPORTS = [
-  { id: 'nfl', label: 'FOOTBALL', Icon: IconFootball },
-  { id: 'bucket', label: 'BASKETBALL', Icon: IconBasketball },
-  // (soccer while it's coming soon: there, locked, SOON under it)
-  ...(SOCCER_LIVE || SOCCER_SOON ? [{ id: 'soccer', label: 'SOCCER', Icon: IconSoccer, soon: !SOCCER_LIVE }] : []),
+  { id: 'nfl', label: 'FOOTBALL', Icon: BallFootball },
+  { id: 'bucket', label: 'BASKETBALL', Icon: BallBasketball },
+  // (soccer while it's coming soon: there, locked, SOON under it; live, a NEW tag over it)
+  ...(SOCCER_LIVE || SOCCER_SOON ? [{ id: 'soccer', label: 'SOCCER', Icon: BallSoccer, soon: !SOCCER_LIVE, tag: SOCCER_LIVE ? 'NEW' : null }] : []),
   ...(BASEBALL_LIVE || BASEBALL_SOON ? [{ id: 'baseball', label: 'BASEBALL', Icon: IconBaseball, soon: !BASEBALL_LIVE }] : []),
 ]
 
@@ -170,9 +202,10 @@ function SportSwitch({ sport }) {
   return (
     <div className={`ag-sport ag-sport--${sport}${three ? ' ag-sport--three' : ''}${SPORTS.length > 3 ? ' ag-sport--four' : ''}`} style={three ? { '--si': Math.max(0, SPORTS.findIndex(s => s.id === sport)) } : undefined} role="tablist" aria-label="Sport">
       <span className="ag-sport-thumb" aria-hidden="true" />
-      {SPORTS.map(({ id, label, Icon, soon }) => (
+      {SPORTS.map(({ id, label, Icon, soon, tag }) => (
         <button key={id} role="tab" aria-selected={sport === id} aria-disabled={soon && sport !== id ? 'true' : undefined} className={`ag-sport-btn ag-sport-btn--${id}${sport === id ? ' is-on' : ''}${soon && sport !== id ? ' is-soon' : ''}`} onClick={() => { if (!soon) go(id) }}>
-          <span className="ag-sport-ico">{soon && sport !== id ? <IconLock size={15} /> : <Icon size={17} />}</span>
+          {tag && <i className="ag-sport-tag">{tag}</i>}
+          <span className="ag-sport-ico">{soon && sport !== id ? <IconLock size={15} /> : <Icon size={20} />}</span>
           <span className="ag-sport-txt"><b>{label}</b>{soon && sport !== id && <small className="ag-sport-soon">COMING SOON</small>}</span>
         </button>
       ))}

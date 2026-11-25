@@ -135,19 +135,20 @@ const kitNickFor = pool => chip => {
   return t ? String(t.kit ?? t.name).toUpperCase() : chip?.team ?? null
 }
 const teamSub = t => t.name
-// the World Cup wheel shows a nation's flag in place of its code (the owner, 2026-11-25); a club keeps its code
-const teamFlag = t => { const f = flagEmoji(t.short); return f ? <span className="flag-emoji">{f}</span> : t.short }
+// the World Cup wheel shows a nation's flag before its code (the owner, 2026-11-25: the flag, but keep both lines,
+// the code over the name, as the wheel always had them); a club keeps its code alone
+const teamFlag = t => { const f = flagEmoji(t.short); return f ? <><span className="flag-emoji">{f}</span>{' '}{t.short}</> : t.short }
 
 // OVR and the striker's name for him (the sim's own, when it has one)
 const calcOvr = (b, types) => Math.round(SoccerSim.calcSoccerOVR?.(b, types) ?? 0)
 const archOf = (ovr, b, types) => (SoccerSim.getSoccerArchetype ?? soccerArchetype)(ovr, b, types)
 
 // Home's pool cards: three stars each. ESPN has no photo for most of them, so these cards (only these) use FotMob's
-// studio photos, framed like ESPN's, a little smaller (public/headshots/soccer/fm-<FotMob id>.webp: 300px on 600x436), Messi's too so the six match
+// studio photos, framed like ESPN's, a little smaller (public/headshots/soccer/fm-<FotMob id>.webp: 300px on 600x436), Messi's too so the six match; Maradona's is his roster photo
 // (the owner, 2026-11-25). The middle face is the big one.
 const FACE_PICKS = {
   current: [['Lamine Yamal', 'soccer/fm-1467236'], ['Erling Haaland', 'soccer/fm-737066'], ['Kylian Mbappé', 'soccer/fm-701154']],
-  alltime: [['Cristiano Ronaldo', 'soccer/fm-30893'], ['Lionel Messi', 'soccer/fm-30981'], ['David Beckham', 'soccer/fm-30612']],
+  alltime: [['Cristiano Ronaldo', 'soccer/fm-30893'], ['Diego Maradona', 'soccer/fmr-158546'], ['Lionel Messi', 'soccer/fm-30981']],
 }
 const HOME_FACES = Object.fromEntries(['current', 'alltime'].map(k => [k, FACE_PICKS[k].map(([n, id]) => {
   const p = POOL_PLAYERS[k].find(p => p.name === n)

@@ -18,7 +18,7 @@ import EmptyState from './EmptyState'
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 const TABS = [['online', 'ONLINE'], ['today', 'TODAY'], ['records', 'RECORDS']]
-const TIER_COLOR = { Rookie: '#9aa7a0', Starter: '#8BD5A6', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
+const TIER_COLOR = { Rookie: '#9aa7a0', Starter: '#74D8BF', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
 // what gets a player onto a board they aren't on yet
 // the Cup's days left, today counted: it ends with Sunday
 const cupLeft = () => { const n = dayIndex(weekEnds()) - dayIndex(dayKey()) + 1; return n <= 1 ? 'LAST DAY' : `${n} DAYS LEFT` }

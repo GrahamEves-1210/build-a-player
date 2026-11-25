@@ -25,12 +25,37 @@ export function behindArc(x, y, m = 0) {
 export const inPaint = (x, y) => x >= COURT.paint.x0 && x <= COURT.paint.x1 && y <= COURT.paint.y1
 export const inBounds = (x, y, pad = 0) => x >= COURT.minX - pad && x <= COURT.maxX + pad && y >= COURT.minY - pad && y <= COURT.maxY + pad
 
-// A shot from here by him: a layup or a dunk near the rim, a jumper anywhere else. roll: one roll (the dunk)
-export function shotKind(R, d, roll) {
-  if (d > T.layRange) return 'jumper'
+// How far out an able dunker takes off with the lane open in front of him (a long gather step, a long takeoff):
+// up to 8-10 ft for a great leaper, more with size; no farther than the normal range for a man who can't get up
+export function dunkFrom(R) {
+  const bnc = R.bncRaw ?? R.bnc
+  return T.dunkRange + T.dunkFar * clamp((bnc - 0.25) / 0.6, 0, 1) + T.dunkFarSize * R.size * (bnc > T.dunkBounce ? 1 : 0)
+}
+// A shot from here by him: a layup or a dunk near the rim, a jumper anywhere else. roll: one roll (the dunk).
+// open: the lane to the rim is his (no one in it, going downhill): an able dunker goes up for it from farther out
+export function shotKind(R, d, roll, open = false) {
   const bnc = R.bncRaw ?? R.bnc                              // (who can get up: the plain grade)
-  if (d <= T.dunkRange && bnc > T.dunkBounce && roll < (bnc - T.dunkBounce) * T.dunkChance * (0.7 + 0.6 * R.fin)) return 'dunk'
+  const able = bnc > T.dunkBounce
+  if (open && able && d > T.dunkRange && d <= dunkFrom(R) && roll < 0.35 + 0.65 * clamp((bnc - T.dunkBounce) / 0.5, 0, 1)) return 'dunk'
+  if (d > T.layRange) return 'jumper'
+  if (d <= T.dunkRange && able && roll < (bnc - T.dunkBounce) * T.dunkChance * (0.7 + 0.6 * R.fin) * (open ? 1.3 : 1)) return 'dunk'
   return 'layup'
+}
+// Is the lane open: nobody who can guard (defs: men, not beaten, not sitting out) between him and the rim, within
+// T.laneW of the line, and he's going at it (or standing right under it)
+export function laneOpen(p, defs) {
+  const d = rimDist(p)
+  if (d < 0.5) return true
+  const ux = (RIM.x - p.x) / d, uy = (RIM.y - p.y) / d
+  const sp = Math.hypot(p.vx || 0, p.vy || 0)
+  if (d > 3 && sp > 2 && ((p.vx || 0) * ux + (p.vy || 0) * uy) / sp < 0.35) return false   // (going away or across: no takeoff)
+  for (const o of defs) {
+    if (beaten(o)) continue
+    const t = (o.x - p.x) * ux + (o.y - p.y) * uy
+    if (t < -0.5 || t > d + 2) continue
+    if (Math.abs((o.x - p.x) * -uy + (o.y - p.y) * ux) < T.laneW) return false
+  }
+  return true
 }
 
 const beaten = p => p.act === 'frozen' || p.act === 'down'
@@ -96,7 +121,7 @@ export function makeChance(s) {
     const t = clamp((s.d - 8) / (T.arcRef - 8), 0, 1)
     base = close + (arc - close) * Math.pow(t, T.curve)
     if (s.d > T.deepAt) base -= (s.d - T.deepAt) * (T.deepFall - T.deepJs * R.js)
-    base *= 1 - T.setFeet * clamp(s.run ?? 0, 0, 1)
+    base *= 1 - T.setFeet * clamp(((s.run ?? 0) - T.runFrom) / (1 - T.runFrom), 0, 1)
     if (s.cs != null) base *= 1 + T.csBoost * s.cs
     pen = T.contestMaxJ * s.c * (1 - T.jsThrough * (R.jsRaw ?? R.js))     // a great shooter shoots over a hand (on the plain grade)
   }
@@ -121,10 +146,10 @@ export function judgeShot(shooter, defenders, shot, rolls) {
     const reach = T.blockReach + T.blockReachBnc * d.R.bnc + T.blockReachSize * d.R.size
     if (dd > reach) continue
     const phase = d.actT / T.jumpTime
-    const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : 0.25
+    const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : T.blockLate
     const kind = shot.kind === 'jumper' ? T.blockJumper : shot.kind === 'dunk' ? T.blockDunk : 1
     const p = clamp(T.blockBase * onTime * (0.55 + T.blockInt * d.R.int) * (1 + T.blockSize * (d.R.size - shooter.R.size))
-      * (1 + T.blockBnc * (d.R.bnc - 0.75)) * kind * (1 - 0.4 * dd / reach), 0, T.blockMax)
+      * (1 + T.blockBnc * (d.R.bnc - 0.75)) * kind * (1 - T.blockFar * dd / reach), 0, T.blockMax)
     if (roll < p) {
       const dot = sd > 2 && dd > 0.01 ? ((d.x - shooter.x) * (RIM.x - shooter.x) + (d.y - shooter.y) * (RIM.y - shooter.y)) / (dd * sd) : 1
       return { blocked: d.id, chase: dot < -T.chaseAngle && Math.hypot(shooter.vx, shooter.vy) > 3, made: false, pts: 0, c: 1, p: 0 }
@@ -140,7 +165,8 @@ export function judgeShot(shooter, defenders, shot, rolls) {
   return {
     blocked: null, made, pts: made ? (shot.three ? 2 : 1) : 0, c, by, p,
     // a poster: a dunk made on a man who went up to stop it, square in it
-    poster: made && shot.kind === 'dunk' && c >= T.posterContest && defenders.some(d => d.id === by && d.act === 'jump'),
+    // (and only by a man who gets up over him: more Bounce and Size than the man who went up)
+    poster: made && shot.kind === 'dunk' && c >= T.posterContest && defenders.some(d => d.id === by && d.act === 'jump' && shooter.R.bnc + shooter.R.size > d.R.bnc + d.R.size + 0.04),
     deep: made && shot.three && shot.d >= T.deepWord,
   }
 }
@@ -151,7 +177,7 @@ export function judgeSteal(def, handler, roll) {
   if (dd > T.stealReach) return { ok: false, reach: true }
   const behind = dd > 0.01 && ((def.x - handler.x) * handler.fx + (def.y - handler.y) * handler.fy) / dd < -0.25
   const p = clamp(T.stealBase * (0.55 + T.stealPer * def.R.per) * (1.3 - T.stealHnd * handler.R.hnd) * (1 + T.stealIq * (0.75 - handler.R.iq))
-    * (handler.burst > 0 ? T.stealBurst * (handler.mv === MOVES.btb.n ? MOVES.btb.steal : 1) : 1) * (handler.act === 'gather' ? T.stealGather : 1) * (behind ? T.stealBehind : 1), 0, T.stealMax)
+    * (handler.burst > 0 ? T.stealBurst * (handler.mv === MOVES.btb.n ? MOVES.btb.steal : 1) * (1 + T.staLoose * (1 - (handler.sta ?? 1))) : 1) * (handler.act === 'gather' ? T.stealGather : 1) * (behind ? T.stealBehind : 1), 0, T.stealMax)
   const ok = roll < p
   return { ok, reach: !ok && behind }
 }
@@ -191,7 +217,7 @@ export const spinTurn = (p, dir) => { const a = Math.acos(clamp(dir.x * (p.fkx ?
 export function judgeMove(handler, def, dir, roll1, roll2) {
   if (!def || beaten(def) || dist(def, handler) > T.moveRange) return { freeze: false, ankles: false }
   const lean = clamp(-(def.vx * dir.x + def.vy * dir.y) / def.R.topDef, 0, 1)
-  const p = clamp(T.moveBase + T.moveLean * lean + T.moveHnd * (handler.R.hnd - def.R.per) - T.moveIq * (def.R.iq - 0.5), 0.04, 0.85)
+  const p = clamp((T.moveBase + T.moveLean * lean + T.moveHnd * (handler.R.hnd - def.R.per) - T.moveIq * (def.R.iq - 0.5)) * (T.staFloor + (1 - T.staFloor) * (handler.sta ?? 1)), 0.04, 0.85)
   const freeze = roll1 < p
   return { freeze, ankles: freeze && roll2 < T.ankleBase * (0.5 + handler.R.hnd) * (1 + lean) }
 }
