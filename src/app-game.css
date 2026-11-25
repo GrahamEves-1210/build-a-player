@@ -8087,3 +8087,8 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
 @media (max-width: 1023px) {
   .ag-home .ag-sport-wrap > .ag-sport, .ag-home .ag-stage { margin-left: 14px; margin-right: 14px; border-radius: var(--hm-r); overflow: hidden; }
 }
+/* (the picked block under the positions and the sport bar's thumb stay on their own layers all the time: promoted only
+   while sliding, they were drawn a pixel lower for the slide and snapped back; and the thumb runs a hair past the
+   bar's left edge so no dark sliver shows there on a phone) */
+.ag-stage .ag-positions::before, .ag-home .ag-sport .ag-sport-thumb { will-change: transform; backface-visibility: hidden; }
+.ag-home .ag-sport .ag-sport-thumb { margin-left: -2px; }
