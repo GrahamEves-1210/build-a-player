@@ -14,7 +14,7 @@ const KitPage = import.meta.env.DEV ? lazy(() => import('./KitPage')) : null   /
 // FRANCHISE (take two): take over an NFL team, put your own builds on it, and run it season after season.
 // This file is the mode's frame: the three save slots, the setup, then the hub. The builds are made on the game's
 // own build page (App.jsx: onBuild out, `built` back); everything else is lib/franchise2.
-//   props: user, onHome, onBuild(job { id, pos, n, of }), built { id, pos, build, types, sandbox }, onBuiltTaken
+//   props: user, onHome, onBuild(job { id, pos, n, of }), built { id, pos, build, types, sandbox }, onBuiltTaken, onSquad (Squad Builder)
 
 const LAST = 'bap_fr2_last'
 const readLast = () => { try { const v = Number(localStorage.getItem(LAST)); return Number.isInteger(v) && v >= 0 && v < SLOTS_N ? v : null } catch { return null } }
@@ -37,7 +37,7 @@ function leaveNote(F) {
   } catch {}
 }
 
-export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTaken }) {
+export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTaken, onSquad = null }) {
   const owner = getUsername(user) || 'Guest'
   const [slot, setSlot] = useState(() => { if (!tripBack() && !built) return null; const s = readLast(); return s != null && rawSlot(s) ? s : null })
   useEffect(() => { tripDone() }, [])   // (read once on the way in; StrictMode runs the state's first value twice)
@@ -116,9 +116,9 @@ export default function FranchiseMode({ user, onHome, onBuild, built, onBuiltTak
   const remove = () => { pend.current = null; clearFranchise(F?.slot ?? slot); try { localStorage.removeItem(FRANCHISE_CARD_KEY) } catch {}; toSlots() }
 
   if (KitPage && /[?&]fkit\b/.test(location.search)) return <Suspense fallback={null}><KitPage onHome={onHome} /></Suspense>   // (dev only: the kit, kit.jsx)
-  if (slot == null) return <Slots owner={owner} onOpen={open} onHome={onHome} />
+  if (slot == null) return <Slots owner={owner} onOpen={open} onHome={onHome} onSquad={onSquad} />
   if (!F && setup) return <Setup setup={setup} owner={owner} put={putSetup} onBuild={buildOut} onStart={start} onBack={toSlots} />
-  if (!F) return <Slots owner={owner} onOpen={open} onHome={onHome} />
+  if (!F) return <Slots owner={owner} onOpen={open} onHome={onHome} onSquad={onSquad} />
   const naming = F.builds.findIndex(b => b.prospect && b.unnamed)
   if (naming >= 0) return <ProspectNamer F={F} B={F.builds[naming]} owner={owner} onDone={(name, face) => { act(X => { const B = X.builds[naming]; B.name = name; if (face) B.face = face; delete B.unnamed; for (const x of X.dc ?? []) if (x.b === naming) x.n = name }); sfx('claim') }} />
   return <Suspense fallback={<FranchiseWait kind="hub" />}><Hub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} onBuild={buildOut} /></Suspense>

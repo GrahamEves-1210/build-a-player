@@ -1926,7 +1926,7 @@ export default function App() {
     return (
       <Suspense fallback={<FranchiseWait />}>
         <FranchiseMode user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onBuild={startFranchiseBuild} built={frBuilt} onBuiltTaken={() => setFrBuilt(null)} />
+          onBuild={startFranchiseBuild} built={frBuilt} onBuiltTaken={() => setFrBuilt(null)} onSquad={openSquad} />
       </Suspense>
     )
   }

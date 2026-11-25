@@ -553,6 +553,13 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
                 <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Sort the stars by the stat</span>
               </button>
+              {/* Squad Builder while Franchise has its row: a small one, the full width (owner 11-25) */}
+              {onFranchise && onSquad && (
+                <button className="ag-mini ag-pop" style={{ '--d': '390ms', gridColumn: '1 / -1' }} onClick={onSquad}>
+                  <span className="ag-mini-title">SQUAD BUILDER</span>
+                  <span className="ag-mini-sub">{squad?.phase === 'build' ? `Building · ${sqBuilt} of ${squad.slots.length}` : 'Build a team, play a season'}</span>
+                </button>
+              )}
             </>
           )}
           {/* website: an ad right under those, the full width, no margins of its own (collapses when there's none) */}

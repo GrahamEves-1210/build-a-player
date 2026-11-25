@@ -2323,7 +2323,7 @@ export default function BucketApp() {
     return (
       <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
         <NbaFranchise user={user} onHome={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onBuild={startNbaFranchiseBuild} built={nbaBuilt} onBuiltTaken={() => setNbaBuilt(null)} />
+          onBuild={startNbaFranchiseBuild} built={nbaBuilt} onBuiltTaken={() => setNbaBuilt(null)} onSquad={openSquad} />
       </Suspense>
     )
   }
