@@ -7856,3 +7856,15 @@ html.low-power .sil-wrap svg.st-face-detail { display: none; }
 
 /* a nation's flag as an emoji (lib/flagEmoji.js): the Twemoji flags font first, which only exists on Windows */
 .flag-emoji { font-family: "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important; font-style: normal; font-weight: 400; letter-spacing: 0; text-transform: none; display: inline-block; vertical-align: top; }
+
+/* Soccer: a FotMob face (headshots/soccer/fmr-*.webp: the face bottom-centred on ESPN's 600x436 canvas) sits low and
+   small in a round avatar. In every circle it's zoomed round the face so the face fills it, centred, the neck running
+   to the bottom edge; the clip keeps it the circle's own size (owner 11-25). ESPN photos are untouched. */
+:is(.qb-avatar, .tk-hs, .crl-face, .cl-face, .cr-me-face, .sq-face, .wm-avatar) img[src*="/soccer/fmr-"],
+.reel-row .reel-logo[src*="/soccer/fmr-"] {
+  object-fit: cover; object-position: 50% 100%;
+  transform: scale(1.38); transform-origin: 50% 106.6%;
+  clip-path: circle(36.2% at 50% 65.6%);
+}
+/* (the reveal card's photo is placed by its own box and transform: it takes the same zoom on the avatar's whole box) */
+.qb-avatar img.qb-avatar-photo[src*="/soccer/fmr-"] { left: 0; top: 0; bottom: auto; width: 100%; height: 100%; transform: scale(1.38); }
