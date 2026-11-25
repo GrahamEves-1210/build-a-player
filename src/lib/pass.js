@@ -22,7 +22,9 @@ export const PASS_PRICE = '$8.99'
 // keep PASS_SALE in step in server/server.js and functions/api/create-pass-checkout.js.
 // Black Friday 2026: half price from Friday Nov 27 through Cyber Monday Nov 30.
 export const PASS_SALE = { label: 'BLACK FRIDAY', off: 50, price: '$4.49', start: '2026-11-27', end: '2026-12-01' }
-export const passSale = day => (day >= PASS_SALE.start && day < PASS_SALE.end ? PASS_SALE : null)
+// (dev server only: ?passsale=1 shows the sale before its days, to look at it; checkout still charges by the date)
+const SALE_PREVIEW = typeof location !== 'undefined' && import.meta.env?.DEV && /[?&]passsale=1\b/.test(location.search)
+export const passSale = day => (SALE_PREVIEW || (day >= PASS_SALE.start && day < PASS_SALE.end) ? PASS_SALE : null)
 // (the sale's last day, as a word for the button's note)
 export const saleEnds = sale => new Date(`${sale.end}T12:00:00Z`).getTime() - 86400000
 // The same pass for coins. supabase/pass_coins.sql holds the same number and refuses a
