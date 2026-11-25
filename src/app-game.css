@@ -7868,3 +7868,26 @@ html.low-power .sil-wrap .st-fx { display: none; }
 }
 /* (the reveal card's photo is placed by its own box and transform: it takes the same zoom on the avatar's whole box) */
 .qb-avatar img.qb-avatar-photo[src*="/soccer/fmr-"] { left: 0; top: 0; bottom: auto; width: 100%; height: 100%; transform: scale(1.38); }
+
+/* Home's sport bar (owner 11-25): each sport's ball beside its name (a plain line glyph, no chip), football,
+   basketball and soccer the same width, a sport still coming soon narrower, and a NEW tag over soccer once it's live */
+.ag-home .ag-sport-ico { display: inline-grid; width: 22px; height: 22px; border: 0; border-radius: 0; background: none !important; opacity: 1; }
+.ag-home .ag-sport-btn.is-on .ag-sport-ico { background: none !important; }
+.ag-home .ag-sport-btn.is-soon .ag-sport-ico { display: none; }
+.ag-home .ag-sport-btn { gap: 7px; position: relative; overflow: visible; }
+.ag-sport-tag { position: absolute; top: 5px; right: 6px; z-index: 2; padding: 2px 5px 1px; border-radius: 3px; background: #f5c842; color: #1d1503; font: 400 11px/1 var(--ag-font); letter-spacing: 1px; font-style: normal; pointer-events: none; }
+.ag-home .ag-sport-btn.is-on .ag-sport-tag { background: #0b0c0e; color: #f5c842; }
+.ag-home .ag-sport.ag-sport--four { grid-template-columns: 1fr 1fr 1fr .62fr !important; }
+.ag-home .ag-sport.ag-sport--four .ag-sport-thumb { width: calc(100% / 3.62) !important; }
+.ag-home .ag-sport.ag-sport--four .ag-sport-btn:not(.is-soon) .ag-sport-txt b { font-size: 17px !important; letter-spacing: .5px !important; }
+@media (max-width: 420px) {
+  .ag-home .ag-sport.ag-sport--four .ag-sport-btn:not(.is-soon) .ag-sport-txt b { font-size: 14.5px !important; letter-spacing: 0 !important; }
+  .ag-home .ag-sport.ag-sport--four .ag-sport-ico { width: 18px; height: 18px; }
+  .ag-home .ag-sport.ag-sport--four .ag-sport-ico svg { width: 18px; height: 18px; }
+  .ag-home .ag-sport.ag-sport--four .ag-sport-btn { gap: 5px; }
+  .ag-sport-tag { top: 3px; right: 3px; font-size: 10px; padding: 2px 4px 1px; }
+}
+@media (min-width: 1024px) { html.app-look .ag-home .ag-sport.ag-sport--four .ag-sport-btn:not(.is-soon) .ag-sport-txt b { font-size: 20px !important; letter-spacing: 1px !important; } }
+/* (with four sports soccer isn't the last: its highlight stops at its own edge; and the balls stay on a phone) */
+.ag-home .ag-sport.ag-sport--four.ag-sport--soccer .ag-sport-thumb::after { opacity: 0; }
+@media (max-width: 520px) { .ag-home .ag-sport.ag-sport--four .ag-sport-btn:not(.is-soon) .ag-sport-ico { display: inline-grid; } }
