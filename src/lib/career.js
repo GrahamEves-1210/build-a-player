@@ -728,8 +728,9 @@ function opened(c00) {
   const c = c1.sport === 'bucket' && !HOOP_SPOTS.includes(c1.spot) ? { ...c1, spot: hoopSpot(c1) } : c1
   const n = healSeason(c)
   if (n === c1) return c1
-  const s = { ...n, updatedAt: Date.now() }
-  try { localStorage.setItem(key(s.sport, s.uid, s.slot ?? 0), JSON.stringify(s)); queueCloudSave(s) } catch {}
+  const s = { ...n, updatedAt: stampAfter(n.updatedAt) }
+  try { localStorage.setItem(key(s.sport, s.uid, s.slot ?? 0), JSON.stringify(s)) } catch {}
+  queueCloudSave(s)
   return s
 }
 // Every save stamps `updatedAt` (local and cloud copies are merged by it) and,
@@ -737,16 +738,50 @@ function opened(c00) {
 // that changes nothing (a screen re-saving what it loaded) keeps the old stamp,
 // so an untouched copy never looks newer than real progress on another device.
 const sameCareer = (a, b) => { try { return JSON.stringify({ ...a, updatedAt: 0 }) === JSON.stringify({ ...b, updatedAt: 0 }) } catch { return false } }
-export function saveCareer(c) {
-  if (!c) return
+// The stamp only moves forward: past the copy he's playing on (c.updatedAt: the cloud's, when another device played
+// last) and the copy on the device. A device whose clock runs behind another's still writes a newer stamp than the save
+// it carried on from, so the merge (newer wins) never hands his progress back to the older copy.
+const stampAfter = (...at) => Math.max(Date.now(), ...at.map(x => (Number(x) || 0) + 1))
+// The browser's storage is full: drop what the game rebuilds or no longer reads, so a save can go in. Only that: the
+// remote config (fetched again), the daily Salary Cap's shuffles, scouting and plays for days older than its ten-day
+// archive. Never a save, a build, a setting or a lock.
+const DAY_KEY = /^(?:qbsal|sal|soc_sal|bb_sal)_(?:play|shuffled|scouted)_.*?(\d{4}-\d{2}-\d{2})$/
+export function freeCareerSpace() {
+  let freed = 0
   try {
-    const slot = c.slot ?? 0
-    const prev = loadCareer(c.sport, c.uid, slot)
-    if (prev && prev.updatedAt && sameCareer(prev, { ...c, slot })) return
-    const s = { ...c, slot, updatedAt: Date.now() }
-    localStorage.setItem(key(c.sport, c.uid, slot), JSON.stringify(s))
-    queueCloudSave(s)
+    const old = Date.now() - 14 * 864e5
+    const drop = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i), m = k && DAY_KEY.exec(k)
+      if (k === 'bap_app_config' || (m && Date.parse(m[1]) < old)) drop.push(k)
+    }
+    for (const k of drop) { freed += (localStorage.getItem(k) ?? '').length; localStorage.removeItem(k) }
   } catch {}
+  return freed
+}
+// Which slot he played last (Home's career card and a reload open that one, not slot 0)
+const lastKey = (sport, uid) => `bap_career_last_${sport}_${uid || 'guest'}`
+export function lastCareerSlot(sport, uid) {
+  try { const n = Number(localStorage.getItem(lastKey(sport, uid))); return Number.isInteger(n) && n > 0 && n < CAREER_SLOTS && localStorage.getItem(key(sport, uid, n)) ? n : 0 } catch { return 0 }
+}
+// true: saved (or nothing to save). false: this device couldn't keep it (its storage is full even after freeing what
+// can go); the screen says so and tries again. Signed in, the account's copy is sent either way, so nothing is lost there.
+export function saveCareer(c) {
+  if (!c) return true
+  const slot = c.slot ?? 0
+  let prev = null
+  try { prev = loadCareer(c.sport, c.uid, slot) } catch {}
+  if (prev && prev.updatedAt && sameCareer(prev, { ...c, slot })) return true
+  const s = { ...c, slot, updatedAt: stampAfter(c.updatedAt, prev?.updatedAt) }
+  let ok = false, text = null
+  try { text = JSON.stringify(s) } catch {}
+  if (text) {
+    try { localStorage.setItem(key(c.sport, c.uid, slot), text); ok = true } catch {}
+    if (!ok && freeCareerSpace() > 0) { try { localStorage.setItem(key(c.sport, c.uid, slot), text); ok = true } catch {} }
+  }
+  try { localStorage.setItem(lastKey(c.sport, c.uid), String(slot)) } catch {}
+  queueCloudSave(s)
+  return ok
 }
 export function clearCareer(sport, uid, slot = 0) { try { localStorage.removeItem(key(sport, uid, slot)) } catch {}; deleteCloudCareer(sport, uid, slot) }
 // Signed in: pull the account's cloud copy and keep whichever is newer (by
@@ -769,7 +804,7 @@ export async function syncCareerFromCloud(sport, uid, slot = 0, had = null) {
   if (cloud === null) {   // the account has no career in this slot: bring the guest one over
     const guest = loadCareer(sport, null, slot)
     if (guest) {
-      const moved = { ...guest, uid, slot, updatedAt: Date.now() }
+      const moved = { ...guest, uid, slot, updatedAt: stampAfter(guest.updatedAt) }
       try { localStorage.setItem(key(sport, uid, slot), JSON.stringify(moved)); localStorage.removeItem(key(sport, null, slot)) } catch {}
       queueCloudSave(moved)
       return moved

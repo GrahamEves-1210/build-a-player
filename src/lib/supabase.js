@@ -35,6 +35,16 @@ if (supabase) {
 }
 export const currentToken = () => _token
 
+// The account this device is signed in to, read from the stored session: no network and no wait. On a reload the
+// app's `user` is null until the session is restored, and stays null when the access token has expired and can't be
+// refreshed (offline, a slow network): the session is still stored then, and a sign-out is what clears it.
+// Career keeps a signed-in player's saves under his account id (lib/career.js), so it asks for this, not `user` alone.
+export function storedUid() {
+  if (!supabase) return null
+  try { const s = JSON.parse(localStorage.getItem(supabase.auth.storageKey) || 'null'); return s?.user?.id ?? s?.currentSession?.user?.id ?? null } catch { return null }
+}
+export const accountId = user => user?.id ?? storedUid()
+
 // Headers for our own /api endpoints: the server reads who the player is from
 // their session token, never from an id in the body
 export async function apiHeaders() {

@@ -27,7 +27,7 @@ import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import NBA_HEADSHOTS     from '../data/nba-headshots.json'
-import { supabase, rtSupabase, apiHeaders } from '../lib/supabase'
+import { supabase, rtSupabase, apiHeaders, accountId } from '../lib/supabase'
 import { track } from '../lib/track'
 import { blockReason, buildSig, markPlayed } from '../lib/saveGuard'
 import { readLive, startLive, bookLive, leaveLive } from '../lib/seasonLive'
@@ -461,7 +461,7 @@ export default function BucketApp() {
       : { starters: false, oneTeam: null }
   })
   // a reload on the build page lands back on it (lib/buildSave.js); opened fresh, the build waits on Home's CONTINUE card
-  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : NBA_FRANCHISE_LIVE && buildPageAtLoad('bucket') === 'nbafranchise' ? 'nbafranchise' : 'splash' })   // (basketball Franchise marks itself during a key moment's mini game: a reload there comes back to it)
+  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : NBA_FRANCHISE_LIVE && buildPageAtLoad('bucket') === 'nbafranchise' ? 'nbafranchise' : (IS_APP || APP_LOOK) && buildPageAtLoad('bucket') === 'career' ? 'career' : 'splash' })   // (the Career hub marks itself too: a reload there opens the career he was playing)   // (basketball Franchise marks itself during a key moment's mini game: a reload there comes back to it)
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? saved?.gameMode ?? null)
   const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; if (saved) return saved.position; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
   const [build, setBuild]             = useState(() => liveAt?.build ?? saved?.build ?? {})
@@ -1104,21 +1104,31 @@ export default function BucketApp() {
     startDaily()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // ── CAREER: one saved career per account; a fresh build starts one (lib/career.js) ──
-  const [career, setCareer] = useState(null)
+  // (undefined: not read yet; null: none)
+  const [career, setCareer] = useState(undefined)
   const careerRef = useRef(null); careerRef.current = career
   const openCareerRef = useRef(null)
+  const pageRef = useRef(page); pageRef.current = page
+  // the account his careers are saved under: the stored session's, before (or without) the network giving `user` back
+  const careerUid = accountId(user)
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
     // (the career code loads on its own: it's big, and the first screen doesn't wait for it)
     let off = false
-    import('../lib/career').then(({ loadCareer, syncCareerFromCloud }) => {
+    import('../lib/career').then(({ loadCareer, syncCareerFromCloud, lastCareerSlot }) => {
       if (off) return
-      setCareer(loadCareer('bucket', user?.id))
-      // signed in: the cloud copy (or a guest career moving onto the account)
-      if (user?.id) syncCareerFromCloud('bucket', user.id).then(c => { if (!off) setCareer(c) })
+      // the career he played last (Home's card, and the hub after a reload), never swapped for another under the open hub
+      const slot = lastCareerSlot('bucket', careerUid)
+      const busy = () => pageRef.current === 'career' && !!careerRef.current
+      const land = c => { if (off || busy()) return; setCareer(c ?? null); if (!c && pageRef.current === 'career') setPage('splash') }
+      if (!careerUid) { land(loadCareer('bucket', null, slot)); return }
+      // signed in: the cloud copy (or a guest career moving onto the account). Home shows the device's copy meanwhile;
+      // a reload into the hub waits for the merge, so it never opens on a copy the cloud then replaces
+      if (pageRef.current !== 'career') setCareer(loadCareer('bucket', careerUid, slot))
+      syncCareerFromCloud('bucket', careerUid, slot).then(land)
     })
     return () => { off = true }
-  }, [user?.id])
+  }, [careerUid])
   const startCareerBuild = useCallback(pos => {
     handleStart('classic', pos === 'big' ? 'big' : 'guard'); setPage('career-build')
   }, [handleStart])
@@ -1132,10 +1142,10 @@ export default function BucketApp() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('../lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: CBB_LIVE && careerNew.current.start === 'college' ? 'college' : 'draft', spot: careerNew.current.spot ?? null }), sandbox: !!isBucketCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
+    const c = { ...newCareer({ sport: 'bucket', uid: careerUid, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: CBB_LIVE && careerNew.current.start === 'college' ? 'college' : 'draft', spot: careerNew.current.spot ?? null }), sandbox: !!isBucketCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user, position, build, isBucketCustomMode])
+  }, [user, careerUid, position, build, isBucketCustomMode])
   // A Squad Builder build is done: into its slot, then the next one (or the team)
   const squadNext = useCallback(() => {
     const sq = squadRef.current, slot = nextToBuild(sq)
@@ -1212,7 +1222,7 @@ export default function BucketApp() {
     } catch {}
   }, [build, gameMode, position, dailyRun, page, isBucketCustomMode, startersPick, oneTeamPick])
   // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
-  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])   // (College Basketball marks its own)
+  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', page === 'career' ? 'career' : gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])   // (College Basketball marks its own)
   // Home's CONTINUE card: which build it is
   const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'nbafranchise' ? 'Franchise' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : 'Current'
 
@@ -2316,7 +2326,7 @@ export default function BucketApp() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start, spot, face) => { careerNew.current = { slot, name, games, start, spot, face }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
+        <CareerIntro sport="bucket" uid={careerUid} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start, spot, face) => { careerNew.current = { slot, name, games, start, spot, face }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }
@@ -2327,6 +2337,7 @@ export default function BucketApp() {
       </Suspense>
     )
   }
+  if (page === 'career' && career === undefined && (IS_APP || APP_LOOK)) return <div className="ag-screen ag-screen--wait" />   // (a reload on the hub: his career is being read)
   if (page === 'nbafranchise' && NBA_FRANCHISE_LIVE) {
     return (
       <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>

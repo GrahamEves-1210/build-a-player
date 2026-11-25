@@ -61,7 +61,7 @@ import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runDLSimulation, calcOVRDL, getArchetypeDL, runLBSimulation, calcOVRLB, getArchetypeLB, runOLSimulation, calcOVROL, getArchetypeOL, runKSimulation, calcOVRK, getArchetypeK, calcKAllProResult, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, calcOLAllProResult } from './utils/simulation'
-import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
+import { supabase, rtSupabase, apiHeaders, accountId } from './lib/supabase'
 import { track } from './lib/track'
 const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : []), ...(K_LIVE ? ['k'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
 // START IN COLLEGE is QB, WR and RB only (College Football's rosters, AppCareer.jsx COLLEGE_POS): a switch on the build page to
@@ -207,7 +207,7 @@ const _resumeAt = (() => {
 })()
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _resumeAt ?? (CFB_LIVE && !_sharedData && buildPageAtLoad('nfl') === 'cfb' ? 'cfb' : 'splash'))   // opening the app lands on the menu; a saved build waits on its Resume card (a reload on the build page goes back to it)
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _resumeAt ?? (CFB_LIVE && !_sharedData && buildPageAtLoad('nfl') === 'cfb' ? 'cfb' : !_sharedData && (IS_APP || APP_LOOK) && buildPageAtLoad('nfl') === 'career' ? 'career' : 'splash'))   // opening the app lands on the menu; a saved build waits on its Resume card (a reload on the build page goes back to it)
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -473,7 +473,7 @@ export default function App() {
     try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk, sandbox: sandboxTainted.current || isCustomMode, starters: startersPick && isCustomMode, ...(tk === 'career' ? { cn: careerNew.current } : tk === 'franchise' && frJob.current ? { job: frJob.current } : null) })) } catch {}
   }, [build, gameMode, position, dailyRun, page, isCustomMode, startersPick])
   // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
-  useEffect(() => { if (page !== 'cfb') markBuildPage('nfl', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build') && tkRef.current !== 'compete' ? page : null) }, [page, gameMode])   // (a Compete pool: a reload forfeits it, lib/compete.js; College Football marks its own)
+  useEffect(() => { if (page !== 'cfb') markBuildPage('nfl', page === 'career' ? 'career' : gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'franchise-build') && tkRef.current !== 'compete' ? page : null) }, [page, gameMode])   // (the Career hub too: a reload there opens the career he was playing)   // (a Compete pool: a reload forfeits it, lib/compete.js; College Football marks its own)
 
   useEffect(() => {
     try {
@@ -800,20 +800,30 @@ export default function App() {
     startSquadBuild(next, sq)
   }, [startSquadBuild, gameMode, position])
   // ── CAREER (app): one saved career per account; a fresh build starts one ──
-  const [career, setCareer] = useState(null)
+  // (undefined: not read yet; null: none)
+  const [career, setCareer] = useState(undefined)
   careerRef.current = career
+  const pageRef = useRef(page); pageRef.current = page
+  // the account his careers are saved under: the stored session's, before (or without) the network giving `user` back
+  const careerUid = accountId(user)
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
     // (the career code loads on its own: it's big, and the first screen doesn't wait for it)
     let off = false
-    import('./lib/career').then(({ loadCareer, syncCareerFromCloud }) => {
+    import('./lib/career').then(({ loadCareer, syncCareerFromCloud, lastCareerSlot }) => {
       if (off) return
-      setCareer(loadCareer('nfl', user?.id))
-      // signed in: the cloud copy (or a guest career moving onto the account)
-      if (user?.id) syncCareerFromCloud('nfl', user.id).then(c => { if (!off) setCareer(c) })
+      // the career he played last (Home's card, and the hub after a reload), never swapped for another under the open hub
+      const slot = lastCareerSlot('nfl', careerUid)
+      const busy = () => pageRef.current === 'career' && !!careerRef.current
+      const land = c => { if (off || busy()) return; setCareer(c ?? null); if (!c && pageRef.current === 'career') setPage('splash') }
+      if (!careerUid) { land(loadCareer('nfl', null, slot)); return }
+      // signed in: the cloud copy (or a guest career moving onto the account). Home shows the device's copy meanwhile;
+      // a reload into the hub waits for the merge, so it never opens on a copy the cloud then replaces
+      if (pageRef.current !== 'career') setCareer(loadCareer('nfl', careerUid, slot))
+      syncCareerFromCloud('nfl', careerUid, slot).then(land)
     })
     return () => { off = true }
-  }, [user?.id])
+  }, [careerUid])
   const startCareerBuild = useCallback(pos => {
     const p = CAREER_POS.includes(pos) ? pos : 'qb'
     handleStart('classic', p); setPage('career-build')
@@ -828,11 +838,11 @@ export default function App() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('./lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: collegeStartFor(careerNew.current, position) ? 'college' : 'draft' }), sandbox: !!isCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
+    const c = { ...newCareer({ sport: 'nfl', uid: careerUid, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games, start: collegeStartFor(careerNew.current, position) ? 'college' : 'draft' }), sandbox: !!isCustomMode, ...(careerNew.current.face ? { face: careerNew.current.face } : null) }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user, position, build, isCustomMode])
+  }, [user, careerUid, position, build, isCustomMode])
 
   // A Squad Builder build is done: into its slot, then the next one (or the team)
   const squadNext = useCallback(() => {
@@ -1889,7 +1899,7 @@ export default function App() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start, _spot, face) => { careerNew.current = { slot, name, games, start, face }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
+        <CareerIntro uid={careerUid} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games, start, _spot, face) => { careerNew.current = { slot, name, games, start, face }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }
@@ -1900,6 +1910,7 @@ export default function App() {
       </Suspense>
     )
   }
+  if (page === 'career' && career === undefined && (IS_APP || APP_LOOK)) return <div className="ag-screen ag-screen--wait" />   // (a reload on the hub: his career is being read)
 
   if (page === 'cfb' && CFB_LIVE) {
     return (

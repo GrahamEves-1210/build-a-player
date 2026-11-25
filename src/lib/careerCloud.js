@@ -24,8 +24,16 @@ const rowOf = c => ({
   updated_at: new Date(c.updatedAt || Date.now()).toISOString(),
 })
 
+// Is this account's session in hand? Career can know the account before the session is back (lib/supabase.js
+// storedUid: a reload, an expired token, offline). Until it is, the cloud is out of reach: asked without it, the table
+// answers "no rows", which would read as "the account has no career" and send the device's copy over a newer one.
+async function signedIn(uid) {
+  try { const { data } = await supabase.auth.getSession(); return !!uid && data?.session?.user?.id === uid } catch { return false }
+}
+
 async function push(c) {
   if (!supabase || !c?.uid) return
+  if (!(await signedIn(c.uid))) return
   try {
     const { error } = await supabase.from('careers').upsert(rowOf(c), { onConflict: 'user_id,sport' })
     if (error) console.warn('[career cloud] save failed:', error.code, error.message)
@@ -56,8 +64,8 @@ if (typeof window !== 'undefined') {
 export async function fetchCloudCareer(sport, uid, slot = 0) {
   if (!supabase || !uid) return undefined
   try {
-    const q = supabase.from('careers').select('data').eq('user_id', uid).in('sport', [sportKey(sport, slot), lineKey(sport, slot)])
-      .then(({ data, error }) => (error ? undefined : (data ?? []).reduce((keep, r) => (!keep || (r.data?.updatedAt ?? 0) > (keep.updatedAt ?? 0) ? r.data : keep), null)))
+    const q = signedIn(uid).then(ok => (!ok ? undefined : supabase.from('careers').select('data').eq('user_id', uid).in('sport', [sportKey(sport, slot), lineKey(sport, slot)])
+      .then(({ data, error }) => (error ? undefined : (data ?? []).reduce((keep, r) => (!keep || (r.data?.updatedAt ?? 0) > (keep.updatedAt ?? 0) ? r.data : keep), null)))))
     const timeout = new Promise(res => setTimeout(() => res(undefined), FETCH_TIMEOUT_MS))
     return await Promise.race([q, timeout])
   } catch { return undefined }
@@ -70,7 +78,7 @@ export async function fetchCloudCareers(sport, uid, n) {
   if (!supabase || !uid) return undefined
   try {
     const keys = Array.from({ length: n }, (_, i) => [sportKey(sport, i), lineKey(sport, i)]).flat()
-    const q = supabase.from('careers').select('sport,data').eq('user_id', uid).in('sport', keys)
+    const q = signedIn(uid).then(ok => (!ok ? undefined : supabase.from('careers').select('sport,data').eq('user_id', uid).in('sport', keys)
       .then(({ data, error }) => {
         if (error) return undefined
         const out = Array(n).fill(null)
@@ -79,7 +87,7 @@ export async function fetchCloudCareers(sport, uid, n) {
           if (i >= 0 && i < n && (!out[i] || (r.data?.updatedAt ?? 0) > (out[i].updatedAt ?? 0))) out[i] = r.data
         }
         return out
-      })
+      })))
     const timeout = new Promise(res => setTimeout(() => res(undefined), FETCH_TIMEOUT_MS))
     return await Promise.race([q, timeout])
   } catch { return undefined }
