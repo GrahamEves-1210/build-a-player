@@ -146,7 +146,7 @@ export function PlayerSheet({ F, act, id, owner, onClose }) {
         {/* (no second line on the card: at phone width it wraps under the position; the facts carry it) */}
         <LowerThird name={p.n} pos={p.p} num={p.num} ovr={p.o} photo={manPhoto(F, p)} team={kit} size="l" mine={p.b != null ? owner : null} />
         <div className="nb-facts">
-          <span><small>Age</small><b>{pros ? (p.ag ?? 20) - 1 : p.ag}</b></span>
+          <span><small>Age</small><b>{pros ? p.ag ?? 20 : p.ag}</b></span>
           <span><small>Height, weight</small><b>{heightText(p.ht)} · {p.wt} LBS</b></span>
           <span><small>Experience</small><b>{p.ys > 0 ? `${p.ys} ${p.ys === 1 ? 'YEAR' : 'YEARS'}` : 'ROOKIE'}</b></span>
           {/* (a real man's draft isn't in the league's data: shown for the men drafted in it) */}

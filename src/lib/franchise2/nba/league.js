@@ -8,7 +8,7 @@ import { BIRTH_NBA } from '../../../data/player-ages'
 import NBA_HEADSHOTS from '../../../data/nba-headshots.json'
 import { NBA_DAY_ONE_INJURIES } from '../../../data/nba-injuries'
 import { NBA_DEALS, NBA_DEAD } from '../../../data/nba-contracts'
-import { NBA_FRANCHISE_ADDS, NBA_FRANCHISE_MOVES, NBA_FRANCHISE_STREET, REAL_FLOOR } from '../../../data/nba-franchise-roster'
+import { NBA_FRANCHISE_ADDS, NBA_FRANCHISE_MOVES, NBA_FRANCHISE_STREET, NBA_FRANCHISE_SERVICE, REAL_FLOOR } from '../../../data/nba-franchise-roster'
 import { calcBucketOVR } from '../../../utils/bucketSimulation'
 import { HEADSHOT_BASE } from '../../../utils/simulation'
 import { nameFor } from '../names'
@@ -30,12 +30,15 @@ export const DIV_OF = {}, CONF_OF = {}
 for (const [c, ds] of Object.entries(CONF_DIVS)) for (const d of ds) for (const s of DIVS[d]) { DIV_OF[s] = d; CONF_OF[s] = c }
 
 const TWO_WORD = /(Trail Blazers)$/
+// The colours a team wears now where the shared list (data/nba-teams.js, every live mode's) still has an older set
+// (ESPN's team pages, 2026-11-24): Utah back in purple since 2025-26, the Clippers navy first since their 2024 rebrand
+const COLORS_NOW = { UTA: { color: '#4E008E', color2: '#79A3DC' }, LAC: { color: '#12173F', color2: '#C8102E' } }
 // TEAM: { short, name, nick, city, color, color2, logo, conf, div }
 export const TEAM = Object.fromEntries(NBA_TEAMS.map(t => {
   const m = t.name.match(TWO_WORD)
   const nick = m ? m[1] : t.name.split(' ').slice(-1)[0]
   const city = t.name.slice(0, t.name.length - nick.length).trim()
-  return [t.short, { ...t, nick, city, logo: `/logos/nba/${t.short}.png`, conf: CONF_OF[t.short], div: DIV_OF[t.short] }]
+  return [t.short, { ...t, ...COLORS_NOW[t.short], nick, city, logo: `/logos/nba/${t.short}.png`, conf: CONF_OF[t.short], div: DIV_OF[t.short] }]
 }))
 export const SHORTS = Object.keys(TEAM).sort()
 export const seasonText = y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`
@@ -75,10 +78,11 @@ export const photoOf = n => (NBA_HEADSHOTS[n] ? `${HEADSHOT_BASE}/nba/${NBA_HEAD
 const ageIn = (name, year) => (BIRTH_NBA[name] ? year - BIRTH_NBA[name] : null)
 
 // his ceiling: the young have room to grow, a man past 27 is what he is
-// (aging.js seedPotential's numbers: room x 0.6-2.0 a year; more and the league's stars multiply over ten seasons)
+// (aging.js seedPotential's numbers: room x 0.35-1.5 a year. At 0.6-2.0 a third of the men under 23 had an 85+ ceiling
+// and the league's 85+ men went from 43 to 70 in five seasons; aging.js's header has the balance and its check)
 export function peakFor(R, o, ag) {
   const room = Math.max(0, 27 - ag)
-  return clamp(40, 99, Math.round(o + room * (0.6 + R.u() * 1.4) + R.n() * 2.5))
+  return clamp(40, 99, Math.round(o + room * (0.35 + R.u() * 1.15) + R.n() * 2.5))
 }
 const servedFrom = ag => clamp(0, 20, ag - 20)
 
@@ -90,14 +94,16 @@ const dealsByName = () => DEALS ?? (DEALS = new Map(Object.entries(NBA_DEALS).ma
 export const realDeal = name => dealsByName().get(looseName(name)) ?? null
 // the real 2026 draft class the rosters carry (the 2026 picks, and anyone else in his first season): rookies in the
 // first season (Rookie of the Year is theirs)
-export const ROOKIES_2026 = new Set(Object.entries(NBA_DEALS).filter(([, d]) => d.dr?.[0] === 2026 || d.ys === 0).map(([n]) => n))
+// (d.rk: a man who missed his whole first season is still a rookie, with a year of service: Sorber)
+export const ROOKIES_2026 = new Set(Object.entries(NBA_DEALS).filter(([, d]) => d.dr?.[0] === 2026 || d.ys === 0 || d.rk).map(([n]) => n))
 export function makeReal(F, r, R) {
   const ag = ageIn(r.name, F.year) ?? (r.born ? F.year - r.born : null) ?? R.int(22, 30)
   const d = realDeal(r.name)
-  const p = { i: F.nid++, n: r.name, p: r.spot, g: r.g, o: r.o, ag, a: { ...r.a }, ht: r.ht, wt: r.wt, num: r.num, ys: d?.ys ?? servedFrom(ag), h: 1 }
-  // (his service is real: the seasons since he came in, not his age)
+  const p = { i: F.nid++, n: r.name, p: r.spot, g: r.g, o: r.o, ag, a: { ...r.a }, ht: r.ht, wt: r.wt, num: r.num, ys: d?.ys ?? NBA_FRANCHISE_SERVICE[r.name] ?? servedFrom(ag), h: 1 }
+  // (his service is real: the seasons he has been on an NBA roster, not his age and not the seasons he played)
   if (d?.dr) p.dr = [...d.dr]
-  if (d ? d.ys === 0 || d.dr?.[0] === FIRST_YEAR : ROOKIES_2026.has(r.name)) { p.rk = FIRST_YEAR; p.ys = 0 }
+  if (d?.rk) p.rk = FIRST_YEAR
+  else if (d ? d.ys === 0 || d.dr?.[0] === FIRST_YEAR : ROOKIES_2026.has(r.name)) { p.rk = FIRST_YEAR; p.ys = 0 }
   else if (!d && BIRTH_NBA[r.name] >= 2006) p.ys = 1
   p.pk = Math.max(p.o, peakFor(R, p.o, ag))
   return p
@@ -140,17 +146,44 @@ export function makeGen(F, spot, R, { o = null, ag = null, taken = null } = {}) 
   const want = o ?? clamp(60, 74, Math.round(68 + R.n() * 3))
   const a = attrsFor(R, spot, want)
   const [h0, h1] = HT[spot], [w0, w1] = WT[spot]
-  const n = nameFor(R, 'nba', { taken: taken ?? leagueNames(F), real: realNames() })
+  const n = freshName(R, taken ?? leagueNames(F))
   const p = { i: F.nid++, n, p: spot, g, o: ovrOfAttrs(g, a), ag: age, a, ht: R.int(h0, h1), wt: R.int(w0, w1), ys: servedFrom(age), gn: 1 }
   p.pk = Math.max(p.o, peakFor(R, p.o, age) - 3)
   return p
 }
+// every name the league has or has had: the rosters, the street, the class, the retired list, the GM's builds and
+// the coaches (a new man never gets one of them)
 export function leagueNames(F) {
   const s = new Set()
   for (const t of Object.values(F.teams ?? {})) for (const p of t.r) s.add(p.n)
   for (const p of F.fa ?? []) s.add(p.n)
   for (const p of F.dc ?? []) s.add(p.n)
+  for (const r of F.retired ?? []) if (r?.n) s.add(r.n)
+  for (const B of F.builds ?? []) if (B?.name) s.add(B.name)
+  for (const st of Object.values(F.staff ?? {})) for (const c of Object.values(st ?? {})) if (c?.n) s.add(c.n)
   return s
+}
+// surnames a made-up NBA man doesn't get: real ones, but they read as a joke beside a first name ("Ladarius Bobo")
+const ODD_LAST = new Set(['Bobo', 'Outlaw', 'Cheeks', 'Crump', 'Pugh', 'Tubbs', 'Funderburk', 'Fobbs', 'Goins', 'Petty', 'Peoples', 'Session', 'Small',
+  'Spikes', 'Hairgrove', 'Womack', 'Dukes', 'Pope', 'Wimbush', 'Sturdivant', 'Koch'])
+// a made-up man's name (names.js nameFor: his background's lists, never a real player's), new to the league: drawn
+// again until nobody has it. `taken` is the league's names (leagueNames) and gets his.
+export function freshName(R, taken) {
+  const real = realNames()
+  for (let k = 0; k < 300; k++) {
+    const had = taken.size
+    const n = nameFor(R, 'nba', { taken, real })
+    if (taken.size === had) continue                     // (nameFor ran out of tries and gave one in use: again)
+    if (!ODD_LAST.has(n.slice(n.indexOf(' ') + 1))) return n
+    taken.delete(n)
+  }
+  // (three hundred draws and none free: the lists are some 100,000 pairs, so this is a league centuries in. A middle
+  // initial, then a suffix, until one is new: it never hands back a name in use.)
+  const base = nameFor(R, 'nba', { real }), cut = base.indexOf(' ')
+  for (let k = 0; ; k++) {
+    const mid = 'ADJMRTCLKBEGHNPSW'[k % 17], n = `${base.slice(0, cut)} ${mid}.${base.slice(cut)}${k >= 17 ? ` ${'I'.repeat(1 + Math.floor(k / 17))}` : ''}`
+    if (!taken.has(n) && !real.has(n)) { taken.add(n); return n }
+  }
 }
 
 // ── The league at the start ──────────────────────────────────────────────────

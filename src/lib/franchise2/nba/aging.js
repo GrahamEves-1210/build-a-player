@@ -11,6 +11,12 @@
 // Development: a young man closes part of the gap to his ceiling every year (about a quarter at 19-23, less after),
 // with a good season's minutes speeding it up. The ceiling itself moves while he's young: most picks never reach the
 // one the scouts saw, a few blow past it (the late picks who pop). By 27 he is what he is.
+// The balance (2026-11-24, scripts/franchise2/nba-talent.mjs: 20-25 seasons, five seeds): what the classes and the
+// young men's ceilings bring in is what the decline and the retirements take out, so the league's count of 90+ men
+// (17 on opening night), 85+ (43), 80+ (126) and men 35 and older (19) stays near where it starts. Before it, 85+ ran
+// to 70-90 and 90+ to 30-35 inside ten seasons. The numbers that hold it: DECL and cliffAt (a point a year at 31-32,
+// two from 33, three past 35), the ceilings of the real men (league.js peakFor = seedPotential here), the class's
+// curve (pkMean), and how often a young man's ceiling jumps (ageMan). Change one and run the check.
 // Retirement: by age, how good he still is and his deal. Role players go at about 32-35, stars play to 36-40; a man
 // signed for next season almost never retires before 33, and a role player's career mostly ends when nobody signs him.
 //
@@ -19,7 +25,7 @@
 //                               man a year older (ag, ys, a, o, pk); builds: the GM's builds who lost a step
 //                                                       older (ag, ys, a, o, pk). Core has written car by then.
 //   careerRow(y, s, line)       a SeasonLine as a car row (the checks use it; core writes its own)
-//   ageMan(p, R, { mpg })       one man's year (mutates p); returns the OVR change
+//   ageMan(p, R, { mpg, cliff }) one man's year (mutates p); returns the OVR change (cliff false: no bad summer)
 //   retireChance(p, { under })  the chance he retires this summer (under: signed for next season)
 //   ageBuild(p, R, { mpg })     the GM's build a year older (the decline from 28; builds.js grows the young ones)
 //   notable(p)                  a career the wire and the history page keep
@@ -37,28 +43,32 @@ const ATH = new Set(['speed', 'bounce'])
 const TOUCH = new Set(['jumpShot', 'passing', 'playmaking', 'basketballIQ', 'clutch'])
 const kindOf = t => (t === 'size' ? 'size' : ATH.has(t) ? 'ath' : TOUCH.has(t) ? 'touch' : 'body')
 // the decline, grade points a year by age: [legs, body, touch]
-// (the league's curve: about flat from 26 to 30, the slide from 31, steeper past 33)
-const DECL = { 26: [0, 0, 0], 27: [0.04, 0, 0], 28: [0.1, 0.02, 0], 29: [0.17, 0.05, 0], 30: [0.28, 0.1, 0.02], 31: [0.48, 0.2, 0.04], 32: [0.66, 0.33, 0.08], 33: [0.86, 0.5, 0.14], 34: [1.2, 0.75, 0.26], 35: [1.4, 0.95, 0.36], 36: [1.55, 1.1, 0.45] }
+// (the league's curve: about flat from 26 to 29, a point a year by 31 and 32, two from 33, three past 35. The
+// summers a man turns 30 to 32 used to cost him 0.4 a year, and the league filled with 85s in their mid-thirties.)
+const DECL = { 26: [0, 0, 0], 27: [0.04, 0, 0], 28: [0.12, 0.03, 0], 29: [0.3, 0.1, 0.02], 30: [0.52, 0.22, 0.05], 31: [0.72, 0.34, 0.09], 32: [0.9, 0.46, 0.13], 33: [1.08, 0.6, 0.2], 34: [1.3, 0.8, 0.3], 35: [1.5, 1.0, 0.4], 36: [1.7, 1.2, 0.5] }
+// the cliff: the summer a veteran's body goes (the Achilles that never comes back, the knees, the year the legs are
+// gone). From 31 on a few men a year lose in one summer what the curve takes in three.
+const cliffAt = ag => (ag < 31 ? 0 : Math.min(0.16, 0.05 + 0.02 * (ag - 31)))
 const declAt = ag => (ag < 26 ? [0, 0, 0] : DECL[Math.min(36, ag)])
 // the share of the gap to his ceiling a young man closes in a year
-const RATE = { 18: 0.3, 19: 0.3, 20: 0.29, 21: 0.27, 22: 0.25, 23: 0.23, 24: 0.21, 25: 0.18, 26: 0.14, 27: 0.08 }
+const RATE = { 18: 0.3, 19: 0.3, 20: 0.29, 21: 0.27, 22: 0.25, 23: 0.23, 24: 0.21, 25: 0.17, 26: 0.1, 27: 0.05 }
 const typesOf = g => (g === 'big' ? BIG_TYPES : GUARD_TYPES)
 const OVR_PER_GRADE = 44 / 9
 
-export function ageMan(p, R, { mpg = null, coach = 0 } = {}) {
+export function ageMan(p, R, { mpg = null, coach = 0, cliff = true } = {}) {
   const ag = p.ag, g = p.g ?? groupOfPos(p.p), types = typesOf(g), a = p.a
   const o0 = p.o ?? ovrOf(p)
   // the ceiling moves while he's young: a bust's sinks, a riser's climbs (now and then a big jump: the pick who pops)
   // (and now and then a young man stalls: the jumper never comes, the body breaks down, the ceiling drops)
   if (ag <= 24) {
     const pk0 = p.pk ?? o0
-    p.pk = pk0 + R.n() * 1.7 - 0.3 + (R.u() < 0.03 ? 4 + R.u() * 6 : 0) - (ag <= 23 && R.u() < 0.03 ? 4 + R.u() * 5 : 0)
+    p.pk = pk0 + R.n() * 1.7 - 0.4 + (R.u() < 0.02 ? 4 + R.u() * 5 : 0) - (ag <= 23 && R.u() < 0.03 ? 4 + R.u() * 5 : 0)
     p.pk = clamp(Math.min(o0 - 2, pk0), 99, p.pk)
   }
-  // the breakout summer (one young man in a hundred a year): the jumper comes, the body fills out, he's a different
+  // the breakout summer (one young man in two hundred a year): the jumper comes, the body fills out, he's a different
   // player in camp (the late pick or the undrafted man who becomes a starter, now and then a star)
   let pop = 0
-  if (ag >= 20 && ag <= 24 && R.u() < 0.012) { pop = 3 + R.u() * 3; p.pk = Math.max(p.pk ?? o0, o0) + 10 + R.u() * 10 }
+  if (ag >= 20 && ag <= 24 && R.u() < 0.005) { pop = 3 + R.u() * 3; p.pk = Math.max(p.pk ?? o0, o0) + 8 + R.u() * 8 }
   // growth: part of the gap, faster for a young man who played real minutes
   let G = 0
   if (ag <= 27) {
@@ -79,7 +89,7 @@ export function ageMan(p, R, { mpg = null, coach = 0 } = {}) {
   // how he plays: more legs than jumper ages fast, a shooter with a head ages well
   const legs = ((a.speed ?? 5) + (a.bounce ?? 5)) / 2, skill = ((a.jumpShot ?? 5) + (a.basketballIQ ?? 5)) / 2
   const style = clamp(0.65, 1.5, 1 + 0.07 * (legs - skill) + (g === 'guard' ? 0.08 : -0.06))
-  const luck = Math.exp(R.n() * 0.3)
+  const luck = Math.exp(R.n() * 0.3) * (cliff && R.u() < cliffAt(ag) ? 2.4 + R.u() * 1.2 : 1)
   const [dA, dB, dT] = declAt(ag)
   for (let j = 0; j < types.length; j++) {
     const t = types[j], k = kindOf(t)
@@ -207,7 +217,7 @@ export function ageBuild(p, R, { mpg = null } = {}) {
   const was = p.o ?? ovrOf(p)
   if (p.ag >= 28) {
     const q = { ...p, a: { ...p.a } }
-    ageMan(q, R, { mpg })
+    ageMan(q, R, { mpg, cliff: false })   // (the league's curve, not its cliffs: the GM's own man never loses three years in a summer)
     for (const t of Object.keys(p.a)) {
       const d = (q.a[t] ?? p.a[t]) - p.a[t]
       if (d >= 0) continue
@@ -245,22 +255,26 @@ export function attrsFor(spot, o, R) {
   return a
 }
 // the ceiling the class's nth best prospect has, on average, and how far from it a 19-, 20-, 21-year-old is
-const pkMean = rank => 86.5 - 2.6 * Math.pow(Math.log(Math.max(1, rank)), 1.4)
+const pkMean = rank => 87.3 - 2.35 * Math.pow(Math.log(Math.max(1, rank)), 1.4)
 export function prospect(R, { rank = 30, spot = null, ag = null } = {}) {
   const sp = spot ?? R.pick(['PG', 'SG', 'SG', 'SF', 'SF', 'PF', 'PF', 'C'])
-  // right-skewed: most land near their slot, a few are far better (one pick in twenty)
-  let pk = pkMean(rank) + R.n() * 4.5 + (R.u() < 0.04 ? 5 + R.u() * 7 : 0)
+  // right-skewed: most land near their slot, a few are far better (one pick in thirty)
+  // (the top ten are the widest spread: the franchise player and the miss both come from there, so the league keeps
+  // its 90s without filling up with 85s)
+  let pk = pkMean(rank) + (rank <= 10 ? R.n() * 5.6 - 1 : R.n() * 4.5) + (R.u() < 0.03 ? 4 + R.u() * 6 : 0)
   // what the scouts can't see (hid: the board reads his ceiling without it): about one in six never develops (nearly one in three of the top ten) (his
   // ceiling is about what he is now or below it, so he slides back: the Bennetts, Thabeets and Okafors, most often the top picks, taken on what they
-  // might become); one in thirty is a late bloomer, 12-24 better than anyone thought (the second-rounder who becomes
+  // might become); one in fifty is a late bloomer, 10-20 better than anyone thought (the second-rounder who becomes
   // a star: the Jokics, Draymonds and Brunsons)
-  const age = ag ?? (rank <= 14 ? R.pick([19, 19, 19, 20, 20, 21]) : R.pick([19, 20, 20, 21, 21, 22, 22]))
+  // (his age in his rookie season, the age he turns in his draft year: one-and-done freshmen at the top of the board, more
+  // upperclassmen after the lottery, a fifth-year senior now and then)
+  const age = ag ?? (rank <= 14 ? R.pick([19, 19, 19, 20, 20, 21]) : R.pick([19, 20, 20, 21, 21, 22, 22, 22, 23]))
   const pk0 = clamp(60, 97, pk)
   const gap = Math.max(1, (25 - age) * 2 + 1 + R.n() * 2.5)
   const o = clamp(55, 84, Math.round(pk0 - gap))
   const roll = R.u()
   if (roll < (rank <= 10 ? 0.3 : 0.14)) pk = Math.min(pk0, o + 1 - R.u() * 13)
-  else if (roll > 0.965) pk = pk0 + 12 + R.u() * 12
+  else if (roll > 0.98) pk = pk0 + 10 + R.u() * 10
   pk = clamp(60, 97, pk)
   const hid = Math.round(pk - pk0)
   const [h0, h1] = HT[sp]
@@ -270,6 +284,6 @@ export function prospect(R, { rank = 30, spot = null, ag = null } = {}) {
 export function seedPotential(p, R) {
   if (p.pk != null) return p
   const room = Math.max(0, 27 - p.ag)
-  p.pk = Math.round(clamp(p.o ?? 70, 99, (p.o ?? 70) + room * (0.6 + R.u() * 1.4) + R.n() * 2.5))
+  p.pk = Math.round(clamp(p.o ?? 70, 99, (p.o ?? 70) + room * (0.35 + R.u() * 1.15) + R.n() * 2.5))
   return p
 }

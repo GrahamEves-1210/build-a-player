@@ -398,3 +398,24 @@ entries at `seasonEndDeals`.
   can't score gets easier looks (`cold*`); down three with more than eight seconds the three goes up early (the sim's
   `endgame` and the moment, `momentPlan().early`). Measured by `scripts/franchise2/nba-balance.mjs`.
 - `moments.js nameIn(p, men)`: a last name with a first initial when another man in the game shares it.
+
+### Draft, builds, development and the opening data, 2026-11-24 (the last fix round)
+
+No new fields on F or on a man. What changed behind the same shapes:
+- **Builds' picks** (`builds.js`): `buildSlots([ovr...])` gives each build his own 2026 first-round pick (a 90+ first,
+  two 90s first and second); `seatBuilds` moves the real 2026 first-rounders from a build's pick on one later, to the
+  first pick whose man the game doesn't carry, so no two men hold one pick. Only `dr[2]` moves on a real man. A save
+  from before keeps the picks it has.
+- **The class** (`draft.js`): `tagOf(p)` is the report's GEM / BUST / SOLID, read off the man (`p.tg` is only what an
+  older save stored: don't read it; `rangeOf(p).tag`). Scouting reports: `SCOUT_CARRY` (2) carry past a draft,
+  `SCOUT_MAX` (20) at most. A prospect's `ag` is the age he turns in his draft year (what the board shows).
+- **Names** (`league.js`): `freshName(R, taken)` for every made-up man (never one in `leagueNames(F)`, which now has
+  the retired list, the builds and the coaches too).
+- **Camp** (`offseason.js`): `minPool` lists only men who can sign, and everyone left when the roster is short of 14;
+  `campInvite(F)` / `campInviteOk(F)` when the street has nobody; `campCheck(F)` returns `{ ok: true, short: 1, why }`
+  for a hard-capped roster that can't add its 14th (season.js rosterFloor signs him on day 0). Use `campCheck`, not
+  `legalRoster`, to start a season.
+- **Talent** (`aging.js`): the balance and its check are in the file's header (`scripts/franchise2/nba-talent.mjs`).
+- **Data**: `ys` in data/nba-contracts.js is years of NBA service (a season lost to injury counts); `rk: 1` there = still
+  a rookie; `NBA_FRANCHISE_SERVICE` (data/nba-franchise-roster.js) for the real men with no contract row. Team colours
+  newer than data/nba-teams.js: `COLORS_NOW` in league.js (Franchise only).
