@@ -428,13 +428,14 @@ const POS_TYPES = { guard: GUARD_TYPES, big: BIG_TYPES }
 // seed and the spin to deal next, so a reload never rerolls one). A Daily Challenge build counts only on its own day,
 // while that run is still going; a Compete pool or a Blacktop build is never kept (a reload forfeits those).
 const PROGRESS_KEY = 'bab_progress'
-const BUILD_PAGE_OF = { squad: 'squad-build', career: 'career-build' }
+const BUILD_PAGE_OF = { squad: 'squad-build', career: 'career-build', nbafranchise: 'nbafranchise-build' }
 function readProgress() {
   if (readLive('bucket')) return null   // a season kept on the device: its build is the one that comes back
   try {
     const p = JSON.parse(localStorage.getItem(PROGRESS_KEY))
     if (!p || (p.gameMode !== 'classic' && p.gameMode !== 'all-time') || !POS_TYPES[p.position] || !p.build || typeof p.build !== 'object') return null
     if (p.tk && !BUILD_PAGE_OF[p.tk]) return null
+    if (p.tk === 'nbafranchise' && !(NBA_FRANCHISE_LIVE && p.job?.id)) return null   // (a Franchise build: only with the mode on, and the spot in the setup it's for)
     if (p.daily) {
       const r = JSON.parse(localStorage.getItem('bab_daily_run') || 'null'), dc = dailyState()
       if (!(r && r.key === p.daily && r.key === dc.key && dc.sport === 'bucket' && !dc.done)) return null
@@ -689,7 +690,7 @@ export default function BucketApp() {
     if (!IS_APP && !APP_LOOK) return
     window.__bapPage = { page, sport: 'bucket' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
-    if (['game', 'sim', 'salarycap', 'squad', 'squad-build', 'career', 'career-build', 'blacktop', 'blacktop-build', 'blacktop-game'].includes(page)) lastPlayRef.current = page
+    if (['game', 'sim', 'salarycap', 'squad', 'squad-build', 'career', 'career-build', 'blacktop', 'blacktop-build', 'blacktop-game', 'nbafranchise', 'nbafranchise-build'].includes(page)) lastPlayRef.current = page
   }, [page])
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
@@ -701,13 +702,15 @@ export default function BucketApp() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build' || page === 'cbb') return
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build' || page === 'cbb' || page === 'nbafranchise' || page === 'nbafranchise-build') return
         const live = btPhaseRef.current, last = lastPlayRef.current
         if (live !== 'idle') setPage(btPageFor(live))                                   // a live run always comes first
         else if (last === 'squad' && squadRef.current) setPage('squad')
         else if (last === 'squad-build' && gameMode) setPage('squad-build')
         else if (last === 'career' && careerRef.current) setPage('career')
         else if (last === 'career-build' && gameMode) setPage('career-build')
+        // (a Franchise build left half done: back to it, or to the front office, which picks it up; never onto the plain build page, where it would play a season of its own)
+        else if (NBA_FRANCHISE_LIVE && (last === 'nbafranchise' || last === 'nbafranchise-build' || tkRef.current === 'nbafranchise')) setPage(last === 'nbafranchise-build' && gameMode && nbaJob.current ? 'nbafranchise-build' : 'nbafranchise')
         // (a season played or in progress: straight back to it, as football's CONTINUE does: still playing, where it was)
         else if (gameMode && gameMode !== 'salarycap' && simResult) { const v = readLive('bucket'); setSimInitialScreen(v ? 0 : 4); setPage('sim') }
         else if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
@@ -1155,10 +1158,10 @@ export default function BucketApp() {
   // back to it (nbaBuilt) and the mode keeps it.
   //   job: { id, pos, n, of, team }   the build's id in the setup, guard or big, "player n of of" for the bar, and the
   //   franchise's team: the figure wears its uniform while he's built (Silhouette kitTeam)
-  const nbaJob = useRef(null)
+  const nbaJob = useRef((saved?.tk === 'nbafranchise' && saved.job) || null)   // (a reload in the middle of the build: its spot and its team, from the save)
   const [nbaBuilt, setNbaBuilt] = useState(null)
   const startNbaFranchiseBuild = useCallback(job => {
-    const same = nbaJob.current?.id === job.id && gameMode === 'classic' && position === job.pos
+    const same = nbaJob.current?.id === job.id && gameMode === 'classic' && position === job.pos && tkRef.current === 'nbafranchise'
     if (!same) handleStart('classic', job.pos)
     nbaJob.current = job
     if (!same) sandboxTainted.current = isBucketCustomMode
@@ -1187,6 +1190,7 @@ export default function BucketApp() {
   const tkRef = useRef(saved?.tk ?? null)
   if (page === 'squad-build') tkRef.current = 'squad'
   else if (page === 'career-build') tkRef.current = 'career'
+  else if (page === 'nbafranchise-build') tkRef.current = 'nbafranchise'
   else if (page === 'game') tkRef.current = competeOn ? 'compete' : null
   else if (isVersusMode) tkRef.current = 'live'
   // (only a build this page has had: a page that never loaded the save leaves it alone)
@@ -1201,14 +1205,16 @@ export default function BucketApp() {
         gameMode, position, build, tk, daily: dailyRun?.key ?? null,
         sandbox: sandboxTainted.current || isBucketCustomMode,
         starters: startersPick && isBucketCustomMode, oneTeam: oneTeamPick && isBucketCustomMode ? oneTeamPick : null,
-        ...(tk === 'career' ? { cn: careerNew.current } : null),
+        // (a Franchise build: the spot in the setup it's for and the franchise's team, so a reload comes back to the same
+        // build in the same uniform)
+        ...(tk === 'career' ? { cn: careerNew.current } : tk === 'nbafranchise' && nbaJob.current ? { job: nbaJob.current } : null),
       }))
     } catch {}
   }, [build, gameMode, position, dailyRun, page, isBucketCustomMode, startersPick, oneTeamPick])
   // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
-  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])   // (College Basketball marks its own)
+  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])   // (College Basketball marks its own)
   // Home's CONTINUE card: which build it is
-  const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : 'Current'
+  const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'nbafranchise' ? 'Franchise' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : 'Current'
 
   // Opened (or refreshed) straight on /bucket/salary → go to Salary Cap. Read
   // at load: the URL-sync effect resets the path to /bucket on the first render.

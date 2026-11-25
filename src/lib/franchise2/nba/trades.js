@@ -1118,7 +1118,7 @@ export function summerTrades(F, n = 4) {
 // line. Both sides answer by their own books (teamSide, decide); the seller, under orders to cut payroll, gives up
 // about a point of value for every $1M it clears, no more.
 import { spendLines } from './contracts'
-function shedOne(F, a, S, line) {
+function shedOne(F, a, S, line, give = 1) {
   const year = capYear(F), ly = lyOf(F)
   const need = payroll(F, a, year) - line(a)
   if (need <= 0.05) return false
@@ -1159,7 +1159,8 @@ function shedOne(F, a, S, line) {
         // (the seller: under orders to cut payroll, it gives up about a point of value for every $1M it clears, no
         // more: a real asset doesn't go for nothing, it brings a pick back)
         const sideA = teamSide(F, a, { pl: q ? [q] : [], pk: [] }, { pl: [p], pk: pkOf(F, pa, a, b) })
-        const short = sideA.out - sideA.in - (5 + 0.9 * Math.min(need + 2, sal - back))
+        // (give: a team clearing the room for a star it's about to sign lets more go for it, market.js clearRoom)
+        const short = sideA.out - sideA.in - (5 + 0.9 * Math.min(need + 2, sal - back)) * give
         let pb = []
         if (short > 0) {
           if (pa.length) continue
@@ -1179,7 +1180,7 @@ function shedOne(F, a, S, line) {
 // one team moves salary until its payroll is down to `target` (a front office making room to keep a star of its
 // own): the same trades, the other teams inside their own lines. Returns wire items; the caller reads the payroll.
 // (held(s): money team s is holding for free agents of its own, market.js: it takes on no salary past that)
-export function shedTo(F, a, target, { held = null } = {}) {
+export function shedTo(F, a, target, { held = null, give = 1 } = {}) {
   if (a === F.team) return []
   SINK = []
   const year = capYear(F)
@@ -1187,7 +1188,7 @@ export function shedTo(F, a, target, { held = null } = {}) {
   const L = Object.fromEntries(S.map(s => [s, spendLines(F, s, year).keep - (held?.(s) ?? 0)]))
   const line = s => (s === a ? target : L[s])
   let n = 0
-  while (n++ < 5 && payroll(F, a, year) > target + 0.05) if (!shedOne(F, a, S, line)) break
+  while (n++ < 5 && payroll(F, a, year) > target + 0.05) if (!shedOne(F, a, S, line, give)) break
   const out = SINK
   SINK = null
   return out
