@@ -22,6 +22,8 @@
 //  shooting shooter(v, o) → the shot in progress (power bar, aim, the timed finish) · strikeOf(k, from, o) → a shot
 //           shotAt(shot, t) → the ball in flight · keeperSave(shot, keeper, o) · shotHud(ctx, view, k, o)
 //           aimMark(ctx, C, x, y, o) · aimTo(sx, sy) · SHOT_TYPES
+//           draw the shot: stroke() · strokeDown/strokeMove/strokeUp · readStroke(st, C, o) → the shot's read ·
+//           drawnShot(k, read, t, windup) · strokeTrail(ctx, st, t, o) · ghostStroke(...) · onGoal(C, x, y) · DRAW
 //  controls padCtl() · padInput(c, a, vh, { down, up }) · padStick(c) · drawPads(ctx, view, c, labels, live) · padLayout(h)
 //
 // Real sizes: the goal 7.32 by 2.44, the box 16.5 deep and 40.32 wide, the six-yard box 5.5 by 18.32, the spot at 11,
@@ -1074,17 +1076,18 @@ export function shooter(v, o = {}) {
   const tv = clamp((v - 1) / 10, 0, 1), fill = o.fill ?? 820, windup = o.windup ?? 190
   const k = {
     phase: 'idle', type: 'driven', at: 0, power: 0, aim: { x: 0, y: -0.2 }, relAt: 0, strikeAt: 0, tapAt: null, timed: 'none',
+    drawn: null, drawing: false,   // (a drawn shot: readStroke's read of it; drawing: a finger's on it now)
     fill, windup, tv, pressure: o.pressure ?? 0,
     // the perfect-strike window (ms either side of the strike), and the near-miss band round it
     green: lerp(24, 56, tv) * (1 - 0.3 * (o.pressure ?? 0) * (1 - tv)),
     press(t, type = 'driven') { if (k.phase !== 'idle') return false; k.phase = 'power'; k.type = type; k.at = t; k.power = 0; return true },
     // (the stick's circle spread to the goal's square: pushed into a corner, it's the corner)
-    aimAt(x, y) { if (k.phase === 'done') return; const m = Math.min(1, Math.hypot(x, y)), c = Math.max(Math.abs(x), Math.abs(y)); if (c > 0.01) { x = (x / c) * m; y = (y / c) * m } k.aim.x = clamp(x, -1, 1); k.aim.y = clamp(y, -1, 1) },
+    aimAt(x, y) { if (k.phase === 'done' || k.drawn) return; const m = Math.min(1, Math.hypot(x, y)), c = Math.max(Math.abs(x), Math.abs(y)); if (c > 0.01) { x = (x / c) * m; y = (y / c) * m } k.aim.x = clamp(x, -1, 1); k.aim.y = clamp(y, -1, 1) },
     powerAt(t) { return k.phase === 'power' ? clamp((t - k.at) / fill, 0, 1) : k.power },
     release(t) { if (k.phase !== 'power') return false; k.power = clamp((t - k.at) / fill, 0, 1); k.phase = 'strike'; k.relAt = t; k.strikeAt = t + windup; return true },
     // a second tap: the timed finish
     tap(t) {
-      if (k.phase !== 'strike' || k.tapAt != null) return false
+      if (k.phase !== 'strike' || k.tapAt != null || k.drawn) return false
       k.tapAt = t
       const e = Math.abs(t - k.strikeAt)
       k.timed = e <= k.green ? 'green' : e <= k.green * 2.6 ? 'ok' : 'red'
@@ -1092,25 +1095,35 @@ export function shooter(v, o = {}) {
     },
     // held right to the end of the bar: it goes anyway, at full power
     tick(t) {
-      if (k.phase === 'power' && t - k.at >= fill + 160) { k.power = 1; k.phase = 'strike'; k.relAt = t; k.strikeAt = t + windup * 0.6 }
-      if (k.phase === 'strike' && t >= k.strikeAt + Math.max(70, k.green * 2.6)) { k.phase = 'done'; return true }
+      if (k.phase === 'power' && !k.drawing && t - k.at >= fill + 160) { k.power = 1; k.phase = 'strike'; k.relAt = t; k.strikeAt = t + windup * 0.6 }
+      // (a drawn shot has no second tap to wait for: he strikes it as he gets there)
+      if (k.phase === 'strike' && t >= k.strikeAt + (k.drawn ? 0 : Math.max(70, k.green * 2.6))) { k.phase = 'done'; return true }
       return false
     },
-    reset() { k.phase = 'idle'; k.power = 0; k.tapAt = null; k.timed = 'none' },
+    // a drawn one's clean-strike band: the top of the range, just short of where it goes over (wider the better the
+    // finisher, narrower under pressure). In it, with a steady line, it's struck as sweetly as a perfectly timed one
+    band(type) { const D = SHOT_TYPES[type] ?? SHOT_TYPES.driven, w = lerp(0.12, 0.22, tv) * (1 - 0.3 * (o.pressure ?? 0) * (1 - tv)); return [D.over - w, D.over] },
+    // a finger's gone down to draw it: he shapes to shoot (no bar filling: the stroke is the power)
+    shape(t) { if (k.phase !== 'idle') return false; k.phase = 'power'; k.type = 'driven'; k.at = t; k.power = 0; k.drawing = true; return true },
+    reset() { k.phase = 'idle'; k.power = 0; k.tapAt = null; k.timed = 'none'; k.drawn = null; k.drawing = false },
   }
   return k
 }
 // The shot itself, struck from (x, z) at the goal at z = 0. o: { v, r (the game's random), foot (1 right, -1 left),
 // weak (on his weaker foot), speed (0-1 how fast he's going), pressure (0-1 a defender on him), dist override, y0 }
+// drawErr: a drawn shot's scatter, against the rest (a game whose goal is small in the picture, where the finger's own
+// error is already metres, asks for less)
 // Returns { type, from, to, T (ms in the air), curve, apex, power, timed, err, onTarget, over, wide, speed }
 export function strikeOf(k, from, o = {}) {
   const D = SHOT_TYPES[k.type] ?? SHOT_TYPES.driven, r = o.r ?? Math.random
-  const tv = clamp(((o.v ?? 6) - 1) / 10, 0, 1), p = k.power
+  const tv = clamp(((o.v ?? 6) - 1) / 10, 0, 1), p = k.power, dr = k.drawn
   const dist = Math.hypot(from.x, from.z)
-  // where he's aiming: across the goal, low to high (the inside of the posts and the bar)
+  // where he's aiming: across the goal, low to high (the inside of the posts and the bar). A drawn shot goes where
+  // the stroke ended, wherever that is: right in the corner, or off the frame altogether
   let ax = k.aim.x * (POST - 0.7), ay = lerp(0.3, BAR - 0.45, (k.aim.y + 1) / 2)
-  if (D.low) ay = 0.22
-  if (D.chip) ay = lerp(1.1, 2.0, (k.aim.y + 1) / 2)
+  if (dr) { ax = dr.x; ay = D.chip ? clamp(dr.y, 0.9, 2.3) : D.low ? Math.min(dr.y, 0.5) : dr.y }
+  else if (D.low) ay = 0.22
+  else if (D.chip) ay = lerp(1.1, 2.0, (k.aim.y + 1) / 2)
   // how far off it goes: the grade, the range, the power, the type, the body, the pressure, the strike
   const foot = o.foot ?? 1
   const across = D.curve ? 0 : (foot > 0 ? clamp(-(ax - from.x * 0.3) / 3, 0, 1) : clamp((ax - from.x * 0.3) / 3, 0, 1))
@@ -1119,7 +1132,10 @@ export function strikeOf(k, from, o = {}) {
   const timed = k.timed === 'green' ? 0.3 : k.timed === 'ok' ? 0.82 : k.timed === 'red' ? 1.75 : 1
   const range = clamp(dist / 16, 0.45, 2)
   const pw = D.chip ? 0.7 + 0.6 * Math.abs(p - 0.5) : 0.42 + 1.3 * p * p
-  const err = lerp(0.9, 0.3, tv) * range * D.acc * pw * body * press * timed
+  // (a drawn one: the outside of the boot is the harder strike, and a shaky stroke a less clean one, the more so the
+  // poorer the finisher)
+  const drawK = dr ? (dr.outside ? DRAW.outsideErr : 1) * (1 + clamp(dr.wobble * 10, 0, 0.6) * lerp(1, 0.4, tv)) * DRAW.err * (o.drawErr ?? 1) : 1
+  const err = lerp(0.9, 0.3, tv) * range * D.acc * pw * body * press * timed * drawK
   let tx = ax + gaussOf(r) * err, ty = ay + gaussOf(r) * err * 0.55
   // too much on it: up and over (a chip with too much on it clears the bar, with too little drops short)
   let over = false
@@ -1127,22 +1143,28 @@ export function strikeOf(k, from, o = {}) {
   if (k.timed === 'red' && r() < 0.35) ty += 0.9
   ty = Math.max(D.low ? 0.11 : 0.15, ty)
   const wide = Math.abs(tx) > POST - 0.12
-  const speed = lerp(D.speed[0], D.speed[1], D.chip ? clamp(p, 0, 1) : p) * (k.timed === 'green' ? 1.06 : k.timed === 'red' ? 0.9 : 1) * (o.pace ?? lerp(0.84, 1.08, tv))
+  const speed = lerp(D.speed[0], D.speed[1], clamp(p, 0, 1)) * (k.timed === 'green' ? 1.06 : k.timed === 'red' ? 0.9 : 1) * (o.pace ?? lerp(0.84, 1.08, tv))
   const L = Math.hypot(tx - from.x, -from.z), T = (L / speed) * 1000 * (D.chip ? 1.15 : 1)
   // the curl: out and back in, toward the far post (the side he's aiming)
-  const curve = D.curve ? -(Math.sign(tx - from.x) || 1) * lerp(0.9, 2.1, clamp(L / 22, 0, 1)) : 0
+  // (drawn: the stroke's own bend, as much as his grade gets on it; the outside of the boot gets less)
+  const curve = dr ? curlOf(dr, L, tv, r) : D.curve ? -(Math.sign(tx - from.x) || 1) * lerp(0.9, 2.1, clamp(L / 22, 0, 1)) : 0
   const apex = D.chip ? lerp(2.2, 3.6, clamp(L / 18, 0, 1)) + (p - 0.5) : D.apex * clamp(L / 16, 0.4, 1.4)
-  return { type: k.type, label: D.label, from: { x: from.x, z: from.z, y: o.y0 ?? 0.11 }, to: { x: tx, y: ty }, T, curve, apex, power: p, timed: k.timed, err, over, wide, onTarget: !over && !wide && ty < BAR - 0.11, speed, low: !!D.low, chip: !!D.chip, dip: !!D.dip }
+  return { type: k.type, label: dr ? dr.label : D.label, from: { x: from.x, z: from.z, y: o.y0 ?? 0.11 }, to: { x: tx, y: ty }, T, curve, apex, power: p, timed: k.timed, err, over, wide, onTarget: !over && !wide && ty < BAR - 0.11, speed, low: !!D.low, chip: !!D.chip, dip: !!D.dip, drawn: !!dr, late: !!dr, lob: !!dr, outside: !!dr?.outside }
 }
 // The ball in flight, ms after the strike: to the goal line at f = 1 and on through it (the game takes it from there)
+// (a drawn shot's curl bends late, the way a struck ball does: out on its line, then whipped in as it slows. Lofted,
+// it dips: up quickly, and down late onto its spot)
+const lateBend = g => (g - g * g * g * g) / 0.4725
+const dipArc = g => (g - g * g * g) / 0.3849
 export function shotAt(s, ms) {
-  const f = ms / s.T, g = clamp(f, 0, 1.4)
-  const x = lerp(s.from.x, s.to.x, g) + s.curve * Math.sin(clamp(g, 0, 1) * Math.PI) * (g > 1 ? 0 : 1)
+  const f = ms / s.T, g = clamp(f, 0, 1.4), c = clamp(g, 0, 1)
+  const x = lerp(s.from.x, s.to.x, g) + s.curve * (s.late ? lateBend(c) : Math.sin(c * Math.PI)) * (g > 1 ? 0 : 1)
   const z = lerp(s.from.z, 0, g)
   let y
-  if (s.low) { const b = Math.abs(Math.sin(clamp(g, 0, 1) * Math.PI * 1.5)); y = 0.11 + b * 0.22 + lerp(0, s.to.y - 0.11, g) }
-  else if (s.dip) y = lerp(s.from.y, s.to.y, g) + s.apex * Math.sin(clamp(g, 0, 1) * Math.PI) + (g < 1 ? (1 - g) * g * 0.8 : 0)
-  else y = lerp(s.from.y, s.to.y, g) + s.apex * Math.sin(clamp(g, 0, 1) * Math.PI)
+  if (s.low) { const b = Math.abs(Math.sin(c * Math.PI * 1.5)); y = 0.11 + b * 0.22 + lerp(0, s.to.y - 0.11, g) }
+  else if (s.dip) y = lerp(s.from.y, s.to.y, g) + s.apex * Math.sin(c * Math.PI) + (g < 1 ? (1 - g) * g * 0.8 : 0)
+  else if (s.lob) y = lerp(s.from.y, s.to.y, g) + s.apex * dipArc(c)
+  else y = lerp(s.from.y, s.to.y, g) + s.apex * Math.sin(c * Math.PI)
   return { x, y: Math.max(0.11, y), z, f, spin: g * 16 }
 }
 // Does the keeper get to it? K: { x, z, reach (m he can cover, standing to full stretch), react (ms), read (-1..1:
@@ -1170,9 +1192,15 @@ export function shotHud(ctx, view, k, o = {}) {
   const t = o.t ?? 0
   if (!k || k.phase === 'idle' || (k.phase === 'done' && t - k.strikeAt > 600)) return
   const w = 150, h = 9, x0 = view.w / 2 - w / 2, y = o.y ?? view.h - 186
-  const D = SHOT_TYPES[k.type] ?? SHOT_TYPES.driven, p = k.powerAt(t)
+  if (k.drawing) return   // (the stroke's trail shows its own pace while it's being drawn)
+  const D = SHOT_TYPES[k.type] ?? SHOT_TYPES.driven, p = Math.min(1, k.powerAt(t))
   ctx.fillStyle = 'rgba(6,8,10,.8)'; rr(ctx, x0 - 8, y - 20, w + 16, h + 28, 4); ctx.fill()
-  text(ctx, D.label, x0, y - 10, { font: LABEL, size: 12, align: 'left', track: 1.2, color: '#c6c7cb' })
+  text(ctx, k.drawn ? k.drawn.label : D.label, x0, y - 10, { font: LABEL, size: 12, align: 'left', track: 1.2, color: '#c6c7cb' })
+  // (a drawn one in its clean-strike band: said over the bar, in gold)
+  if (k.drawn && k.timed === 'green') {
+    ctx.fillStyle = 'rgba(6,8,10,.8)'; rr(ctx, x0 + w - 98, y - 46, 106, 22, 4); ctx.fill()
+    text(ctx, 'CLEAN STRIKE', x0 + w - 45, y - 34, { font: LABEL, size: 14, track: 1.2, color: '#f7cf55' })
+  }
   // the over-the-bar end
   const ov = x0 + w * D.over
   ctx.fillStyle = '#26282c'; ctx.fillRect(x0, y, w, h)
@@ -1180,16 +1208,16 @@ export function shotHud(ctx, view, k, o = {}) {
   ctx.strokeStyle = 'rgba(242,242,238,.28)'; ctx.lineWidth = 1.2
   for (let i = -2; i < 12; i++) { ctx.beginPath(); ctx.moveTo(ov + i * 5, y + h); ctx.lineTo(ov + i * 5 + h, y); ctx.stroke() }
   ctx.restore()
-  ctx.fillStyle = p > D.over ? '#ff5a48' : '#f2f2ee'; ctx.fillRect(x0, y, w * p, h)
+  ctx.fillStyle = k.powerAt(t) > D.over ? '#ff5a48' : '#f2f2ee'; ctx.fillRect(x0, y, w * p, h)
   ctx.strokeStyle = 'rgba(242,242,238,.5)'; ctx.lineWidth = 1; ctx.strokeRect(x0 + 0.5, y + 0.5, w - 1, h - 1)
   // the timed finish: a ring closing on the strike, the window in chalk
-  if (k.phase === 'strike' || (k.phase === 'done' && t - k.strikeAt < 500)) {
+  if (!k.drawn && (k.phase === 'strike' || (k.phase === 'done' && t - k.strikeAt < 500))) {
     const cx = x0 + w - 6, cy = y - 10, left = k.strikeAt - t
     const f = clamp(1 - left / k.windup, 0, 1.4)
     ctx.strokeStyle = '#f2f2ee'; ctx.lineWidth = 1.6
     ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.2832); ctx.stroke()
     if (k.phase === 'strike' && f < 1.2) { ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(cx, cy, 4 + (1 - Math.min(1, f)) * 12, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1 }
-    const word = k.timed === 'green' ? 'PERFECT' : k.timed === 'ok' ? 'GOOD' : k.timed === 'red' ? 'MISTIMED' : null
+    const word = k.drawn ? null : k.timed === 'green' ? 'PERFECT' : k.timed === 'ok' ? 'GOOD' : k.timed === 'red' ? 'MISTIMED' : null
     if (word) text(ctx, word, cx - 12, cy, { font: LABEL, size: 12, align: 'right', track: 1, color: k.timed === 'green' ? '#f7cf55' : k.timed === 'red' ? '#ff8a7a' : '#f2f2ee' })
   }
 }
@@ -1207,6 +1235,193 @@ export function aimMark(ctx, C, ax, ay, o = {}) {
 }
 // where on the goal face a stick (or arrow keys) points: x across (-1 the left post), y up (-1 low, 1 high)
 export const aimTo = (sx, sy) => ({ x: (POST - 0.7) * clamp(sx, -1, 1), y: lerp(0.3, BAR - 0.45, (clamp(sy, -1, 1) + 1) / 2) })
+
+// ── Draw the shot: the stroke is the strike ─────────────────────────────────
+// The way the best phone football games do it: a finger (or the mouse) on the ball, and draw the shot. The stroke is
+// the strike, and the shooting model above takes it from there (strikeOf, shotAt, keeperSave):
+//   where it ends   the spot on the goal: draw it into the top corner and that's where he's putting it. A stroke that
+//                   stops short of the goal line goes on along its line, along the grass (the low one)
+//   how quick       the pace: a quick stroke is struck hard, a slow one stroked. Too quick and he's leaned back: it
+//                   balloons over the bar. The trail shows it as it's drawn: chalk, gold at the top of the range, red
+//                   when it's going over
+//   its bend        the curl: a stroke bowed out one way and back in is bent with the inside of the boot, bowed the
+//                   other way it's the outside of the boot (less bend on it, harder to keep on target). Bowed to the
+//                   right is the inside for a right-footer. The ball goes out on its line and bends in late
+//   slow and lifted the chip: a soft stroke up into the goal is the dink over the keeper (from twelve yards, the Panenka)
+// The striker's grade shapes all of it: a good finisher's stroke comes off truer (less scatter, more bend in his boot),
+// a poor one's wilder, and a shaky line costs him more.
+//   stroke()                                 the stroke's state (the points, in the picture's units)
+//   strokeDown(st, x, y, t, id, ball)        the finger goes down; ball: the ball's point in the picture. The stroke is
+//                                            drawn from the ball wherever the finger lands (it's moved onto it)
+//   strokeMove(st, x, y, t, id) · strokeUp(st, x, y, t, id)
+//   readStroke(st, C, o) → { x, y (the spot on the goal face, m), power, bend, curl, outside, type, label, short }
+//                          or { tap } (too short to be a shot) or { back, dx, dy } (drawn back toward his own goal)
+//                          o: { foot (1 right, -1 left), base ('driven', or 'pen' for a penalty), origin (the ball's
+//                          point, when the stroke's drawn away from it: a run-of-play game's right thumb) }
+//   drawnShot(k, read, t, windup)            the shooter set to strike it as drawn, windup ms from now
+//   strokeTrail(ctx, st, t, { C, k, ... })   the trail while it's drawn and just after, and where a short one's going
+//                                            (with o.origin, a ring on the goal where it's going, all the way)
+//   ghostStroke(ctx, from, to, bend, age)    the first shot's teaching stroke (three goes, then it stops)
+//   onGoal(C, x, y)                          the point of the goal face (z = 0) under a point of the picture
+//   DRAW                                     the numbers: the pace to power, the bend to curl
+export const DRAW = {
+  minLen: 22,                // px: shorter than this is a tap, not a shot
+  s0: 0.15, s1: 1.9,         // px/ms: a stroke this quick is no power, this quick full power (quicker balloons)
+  maxP: 1.25,
+  dead: 0.08, full: 0.32,    // the bend (its bow over its length) that starts to curl it, and the most he can put on it
+  chipP: 0.42, chipY: 1.0,   // softer than this, up into the goal: the chip
+  lowY: 0.5, yLow: 0.22,     // under this it's driven along the grass; a short stroke goes in at this height
+  err: 0.7, outsideErr: 1.35,
+}
+// the point on the goal face (z = 0) a point in the picture sits over (the lens may be turned)
+export function onGoal(C, sx, sy) {
+  const u = (sx - C.vx) / C.F, cy = C.yaw ? C.cy : 1, sn = C.yaw ? C.sn : 0
+  const dx = (-C.z * (u * cy + sn)) / (cy - u * sn)
+  const d = dx * sn - C.z * cy
+  return { x: C.x + dx, y: C.y - ((sy - C.hz) * d) / C.F }
+}
+let LEARNT = 0               // drawn shots this visit: the teaching stroke stops after the first couple
+export const drawnSoFar = () => LEARNT
+export function stroke() { return { id: null, on: false, pts: [], ox: 0, oy: 0, at: 0, upAt: -1e9 } }
+export function strokeDown(st, x, y, t, id, ball) {
+  if (st.on) return false
+  st.on = true; st.id = id; st.at = t
+  st.ox = ball ? ball.x - x : 0; st.oy = ball ? ball.y - y : 0
+  st.pts.length = 0; st.pts.push({ x: x + st.ox, y: y + st.oy, t })
+  return true
+}
+export function strokeMove(st, x, y, t, id) {
+  if (!st.on || id !== st.id) return false
+  const q = st.pts[st.pts.length - 1], X = x + st.ox, Y = y + st.oy
+  if (Math.hypot(X - q.x, Y - q.y) >= 1.2 && st.pts.length < 400) st.pts.push({ x: X, y: Y, t })
+  return true
+}
+export function strokeUp(st, x, y, t, id) {
+  if (!st.on || id !== st.id) return false
+  strokeMove(st, x, y, t, id)
+  st.on = false; st.upAt = t; st.id = null
+  return true
+}
+// its pace: the length over the time the finger was moving (a hold before it starts doesn't count; while it's still
+// being drawn, a stop does)
+function paceOf(pts, now = null) {
+  const n = pts.length, P0 = pts[0]
+  let len = 0, t0 = null
+  for (let i = 1; i < n; i++) { len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); if (t0 == null && Math.hypot(pts[i].x - P0.x, pts[i].y - P0.y) > 6) t0 = pts[i - 1].t }
+  const t1 = now ?? pts[n - 1].t, dur = Math.max(24, t1 - (t0 ?? P0.t))
+  const speed = len / dur
+  return { len, dur, speed, power: clamp((speed - DRAW.s0) / (DRAW.s1 - DRAW.s0), 0, DRAW.maxP) }
+}
+export function readStroke(st, C, o = {}) {
+  const pts = st.pts, n = pts.length, P0 = pts[0]
+  if (!P0 || n < 2) return { tap: true }
+  const pace = paceOf(pts)
+  if (pace.len < DRAW.minLen) return { tap: true }
+  const E = pts[n - 1], cx = E.x - P0.x, cy = E.y - P0.y, cl = Math.hypot(cx, cy) || 1
+  // drawn back toward his own goal (or flat across): not a shot
+  if (cy > -0.3 * cl) return { back: true, dx: cx / cl, dy: cy / cl, len: pace.len }
+  // the bend: how far it bows off the straight line from the ball to where it ends, over that line's length (+ to the
+  // right of it), and how much it shakes about its own smooth line
+  const nx = -cy / cl, ny = cx / cl, ds = []
+  let dmax = 0
+  for (const q of pts) { const d = (q.x - P0.x) * nx + (q.y - P0.y) * ny; ds.push(d); if (Math.abs(d) > Math.abs(dmax)) dmax = d }
+  let w2 = 0
+  for (let i = 2; i < n - 2; i++) { const m = (ds[i - 2] + ds[i - 1] + ds[i] + ds[i + 1] + ds[i + 2]) / 5; w2 += (ds[i] - m) ** 2 }
+  const bend = dmax / cl, wobble = n > 6 ? Math.sqrt(w2 / (n - 4)) / cl : 0
+  // the spot: where it ends on the goal face, or on along its line to the goal line when it stops short (o.origin: the
+  // stroke was drawn somewhere else, on the thumb's side of the screen: it's read as though drawn from there, the ball)
+  const ox = o.origin ? o.origin.x - P0.x : 0, oy = o.origin ? o.origin.y - P0.y : 0
+  const B = onGoal(C, P0.x + ox, P0.y + oy), G = onGoal(C, E.x + ox, E.y + oy)
+  let x = G.x, y = G.y, short = false
+  if (y < DRAW.yLow) { const den = G.y - B.y; if (den > 0.01) x = B.x + ((DRAW.yLow - B.y) / den) * (G.x - B.x); y = DRAW.yLow; short = true }
+  x = clamp(x, -(POST + 3), POST + 3); y = clamp(y, 0.12, BAR + 2.5)
+  const foot = o.foot ?? 1, pen = o.base === 'pen', power = pace.power
+  const curl = Math.abs(bend) >= DRAW.dead, outside = curl && Math.sign(bend) === -foot
+  // (o.base: the game's plain strike: 'driven', 'pen' for a penalty, 'volley' for one hit first time)
+  const base = o.base ?? 'driven'
+  let type, label
+  if (power < DRAW.chipP && y > DRAW.chipY) { type = 'chip'; label = pen && Math.abs(x) < 1.1 ? 'PANENKA' : 'CHIP' }
+  else if (curl) { type = pen ? 'pen' : 'finesse'; label = outside ? 'OUTSIDE OF THE BOOT' : pen ? 'PLACED' : 'CURLER' }
+  else if (base === 'driven' && y < DRAW.lowY) { type = 'low'; label = 'LOW DRIVEN' }
+  else { type = base; label = { pen: 'PENALTY', volley: 'FIRST TIME' }[base] ?? 'DRIVEN' }
+  return { x, y, power, bend: type === 'chip' ? 0 : bend, wobble, curl: curl && type !== 'chip', outside: outside && type !== 'chip', type, label, short, len: pace.len, dur: pace.dur, speed: pace.speed }
+}
+// the bend he gets on it: the stroke's bow, as much as his boot has in it from there
+function curlOf(dr, L, tv, r) {
+  if (!dr.curl) return 0
+  const amt = clamp((Math.abs(dr.bend) - DRAW.dead) / (DRAW.full - DRAW.dead), 0, 1)
+  const most = lerp(0.35, 2.4, clamp((L - 8) / 18, 0, 1)) * lerp(0.6, 1.1, tv) * (dr.outside ? 0.62 : 1)
+  return Math.sign(dr.bend) * amt * most * (1 + gaussOf(r) * 0.12 * (1.2 - tv))
+}
+export function drawnShot(k, rd, t, windup = k.windup) {
+  k.drawn = rd; k.drawing = false; k.type = rd.type
+  k.power = rd.type === 'chip' ? lerp(0.3, 0.72, clamp(rd.power / DRAW.chipP, 0, 1)) : rd.power
+  k.aim.x = clamp(rd.x / (POST - 0.7), -1.6, 1.6); k.aim.y = clamp(((rd.y - 0.3) / (BAR - 0.75)) * 2 - 1, -1, 1.8)
+  k.phase = 'strike'; k.at = t; k.relAt = t; k.strikeAt = t + windup; k.tapAt = null; k.timed = 'none'
+  const [lo, hi] = k.band(rd.type)
+  if (rd.type !== 'chip' && rd.power >= lo && rd.power <= hi && rd.wobble < 0.025) k.timed = 'green'
+  LEARNT++
+}
+// The trail: chalk on an ink edge, thicker the quicker it's drawn, gold at the top of the range and red once it's
+// going over (o.over: the power that does it). A stroke that stops short shows where it's going on, dotted, to the
+// spot. It fades once he's struck it
+export function strokeTrail(ctx, st, t, o = {}) {
+  const pts = st.pts, n = pts.length
+  if (n < 2) return
+  const age = st.on ? 0 : t - st.upAt
+  if (age > 520) return
+  const pace = paceOf(pts, st.on ? t : null)
+  // (the band for the shot it is so far: o.k, the shooter, and o.base, the game's own strike)
+  let lo = (o.over ?? 0.8) - 0.18, hi = o.over ?? 0.8
+  if (o.k && o.C) { const rd = readStroke(st, o.C, o); if (rd.type) [lo, hi] = rd.type === 'chip' ? [9, 9] : o.k.band(rd.type) }
+  const col = pace.power > hi ? '#ff5a48' : pace.power >= lo ? '#f7cf55' : '#f2f2ee'
+  const w = 3 + 2.6 * clamp(pace.power, 0, 1)
+  ctx.save()
+  ctx.globalAlpha = st.on ? 1 : 1 - age / 520
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+  const path = () => { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y) }
+  path(); ctx.strokeStyle = 'rgba(6,8,10,.62)'; ctx.lineWidth = w + 4; ctx.stroke()
+  path(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke()
+  const E = pts[n - 1]
+  if (o.C && st.on && o.origin) {
+    // drawn away from the ball: the ring on the goal where it's going
+    const rd = readStroke(st, o.C, o)
+    if (rd.type) { ctx.globalAlpha = 1; aimMark(ctx, o.C, rd.x, rd.y) }
+  } else if (o.C && st.on) {
+    // short of the goal line: on along its line, to the spot it's going in at
+    const B = onGoal(o.C, pts[0].x, pts[0].y), G = onGoal(o.C, E.x, E.y)
+    if (G.y < DRAW.yLow && G.y - B.y > 0.01 && pace.len >= DRAW.minLen && E.y < pts[0].y - 8) {
+      const X = B.x + ((DRAW.yLow - B.y) / (G.y - B.y)) * (G.x - B.x), q = P(o.C, clamp(X, -(POST + 3), POST + 3), DRAW.yLow, 0)
+      if (q.ok) {
+        ctx.setLineDash([3, 6]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(242,242,238,.7)'
+        ctx.beginPath(); ctx.moveTo(E.x, E.y); ctx.lineTo(q.x, q.y); ctx.stroke(); ctx.setLineDash([])
+        ctx.fillStyle = 'rgba(242,242,238,.85)'; ctx.beginPath(); ctx.arc(q.x, q.y, 3, 0, 6.2832); ctx.fill()
+      }
+    }
+  }
+  ctx.fillStyle = col; ctx.strokeStyle = INK; ctx.lineWidth = 2
+  ctx.beginPath(); ctx.arc(E.x, E.y, w * 0.5 + 3, 0, 6.2832); ctx.fill(); ctx.stroke()
+  ctx.restore()
+}
+// The teaching stroke on the first shot: a dotted chalk line drawn off the ball to a spot, bowed by bend, a fingertip
+// on its end; three goes, then it rests. age: ms since it started
+export const GHOST_MS = 1700
+export function ghostStroke(ctx, from, to, bend, age) {
+  if (age < 0 || age > GHOST_MS * 3) return
+  const c = age % GHOST_MS, f = easeOutS(clamp(c / 820, 0, 1)), fade = c < 1250 ? 1 : 1 - (c - 1250) / 450
+  const dx = to.x - from.x, dy = to.y - from.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L
+  const at = u => { const b = ((u - u * u * u * u) / 0.4725) * bend * L; return { x: from.x + dx * u + nx * b, y: from.y + dy * u + ny * b } }
+  ctx.save(); ctx.globalAlpha = 0.85 * fade
+  ctx.lineCap = 'round'; ctx.setLineDash([2, 7]); ctx.lineWidth = 4; ctx.strokeStyle = '#f2f2ee'
+  ctx.beginPath(); ctx.moveTo(from.x, from.y)
+  for (let i = 1; i <= 24; i++) { const q = at((i / 24) * f); ctx.lineTo(q.x, q.y) }
+  ctx.stroke(); ctx.setLineDash([])
+  const h = at(f)
+  ctx.lineWidth = 2.5; ctx.strokeStyle = '#f2f2ee'; ctx.fillStyle = 'rgba(242,242,238,.28)'
+  ctx.beginPath(); ctx.arc(h.x, h.y, 12, 0, 6.2832); ctx.fill(); ctx.stroke()
+  ctx.restore()
+}
+const easeOutS = x => 1 - (1 - x) * (1 - x)
 
 // ── The moments' words, in the scene ────────────────────────────────────────
 // the scoreboard's line: the score and the minute when there's a game on, or the club name in a drill
@@ -1281,10 +1496,13 @@ export function drawPads(ctx, view, c, labels = {}, live = true) {
   }
   const ax = c.tid != null ? c.ox : B.stick.x, ay = c.tid != null ? c.oy : B.stick.y, R = B.stick.R
   ctx.globalAlpha = live ? 1 : 0.4
-  ctx.fillStyle = 'rgba(6,8,10,.45)'; ctx.beginPath(); ctx.arc(ax, ay, R + 6, 0, 6.2832); ctx.fill()
-  ctx.strokeStyle = 'rgba(242,242,238,.28)'; ctx.lineWidth = 2; ctx.stroke()
-  ctx.fillStyle = c.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#f2f2ee' : 'rgba(242,242,238,.7)'
-  ctx.beginPath(); ctx.arc(ax + s.x * R, ay - s.y * R, 19, 0, 6.2832); ctx.fill()
+  // (labels.stick false: no stick, the shot's drawn on the picture)
+  if (labels.stick !== false) {
+    ctx.fillStyle = 'rgba(6,8,10,.45)'; ctx.beginPath(); ctx.arc(ax, ay, R + 6, 0, 6.2832); ctx.fill()
+    ctx.strokeStyle = 'rgba(242,242,238,.28)'; ctx.lineWidth = 2; ctx.stroke()
+    ctx.fillStyle = c.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#f2f2ee' : 'rgba(242,242,238,.7)'
+    ctx.beginPath(); ctx.arc(ax + s.x * R, ay - s.y * R, 19, 0, 6.2832); ctx.fill()
+  }
   for (const [id, B2, size] of [['S', B.S, 18], ['P', B.P, 14]]) {
     if (!labels[id]) continue
     const lit = (id === 'S' ? c.sid : c.pid) != null && live

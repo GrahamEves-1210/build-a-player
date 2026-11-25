@@ -10,6 +10,11 @@
 //            again as his foot meets it for a timed finish. CHIP (E): a quick tap is the dink over a keeper who's come
 //            off his line; held, it's a finesse shot, curled and placed. With a teammate arriving and the stick pulled
 //            back, a tap of SHOOT cuts it back for him.
+//   or DRAW it (soccer.js's draw the shot): on a phone the left thumb steers and the right one draws the shot, anywhere
+//            on the right of the screen, as though from the ball; with a mouse, draw it anywhere while the arrows
+//            steer. Where the stroke points is where it's going (the ring on the goal shows it), its pace the power, a
+//            bow in it the curl, a soft one up into the goal the dink. Drawn back toward his own goal with a man
+//            arriving, it's the cut-back.
 //   the keeper  comes off his line to narrow the angle, sets himself and spreads as you get close, comes to claim a
 //            heavy touch, goes down at your feet if you take it too close, and reads your hips: he leans the way
 //            you're running. The angle matters: out wide there's less of the goal to aim at, the near post's tight.
@@ -19,10 +24,12 @@
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, nudge, manOf, paceOf, text, rr, circle, keyCap, lightMode, DISPLAY, LABEL } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribblePose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D, BOX_W,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, defenderBeaten, keeperRoar, strikerDenied, celebMs, skipOutro } from './soccer.js'
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, defenderBeaten, keeperRoar, strikerDenied, celebMs, skipOutro,
+  stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar } from './soccer.js'
+import { tip } from './soccerPads.js'
 
 export const how = {
-  'one-on-one': 'Through on goal. Run at him with the stick (up to sprint: the touches get heavier). Hold SHOOT and aim, let go to strike it, tap again at contact for a perfect finish. Tap CHIP to dink a keeper who’s off his line, hold it to curl one. Cut sharply as he commits to go round him.',
+  'one-on-one': 'Through on goal. Run at him with the stick (up to sprint: the touches get heavier) and draw your shot on the right of the screen: where it points is where it’s going, the quicker the harder, bend it to curl it, soft and high to dink it. Drawn back across with a man arriving, it’s the cut-back. Cut sharply as the keeper commits to go round him. On a keyboard: hold SPACE and aim, let go to strike it; E to chip or curl.',
 }
 
 const FRICTION = 10.5        // m/s²: how fast a touched ball slows on the grass (a touch is a push, not a pass)
@@ -60,7 +67,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     k, shot: null, pass: null, res: null, why: '', resAt: null, endAt: null, popAt: null, doneAt: null,
     camX: x0 * 0.6, camZ: z0 - 9, hist: [], take: null, word: null,
     ctl: { tid: null, ox: 0, oy: 0, tx: 0, ty: 0, ax: 0, ay: 0, ext: false, keys: { L: 0, R: 0, U: 0, D: 0 }, sid: null, cid: null, chipAt: null, shootAt: null, side: 0, sideAt: -999 },
-    stickOut: { x: 0, y: 0 }, vh: 640, keysView: false,
+    stickOut: { x: 0, y: 0 }, vh: 640, keysView: false, st: stroke(), lastView: null,
     nudge: nudge(),
     hud: { prompt: 'THROUGH ON GOAL' },
     tick(dt) {
@@ -93,6 +100,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   // ── the controls: a thumbstick on the left of the screen, SHOOT and CHIP on the right; the arrows, SPACE and E ──
   function control(a) {
     const c = g.ctl
+    if (drawIn(a)) return
     if (a.kind === 'stick') { c.ax = clamp(a.x, -1, 1); c.ay = clamp(a.y, -1, 1); c.ext = true; return }
     if (a.kind === 'key') {
       if (a.zone === 'S') return shootDown('key')
@@ -123,8 +131,8 @@ export function make({ v, seed, cast = null, situation = null }) {
     const c = g.ctl, o = g.stickOut
     if (c.tid != null) { o.x = c.tx; o.y = c.ty } else if (c.ext) { o.x = c.ax; o.y = c.ay }
     else { o.x = c.keys.R - c.keys.L; o.y = c.keys.U - c.keys.D; const m = Math.hypot(o.x, o.y); if (m > 1) { o.x /= m; o.y /= m } }
-    // aiming while the shot's being lined up: no stick across is the side he's not covering
-    if (k.phase === 'power' || (k.phase === 'strike' && g.t < k.strikeAt - 30)) {
+    // aiming while the shot's being lined up: no stick across is the side he's not covering (a drawn one's aimed)
+    if (!k.drawn && !k.drawing && (k.phase === 'power' || (k.phase === 'strike' && g.t < k.strikeAt - 30))) {
       const open = -(Math.sign(g.gk.x - g.me.x * 0.25) || 1) * 0.6
       k.aimAt(Math.abs(o.x) > 0.2 ? o.x : open, o.y)
       if (k.type === 'driven' && o.y < -0.5) k.type = 'low'
@@ -142,7 +150,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   }
   function shootUp() {
     const c = g.ctl
-    if (k.phase !== 'power' || (k.type !== 'driven' && k.type !== 'low')) return
+    if (k.phase !== 'power' || k.drawing || (k.type !== 'driven' && k.type !== 'low')) return
     const quick = g.t - (c.shootAt ?? g.t) < 150
     // a quick tap with the stick pulled back and a man arriving: cut it back to him. With the stick up: the dink
     if (quick && g.mt?.on && g.stickOut.y < -0.4 && Math.hypot(g.bl.x - g.me.x, g.bl.z - g.me.z) < CONTROL) { k.reset(); return cutBack() }
@@ -159,11 +167,38 @@ export function make({ v, seed, cast = null, situation = null }) {
   }
   function chipUp() {
     const c = g.ctl
-    if (k.phase !== 'power' || k.type !== 'finesse') return
+    if (k.phase !== 'power' || k.drawing || k.type !== 'finesse') return
     if (g.t - (c.chipAt ?? g.t) < 170) { k.type = 'chip'; k.release(g.t); k.power = clamp(0.5 + (Math.hypot(g.gk.x - g.me.x, g.gk.z - g.me.z) - 6) * 0.02, 0.35, 0.7); return }
     k.release(g.t)
   }
 
+  // ── drawing it: the right of a phone's screen (the left's the stick), anywhere with a mouse ──
+  const camNow = () => camOf(g.lastView ?? { w: 360, h: g.vh }, { x: g.camX, y: 5.4, z: g.camZ, F: 480, hzAt: 0.13 })
+  g.aimView = () => { const C = camNow(); return { C, ball: P(C, g.bl.x, 0.11, g.bl.z) } }
+  function drawIn(a) {
+    if (a.kind !== 'down' && a.kind !== 'move' && a.kind !== 'up') return false
+    const id = a.id ?? 0, st = g.st
+    if (a.kind === 'down') {
+      if (!g.keysView && a.x < 180) return false
+      if (canShoot() && k.phase === 'idle' && k.shape(g.t)) { strokeDown(st, a.x, a.y, g.t, id, null); g.hud.prompt = null }
+      return true
+    }
+    if (id !== st.id) return false
+    if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
+    strokeUp(st, a.x, a.y, g.t, id)
+    if (!k.drawing || k.phase !== 'power' || !canShoot()) { if (k.drawing) k.reset(); return true }
+    const v0 = g.aimView(), rd = readStroke(st, v0.C, { foot: 1, origin: v0.ball })
+    if (rd.back) {
+      k.reset()
+      // drawn back across him, a man arriving: the cut-back
+      if (g.mt?.on && Math.hypot(g.bl.x - g.me.x, g.bl.z - g.me.z) < CONTROL) cutBack()
+      return true
+    }
+    if (rd.tap) { k.reset(); return true }
+    drawnShot(k, rd, g.t, k.windup)
+    g.fx.push('h:light')
+    return true
+  }
   // ── you, and the ball at your feet ──
   const S = { x: 0, z: 0 }
   function striker(s) {
@@ -556,7 +591,7 @@ function defenderPose(g) {
   return runPose(d.cycle % 1, clamp(Math.hypot(d.vx, d.vz) / 7.5, 0.3, 1))
 }
 export function draw(ctx, g, view) {
-  g.vh = view.h; g.keysView = !!view.keys
+  g.vh = view.h; g.keysView = !!view.keys; g.lastView = { w: view.w, h: view.h }
   const C = camOf(view, { x: g.camX, y: 5.4, z: g.camZ, F: 480, hzAt: 0.13 })
   const K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
   stadium(ctx, view, C, { team, away, board: boardWords(g) })
@@ -597,8 +632,9 @@ export function draw(ctx, g, view) {
   list.sort((p, q) => q.z - p.z)
   for (const m of list) m.fn()
   if (b.held) ball(ctx, C, b.x, b.y, b.z, b.spin, 0, false)
-  // the aim, on the goal, while he's lining it up
-  if ((g.k.phase === 'power' || g.k.phase === 'strike') && !g.res) {
+  // the aim, on the goal, while he's lining it up (drawn: where the stroke sent it)
+  if (g.k.drawn && g.k.phase === 'strike' && !g.res) aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
+  else if (!g.k.drawing && !g.k.drawn && (g.k.phase === 'power' || g.k.phase === 'strike') && !g.res) {
     const a = g.k.aim
     aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : g.k.type === 'chip' ? lerp(1.1, 2.0, (a.y + 1) / 2) : lerp(0.3, BAR - 0.45, (a.y + 1) / 2))
   }
@@ -607,6 +643,14 @@ export function draw(ctx, g, view) {
   if (g.word && !g.res) {
     const p = P(C, g.me.x, 2.4, g.me.z)
     if (p.ok) { const al = clamp(1 - (g.t - g.word.at - 700) / 400, 0, 1); ctx.globalAlpha = al; tag(ctx, g.word.text, p.x, p.y - 8); ctx.globalAlpha = 1 }
+  }
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, origin: P(C, g.bl.x, 0.11, g.bl.z) })
+  // the first chance: how it's drawn, off to the right of the screen, and the line under it
+  if (!g.res && !g.shot && !g.pass && g.phase === 'live' && g.k.phase === 'idle' && !g.k.drawn && g.me.z > -24 && drawnSoFar() < 2) {
+    g.ghostAt ??= g.t
+    const from = view.keys ? P(C, g.bl.x, 0.11, g.bl.z) : { x: 284, y: view.h - 116 }, to = { x: from.x - 24, y: from.y - 112 }
+    ghostStroke(ctx, from, to, 0.12, g.t - g.ghostAt)
+    if (g.t - g.ghostAt < 5200) tip(ctx, view, view.keys ? 'DRAW YOUR SHOT WITH THE MOUSE' : 'STEER ON THE LEFT · DRAW YOUR SHOT ON THE RIGHT', view.keys ? view.h - 100 : view.h - 262, 14)
   }
   shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
   drawControls(ctx, view, g)
@@ -634,13 +678,10 @@ function drawControls(ctx, view, g) {
   ctx.strokeStyle = 'rgba(242,242,238,.28)'; ctx.lineWidth = 2; circle(ctx, ax, ay, R + 6); ctx.stroke()
   ctx.fillStyle = c.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#f2f2ee' : 'rgba(242,242,238,.7)'
   circle(ctx, ax + s.x * R, ay - s.y * R, 19); ctx.fill()
-  const lit = c.sid != null && live
-  ctx.fillStyle = lit ? '#f2f2ee' : 'rgba(26,27,30,.92)'; circle(ctx, B.shoot.x, B.shoot.y, B.shoot.r); ctx.fill()
-  ctx.strokeStyle = 'rgba(242,242,238,.25)'; ctx.lineWidth = 2; ctx.stroke()
-  text(ctx, 'SHOOT', B.shoot.x, B.shoot.y + 1, { font: DISPLAY, size: 18, color: lit ? '#0b0c0e' : '#f2f2ee' })
-  const cl = c.cid != null && live
-  ctx.fillStyle = cl ? '#f2f2ee' : 'rgba(26,27,30,.92)'; circle(ctx, B.chip.x, B.chip.y, B.chip.r); ctx.fill()
-  ctx.strokeStyle = 'rgba(242,242,238,.25)'; ctx.lineWidth = 2; ctx.stroke()
-  text(ctx, 'CHIP', B.chip.x, B.chip.y + 1, { font: DISPLAY, size: 15, color: cl ? '#0b0c0e' : '#f2f2ee' })
+  // (the right of the screen is where the shot's drawn: a word there, no buttons)
+  if (!g.st.on && !g.shot && !g.res) {
+    ctx.fillStyle = 'rgba(6,8,10,.55)'; rr(ctx, 360 - 148, B.shoot.y - 15, 136, 30, 4); ctx.fill()
+    text(ctx, 'DRAW YOUR SHOT', 360 - 80, B.shoot.y + 1, { size: 14, track: 1.2, color: 'rgba(242,242,238,.9)' })
+  }
   ctx.globalAlpha = 1
 }
