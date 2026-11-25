@@ -142,18 +142,17 @@ const teamSub = t => t.name
 const calcOvr = (b, types) => Math.round(SoccerSim.calcSoccerOVR?.(b, types) ?? 0)
 const archOf = (ovr, b, types) => (SoccerSim.getSoccerArchetype ?? soccerArchetype)(ovr, b, types)
 
-// Home's pool cards: the best-known players in each pool with an ESPN photo
+// Home's pool cards: three stars each. ESPN has no photo for most of them, so these cards (only these) use FotMob's
+// studio photos, framed like ESPN's (public/headshots/soccer/fm-<FotMob id>.webp); Messi keeps his ESPN photo
+// (the owner, 2026-11-25). The middle face is the big one.
 const FACE_PICKS = {
-  current: ['Erling Haaland', 'Kylian Mbappé', 'Harry Kane', 'Robert Lewandowski', 'Lautaro Martínez', 'Victor Osimhen'],
-  alltime: ['Lionel Messi', 'Cristiano Ronaldo', 'Kylian Mbappé', 'Harry Kane', 'Erling Haaland', 'Lamine Yamal'],
+  current: [['Lamine Yamal', 'soccer/fm-1467236'], ['Erling Haaland', 'soccer/fm-737066'], ['Kylian Mbappé', 'soccer/fm-701154']],
+  alltime: [['Cristiano Ronaldo', 'soccer/fm-30893'], ['Lionel Messi', null], ['Harry Kane', 'soccer/fm-194165']],
 }
-const HOME_FACES = Object.fromEntries(['current', 'alltime'].map(k => {
-  const list = POOL_PLAYERS[k]
-  const named = FACE_PICKS[k].map(n => list.find(p => p.name === n && p.headshot)).filter(Boolean)
-  const rest = [...list].filter(p => p.headshot && !named.includes(p)).sort((a, b) => avgAttr(b) - avgAttr(a))
-  return [k, [...named, ...rest].slice(0, 3).map(p => ({ id: p.headshot, color: p.color }))]
-}))
-function avgAttr(p) { const v = Object.values(p.attrs ?? {}); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0 }
+const HOME_FACES = Object.fromEntries(['current', 'alltime'].map(k => [k, FACE_PICKS[k].map(([n, id]) => {
+  const p = POOL_PLAYERS[k].find(p => p.name === n)
+  return { id: id ?? p?.headshot, color: p?.color ?? '#888888' }
+}).filter(f => f.id)]))
 
 // Squad Builder's header: the spot of the slot being built (a copy of lib/squad.js SOCCER_SHAPES' labels, so Home
 // doesn't load the squad module)
