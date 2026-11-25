@@ -1015,8 +1015,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
           // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
           // the silhouette png (z 4) and hide the jersey colours)
-          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={kitBuild} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} /></div>
-          : <BucketFigureOverlay build={kitBuild} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} />)}
+          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={kitBuild} logoDir={logoDirProp} nickOf={kitNick} /></div>
+          : <BucketFigureOverlay build={kitBuild} logoDir={logoDirProp} nickOf={kitNick} />)}
         {isBucket && bucketPhoto && bounds && (() => {
           const { W, H, fx, fy, scale } = bounds
           const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100
