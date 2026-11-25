@@ -26,8 +26,8 @@ html:is(.is-app, .app-look) {
   --ag-body: 'Outfit', system-ui, -apple-system, sans-serif;
 
   /* identity colours (index.css) */
-  --ag-a1: color-mix(in srgb, var(--btn-start, #62F2C8) 66%, var(--btn-end, #14DB8C));   /* the site's teal, leaned toward its green */
-  --ag-a2: var(--btn-end, #14DB8C);
+  --ag-a1: color-mix(in srgb, var(--btn-start, #86ECBA) 66%, var(--btn-end, #2FCB7E));   /* the site's teal, leaned toward its green */
+  --ag-a2: var(--btn-end, #2FCB7E);
   --ag-on: var(--btn-txt, #07120a);
   --ag-glow: color-mix(in srgb, var(--ag-a1) 32%, transparent);
   --ag-accent: var(--accent, #95D5B2);
@@ -319,7 +319,7 @@ html.is-bucket .ag-tab { color: rgba(255,237,213,.42); }
 .ag-tile-icon { position: absolute; top: 10px; right: 10px; color: var(--tc); opacity: .95; }
 .ag-tile-title { font-family: var(--ag-font); font-size: 22px; letter-spacing: 2px; line-height: 1; }
 .ag-tile-sub { margin-top: 4px; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }
-.ag-tile--mint    { --tc: #62F2C8; }
+.ag-tile--mint    { --tc: #86ECBA; }
 .ag-tile--gold    { --tc: #D4AF37; }
 .ag-tile--red     { --tc: #ef4444; }
 .ag-tile--orange  { --tc: #f97316; }
@@ -607,7 +607,7 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 .ag-modes { display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px; padding: 0 14px; }
 .ag-resume--top { margin: 0 14px; width: auto; }   /* sits in the page flow above the modes: their gutter */
 .ag-mode {
-  --mc: #62F2C8; --mc2: #14DB8C;
+  --mc: #86ECBA; --mc2: #2FCB7E;
   position: relative; overflow: hidden;
   display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
   min-height: 112px;
@@ -660,7 +660,7 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 .ag-mini:not(:disabled):active { transform: scale(.96); }
 .ag-mini--orange { --mc: #f97316; }
 .ag-mini--purple { --mc: #a855f7; }
-.ag-mini--mint   { --mc: #14DB8C; }
+.ag-mini--mint   { --mc: #2FCB7E; }
 .ag-mini-title { font-family: var(--ag-display); font-size: 20px; letter-spacing: .5px; line-height: 1; text-transform: uppercase; white-space: nowrap; }
 .ag-mini-title em { font-style: normal; color: var(--mc); letter-spacing: -.5px; }
 .ag-mini-title .hoop-u-svg { height: .8em; vertical-align: -.06em; }
@@ -772,8 +772,8 @@ html:is(.is-app, .app-look) .grade-toggle-btn {
   letter-spacing: 2px !important;
   padding: 5px 12px !important;
   border-radius: 8px !important;
-  border: 1.5px solid #62F2C8 !important;
-  background: rgba(98,242,200,.14) !important;
+  border: 1.5px solid #86ECBA !important;
+  background: rgba(134,236,186,.14) !important;
   box-shadow: none !important;
   color: #fff !important;
 }
@@ -1324,7 +1324,7 @@ html:is(.is-app, .app-look) .tpm-team-btn { border-radius: 12px !important; }
 
 /* Rarity colours: Common · Rare · Epic · Legend */
 .ag-rar-0 { --rc: #9aa7b4; --rc2: #5e6a76; }
-.ag-rar-1 { --rc: #62F2C8; --rc2: #14DB8C; }
+.ag-rar-1 { --rc: #86ECBA; --rc2: #2FCB7E; }
 .ag-rar-2 { --rc: #c4a1ff; --rc2: #8b5cf6; }
 .ag-rar-3 { --rc: #f5dc8a; --rc2: #d4af37; }
 .ag-rar-pill {
@@ -2556,7 +2556,7 @@ html.is-app input:not([type="range"]):not([type="checkbox"]):not([type="radio"])
 }
 .ag-sport--bucket .ag-sport-thumb { transform: translateX(100%); background: linear-gradient(135deg, #fb923c, #c2410c); box-shadow: 0 4px 16px rgba(249,115,22,.4), inset 0 1px 0 rgba(255,255,255,.35); }
 html.ag-sport-leaving .ag-sport--nfl .ag-sport-thumb { transform: translateX(100%); background: linear-gradient(135deg, #fb923c, #c2410c); }
-html.ag-sport-leaving .ag-sport--bucket .ag-sport-thumb { transform: none; background: linear-gradient(135deg, #62F2C8, #14DB8C); }
+html.ag-sport-leaving .ag-sport--bucket .ag-sport-thumb { transform: none; background: linear-gradient(135deg, #86ECBA, #2FCB7E); }
 html.ag-sport-leaving .ag-home-inner > *:not(.ag-sport):not(.ag-hud) { opacity: .35; transition: opacity .16s ease; }
 .ag-sport-btn {
   position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -3001,7 +3001,7 @@ html.app-look:not(.is-app) .ag-home { padding-bottom: calc(var(--ag-dock-h) + 20
 .cp-hud b { font-family: var(--ag-display, sans-serif); font-weight: 400; font-size: 22px; letter-spacing: .5px; }
 .cp-hud-dots { display: flex; gap: 4px; margin-left: auto; }
 .cp-hud-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); }
-.cp-hud-dots i.is-in { background: var(--ag-a1, #62F2C8); box-shadow: 0 0 6px var(--ag-glow, transparent); }
+.cp-hud-dots i.is-in { background: var(--ag-a1, #86ECBA); box-shadow: 0 0 6px var(--ag-glow, transparent); }
 .cp-hud small { font-size: 12px; color: var(--ag-muted, #9aa); }
 @media (min-width: 1024px) { html.app-look .cp > *:not(.ag-screen-head) { margin-left: 0; margin-right: 0; } }
 
@@ -3070,7 +3070,7 @@ html.app-look.ag-page .lb-page { padding-bottom: calc(var(--app-bottom) + 24px) 
   top: 5px; bottom: 5px; left: 5px; width: calc(50% - 5px); border-radius: 10px; overflow: hidden;
   background:
     repeating-linear-gradient(90deg, transparent 0 17px, rgba(255,255,255,.16) 17px 18px),
-    linear-gradient(135deg, #62F2C8, #14DB8C);
+    linear-gradient(135deg, #86ECBA, #2FCB7E);
   transition: transform .38s cubic-bezier(.2,1.3,.3,1), background .3s ease;
 }
 .ag-sport--bucket .ag-sport-thumb {
@@ -3086,7 +3086,7 @@ html.app-look.ag-page .lb-page { padding-bottom: calc(var(--app-bottom) + 24px) 
   border: 1px solid currentColor; opacity: .85;
   transition: background .25s ease, border-color .25s ease, color .25s ease;
 }
-.ag-sport-btn--nfl { color: color-mix(in srgb, #62F2C8 70%, var(--ag-muted)); }
+.ag-sport-btn--nfl { color: color-mix(in srgb, #86ECBA 70%, var(--ag-muted)); }
 .ag-sport-btn--bucket { color: color-mix(in srgb, #fb923c 70%, var(--ag-muted)); }
 .ag-sport-btn.is-on .ag-sport-ico { background: rgba(0,0,0,.18); border-color: rgba(0,0,0,.25); opacity: 1; }
 .ag-sport-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; gap: 2px; min-width: 0; }
@@ -3110,7 +3110,7 @@ html.app-look:not(.is-app) .spin-respin-half { font-size: 15px !important; lette
   padding: 14px; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--tc) 55%, transparent);
   background: radial-gradient(ellipse 80% 90% at 0% 0%, color-mix(in srgb, var(--tc) 22%, transparent), transparent 65%), var(--ag-panel);
 }
-.ol-hero--rookie { --tc: #9aa7a0; } .ol-hero--starter { --tc: #62F2C8; } .ol-hero--pro { --tc: #60a5fa; }
+.ol-hero--rookie { --tc: #9aa7a0; } .ol-hero--starter { --tc: #86ECBA; } .ol-hero--pro { --tc: #60a5fa; }
 .ol-hero--allstar { --tc: #a78bfa; } .ol-hero--mvp { --tc: #fb923c; } .ol-hero--legend { --tc: #f5dc8a; }
 .ol-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .ol-hero-rating { display: flex; flex-direction: column; line-height: 1; }
@@ -3127,7 +3127,7 @@ html.app-look:not(.is-app) .spin-respin-half { font-size: 15px !important; lette
   color: #0a0f0c; background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 70%, #fff), var(--tc)); box-shadow: 0 0 10px color-mix(in srgb, var(--tc) 45%, transparent);
 }
 .ol-tier--lg { font-size: 15px; padding: 5px 13px; letter-spacing: 2.6px; }
-.ol-tier--rookie { --tc: #9aa7a0; } .ol-tier--starter { --tc: #62F2C8; } .ol-tier--pro { --tc: #60a5fa; }
+.ol-tier--rookie { --tc: #9aa7a0; } .ol-tier--starter { --tc: #86ECBA; } .ol-tier--pro { --tc: #60a5fa; }
 .ol-tier--allstar { --tc: #a78bfa; } .ol-tier--mvp { --tc: #fb923c; } .ol-tier--legend { --tc: #f5dc8a; }
 .ol-ladder { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
 .ol-rung { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 9px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.02); opacity: .55; }
@@ -4191,7 +4191,7 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
   transform: rotateY(180deg);
   display: grid; align-content: center; justify-items: center; gap: 3px; padding: 8px 6px; text-align: center;
   color: var(--btn-txt, #04130c);
-  background: linear-gradient(150deg, var(--btn-start, #62F2C8), var(--btn-end, #14DB8C));
+  background: linear-gradient(150deg, var(--btn-start, #86ECBA), var(--btn-end, #2FCB7E));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 6px 16px rgba(0,0,0,.4);
 }
 .au-card-face small { font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 2px; opacity: .65; }
@@ -4264,7 +4264,7 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
   height: 64px; border-radius: 14px; cursor: pointer;
   display: grid; place-content: center; gap: 0;
   border: 0; color: var(--btn-txt, #04130c);
-  background: linear-gradient(135deg, var(--btn-start, #62F2C8), var(--btn-end, #14DB8C));
+  background: linear-gradient(135deg, var(--btn-start, #86ECBA), var(--btn-end, #2FCB7E));
   box-shadow: 0 6px 16px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.4);
   transition: transform var(--press);
 }
@@ -4811,7 +4811,7 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .game-layout.ag-drop .spin-top-row { display: none !important; }   /* the grades switch is in the navbar on phones */
 /* the grades switch: right at the top of the sheet, big enough to find */
 .game-layout.ag-drop .grade-toggle-btn { display: inline-flex !important; align-items: center; justify-content: center; height: 38px !important; min-width: 210px !important; padding: 0 18px !important; margin: 0 !important; border-radius: 19px !important; border: 1.5px solid currentColor !important; font-family: var(--ag-font) !important; font-size: 16px !important; letter-spacing: 1.6px !important; }
-.game-layout.ag-drop .grade-toggle-on { color: #62F2C8 !important; background: rgba(98,242,200,.14) !important; }
+.game-layout.ag-drop .grade-toggle-on { color: #86ECBA !important; background: rgba(134,236,186,.14) !important; }
 .game-layout.ag-drop .grade-toggle-off { color: #f87171 !important; background: rgba(248,113,113,.14) !important; }
 .game-layout.ag-drop .reels-wrap { width: 100% !important; max-width: 420px; margin: 0 auto !important; }
 .game-layout.ag-drop .reels-row { width: 100%; }
@@ -4912,7 +4912,7 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--app-bottom, 0px) - 16px); }
 
 /* the grades switch in the phone navbar */
-.nav-grades { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 34px; margin-left: auto; padding: 0 12px; border-radius: 17px; border: 1.5px solid #62F2C8; background: rgba(98,242,200,.12); color: #62F2C8; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; cursor: pointer; }
+.nav-grades { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 34px; margin-left: auto; padding: 0 12px; border-radius: 17px; border: 1.5px solid #86ECBA; background: rgba(134,236,186,.12); color: #86ECBA; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; cursor: pointer; }
 .nav-grades b { font-weight: 400; color: #fff; }
 .nav-grades.is-off { border-color: #f87171; background: rgba(248,113,113,.12); color: #f87171; }
 /* website: the App Store badge under the menu */
@@ -5007,10 +5007,10 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .ll-sheet.sb-buy .ag-eyebrow { color: #f5dc8a; }
 .mg-hard { font-style: normal; margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: rgba(248,113,113,.16); color: #fca5a5; font-size: .85em; letter-spacing: 1px; }
 /* career: the physical traits' training window */
-.cr-trait-win { margin-left: 6px; padding: 1px 5px 0; border-radius: 5px; font-style: normal; font-family: var(--ag-font); font-size: 10px; letter-spacing: 1px; color: #bfe9d6; background: rgba(98,242,200,.14); }
+.cr-trait-win { margin-left: 6px; padding: 1px 5px 0; border-radius: 5px; font-style: normal; font-family: var(--ag-font); font-size: 10px; letter-spacing: 1px; color: #bfe9d6; background: rgba(134,236,186,.14); }
 .cr-trait-win.is-last { color: #1d1503; background: #f5c542; }
 .cr-trait-win.is-closed { color: var(--ag-muted); background: rgba(255,255,255,.07); }
-.cr-train-note { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(98,242,200,.08); border: 1px solid rgba(98,242,200,.22); font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-text-2); line-height: 1.35; }
+.cr-train-note { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(134,236,186,.08); border: 1px solid rgba(134,236,186,.22); font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-text-2); line-height: 1.35; }
 .cr-train-note.is-last { background: rgba(245,197,66,.1); border-color: rgba(245,197,66,.45); color: #f5dc8a; }
 /* Career intro: a finished career. Logo | name ... legacy, then chips, then one quiet line */
 .cr-run { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "logo name pts" "logo chips pts" "meta meta meta"; gap: 4px 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid transparent; }
@@ -5026,7 +5026,7 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .cr-run-chips { grid-area: chips; display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .cr-run-chips i { font-style: normal; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px 1px; border-radius: 5px; background: rgba(255,255,255,.07); font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1px; color: var(--ag-text-2); white-space: nowrap; }
 .cr-run-chips i.is-hof { background: rgba(242,201,76,.18); color: #f2c94c; }
-.cr-run-chips i.is-rank { background: rgba(98,242,200,.14); color: #bfe9d6; }
+.cr-run-chips i.is-rank { background: rgba(134,236,186,.14); color: #bfe9d6; }
 .cr-run-chips i.is-sb { background: rgba(232,121,249,.16); color: #f0abfc; }
 .cr-run-meta { grid-area: meta; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -5127,7 +5127,7 @@ html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { gap: 5px; }
 /* Reward marks beside the coin (components/app/GainIcons.jsx): XP a mint hexagon
    stamped XP, legacy a purple shield with a gold star; --sm sits inline in text */
 .xp-ico, .lg-ico { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; vertical-align: -5px; position: relative; }
-.xp-ico { clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: radial-gradient(circle at 35% 28%, #d8fff6, #62F2C8 45%, #0f766e); }
+.xp-ico { clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: radial-gradient(circle at 35% 28%, #d8fff6, #86ECBA 45%, #0f766e); }
 .xp-ico::before { content: 'XP'; font-family: var(--ag-display); font-size: 9.5px; letter-spacing: -.2px; color: #053b36; text-shadow: 0 1px 0 rgba(216,255,246,.5); }
 .lg-ico { clip-path: polygon(50% 0, 100% 14%, 94% 62%, 50% 100%, 6% 62%, 0 14%); background: radial-gradient(circle at 35% 25%, #e9d5ff, #a855f7 45%, #4c1d95); }
 .lg-ico::before { content: '★'; font-size: 11px; line-height: 1; color: #fde68a; text-shadow: 0 1px 1px rgba(76,29,149,.8); transform: translateY(-1px); }
@@ -5175,7 +5175,7 @@ html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-
 .ag-fan-item.is-hot .ag-fan-dot { transform: scale(1.12); background: var(--ag-grad); color: var(--ag-on); border-color: transparent; }
 @media (hover: hover) { .ag-fan-item:hover .ag-fan-dot { transform: scale(1.12); background: var(--ag-grad); color: var(--ag-on); border-color: transparent; } }
 .ag-fan-item.is-sport .ag-fan-dot { color: #fb923c; border-color: rgba(251,146,60,.5); }
-.ag-dock--bucket .ag-fan-item.is-sport .ag-fan-dot, html.is-bucket .ag-fan-item.is-sport .ag-fan-dot { color: #62F2C8; border-color: rgba(98,242,200,.5); }
+.ag-dock--bucket .ag-fan-item.is-sport .ag-fan-dot, html.is-bucket .ag-fan-item.is-sport .ag-fan-dot { color: #86ECBA; border-color: rgba(134,236,186,.5); }
 @media (prefers-reduced-motion: reduce) { .ag-fan-item, .ag-fan-back { animation: none; } .ag-play-glyph { transition: none; } }
 html.ag-fan-open .ag-dock { z-index: 1170; }
 .ag-fan { z-index: 1180; }
@@ -5266,7 +5266,7 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
   .rc-comp-switch { display: flex; gap: 4px; margin: 12px 13px 2px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
   .rc-comp-switch button { flex: 1; height: 32px; border: 0; border-radius: 8px; background: transparent; color: rgba(255,255,255,.62); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 1.6px; cursor: pointer; transition: background .15s, color .15s; }
   @media (hover: hover) { .rc-comp-switch button:hover:not(.is-on) { color: #fff; background: rgba(255,255,255,.06); } }
-  .rc-comp-switch button.is-on { color: #04130c; background: linear-gradient(135deg, var(--btn-start, #62F2C8), var(--btn-end, #14DB8C)); }
+  .rc-comp-switch button.is-on { color: #04130c; background: linear-gradient(135deg, var(--btn-start, #86ECBA), var(--btn-end, #2FCB7E)); }
   [data-sport="bucket"] .rc-comp-switch button.is-on { color: #1a0a02; background: linear-gradient(135deg, #ff9a52, #ea6a1c); }
   .rc-comp-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .panel-right:not(.rc-view--comp) > .rc-comp { display: none; }
@@ -5896,7 +5896,7 @@ html.app-look:not(.is-app) .reels-wrap.rs-on .reel-outer { animation: none !impo
    One flat accent per sport, small corners, hairlines instead of boxes, and the
    player photos and the type carrying the page. No gradients, glows or entrance
    animations here. On a phone the block runs edge to edge. */
-.ag-home { --hm-r: 5px; --hm-on: #06120d; --hm-a: #33E6A6; background: #070b0a; }
+.ag-home { --hm-r: 5px; --hm-on: #06120d; --hm-a: #62E29F; background: #070b0a; }
 .ag-home--bucket { --hm-on: #1c0a02; --hm-a: #f97316; background: #0b0806; }
 
 /* the top bar: no boxes */
@@ -5918,7 +5918,7 @@ html.app-look:not(.is-app) .reels-wrap.rs-on .reel-outer { animation: none !impo
 .ag-home .ag-sport-thumb { top: 0; bottom: 0; left: -10%; width: 60%; border-radius: 0; overflow: visible; box-shadow: none; background: var(--hm-a); transform: skewX(-14deg); transition: transform .2s cubic-bezier(.3,1,.5,1); }
 .ag-home .ag-sport--bucket .ag-sport-thumb { background: var(--hm-a); transform: translateX(100%) skewX(-14deg); }
 html.ag-sport-leaving .ag-home .ag-sport--nfl .ag-sport-thumb { background: #f97316; transform: translateX(100%) skewX(-14deg); }
-html.ag-sport-leaving .ag-home .ag-sport--bucket .ag-sport-thumb { background: #33E6A6; transform: skewX(-14deg); }
+html.ag-sport-leaving .ag-home .ag-sport--bucket .ag-sport-thumb { background: #62E29F; transform: skewX(-14deg); }
 html.ag-sport-leaving .ag-home-inner > *:not(.ag-sport):not(.ag-hud) { opacity: 1; }
 .ag-home .ag-sport-btn { gap: 8px; padding: 0 8px; }
 .ag-home .ag-sport-ico { display: none; }
@@ -6353,7 +6353,7 @@ html:is(.is-app, .app-look) ::-webkit-scrollbar { width: 8px; height: 8px; }
 html:is(.is-app, .app-look) ::-webkit-scrollbar-track { background: transparent; }
 html:is(.is-app, .app-look) ::-webkit-scrollbar-corner { background: transparent; }
 html:is(.is-app, .app-look) ::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 8px; background: rgba(255,255,255,.26) padding-box; }
-html:is(.is-app, .app-look) ::-webkit-scrollbar-thumb:hover { background: var(--ag-a1, #33E6A6) padding-box; }
+html:is(.is-app, .app-look) ::-webkit-scrollbar-thumb:hover { background: var(--ag-a1, #62E29F) padding-box; }
 /* (Chrome ignores all of that on anything with scrollbar-color set; Firefox only has scrollbar-color) */
 html:is(.is-app, .app-look) .spin-panel-scroll { scrollbar-color: auto; scrollbar-width: auto; }
 @supports (-moz-appearance: none) {
@@ -6736,7 +6736,7 @@ html.ag-sport-leaving .ag-sport.ag-sport--three .ag-sport-thumb { transform: tra
 /* Home's flat switch: a skewed block a third wide (the two-sport one is 60% of the bar) */
 .ag-home .ag-sport.ag-sport--three .ag-sport-thumb { left: -5%; width: calc(100% / 3 + 10%); transform: translateX(calc(var(--si, 0) * 76.923%)) skewX(-14deg); }
 html.ag-sport-leaving .ag-home .ag-sport.ag-sport--three .ag-sport-thumb { transform: translateX(calc(var(--sport-to, 0) * 76.923%)) skewX(-14deg); }
-html.ag-sport-leaving[data-sport-to="nfl"] .ag-home .ag-sport--three .ag-sport-thumb { background: #33E6A6; }
+html.ag-sport-leaving[data-sport-to="nfl"] .ag-home .ag-sport--three .ag-sport-thumb { background: #62E29F; }
 html.ag-sport-leaving[data-sport-to="bucket"] .ag-home .ag-sport--three .ag-sport-thumb { background: #f97316; }
 html.ag-sport-leaving[data-sport-to="soccer"] .ag-home .ag-sport--three .ag-sport-thumb { background: #f2f2ee; }
 .ag-home .ag-sport--three .ag-sport-txt b { font-size: 19px; letter-spacing: .5px; }
@@ -6794,7 +6794,7 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-
 .ag-formation b { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: rgba(255,255,255,.42); }
 .ag-formation b.is-on { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.45); }
 /* the dock's fan: soccer's other sport (football) in its own colour */
-.ag-dock--soccer .ag-fan-item.is-sport .ag-fan-dot, html.is-soccer .ag-fan-item.is-sport .ag-fan-dot { color: #62F2C8; border-color: rgba(98,242,200,.5); }
+.ag-dock--soccer .ag-fan-item.is-sport .ag-fan-dot, html.is-soccer .ag-fan-item.is-sport .ag-fan-dot { color: #86ECBA; border-color: rgba(134,236,186,.5); }
 
 /* ── The build screen: chalk lines, dots and labels on the night pitch ── */
 [data-sport="soccer"] .prf-page,
@@ -6848,7 +6848,7 @@ html:is(.is-app, .app-look).is-soccer .spin-respin-half { font-size: 15px !impor
 [data-sport="soccer"] .wm-htp-num { background: rgba(242,242,238,.14); border-color: rgba(242,242,238,.3); }
 [data-sport="soccer"] .wm-about-disclaimer { border-top-color: rgba(242,242,238,.14); }
 /* sign-in keeps the main app's colours, as on basketball */
-[data-sport="soccer"] .auth-modal { --accent: #95D5B2; --accent-hi: #B7E4C7; --btn-start: #62F2C8; --btn-end: #14DB8C; --btn-glow: rgba(98,242,200,0.30); --btn-txt: #07120a; --text: #D8F3DC; --text-2: #95D5B2; --text-3: #52B788; --text-4: #2D6A4F; }
+[data-sport="soccer"] .auth-modal { --accent: #95D5B2; --accent-hi: #B7E4C7; --btn-start: #86ECBA; --btn-end: #2FCB7E; --btn-glow: rgba(134,236,186,0.30); --btn-txt: #07120a; --text: #D8F3DC; --text-2: #95D5B2; --text-3: #52B788; --text-4: #2D6A4F; }
 /* the about page and the old sim results */
 [data-sport="soccer"] .about-header { border-bottom-color: rgba(242,242,238,.2); }
 [data-sport="soccer"] .about-coming-card.active { border-color: rgba(242,242,238,.4); background: rgba(242,242,238,.06); }

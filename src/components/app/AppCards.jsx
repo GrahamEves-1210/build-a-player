@@ -202,7 +202,7 @@ function SetTile({ s, onOpen, i }) {
   const done = s.owned === s.total
   const cls = `ag-set${s.kind === 'team' ? '' : ' ag-set--text'}${done ? ' is-complete' : ''}${s.owned === 0 ? ' is-empty' : ''}${s.gold ? ' ag-set--gold' : ''}${s.purple ? ' ag-set--purple' : ''}`
   return (
-    <button className={cls} style={{ '--tc': s.color ?? (s.gold ? '#D4AF37' : s.purple ? '#a855f7' : '#62F2C8'), '--d': `${Math.min(i, 16) * 18}ms` }} onClick={onOpen}>
+    <button className={cls} style={{ '--tc': s.color ?? (s.gold ? '#D4AF37' : s.purple ? '#a855f7' : '#86ECBA'), '--d': `${Math.min(i, 16) * 18}ms` }} onClick={onOpen}>
       {s.kind === 'team'
         ? <><img src={s.logo} alt="" className="ag-set-tile-logo" loading="lazy" /><span className="ag-set-tile-short">{s.short}</span></>
         : <><span className="ag-set-kind-title">{s.title}</span><span className="ag-set-kind-sub">{s.sub}</span></>}
@@ -352,7 +352,7 @@ export default function AppCards({ sport: startSport, onClose }) {
         {data && openSet ? (
           <section className="ag-set-view ag-pop" style={{ '--d': '0ms' }}>
             <button className="ag-set-back" onClick={() => setOpen(null)}><IconArrow size={16} style={{ transform: 'rotate(180deg)' }} /> ALL SETS</button>
-            <div className="ag-set-head" style={{ '--tc': openSet.color ?? (openSet.gold ? '#D4AF37' : openSet.purple ? '#a855f7' : '#62F2C8') }}>
+            <div className="ag-set-head" style={{ '--tc': openSet.color ?? (openSet.gold ? '#D4AF37' : openSet.purple ? '#a855f7' : '#86ECBA') }}>
               {openSet.logo ? <img src={openSet.logo} alt="" className="ag-set-logo" /> : <span className="ag-set-logo ag-set-logo--icon">{openSet.gold ? <IconCrown size={22} /> : <IconStar size={22} />}</span>}
               <span className="ag-set-name">{openSet.title}</span>
               <span className="ag-set-count">{openSet.owned}/{openSet.total}</span>

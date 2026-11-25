@@ -50,7 +50,7 @@ code wrapped in Capacitor 8 and built on Codemagic (`APP.md`). Launch steps are 
 - No vibe-coded look: no equal card grids, icon chips in tinted squares, sentence subtitles, gradients, glows or
   fade-up-everything. It should look like a real game menu, designed and rich rather than plain.
 - Readable first: one primary action above the fold, text at 13px or more, obvious navigation.
-- Keep the identity: a bright, poppy green (accent #33E6A6, buttons #62F2C8 to #14DB8C; owner 2026-11-25), Anton/Bebas type, Build-A-Player wordmark. No candy, sparkles or cartoon fonts.
+- Keep the identity: a bright green, not oversaturated or blue (accent #62E29F, buttons #86ECBA to #2FCB7E; owner 2026-11-25), Anton/Bebas type, Build-A-Player wordmark. No candy, sparkles or cartoon fonts.
 - Website layouts must clear the bottom ad rail (`--web-rail`). Ads are live on home.
 - Reuse existing pieces (simFlow.jsx, BoxSheet, GamesSwitch, kit.jsx) before building new ones.
 - Motion: `motion` is pinned at 12.43.0. Loops pause via `lib/fxPause.js`; no always-on infinite loops.
