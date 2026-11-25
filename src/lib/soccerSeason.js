@@ -16,6 +16,9 @@ const DERBY_CLUBS = new Set(('ARS TOT CHE FUL BRE CRY BHA LIV EVE MCI MUN NEW SU
   'BVB S04 BMG KOE B04 HSV SVW SGE M05 FCB FCA VFB SCF TSG ' +
   'MIL INT ROM LAZ JUV TOR BOL FIO PRM SAS COM MNZ ' +
   'PSG PFC RCL LIL REN LOR BST NIC MON OLM').split(' '))
+// the January window's story cards come up around the window (matchweeks 18 to 24 of 38), not in the autumn: one
+// came up at the November international break
+const inJanuary = c => { const t = c.total ?? 38; return c.k >= Math.round(t * 18 / 38) && c.k <= Math.round(t * 24 / 38) }
 const SOCCER_ALL = [
   { id: 'fc-sacked', at: ['mid', 'late'], w: 4, when: c => !c.ucl && c.struggling,
     make: c => ({ kicker: 'MANAGER SACKED', title: 'The board pulls the trigger',
@@ -38,7 +41,7 @@ const SOCCER_ALL = [
         o('nothing', 'Say nothing, let the football talk', { attr: c.R1('nerve', 1), window: 4, tag: 'FOCUSED' }, 'Head down. Goals do the talking.'),
         o('flirt', 'Flirt with it in an interview', gam(0.45, { xp: 40 }, 'His price goes up, and the club stays calm.', { team: { off: -1 }, window: 4, tag: 'UNSETTLED' }, 'The fans turn on him, and the dressing room notices.')),
       ] }) },
-  { id: 'fc-january', at: ['mid'], w: 4, when: c => !c.struggling,
+  { id: 'fc-january', at: ['mid'], w: 4, when: c => !c.struggling && inJanuary(c),
     make: c => ({ kicker: 'THE JANUARY WINDOW', title: 'The club has money to spend',
       body: `${c.nick} have one big signing in them before the window shuts. The manager asks the senior players what the team needs.`,
       options: [
@@ -46,7 +49,7 @@ const SOCCER_ALL = [
         o('cb', 'A centre-back', { team: { def: 1.5 } }, 'Fewer goals conceded, tighter matches.'),
         o('keep', 'Keep the squad together', { team: { off: 0.5, def: 0.5 } }, 'No new faces. Everyone knows their job.'),
       ] }) },
-  { id: 'fc-sale', at: ['mid'], w: 4, when: c => c.struggling,
+  { id: 'fc-sale', at: ['mid'], w: 4, when: c => c.struggling && inJanuary(c),
     make: c => ({ kicker: 'THE JANUARY WINDOW', title: 'The club sells',
       body: `${c.nick} need the money. Their best winger is going on deadline day. Stay quiet, or ask the club to keep him?`,
       options: [
