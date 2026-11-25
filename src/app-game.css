@@ -8215,3 +8215,12 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   .ag-home .ag-wordmark-img { display: block; height: .704em; width: auto; margin: .16em auto .2em; }
   .ag-home .ag-wordmark-img--bucket { height: .838em; margin-top: .03em; }
 }
+/* Home's wordmark set exactly like the spin screen's nav wordmark (owner 11-25: that one looks right). The nav's dash tucks are in px
+   at 16px (phone) / 25px (desktop); Home gets the same tucks as em so they hold at its larger size, and desktop goes back to type (not the picture) */
+.ag-wordmark-img { display: none !important; }
+@media (min-width: 1024px) { .ag-home .ag-wordmark > .bap-wm { display: inline !important; } }
+@media (max-width: 768px) {
+  .ag-home .bap-wm em > .wm-g1 { margin-left: -.0674em; }   /* (-.033em - .55px at 16px) */
+  .ag-home .bap-wm em > .wm-g3 { margin-right: -.1295em; }  /* (-.067em - 1px at 16px) */
+}
+@media (min-width: 769px) { .ag-home .bap-wm em > .wm-g1 { margin-left: -.045em; } }   /* (-.033em - .3px at 25px) */
