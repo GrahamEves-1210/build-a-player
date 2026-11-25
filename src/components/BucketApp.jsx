@@ -1153,7 +1153,8 @@ export default function BucketApp() {
   // ── BASKETBALL FRANCHISE (NBA_FRANCHISE_LIVE): the GM's own builds are made here, on the normal build page, one at a
   // time, the way football's Franchise does it (App.jsx). The mode asks for one (onBuild); the finished build goes
   // back to it (nbaBuilt) and the mode keeps it.
-  //   job: { id, pos, n, of }   the build's id in the setup, guard or big, and "player n of of" for the bar
+  //   job: { id, pos, n, of, team }   the build's id in the setup, guard or big, "player n of of" for the bar, and the
+  //   franchise's team: the figure wears its uniform while he's built (Silhouette kitTeam)
   const nbaJob = useRef(null)
   const [nbaBuilt, setNbaBuilt] = useState(null)
   const startNbaFranchiseBuild = useCallback(job => {
@@ -1984,6 +1985,7 @@ export default function BucketApp() {
           onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
           isRB={false}
           isBucket={true}
+          kitTeam={page === 'nbafranchise-build' && nbaJob.current?.team ? NBA_TEAMS.find(t => t.short === nbaJob.current.team) ?? null : null}
           isPlus={isSubscribed}
           isCustomMode={isBucketCustomMode}
           onOpenCustomModal={() => setShowBucketCustomModal(true)}

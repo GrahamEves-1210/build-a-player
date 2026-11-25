@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildCapNote, waiveFor, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
+import { TEAM, photoOf, ovrOfAttrs, attrsOfBuild, buildSpot, buildSlot, buildCapNote, BUILD_MAX, CAP_SIM, FIRST_YEAR } from '../../../lib/franchise2/nba'
+import { buildWaives } from '../../../lib/franchise2/nba/setup'
 import { cleanName, nameOk, randomFirstLast } from '../../../lib/franchise2/identity'
 import { defaultFace, buildFaceUrl, FACE_KEYS } from '../../../lib/franchise2/faces'
 import { sfx, haptic } from '../../../lib/juice'
@@ -58,22 +59,16 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
   const next = ordered.find(p => !built(p))
   const unnamed = ordered.find(p => built(p) && !built(p).name)
   const done = !next && !unnamed
-  const build = p => { sfx('tap'); onBuild({ id: p.id, pos: p.pos, n: ordered.indexOf(p) + 1, of: ordered.length }) }
+  const build = p => { sfx('tap'); onBuild({ id: p.id, pos: p.pos, n: ordered.indexOf(p) + 1, of: ordered.length, team: S.team }) }
   const ready = ordered.filter(p => built(p)?.name)
-  // the roster: its standard spots, and who a full one lets go to make room for each build, in order
-  const T = preview().teams[S.team]
-  const outs = useMemo(() => {
-    const F = { ...preview(), team: S.team }, t = { ...T, r: [...T.r] }, out = {}
-    for (const p of ordered) {
-      if (t.r.filter(x => !x.tw).length >= 15) { const m = waiveFor(F, t, p.pos); if (m) { out[p.id] = m; t.r = t.r.filter(x => x !== m) } }
-      t.r.push({ i: -1, g: p.pos, b: 0 })
-    }
-    return out
-  }, [S.team, ordered.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  // who a full roster lets go to make room for each build: read off the league this setup will start (its seed, its
+  // rules: lib/franchise2/nba/setup.js), in the order the franchise puts the builds on, so the men named here are the
+  // men the wire says were waived at tip-off
+  const outs = useMemo(() => buildWaives(S), [S.seed, S.team, S.rules?.cap, S.rules?.inj, picks.map(p => `${p.id}${p.pos}`).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const nick = TEAM[S.team].nick
   return (
     <div className="fsu-builds">
-      <Chyron team={S.team} tag={String(picks.length)} title="Build your players" sub={`ROOKIES · UP TO ${BUILD_MAX} · EACH TAKES A ROSTER SPOT`} />
+      <Chyron team={S.team} title="Build your players" right={`${picks.length} OF ${BUILD_MAX}`} sub="ROOKIES · EACH TAKES A ROSTER SPOT" />
       <div className="fsu-pos">
         {GROUPS.map(([pos, k, name, spots]) => {
           const n = count(pos)
@@ -107,7 +102,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
           return (
             <div key={p.id} className="nb-build-row">
               <LowerThird name={B.name} pos={buildSpot(B.pos, a)} num={B.num} ovr={o} photo={faceOf(B, S.team)} team={S.team} mine={owner}
-                line={`NO. ${slot} PICK · ${money(Array.isArray(deal) ? deal[0] : deal)}`} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
+                line={`PICK ${slot} · ${money(Array.isArray(deal) ? deal[0] : deal)}`} onClick={() => go({ naming: p.id }, 'tap')} delay={k * 40} />
               {room && <p className="nb-build-cap">{room}</p>}
               {notes[p.id] && <p className="nb-build-cap">{notes[p.id]}</p>}
               <span className="nb-fa-acts"><button type="button" onClick={() => build(p)}>Rebuild</button></span>
@@ -125,6 +120,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
 }
 
 // a build back from the build page: his face, his name and his number
+const COMMON = { guard: [1, 3, 0, 2, 5, 4, 7, 8, 11, 10, 13, 12, 14, 15, 20, 22, 23, 24, 30], big: [21, 32, 33, 34, 35, 12, 13, 15, 20, 22, 23, 24, 40, 41, 42, 44, 45, 50, 55] }
 export function NbaNameStep({ S, id, owner, onDone }) {
   const B = S.builds[id]
   const F = preview()
@@ -132,7 +128,8 @@ export function NbaNameStep({ S, id, owner, onDone }) {
   const free = useMemo(() => Array.from({ length: 100 }, (_, n) => n).filter(n => !taken.has(n)), [taken])
   const [first, setFirst] = useState(() => B.name?.split(' ')[0] ?? '')
   const [last, setLast] = useState(() => B.name?.split(' ').slice(1).join(' ') ?? '')
-  const [num, setNum] = useState(() => (B.num != null && !taken.has(B.num) ? B.num : free[(id.length * 7) % free.length]))
+  // (his number until one is picked: the first free of the numbers guards and bigs wear, not whatever's left in the 70s)
+  const [num, setNum] = useState(() => (B.num != null && !taken.has(B.num) ? B.num : (COMMON[B.pos] ?? COMMON.guard).find(n => !taken.has(n)) ?? free[0]))
   const [all, setAll] = useState(false)
   const [page, setPage] = useState(0)
   // (the face he comes in with is the first of the eight, so one is always lit)
@@ -143,7 +140,8 @@ export function NbaNameStep({ S, id, owner, onDone }) {
   const slot = buildSlot(o)
   const deal = CAP_SIM.rookieScale(slot, FIRST_YEAR)
   const ok = nameOk(first, last)
-  const shown = all ? free : free.slice(0, 18)
+  // (the first numbers free, and always the one he's wearing)
+  const shown = all ? free : [...new Set([...free.slice(0, 18), num])].sort((x, y) => x - y)
   const same = f => FACE_KEYS.every(k => f[k] === face[k])
   return (
     <div className="fsu-nameform">

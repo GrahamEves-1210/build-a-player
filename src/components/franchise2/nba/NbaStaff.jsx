@@ -52,7 +52,7 @@ export default function NbaStaffScreen({ F, act, owner, onBack }) {
   const search = j => { act(X => { NC.staffCandidates(X, j) }); setK(j); sfx('tap') }
   const poached = (F.phase === 'off' && F.cev?.y === F.year ? F.cev.ev : []).filter(e => e.k === 'leave' && e.mine)
   return (
-    <div className="fd fk fst fd-narrow">
+    <div className="fd fk fst fd-narrow nb-staff">
       <BackBar label="Team" title="Coaching staff" onBack={onBack} />
       <Chyron team={F.team} title="COACHING STAFF" tag={F.year} sub={`${TEAM[F.team].nick.toUpperCase()} · HEAD COACH ${lastOf(M.hc?.n ?? owner)}`} />
       {hot && (
@@ -101,23 +101,23 @@ function Search({ F, act, k, onBack }) {
     const sit = () => { if (!act(X => NC.interviewStaff(X, k, c.i))) { sfx('deny'); return } sfx('flip'); haptic('medium') }
     const hire = () => { if (!act(X => NC.hireStaff(X, k, c.i))) { sfx('deny'); return } sfx('claim'); haptic('success'); onBack() }
     return (
-      <div className="fst-car">
+      <div className="fst-car nb-staff">
         <BackBar label="Candidates" title={c.n} onBack={() => { setSel(null); sfx('back') }} />
-        <StaffL3 F={F} c={c} role={k} team={F.team} lg={NBA_STAFF} hidden={!seen} reveal={seen} line={[c.home ? `${TEAM[F.team].nick.toUpperCase()} ASSISTANT` : c.cv, `AGE ${c.ag}`].filter(Boolean).join(' · ')} />
+        <StaffL3 F={F} c={c} role={k} team={F.team} lg={NBA_STAFF} hidden={!seen} reveal={seen} line={c.home ? `${TEAM[F.team].nick.toUpperCase()} ASSISTANT` : c.cv} />
         {!seen
-          ? <><p className="fst-note">An interview shows his grades. {left} of {NC.IV_N} interviews left for this job.</p><ActionBar><Go onClick={sit} disabled={left <= 0}>{left > 0 ? 'Interview him' : 'No interviews left'}</Go></ActionBar></>
-          : <><p className="fst-note">{cur ? `Hiring him lets ${cur.n} go.` : 'The job is open.'}</p><ActionBar><Go onClick={hire}>{`Hire ${lastOf(c.n)}`}</Go></ActionBar></>}
+          ? <><p className="fst-note">{`Age ${c.ag}. `}An interview shows his grades. {left} of {NC.IV_N} interviews left for this job.</p><ActionBar><Go onClick={sit} disabled={left <= 0}>{left > 0 ? 'Interview him' : 'No interviews left'}</Go></ActionBar></>
+          : <><p className="fst-note">{`Age ${c.ag}. `}{cur ? `Hiring him lets ${cur.n} go.` : 'The job is open.'}</p><ActionBar><Go onClick={hire}>{`Hire ${lastOf(c.n)}`}</Go></ActionBar></>}
       </div>
     )
   }
   return (
-    <div className="fst-car">
+    <div className="fst-car nb-staff">
       <BackBar label="Coaching staff" title={`${NC.JOB[k]} search`} onBack={onBack} />
       <Chyron team={F.team} title={`${NC.JOB[k]} SEARCH`} right={`${left} OF ${NC.IV_N} INTERVIEWS LEFT`} sub={`${NC.JOB_LONG[k]} · TAP A CANDIDATE`} />
       {cur && <StaffL3 F={F} c={cur} role={k} team={F.team} size="s" lg={NBA_STAFF} line={`IN THE JOB SINCE ${cur.st ?? F.year}`} stamp={<Stamp kind="ink" quiet>NOW</Stamp>} />}
       {list.map((x, i) => (
         <StaffL3 key={x.i} F={F} c={x} role={k} team={F.team} size="s" lg={NBA_STAFF} hidden={!NC.gradesKnown(F, x, k)} delay={i * 35} onClick={() => { setSel(x.i); sfx('tap') }}
-          line={[x.home ? `${TEAM[F.team].nick.toUpperCase()} ASSISTANT` : x.cv, `AGE ${x.ag}`].filter(Boolean).join(' · ')} />
+          line={x.home ? `${TEAM[F.team].nick.toUpperCase()} ASSISTANT` : x.cv} />
       ))}
     </div>
   )

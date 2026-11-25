@@ -17,7 +17,7 @@ function nanCheck(tag) {
   for (const s of N.SHORTS) { const c = N.CAP_SIM.capSheet(F, s); if (!Number.isFinite(c.pay)) fail(tag, 'payroll NaN', s) }
 }
 const champs = {}
-let offers = 0, won = 0, kept = 0, gone = 0, qo = 0, picks = 0, stretchN = [0, 0, 0]
+let offers = 0, won = 0, kept = 0, gone = 0, qo = 0, picks = 0, stretchN = [0, 0, 0], hurtN = 0, minorN = 0, rests = 0
 for (let y = 0; y < Y; y++) {
   const yr = F.year
   // ── the season: three stretches ──
@@ -34,6 +34,11 @@ for (let y = 0; y < Y; y++) {
     if (X.w + X.l !== X.rows.length) fail(yr, 'recap record', k)
     if (!(X.seed >= 1 && X.seed <= 15)) fail(yr, 'seed', X.seed)
     for (const b of X.builds) if (b.gp > games) fail(yr, 'build games', b.p.n, b.gp, games)
+    // (the recap's injuries: five games or more or the season, a man once; the rest day to day, nobody in both)
+    if (new Set(X.hurt.map(h => h.id)).size !== X.hurt.length) fail(yr, 'a man twice in the recap\'s injuries', k)
+    if (X.hurt.some(h => h.g < 5 && !h.se)) fail(yr, 'a short injury listed under five games or more', k)
+    if (X.minor.some(n => X.hurt.some(h => h.n === n)) || new Set(X.minor).size !== X.minor.length) fail(yr, 'day-to-day names', k)
+    hurtN += X.hurt.length; minorN += X.minor.length
     if (k === 1 && F.day !== F.ddl) fail(yr, 'stretch 2 stops before deadline day', F.day, F.ddl)
     const boxes = X.rows.filter(r => N.boxOf(F, r)).length
     if (y === 0) console.log(`   stretch ${k + 1}: ${games} games, ${boxes} box scores kept, save ${(N.packNba(F).length / 1024).toFixed(0)} KB`)
@@ -47,6 +52,19 @@ for (let y = 0; y < Y; y++) {
   let taps = 0
   while ((F.phase === 'playin' || F.phase === 'playoffs') && taps++ < 12) {
     const ph = F.phase
+    // (two seasons in three, with his team still in it: SIM THE REST OF THE POSTSEASON, from the first round one year
+    // and from the second the next. The champion's page still shows how his own run ended: the series, who won it,
+    // its games)
+    if (ph === 'playoffs' && N.alive(F) && (y % 3 === 1 || (y % 3 === 2 && F.po.rd >= 1))) {
+      const from = F.log.length
+      const r = N.lightRest(F), x = N.roundResult(F)
+      if (r?.out !== false || F.phase !== 'done') fail(yr, 'sim the rest', JSON.stringify(r), F.phase)
+      else if (!x || x.ph !== 'playoffs' || !x.S?.done || (x.S.hi !== TEAM && x.S.lo !== TEAM)) fail(yr, 'sim the rest: no series to show', JSON.stringify(x?.S ?? null))
+      else if (x.rows.length !== x.S.g.length || x.won !== (x.S.done === TEAM) || x.out === x.won || x.rows.some(g => !g.po)) fail(yr, 'sim the rest: the series shown', x.rows.length, x.S.g.length, x.won)
+      else if (x.won !== (F.po.champ === TEAM) || F.log.length - from < x.rows.length) fail(yr, 'sim the rest: the last series is the one he went out in (or the Finals he won)')
+      else rests++
+      break
+    }
     const r = N.lightRound(F)
     if (!r) { fail(yr, 'round null'); break }
     // (a top-six seed watches the play-in: nothing of his to show)
@@ -105,6 +123,7 @@ for (let y = 0; y < Y; y++) {
 }
 console.log(`stretch games a season (GM): ${stretchN.map(n => (n / Y).toFixed(1)).join(' / ')}`)
 console.log(`re-sign: ${kept} kept, ${qo} tendered, ${gone} let go · offers ${offers}, ${won} signed · picks ${picks}`)
+console.log(`recaps: ${hurtN} men out five games or more, ${minorN} day to day · ${rests} postseasons simmed to the end while still in it`)
 console.log('titles', JSON.stringify(champs))
 console.log(`${Y} light seasons in ${((Date.now() - t0) / 1000).toFixed(0)}s`)
 

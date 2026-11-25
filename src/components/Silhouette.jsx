@@ -447,13 +447,16 @@ function BaseballSilhouette(props) {
   return <SilhouetteFigure {...props} {...mapped} isBucket activeDrag={activeDrag ? { ...activeDrag, type: to(activeDrag.type) } : activeDrag} />
 }
 
-function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isK = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
+function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isK = false, isDL: isDLPos = false, isLB = false, isBucket = false, isSoccer = false, isBaseball = false, logoDir: logoDirProp = null, kitNick = null, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false, kitTeam = null }) {
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
   const figW   = isBucket ? BUCKET_FIG_W : isK ? K_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isOL ? OL_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
   const figH   = isBucket ? BUCKET_FIG_H : isK ? K_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isOL ? OL_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
   const zones  = isK ? K_ZONES : isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
+  // kitTeam ({ short, color, color2 }, basketball): the figure wears that one team's uniform, whoever the traits came
+  // from (a Franchise build is the franchise team's player: BucketApp's nbafranchise-build). The cards keep their men.
+  const kitBuild = useMemo(() => (kitTeam && build ? Object.fromEntries(Object.entries(build).map(([k, v]) => [k, v ? { ...v, teamColor: kitTeam.color, teamColor2: kitTeam.color2, team: kitTeam.short } : v])) : build), [build, kitTeam])
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
   const [isMobile, setIsMobile] = useState(
@@ -793,7 +796,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             left: '50%', top: 'calc(15% + 42px)',
             transform: 'translate(-50%, -50%)',
             width: '40px', height: '40px',
-            background: build?.['clutch']?.teamColor || '#333333',
+            background: kitBuild?.['clutch']?.teamColor || '#333333',
             zIndex: 2,
             pointerEvents: 'none',
           }} />
@@ -904,8 +907,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
           // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
           // the silhouette png (z 4) and hide the jersey colours)
-          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} /></div>
-          : <BucketFigureOverlay build={build} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} />)}
+          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={kitBuild} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} /></div>
+          : <BucketFigureOverlay build={kitBuild} logoDir={logoDirProp} nickOf={kitNick} soccer={isSoccer && !isBaseball} />)}
         {isBucket && bucketPhoto && bounds && (() => {
           const { W, H, fx, fy, scale } = bounds
           const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100

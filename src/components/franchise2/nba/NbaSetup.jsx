@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { TEAM, DIVS, CONF_DIVS, DIV_OF, CONF_NAME, CONF_OF, buildTeams, teamOvr, depthOrder, photoOf, FIRST_YEAR, NC } from '../../../lib/franchise2/nba'
 import { CAP_SIM } from '../../../lib/franchise2/nba'
+import { lastSeason } from '../../../lib/franchise2/nba/setup'
 import { sfx, haptic } from '../../../lib/juice'
 import { IconClose, IconCaret } from '../../app/icons'
 import { GamesSwitch } from '../../simFlow'
@@ -14,7 +15,8 @@ import '../setup.css'
 
 // BASKETBALL FRANCHISE, the setup: football's five steps (Setup.jsx), in the NBA's terms.
 //   0 THE MODE    FULL or LIGHT (kept on the save: F.pace), the league rules and key moments
-//   1 THE TEAM    the 30 logos by division; a team's card: its OVR, its rank, its payroll, its real head coach, its stars
+//   1 THE TEAM    the 30 logos by division; a team's card: last season, its OVR, its rank, its payroll, its real head
+//                 coach, its stars
 //   2 PLAYERS     up to three of the GM's own builds (a guard or a big), built on the build page and named here
 //   3 THE COACH   spun from the league's real head coaches (CoachBuild.jsx with nbaCoachLg.js), a style, a name, a face
 //   4 THE HIRE    the coach card and his staff: keep the men in the jobs or interview and hire others (NbaHire.jsx)
@@ -63,7 +65,7 @@ export default function NbaSetup({ setup, owner, put, onStart, onBack, onBuild }
   const games = <GamesSwitch mode={S.games ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game" onPick={m => go({ games: m })} cls={GAMES_CLS} />
   const closing = firstStep(S) && !naming
   return (
-    <div className="fk-root fsu" style={S.team && step !== 'team' && step !== 'pace' ? fkVars(S.team) : undefined}>
+    <div className="fk-root fsu nb-setup" style={S.team && step !== 'team' && step !== 'pace' ? fkVars(S.team) : undefined}>
       <div className="fsu-top">
         <button type="button" className="fsu-x" onClick={back} aria-label={closing ? 'Close' : 'Back'}>
           {closing ? <IconClose size={16} /> : <IconCaret dir="left" size={18} />}
@@ -115,6 +117,7 @@ function TeamCard({ s, onPick, onGo }) {
   const stars = depthOrder(F, s).slice().sort((a, b) => b.o - a.o).slice(0, 3)
   const pay = CAP_SIM.capSheet(F, s)
   const hc = NC.realHC(s)
+  const ls = lastSeason(s)
   const i = ORDER.indexOf(s)
   const prev = ORDER[(i + 29) % 30], next = ORDER[(i + 1) % 30]
   const rank = useMemo(() => Object.keys(TEAM).sort((a, b) => teamOvr(F, b) - teamOvr(F, a)).indexOf(s) + 1, [s]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -122,10 +125,12 @@ function TeamCard({ s, onPick, onGo }) {
     <div className="fsu-card" key={s}>
       <div className="fsu-card-nav">
         <button type="button" onClick={() => onPick(prev)} aria-label={TEAM[prev].name}><IconCaret dir="left" size={14} /><KLogo s={prev} size={22} />{prev}</button>
-        <span>{DIV_OF[s].toUpperCase()}</span>
+        <span>{`${CONF_OF[s] === 'E' ? 'EAST' : 'WEST'} · ${DIV_OF[s].toUpperCase()}`}</span>
         <button type="button" onClick={() => onPick(next)} aria-label={TEAM[next].name}>{next}<KLogo s={next} size={22} /><IconCaret dir="right" size={14} /></button>
       </div>
-      <TeamSlab s={s} size="l" sub={`${CONF_NAME[CONF_OF[s]].toUpperCase()} CONFERENCE`} />
+      {/* (last season on the slab, football's card: the record, how it ended) */}
+      <TeamSlab s={s} size="l" rec={ls?.rec} sub={ls ? `${ls.season} SEASON` : `${CONF_NAME[CONF_OF[s]].toUpperCase()} CONFERENCE`} />
+      {ls && <div className="fsu-last">{ls.div && <b>{ls.div} DIVISION CHAMPIONS</b>}<span className={ls.champ ? 'is-gold' : ''}>{ls.end}</span></div>}
       <div className="fsu-card-nums">
         <BigNum v={ovr} label="TEAM OVR" size={58} />
         <Fact v={`${rank}${ORD(rank)}`} label="IN THE NBA" size={40} />
