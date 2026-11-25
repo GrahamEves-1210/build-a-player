@@ -149,7 +149,10 @@ ok(N.rangeOf({ pk: 76, seen: 88, o: 76, sc: 2, tg: 'SOLID' }).tag === 'BUST', 'a
   while (stdE().length < 14 && g++ < 5) { const r = N.campInvite(E); if (!r.ok) { console.log('     invite refused:', r.why); break } }
   ok(stdE().length === 14 && N.campCheck(E).ok, `two camp invites make 14 (${stdE().slice(-2).map(p => `${p.n} ${p.o}, age ${p.ag}, $${p.$}M`).join('; ')})`)
   ok(!N.campInvite(E).ok, 'no invite once the roster has its 14')
-  // (c) a hard cap with no room for a rookie's minimum: the season can still start, a man short
+  // (c) a hard cap with no room left under it: the roster minimum comes first (contracts.js canSign: a minimum deal for
+  // a roster under 14 always goes, whatever the line), so camp still gets to 14 and the season starts with a full
+  // roster. (Before the 2026-11-24 money round this roster opened a man short: campCheck's `short` is still there for
+  // a roster with truly nobody to add.)
   const H = JSON.parse(snap)
   const TH = H.teams.MIL, stdH = () => TH.r.filter(p => !p.tw)
   while (stdH().length > 13) TH.r = TH.r.filter(p => p !== stdH().sort((a, b) => a.o - b.o)[0])
@@ -158,9 +161,17 @@ ok(N.rangeOf({ pk: 76, seen: 88, o: 76, sc: 2, tg: 'SOLID' }).tag === 'BUST', 'a
   const gap = N.CAP_SIM.apron1Of(y) - N.CAP_SIM.payroll(H, 'MIL', y)
   const star = stdH().sort((a, b) => b.$ - a.$)[0]
   star.$ = Math.round((star.$ + gap - 0.4) * 10) / 10
-  const ck = N.campCheck(H)
-  ok(N.minPool(H).length === 0 && !N.campInvite(H).ok, `hard-capped ${(N.CAP_SIM.apron1Of(y) - N.CAP_SIM.payroll(H, 'MIL', y)).toFixed(1)}M under the apron: no minimum deal fits`)
-  ok(ck.ok && ck.short === 1, `camp lets the season start a man short: ${ck.why}`)
+  const under = (N.CAP_SIM.apron1Of(y) - N.CAP_SIM.payroll(H, 'MIL', y)).toFixed(1)
+  ok(!N.campCheck(H).ok, `hard-capped ${under}M under the apron with 13 men: camp isn't legal yet`)
+  const poolH = N.minPool(H)
+  ok(poolH.length >= 1, `the minimum list still has men for the 14th spot (${poolH.length})`)
+  const mid = (H.fa ?? []).filter(p => !poolH.includes(p)).sort((a, b) => b.o - a.o)[0]
+  if (mid) ok(!N.CAP_SIM.canSign(H, 'MIL', mid, { $: N.CAP_SIM.minOf(mid.ys ?? 0, y) + 2, y: 1, r: 0 }).ok, 'anything past the minimum is still stopped by the hard cap')
+  if (poolH.length) N.signMin(H, poolH[0].i)
+  ok(stdH().length === 14 && N.campCheck(H).ok && !N.campCheck(H).short, 'the minimum deal goes and camp is legal at 14')
+  // (and once it has its 14, the hard cap holds again: no fifteenth man on a minimum deal)
+  const next = N.minPool(H)[0] ?? (H.fa ?? []).slice().sort((a, b) => b.o - a.o)[0]
+  if (next) ok(!N.CAP_SIM.canSign(H, 'MIL', next, { $: N.CAP_SIM.minOf(next.ys ?? 0, y), y: 1, r: 0 }).ok, 'a fifteenth man on the minimum is stopped by the hard cap')
   N.nextStep(H)
   ok(H.phase === 'season', 'and the season starts')
 }

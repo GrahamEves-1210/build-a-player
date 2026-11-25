@@ -148,7 +148,8 @@ export function PlayerSheet({ F, act, id, owner, onClose }) {
         <div className="nb-facts">
           <span><small>Age</small><b>{pros ? p.ag ?? 20 : p.ag}</b></span>
           <span><small>Height, weight</small><b>{heightText(p.ht)} · {p.wt} LBS</b></span>
-          <span><small>Experience</small><b>{p.ys > 0 ? `${p.ys} ${p.ys === 1 ? 'YEAR' : 'YEARS'}` : 'ROOKIE'}</b></span>
+          {/* (a rookie is a rookie through his first season, whatever service the data gives him: a man who sat out the year he was drafted, a build) */}
+          <span><small>Experience</small><b>{p.ys > 0 && !(p.rk != null && p.rk >= CAP_SIM.capYear(F)) ? `${p.ys} ${p.ys === 1 ? 'YEAR' : 'YEARS'}` : 'ROOKIE'}</b></span>
           {/* (a real man's draft isn't in the league's data: shown for the men drafted in it) */}
           {p.dr && <span><small>Drafted</small><b>{p.dr[0]} · {p.dr[1] === 1 ? '1ST' : '2ND'} ROUND, NO. {p.dr[2]}</b></span>}
           <span><small>Contract</small><b>{pros ? 'UNSIGNED' : !s && !(p.y > 0) ? 'FREE AGENT' : dealLine(p)}</b></span>
