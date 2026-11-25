@@ -1740,6 +1740,7 @@ const aswText = a => [a.three && `3-Point Contest, ${placeWord(a.three.place)} (
 export const honorsOf = (s, S, pos) => (S.honorsOf ? S.honorsOf(s, pos) : S.isSoccer ? [
   ...(s.trophies ?? []),
   s.wc?.champion && 'World Cup',
+  s.cont?.champion && (s.cont.name ?? 'Continental title'),
   s.award && S.ui.award,
   !s.award && s.bdo?.rank <= 10 && `${S.ui.award}: ${ordinalOf(s.bdo.rank)}`,
   s.allPro && (s.bootName ?? 'Golden Boot'),
@@ -1965,6 +1966,8 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
     [t.leagueTitles, t.leagueTitles === 1 ? 'LEAGUE TITLE' : 'LEAGUE TITLES', IconTrophy, true],
     [t.cups, t.cups === 1 ? 'CUP' : 'CUPS', IconTrophy, false],
     [t.uel, 'EUROPA LEAGUE', IconTrophy, false],
+    [t.uecl ?? 0, 'CONFERENCE LEAGUE', IconTrophy, false],
+    [t.contTitles?.length ?? 0, t.contTitles?.length === 1 ? String(t.contTitles[0].name ?? 'CONTINENTAL TITLE').toUpperCase() : 'CONTINENTAL TITLES', IconTrophy, true],
     [t.allPros, t.allPros === 1 ? 'GOLDEN BOOT' : 'GOLDEN BOOTS', IconMedal, false],
     [t.shoes, t.shoes === 1 ? 'GOLDEN SHOE' : 'GOLDEN SHOES', IconMedal, false],
     [t.poty, 'PLAYER OF THE SEASON', IconStar, false],

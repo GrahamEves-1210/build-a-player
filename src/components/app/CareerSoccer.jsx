@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { sportOf, openTalks, acceptTalks, roundOdds, playoffRound, combinePos, gameCast, gamesMode } from '../../lib/career'
 import { wageText, feeText, nationName, stayPut } from '../../lib/careerSoccer'
-import * as SOCCER_SIM from '../../utils/soccerSimulation'
+import { soccerLeagueInfo } from '../../utils/soccerSimulation'
 import { sfx } from '../../lib/juice'
 import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconCheck, IconCaret } from './icons'
 import { Analytics, CareerGame, honorsOf, fmt, ClubLogo, tieText, seasonOf, ordinalOf, inLeague } from './AppCareer'
@@ -13,26 +13,22 @@ import './squad-soccer.css'   // (the league table's rows: Squad Builder's socce
 // ── The league table ─────────────────────────────────────────────────────────
 // Rows are the season engine's standings: { short, name, played, wins, draws, losses, gf, ga, gd, points, pos, isUs }.
 const byTable = (a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || (a.isUs ? -1 : b.isUs ? 1 : 0)
-const soccerLeagueInfo = SOCCER_SIM.soccerLeagueInfo
-// (the engine's table at a matchweek, where the build has it: utils/soccerSimulation.js soccerTableAt(form, upto, mine).
-// Read off the module by name, so a build without it still loads)
-const tableAt = SOCCER_SIM[['soccer', 'Table', 'At'].join('')] ?? null
 // The table as it stands after his club's matches so far, the truest source first:
-//   1. the league done: the final table (c.active.final.standings)
-//   2. the career's own (the engine's): S.x.table(c), or c.active.table
-//   3. the season's matchweek-by-matchweek form (a run's `form`), read at the matches played with his club's real results
-//   4. none of those: the season's simulated final table brought back to the matches played, his club's row from its
-//      real results (an estimate: the other clubs' rows move when the season is re-simulated)
+//   1. the engine's own: S.x.table(c) (lib/careerSoccer.js: every club's results matchweek by matchweek, his club's as
+//      they were really played; each row carries its zone), or rows kept on the career (c.active.table)
+//   2. the league done: the final table (c.active.final.standings)
+//   3. neither (a build or a season from before the engine's table): the season's simulated final table brought back
+//      to the matches played, his club's row from its real results (an estimate: the other clubs' rows move when the
+//      season is re-simulated)
 export function tableNow(c, games = []) {
   const a = c.active
   if (!a) return null
-  if (a.final?.standings?.length) return a.final.standings
-  const own = sportOf(c).x?.table?.(c, games) ?? a.table
+  let own = null
+  try { own = sportOf(c).x?.table?.(c) ?? a.table ?? null } catch { own = null }
   if (Array.isArray(own) && own.length) return own
+  if (a.final?.standings?.length) return a.final.standings
   const k = games.length
   if (!k) return null
-  const form = a.snap?.last?.form ?? a.base?.form
-  if (tableAt && form) { try { const rows = tableAt(form, k, { short: c.team, games }); if (rows?.length) return rows } catch { /* the estimate below */ } }
   const src = a.snap?.last?.standings ?? a.base?.standings
   if (!src?.length) return null
   const rows = src.map(r => {
@@ -51,10 +47,14 @@ export function tableNow(c, games = []) {
 }
 // a season's own table (the recap's), kept small on the season: [short, W, D, L, GF, GA] in table order (AppCareer's
 // withTable), or the engine's full rows
-const unpackTable = (S, list, mine) => (list ?? []).map((r, i) => (Array.isArray(r) ? { short: r[0], name: S.teamOf(r[0])?.name ?? r[0], played: r[1] + r[2] + r[3], wins: r[1], draws: r[2], losses: r[3], gf: r[4], ga: r[5], gd: r[4] - r[5], points: r[1] * 3 + r[2], pos: i + 1, isUs: r[0] === mine } : { ...r, pos: r.pos ?? i + 1, isUs: r.isUs ?? r.short === mine }))
+const unpackTable = (S, list, mine) => (list ?? []).map((r, i) => (Array.isArray(r) ? { short: r[0], name: r[6] ?? S.teamOf(r[0])?.name ?? r[0], extra: r[6] != null, played: r[1] + r[2] + r[3], wins: r[1], draws: r[2], losses: r[3], gf: r[4], ga: r[5], gd: r[4] - r[5], points: r[1] * 3 + r[2], pos: i + 1, isUs: r[0] === mine } : { ...r, pos: r.pos ?? i + 1, isUs: r.isUs ?? r.short === mine }))
+const seasonTable = (S, s) => { let rows = null; try { rows = S.x?.tableOf?.(s) ?? null } catch { rows = null } return rows?.length ? rows : unpackTable(S, s.table, s.team) }
 // where a place in the table leads: the Champions League, the Europa League, the Conference League, the drop
 // (the places are the league's own: utils/soccerSimulation.js soccerLeagueInfo; uecl when the league has them)
-const ZONE_WORD = { ucl: 'Champions League', uel: 'Europa League', uecl: 'Conference League', down: 'Relegation' }
+// (the engine's rows carry their own zone: those five, and in a second tier 'up' and 'playoff')
+const ZONE_WORD = { ucl: 'Champions League', uel: 'Europa League', uecl: 'Conference League', up: 'Promotion', playoff: 'Play-off', down: 'Relegation' }
+const ZONES = Object.keys(ZONE_WORD)
+const zoneOfRow = (r, i, byPlace) => (r.zone !== undefined ? (ZONES.includes(r.zone) ? r.zone : null) : byPlace(r.pos ?? i + 1))
 function zonesOf(league, size) {
   const info = soccerLeagueInfo(league) ?? { ucl: 4, uel: 2, down: 3 }
   const ucl = info.ucl ?? 4, uel = info.uel ?? 0, uecl = info.uecl ?? 0, down = info.down ?? 3
@@ -69,13 +69,13 @@ export function LeagueTable({ c, rows, league, mine = c.team, all: all0 = false 
   const me = rows.findIndex(r => r.isUs || r.short === mine)
   const zone = zonesOf(league, size)
   const shown = all ? rows : rows.filter((r, i) => i < 4 || Math.abs(i - me) <= 1 || i >= size - 3)
-  const zones = [...new Set(rows.map((r, i) => zone(r.pos ?? i + 1)).filter(Boolean))]
+  const zones = ZONES.filter(z => rows.some((r, i) => zoneOfRow(r, i, zone) === z))
   return (
     <div className="cr-lt">
       <div className="sq-table" role="table" aria-label="League table">
         <div className="sq-table-row sq-table-head" role="row"><span>#</span><span>CLUB</span><span>P</span><span>W</span><span>D</span><span>L</span><span>GD</span><span>PTS</span></div>
         {shown.map((r, j) => {
-          const i = rows.indexOf(r), z = zone(r.pos ?? i + 1)
+          const i = rows.indexOf(r), z = zoneOfRow(r, i, zone)
           const gap = j > 0 && i - rows.indexOf(shown[j - 1]) > 1
           return (
             <div key={r.short} className={`sq-table-row${i === me ? ' is-mine' : ''}${z ? ` is-${z}` : ''}${gap ? ' is-gap' : ''}`} role="row">
@@ -97,12 +97,14 @@ export function LeagueTable({ c, rows, league, mine = c.team, all: all0 = false 
 export function SoccerTable({ c, games, final = null }) {
   const done = !!final?.length || !!c.active?.final
   const [open, setOpen] = useState(false)
-  const rows = final?.length ? final : tableNow(c, games)
+  // (nothing to show before a ball is kicked; the engine's rows, zones and all, ahead of the bare final standings)
+  const live = games.length || done ? tableNow(c, games) : null
+  const rows = live?.length && live[0].zone !== undefined ? live : final?.length ? final : live
   if (!rows?.length) return null
   const S = sportOf(c)
   const me = rows.find(r => r.isUs || r.short === c.team)
   const league = c.active?.base?.league?.id ?? S.teamOf(c.team)?.league
-  const z = me ? zonesOf(league, rows.length)(me.pos) : null
+  const z = me ? zoneOfRow(me, rows.indexOf(me), zonesOf(league, rows.length)) : null
   const bar = (
     <button type="button" className={`cr-race-bar cr-lt-bar${open ? ' is-open' : ''}`} onClick={() => { setOpen(o => !o); sfx('tap') }} aria-expanded={open}>
       <span><small>{done ? 'FINAL TABLE' : 'THE TABLE'}</small><b>{me ? ordinalOf(me.pos).toUpperCase() : '—'}</b></span>
@@ -131,6 +133,7 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
       <div className="cr-badges">
         {(last.trophies ?? []).map(t => <span key={t} className="cr-badge is-gold"><IconTrophy size={12} /> {t.toUpperCase()}</span>)}
         {wc?.champion && <span className="cr-badge is-gold"><IconTrophy size={12} /> WORLD CUP</span>}
+        {last.cont?.champion && <span className="cr-badge is-gold"><IconTrophy size={12} /> {String(last.cont.name ?? 'CONTINENTAL TITLE').toUpperCase()}</span>}
         {last.award ? <span className="cr-badge is-gold"><IconCrown size={12} /> BALLON D'OR</span> : bdo?.rank <= 30 && <span className="cr-badge"><IconStar size={12} /> BALLON D'OR · {ordinalOf(bdo.rank).toUpperCase()}</span>}
         {last.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {(last.bootName ?? 'GOLDEN BOOT').toUpperCase()}</span>}
         {last.poty && <span className="cr-badge is-gold"><IconStar size={12} /> {(last.potyName ?? 'PLAYER OF THE SEASON').toUpperCase()}</span>}
@@ -151,20 +154,11 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
         <p><b>{nationName(c.nation)}</b> {last.caps ? `${last.caps} ${last.caps === 1 ? 'cap' : 'caps'}, ${last.intlGoals} ${last.intlGoals === 1 ? 'goal' : 'goals'}${last.intlRole && last.intlRole !== 'Starter' ? ` (${last.intlRole.toLowerCase()})` : ''}` : 'Not called up'}</p>
         {last.missed > 0 && <p><b>Missed</b> {last.missed} {last.missed === 1 ? 'match' : 'matches'}</p>}
       </div>
-      {wc && (
-        <div className={`ag-card cr-wc${wc.champion ? ' is-ring' : ''}`}>
-          <span className="ag-eyebrow">THE {wc.year} WORLD CUP · {nationName(wc.nation).toUpperCase()}</span>
-          {!wc.called ? <p className="cr-note">Left out of the squad. He watches it at home.</p> : <>
-            <b className="cr-wc-finish">{wc.champion ? 'WORLD CHAMPIONS' : String(wc.finish ?? '').toUpperCase()}</b>
-            <p className="cr-note">{wc.goals} {wc.goals === 1 ? 'goal' : 'goals'}, {wc.assists} {wc.assists === 1 ? 'assist' : 'assists'} in {wc.apps} {wc.apps === 1 ? 'match' : 'matches'}{wc.boot?.won ? '. The Golden Boot.' : wc.boot?.winner ? `. The Golden Boot went to ${wc.boot.winner}.` : '.'}{wc.ball ? ` The ${wc.ball}.` : ''}{wc.young ? ' Best Young Player.' : ''}</p>
-            <div className="cr-goals">{(wc.games ?? []).map((g, i) => <span key={i} className={`cr-goal${g.won ? ' is-met' : g.drawn && !g.pens ? '' : ' is-miss'}`}>{g.stage === 'group' ? 'Group' : g.round ?? g.stage}: {g.mySc}–{g.oppSc}{g.pens ? ` (${g.pens[0]}–${g.pens[1]} pens)` : ''} {g.oppName ?? g.opp}{g.goals ? ` · ${g.goals}G` : ''}</span>)}</div>
-          </>}
-        </div>
-      )}
+      {[wc, last.cont].filter(Boolean).map(t => <Tournament key={t.name ?? 'wc'} t={t} />)}
       {last.table?.length > 0 && (
         <div className="cr-lt-card">
           <span className="ag-eyebrow">{String(last.league ?? 'THE LEAGUE').toUpperCase()} · THE FINAL TABLE</span>
-          <LeagueTable c={c} rows={unpackTable(S, last.table, last.team)} league={last.leagueId ?? last.league} mine={last.team} />
+          <LeagueTable c={c} rows={seasonTable(S, last)} league={last.leagueId ?? last.league} mine={last.team} />
         </div>
       )}
       <Analytics c={c} s={last} />
@@ -173,6 +167,22 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
       {card.img && <img src={card.img} alt={`${c.name}'s ${seasonOf(last.season)} season card`} className="cl-preview" />}
       {card.img && <a className="ag-btn ag-btn--ghost cl-season-share" href={card.img} download={`season-${seasonOf(last.season)}.png`}>SAVE THE IMAGE</a>}
       {card.failed && <p className="cr-note">{card.img ? "Couldn't open sharing here. Save the image instead." : "Couldn't make the card. Try again."}</p>}
+    </div>
+  )
+}
+// His country's summer: the World Cup, or the continental championship (the Euros, the Copa América, AFCON: s.cont, the
+// World Cup's shape with its name). Not qualified, left out, or how far they went and what he did
+function Tournament({ t }) {
+  const name = t.name ?? 'World Cup'
+  return (
+    <div className={`ag-card cr-wc${t.champion ? ' is-ring' : ''}`}>
+      <span className="ag-eyebrow">{/^the /i.test(name) ? '' : 'THE '}{t.year} {name.toUpperCase()} · {nationName(t.nation).toUpperCase()}</span>
+      {t.qualified === false ? <p className="cr-note">{nationName(t.nation)} didn't qualify.</p>
+        : !t.called ? <p className="cr-note">Left out of the squad. He watches it at home.</p> : <>
+          <b className="cr-wc-finish">{t.champion ? (t.name ? 'WINNERS' : 'WORLD CHAMPIONS') : String(t.finish ?? '').toUpperCase()}</b>
+          <p className="cr-note">{t.goals} {t.goals === 1 ? 'goal' : 'goals'}, {t.assists} {t.assists === 1 ? 'assist' : 'assists'} in {t.apps} {t.apps === 1 ? 'match' : 'matches'}{t.boot?.won ? '. The Golden Boot.' : t.boot?.winner ? `. The Golden Boot went to ${t.boot.winner}.` : '.'}{t.ball ? ` The ${t.ball}.` : ''}{t.young ? ' Best Young Player.' : ''}</p>
+          <div className="cr-goals">{(t.games ?? []).map((g, i) => <span key={i} className={`cr-goal${g.won ? ' is-met' : g.drawn && !g.pens ? '' : ' is-miss'}`}>{g.stage === 'group' ? 'Group' : g.round ?? g.stage}: {g.mySc}–{g.oppSc}{g.pens ? ` (${g.pens[0]}–${g.pens[1]} pens)` : ''} {g.oppName ?? g.opp}{g.goals ? ` · ${g.goals}G` : ''}</span>)}</div>
+        </>}
     </div>
   )
 }
