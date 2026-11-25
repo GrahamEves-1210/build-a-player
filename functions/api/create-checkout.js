@@ -14,6 +14,20 @@ async function sessionUser(request, env) {
   return error ? null : user ?? null
 }
 
+// Black Friday (the pass sale's days, src/lib/pass.js PASS_SALE): MONTHLY Pro's first month half price, then $4.99 as
+// usual. A Stripe coupon that applies once (made the first time it's needed); yearly is never discounted
+const PRO_SALE = { coupon: 'BF2026-PRO-MONTH1', name: 'Black Friday: first month 50% off', start: '2026-11-25', end: '2026-12-01' }
+const proNyDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
+async function proSaleDiscount(stripe, plan) {
+  const d = proNyDay()
+  if (plan === 'year' || d < PRO_SALE.start || d >= PRO_SALE.end) return undefined
+  try { await stripe.coupons.retrieve(PRO_SALE.coupon) } catch (e) {
+    if (e?.statusCode !== 404 && e?.code !== 'resource_missing') throw e
+    await stripe.coupons.create({ id: PRO_SALE.coupon, percent_off: 50, duration: 'once', name: PRO_SALE.name })
+  }
+  return [{ coupon: PRO_SALE.coupon }]
+}
+
 export async function onRequestPost(context) {
   try {
     const stripe = new Stripe(context.env.STRIPE_SECRET_KEY)
@@ -35,6 +49,7 @@ export async function onRequestPost(context) {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price, quantity: 1 }],
+      discounts: await proSaleDiscount(stripe, plan),
       customer_email: email || undefined,
       metadata: { userId },
       subscription_data: { metadata: { userId } },

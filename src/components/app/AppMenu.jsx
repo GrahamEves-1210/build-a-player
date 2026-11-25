@@ -7,6 +7,8 @@ import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { reduceMotion, setReduceMotion, cbSafe, setCbSafe } from '../../lib/settings'
 import { IS_APP, PLAY_BILLING } from '../../lib/platform'
+import { passSale } from '../../lib/pass'
+import { dayKey } from '../../lib/progress'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import { openCheckout, openBillingPortal, billingDue, restorePro, PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
@@ -89,7 +91,9 @@ function ProView({ onVault }) {
       {!pro && !due && sellsHere() && (
         <div className="ag-pro-plans" role="radiogroup" aria-label="Plan">
           <button role="radio" aria-checked={plan === 'month'} className={`ag-pro-plan${plan === 'month' ? ' is-on' : ''}`} onClick={() => setPlan('month')}>
-            <small>MONTHLY</small><b>{price.month}</b><span>a month</span>
+            {/* Black Friday (the pass sale's days): the first month half off on Stripe; Google Play has no sale */}
+            {!PLAY_BILLING && passSale(dayKey()) && <i>FIRST MONTH 50% OFF</i>}
+            <small>MONTHLY</small><b>{price.month}</b><span>{!PLAY_BILLING && passSale(dayKey()) ? 'a month after your first' : 'a month'}</span>
           </button>
           <button role="radio" aria-checked={plan === 'year'} className={`ag-pro-plan${plan === 'year' ? ' is-on' : ''}`} onClick={() => setPlan('year')}>
             <i>MOST POPULAR</i><small>YEARLY</small>
