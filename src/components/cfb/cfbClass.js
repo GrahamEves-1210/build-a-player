@@ -22,15 +22,16 @@ export const draftAge = cls => 19 + classIdx(cls)
 
 // ── Upgrade points: what a season earns (1 to 3) ─────────────────────────────
 // 3: national honors. He won the Heisman or was a finalist, made an All-America team (first or second), or won his
-//    position's national award (Davey O'Brien, Doak Walker, Biletnikoff), the Maxwell, the Walter Camp or his
-//    conference's Player of the Year.
+//    position's national award (Davey O'Brien, Doak Walker, Biletnikoff, Mackey; on defense the Bednarik, the
+//    Nagurski, the Outland, the Ted Hendricks, the Thorpe), the Maxwell, the Walter Camp or his conference's Player of the Year.
 // 2: a starter's good year. He hit his position's mark (a quarterback 3,500 passing yards or 32 touchdowns passing
 //    and rushing, a running back 1,200 rushing yards or 14 touchdowns, a receiver 1,000 receiving yards or 10
-//    touchdowns), or his team won ten games, its conference or a Playoff spot.
+//    touchdowns, a tight end 650 receiving yards or 7 touchdowns, a defensive lineman 8 sacks or 15 tackles for loss, a
+//    defensive back 4 interceptions or 12 passes defended), or his team won ten games, its conference or a Playoff spot.
 // 1: any other season, a year as the backup included.
 // r: a season's result (cfbSimulation runCFBSimulation, or a backup year: asBackup below)
-const HONORS = ['daveyOBrien', 'doakWalker', 'biletnikoff', 'maxwell', 'walterCamp', 'confPOY']
-export const POINT_MARKS = { qb: 'a 3,500-yard or 32-touchdown season', rb: 'a 1,200-yard or 14-touchdown season', wr: 'a 1,000-yard or 10-touchdown season' }
+const HONORS = ['daveyOBrien', 'doakWalker', 'biletnikoff', 'mackey', 'bednarik', 'nagurski', 'outland', 'hendricks', 'thorpe', 'maxwell', 'walterCamp', 'confPOY']
+export const POINT_MARKS = { qb: 'a 3,500-yard or 32-touchdown season', rb: 'a 1,200-yard or 14-touchdown season', wr: 'a 1,000-yard or 10-touchdown season', te: 'a 650-yard or 7-touchdown season', dl: 'an 8-sack or 15-TFL season', db: 'a 4-interception or 12-pass-defended season' }
 export function upgradePoints(r, pos) {
   const c = r?.cfb ?? {}
   const a = c.awards ?? {}
@@ -46,6 +47,9 @@ export function upgradePoints(r, pos) {
     const n = k => t[k] ?? 0
     const mark = pos === 'qb' ? (n('seasonPassYds') >= 3500 ? `${n('seasonPassYds').toLocaleString()} passing yards` : n('seasonTDs') + n('seasonRushTDs') >= 32 ? `${n('seasonTDs') + n('seasonRushTDs')} touchdowns` : null)
       : pos === 'rb' ? (n('seasonRushYds') >= 1200 ? `${n('seasonRushYds').toLocaleString()} rushing yards` : n('seasonRushTDs') + n('seasonRecTDs') >= 14 ? `${n('seasonRushTDs') + n('seasonRecTDs')} touchdowns` : null)
+      : pos === 'te' ? (n('seasonRecYds') >= 650 ? `${n('seasonRecYds').toLocaleString()} receiving yards` : n('seasonRecTDs') >= 7 ? `${n('seasonRecTDs')} touchdown catches` : null)
+      : pos === 'dl' ? (n('seasonSacks') >= 8 ? `${n('seasonSacks')} sacks` : n('seasonTFL') >= 15 ? `${n('seasonTFL')} tackles for loss` : null)
+      : pos === 'db' ? (n('seasonINTs') >= 4 ? `${n('seasonINTs')} interceptions` : n('seasonPD') >= 12 ? `${n('seasonPD')} passes defended` : null)
       : (n('seasonRecYds') >= 1000 ? `${n('seasonRecYds').toLocaleString()} receiving yards` : n('seasonRecTDs') >= 10 ? `${n('seasonRecTDs')} touchdown catches` : null)
     const team = r?.champion ? 'National champions' : c.cfpSeed ? 'A Playoff team' : c.confChamp ? 'Conference champions' : wins >= 10 ? `${wins} wins` : null
     if (mark || team) return { pts: 2, why: mark ?? team }
@@ -58,6 +62,9 @@ const LINE_KEYS = {
   qb: ['comp', 'att', 'passYds', 'tds', 'ints', 'sacks', 'rushAtt', 'rushYds', 'rushTDs', 'rating', 'eff'],
   rb: ['carries', 'rushYds', 'rushTDs', 'ypc', 'recs', 'recYds', 'recTDs', 'fumbles', 'long'],
   wr: ['targets', 'rec', 'recYds', 'recTDs', 'long'],
+  te: ['targets', 'rec', 'recYds', 'recTDs', 'long'],
+  dl: ['tk', 'solo', 'sck', 'tfl', 'pd', 'qbh', 'int', 'ff', 'fr', 'td'],
+  db: ['tk', 'solo', 'sck', 'tfl', 'pd', 'qbh', 'int', 'ff', 'fr', 'td'],
 }
 function backupLine(g, pos, rnd) {
   const blow = Math.abs((g.mySc ?? 0) - (g.oppSc ?? 0)) >= 21   // the starters sit in a blowout
@@ -75,7 +82,17 @@ function backupLine(g, pos, rnd) {
     const rushYds = Math.round(carries * ypc)
     return { carries, rushYds, rushTDs: rnd() < 0.2 + (blow ? 0.15 : 0) && td ? 1 : 0, ypc: +(rushYds / carries).toFixed(1), recs, recYds: recs * Math.round(5 + rnd() * 5), recTDs: 0, fumbles: 0, long: Math.max(3, Math.round(Math.max(1, ypc) * (1.6 + rnd() * 2))) }
   }
-  const targets = Math.floor(rnd() * 4) + (blow ? 1 : 0)
+  if (pos === 'dl' || pos === 'db') {
+    // (a backup defender rotates in: a lineman gets a series a quarter, a back the dime package and the second half of a rout)
+    const tk = Math.max(0, Math.round(rnd() * (pos === 'dl' ? 2.6 : 2.2) + (blow ? 1.5 : 0)))
+    const sck = pos === 'dl' && rnd() < 0.09 ? 1 : 0
+    const tfl = sck + (rnd() < (pos === 'dl' ? 0.1 : 0.04) ? 1 : 0)
+    const int = pos === 'db' && rnd() < 0.035 ? 1 : 0
+    const pd = int + (pos === 'db' && rnd() < 0.2 ? 1 : 0)
+    const t2 = Math.max(tk, tfl)
+    return { tk: t2, solo: Math.round(t2 * (0.5 + rnd() * 0.2)), sck, tfl, pd, qbh: pos === 'dl' && rnd() < 0.15 ? 1 : 0, int, ff: 0, fr: 0, td: 0 }
+  }
+  const targets = Math.floor(rnd() * (pos === 'te' ? 3 : 4)) + (blow ? 1 : 0)
   const rec = Math.round(targets * (0.5 + rnd() * 0.3))
   return { targets, rec, recYds: rec * Math.round(8 + rnd() * 7), recTDs: rec && rnd() < 0.1 && td ? 1 : 0, long: rec ? Math.round(10 + rnd() * 20) : 0 }
 }
@@ -84,6 +101,7 @@ function totalsOf(gs, pos) {
   const max = k => gs.reduce((a, g) => Math.max(a, g[k] ?? 0), 0)
   if (pos === 'qb') { const att = sum('att'), comp = sum('comp'); return { seasonPassYds: sum('passYds'), seasonTDs: sum('tds'), seasonINTs: sum('ints'), seasonCompletions: comp, seasonAttempts: att, seasonCompPct: att ? Math.round(comp / att * 1000) / 10 : 0, seasonRushYds: sum('rushYds'), seasonRushTDs: sum('rushTDs'), gp: gs.filter(g => g.att || g.rushAtt).length } }
   if (pos === 'rb') { const car = sum('carries'); return { seasonCarries: car, seasonRushYds: sum('rushYds'), seasonRushTDs: sum('rushTDs'), seasonYPC: car ? Math.round(sum('rushYds') / car * 10) / 10 : 0, seasonRecs: sum('recs'), seasonRecYds: sum('recYds'), seasonRecTDs: sum('recTDs'), seasonLong: max('long'), gp: gs.filter(g => g.carries).length } }
+  if (pos === 'dl' || pos === 'db') return { seasonTackles: sum('tk'), seasonSolo: sum('solo'), seasonSacks: sum('sck'), seasonTFL: sum('tfl'), seasonPD: sum('pd'), seasonQBHits: sum('qbh'), seasonINTs: sum('int'), seasonFF: sum('ff'), seasonFR: sum('fr'), seasonDefTDs: sum('td'), gp: gs.filter(g => g.tk || g.pd || g.sck).length }
   const rec = sum('rec'); return { seasonTargets: sum('targets'), seasonRecs: rec, seasonRecYds: sum('recYds'), seasonRecTDs: sum('recTDs'), seasonYPR: rec ? Math.round(sum('recYds') / rec * 10) / 10 : 0, seasonLong: max('long'), gp: gs.filter(g => g.targets).length }
 }
 // the awards were the starter's, under his own name: none of them is the build's
@@ -115,10 +133,13 @@ export function asBackup(r, pos, seed, starter, ovr) {
 // pools: the season's rosters (cfbShared seasonData); cls: the build's class, for the draft page (null: Career's
 // older saves, which keep the starter's year the engine was told)
 export function backupSeason(sim, pools, types, team, pos, seed, { ovr, cls = null, build = null, name = null, season = null, usePools = false } = {}) {
-  const room = pools[pos].filter(p => p.team === (team?.short ?? team)).sort((a, b) => (a.depth ?? 9) - (b.depth ?? 9))
+  // (a defender sits behind the men at his own spot: build's Size chip, cfbShared spotOf; the engine plays the No. 1 there)
+  const def = pos === 'dl' || pos === 'db'
+  const spot = def ? (pos === 'dl' ? (build?.size?.subpos === 'dt' ? 'dt' : 'edge') : (build?.size?.subpos === 's' ? 's' : 'cb')) : null
+  const room = (pools[pos] ?? []).filter(p => p.team === (team?.short ?? team) && (!def || (p.subpos ?? (pos === 'dl' ? 'edge' : 'cb')) === spot)).sort((a, b) => (a.depth ?? 9) - (b.depth ?? 9))
   const one = room[0]
-  const bar = (pos === 'wr' ? room[2] ?? room[room.length - 1] : one) ?? null
-  const sb = Object.fromEntries(types.map(t => [t, { type: t, val: one?.attrs?.[t] ?? 5, qbFull: one?.name, team: one?.team }]))
+  const bar = (pos === 'wr' ? room[2] ?? room[room.length - 1] : def && (spot === 'edge' || spot === 'cb') ? room[1] ?? one : one) ?? null
+  const sb = Object.fromEntries(types.map(t => [t, { type: t, val: one?.attrs?.[t] ?? 5, qbFull: one?.name, team: one?.team, ...(t === 'size' && def ? { subpos: spot, height: one?.height, weight: one?.weight } : {}) }]))
   const r = asBackup(sim.runCFBSimulation(sb, types, team, pos, seed, 'career', null, { name: one?.name ?? 'Starter', year: one?.year ?? 'JR', ...(usePools ? { pools } : {}), ...(season ? { season } : {}) }), pos, seed, bar, ovr)
   if (!cls) return r
   // (the page is about him: his name, his class, his own ratings on the scouting report, and where he stands with the draft)

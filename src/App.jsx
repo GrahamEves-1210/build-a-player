@@ -64,9 +64,9 @@ import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getAr
 import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
 const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : []), ...(K_LIVE ? ['k'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
-// START IN COLLEGE is QB, WR and RB only (College Football's rosters, AppCareer.jsx COLLEGE_POS): a switch on the build page to
-// another position after picking it goes to the draft (it crashed CareerCollege, which has no other positions)
-const collegeStartFor = (cn, pos) => CFB_LIVE && cn.start === 'college' && ['qb', 'wr', 'rb'].includes(pos)
+// START IN COLLEGE is QB, WR, RB, TE, DL and DB (College Football's rosters, AppCareer.jsx COLLEGE_POS): a switch on the build
+// page to another position after picking it goes to the draft (it crashed CareerCollege, which has no other positions)
+const collegeStartFor = (cn, pos) => CFB_LIVE && cn.start === 'college' && ['qb', 'wr', 'rb', 'te', 'dl', 'db'].includes(pos)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import { readLive, startLive, bookLive, clearLive } from './lib/seasonLive'
 import { buildPageAtLoad, markBuildPage } from './lib/buildSave'

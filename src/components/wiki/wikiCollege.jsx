@@ -34,13 +34,13 @@ export function CollegePage({ go }) {
       {CFB_LIVE && (
         <>
           <h2 id="cfb">College Football</h2>
-          <p>A mode inside football's <b>More ways to play</b>. Positions: QB, RB and WR.</p>
+          <p>A mode inside football's <b>More ways to play</b>. Positions: QB, RB, WR, TE, DL and DB.</p>
           <ul>
             <li><b>The wheels.</b> The first wheel is a conference, the second one of its starters. <b>Current</b> deals every FBS team's real 2026 players ({n0(fbs)} teams in {word(CFB_CONFERENCES.length)} groups: {andList(CFB_CONFERENCES.map(c => c.short))}). <b>All-Time</b> deals each school's legends, one to three at each position.</li>
             <li><b>Offers.</b> The first school is a scholarship decision: his star rating, national rank and the ten schools offering him. He is named on the offers screen, and the name follows him into the NFL.</li>
             <li><b>The season.</b> Twelve games played live, the AP Top 25 every week, conference title games, bowls and the 12-team College Football Playoff. A tough schedule makes the numbers harder to get.</li>
-            <li><b>Awards.</b> The Heisman ceremony with the finalists and the vote count, the position awards (Davey O'Brien, Doak Walker, Biletnikoff), the Maxwell, the Walter Camp, conference Player of the Year and the All-America teams.</li>
-            <li><b>Points.</b> A good year at each spot: QB {CFB_MARKS.qb}, RB {CFB_MARKS.rb}, WR {CFB_MARKS.wr}.</li>
+            <li><b>Awards.</b> The Heisman ceremony with the finalists and the vote count, the position awards (Davey O'Brien, Doak Walker, Biletnikoff, Mackey; on defense the Bednarik, Nagurski, Outland, Ted Hendricks and Thorpe), the Maxwell, the Walter Camp, conference Player of the Year and the All-America teams.</li>
+            <li><b>Points.</b> A good year at each spot: QB {CFB_MARKS.qb}, RB {CFB_MARKS.rb}, WR {CFB_MARKS.wr}, TE {CFB_MARKS.te}, DL {CFB_MARKS.dl}, DB {CFB_MARKS.db}.</li>
             <li><b>Draft stock.</b> After every season a scouting report projects the round and pick, says what scouts like and question, and shows the board at his position.</li>
             <li><b>After a season.</b> Play on to the next season, <b>transfer</b> through the portal (a big season can bring a bigger program), or <b>enter the NFL Draft</b> once he has finished his junior year. A senior is out of eligibility.</li>
             <li><b>Enter the NFL Draft</b> turns the build into a new Career. Every trait drops two grades except Size (an A+ becomes an A-), and his college draft stock sets where the Career draft starts him.</li>
@@ -68,7 +68,7 @@ export function CollegePage({ go }) {
       )}
 
       <h2 id="start-in-college">Start in College</h2>
-      <p>A new {andList([...(CFB_LIVE ? ['football (QB, RB or WR)'] : []), ...(CBB_LIVE ? ['basketball'] : [])])} Career can start in college instead of at the combine. He picks a school from his offers and plays his college seasons as part of the career. In college the build plays two grades higher on every trait except Size; the boost comes off at the draft.</p>
+      <p>A new {andList([...(CFB_LIVE ? ['football (QB, RB, WR, TE, DL or DB)'] : []), ...(CBB_LIVE ? ['basketball'] : [])])} Career can start in college instead of at the combine. He picks a school from his offers and plays his college seasons as part of the career. In college the build plays two grades higher on every trait except Size; the boost comes off at the draft.</p>
       <p>College seasons earn XP and coins like any season.{(CFB_LIVE && !CFB_CLOUD) || (CBB_LIVE && !CBB_CLOUD) ? ' They are kept on the device and are not on the leaderboards.' : ''}</p>
     </>
   )
