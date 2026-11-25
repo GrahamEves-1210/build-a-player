@@ -40,7 +40,7 @@ export function make({ v, seed }) {
     t: 0, game: 'finishing', zones: 'none', stick: true, pads: null, fx: [], done: null, outro: 1900, stamp: null,
     shots, i: 0, R, made: 0, k, phase: 'set', at: 700, shot: null, nextAt: null, rollAt: null, doneAt: null,
     ctl: padCtl(), vh: 640, st: stroke(), lastView: null, camX: lensOf(shots[0].spot).x, camZ: lensOf(shots[0].spot).z, camYaw: lensOf(shots[0].spot).yaw,
-    hud: { prompt: 'SET', dots: shots.map(() => null) },
+    hud: { prompt: 'FIVE BALLS · THREE IN THE TARGET', dots: shots.map(() => null) },
     tick(dt) {
       g.t += dt
       const o = padStick(g.ctl), sh = shots[g.i]
