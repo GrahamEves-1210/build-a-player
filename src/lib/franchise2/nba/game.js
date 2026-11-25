@@ -159,7 +159,9 @@ export const lead = (S, k) => S.sc[k] - S.sc[other(k)]
 const trouble = (S, b) => (S.per <= 3 ? b.pf >= S.per + 1 : S.per === 4 ? b.pf >= 5 && S.clock > 240 : false)
 function lineup(S, k, start = false) {
   const T = S[k], L = T.rot
-  const avail = T.men.filter(p => S.box[p.i].pf < 6 && !T.out.includes(p.i))
+  let avail = T.men.filter(p => S.box[p.i].pf < 6 && !T.out.includes(p.i))
+  // (the men the GM sat, rotation.js planRotation's sat: they stay on the bench while five others can play)
+  if (L.sat?.length) { const up = avail.filter(p => !L.sat.includes(p.i)); if (up.length >= 5) avail = up }
   // (the NBA's rule: with nobody left on the bench, the last man to foul out stays in)
   for (let j = T.out.length - 1; j >= 0 && avail.length < 5; j--) { const p = T.by.get(T.out[j]); if (p && !avail.includes(p)) avail.push(p) }
   const margin = lead(S, k), left = S.per >= 4 ? S.clock : 99999

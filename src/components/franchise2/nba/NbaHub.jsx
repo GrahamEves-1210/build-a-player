@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, CONF_OF, CONF_NAME, DIV_OF, SHORTS, records, recText, pct, confOrder, gamesBack, streakText, nextMine, myGames, gameNo, dateText,
   playNext, simTo, startPostseason, playPoNight, simPostseason, mySeries, myPoGame, seriesText, ROUND_NAME, closeSeason, teamOvr,
   seasonText, CAP_SIM, nick, FINISH_TEXT, finishOf, nextStep, isLight, stretchOk, stretchOf, openStretch, lightSettle, lightPlay, lightSimAll,
+  allStarStop, allStarOn, allStarDay, teamOfMan, manOf,
 } from '../../../lib/franchise2/nba'
 import * as NBA from '../../../lib/franchise2/nba'
 import { sfx, haptic } from '../../../lib/juice'
@@ -16,7 +17,7 @@ import NbaGame, { NbaBox } from './NbaGame'
 import NbaTeam from './NbaTeam'
 import NbaLeague from './NbaLeague'
 import NbaHistory from './NbaHistory'
-import NbaOffseason, { Prospect, ManSheetHost } from './NbaOffseason'
+import NbaOffseason, { Prospect, ManSheetHost, ManOpen, tapMan } from './NbaOffseason'
 import { StretchCard, StretchRecap, PoLight, RoundDone, LightOffseason } from './NbaLight'
 import { createPortal } from 'react-dom'
 import '../season.css'
@@ -59,7 +60,8 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   }
   // today: the day the next night is played (the deadline card's "today"); his game number when he plays tonight
   const ng = F.phase === 'season' ? nextMine(F) : null
-  const sub = F.phase === 'season' ? `${dateText(F, Math.min(F.day, F.days - 1))} · ${!ng ? 'Regular season' : ng.d === F.day ? `Game ${gameNo(F, ng)}` : 'No game today'}`
+  const inBreak = F.phase === 'season' && F.asb && F.day >= F.asb[0] && F.day <= F.asb[1]
+  const sub = F.phase === 'season' ? `${dateText(F, Math.min(F.day, F.days - 1))} · ${inBreak ? 'All-Star break' : !ng ? 'Regular season' : ng.d === F.day ? `Game ${gameNo(F, ng)}` : 'No game today'}`
     : off ? 'Offseason' : F.phase === 'post' ? 'Regular season over' : F.phase === 'playin' ? 'Play-in' : F.phase === 'playoffs' ? ROUND_NAME[F.po.rd].toLowerCase().replace(/(^|\s)\w/g, c => c.toUpperCase()).replace(/^Nba /, 'NBA ') : 'Season over'
   return (
     <div className="ag-screen f2 fk fk-root fh nb" style={fkVars(F.team)}>
@@ -123,11 +125,16 @@ function Season({ F, R, act, play, owner, onTrades, onSim, light = false }) {
   // (LIGHT: the stretch simmed to its recap, a postseason round simmed to its result: NbaLight.jsx; never a game on screen)
   const lplay = () => { act(X => { lightPlay(X) }); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
   const lsim = () => { act(X => { lightSimAll(X) }); sfx('flip') }
+  // (FULL: the All-Star break is a stop on the calendar: the days up to it, then the game on its Sunday)
+  const asStop = !light ? allStarStop(F) : null
+  const asPlay = () => { act(X => { simTo(X, allStarDay(X) + 1) }); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
   return (
     <ManSheetHost F={F} act={act} owner={owner}>
     <div className="fh-grid">
       <div className="fh-main">
-        {ph === 'season' && !light && <NextGame F={F} R={R} act={act} play={play} onTrades={onTrades} onSim={onSim} />}
+        {ph === 'season' && !light && asStop === 'game' && <AllStarCard F={F} onPlay={asPlay} />}
+        {ph === 'season' && !light && <NextGame F={F} R={R} act={act} play={play} onTrades={onTrades} onSim={onSim} asStop={asStop} />}
+        {ph === 'season' && !light && asStop !== 'game' && allStarOn(F) && <AllStarCard F={F} />}
         {(ph === 'season' || ph === 'post') && light && F.lt?.ph === 'recap' && F.lt.y === F.year && <StretchRecap F={F} act={act} owner={owner} onTrades={onTrades} />}
         {ph === 'season' && light && F.lt?.ph === 'card' && stretchOk(F) && <StretchCard F={F} play={lplay} simToEnd={lsim} onTrades={onTrades} />}
         {ph === 'post' && !(light && F.lt?.ph === 'recap' && F.lt.y === F.year) && <SeasonOver F={F} R={R} act={act} />}
@@ -155,9 +162,19 @@ function Season({ F, R, act, play, owner, onTrades, onSim, light = false }) {
 // (a long name a size down in the matchup's half-width card: "Timberwolves", "Trail Blazers" at 360px)
 const nickCls = s => (TEAM[s].nick.length >= 12 ? 'is-xlong' : TEAM[s].nick.length >= 9 ? 'is-long' : '')
 const seedIn = (F, R, s) => confOrder(F, CONF_OF[s], R).indexOf(s) + 1
-function NextGame({ F, R, act, play, onTrades, onSim }) {
+function NextGame({ F, R, act, play, onTrades, onSim, asStop = null }) {
   const g = nextMine(F)
-  if (!g) return null
+  // (his team's 82 are played and the league has nights left: an old save's schedule; the season still has to finish)
+  if (!g) return (
+    <section className="fh-next">
+      <div className="fh-next-h"><b>{dateText(F, Math.min(F.day, F.days - 1))}</b><span>{recText(R[F.team])} · {R[F.team].g} games played</span></div>
+      <p className="fh-next-note">The {nick(F.team)} have no games left. The regular season ends {dateText(F, F.days - 1)}.</p>
+      <div className="fh-go">
+        <Go onClick={() => onSim(F.days, 'Sim to the end of the regular season')}>Sim to the end of the regular season</Go>
+        <button type="button" className="fh-textbtn" onClick={() => onSim(F.day + 1, 'Next night')}>Next night</button>
+      </div>
+    </section>
+  )
   const home = g.h === F.team, opp = home ? g.a : g.h
   const b2b = F.sched.some(x => x.d === g.d - 1 && (x.h === F.team || x.a === F.team))
   const kind = DIV_OF[opp] === DIV_OF[F.team] ? `${DIV_OF[F.team]} Division` : CONF_OF[opp] === CONF_OF[F.team] ? `${CONF_NAME[CONF_OF[F.team]]} Conference` : 'Interconference'
@@ -177,12 +194,67 @@ function NextGame({ F, R, act, play, onTrades, onSim }) {
       <p className="fh-line">{kind}</p>
       {ddl && F.ddl - F.day <= 14 && <button type="button" className="fh-row nb-ddl" onClick={onTrades}><span><small>Trade deadline</small><b>{dateText(F, F.ddl)} · {F.ddl - F.day === 0 ? 'today' : `${F.ddl - F.day} days`}</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>}
       <div className="fh-go">
-        <Go onClick={play}>Play game {gameNo(F, g)}</Go>
+        {asStop === 'to' ? <Go onClick={() => onSim(F.asb[0], 'To the All-Star break')}>To the All-Star break</Go>
+          : asStop === 'game' ? null : <Go onClick={play}>Play game {gameNo(F, g)}</Go>}
         <div className="nb-sims">
           {sim(F.day + 7, 'Sim a week')}
-          {ddl && F.day < F.ddl ? sim(F.ddl, 'Sim to the deadline') : asb ? sim(F.asb[0], 'Sim to the All-Star break') : null}
+          {ddl && F.day < F.ddl ? sim(F.ddl, 'Sim to the deadline') : asb && asStop !== 'to' ? sim(F.asb[0], 'Sim to the All-Star break') : null}
           {sim(F.days, 'Sim to the end')}
         </div>
+      </div>
+    </section>
+  )
+}
+
+// THE ALL-STAR BREAK: the two teams as they were named (five starters by the vote, seven reserves by the coaches), the
+// GM's men marked, and the game on its Sunday: before it the way to it, after it the score and the MVP
+const AS_CONF = { E: 'East', W: 'West' }
+function AllStarCard({ F, onPlay = null }) {
+  const open = useContext(ManOpen)
+  const A = F.as, g = A.g ?? null
+  const confs = CONF_OF[F.team] === 'W' ? ['W', 'E'] : ['E', 'W']
+  const mine = i => teamOfMan(F, i) === F.team
+  const list = names => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0])
+  // the GM's men, the way it's said: "Jayson Tatum starts for the East. Jaylen Brown is an East reserve."
+  const lines = []
+  for (const c of ['E', 'W']) {
+    const st = A[c].st.filter(mine).map(i => manOf(F, i)?.n).filter(Boolean), res = (A[c].res ?? []).filter(mine).map(i => manOf(F, i)?.n).filter(Boolean)
+    if (st.length) lines.push(`${list(st)} ${st.length > 1 ? 'start' : 'starts'} for the ${AS_CONF[c]}.`)
+    if (res.length) lines.push(`${list(res)} ${res.length > 1 ? `are ${AS_CONF[c]} reserves` : `is ${/^[AEIOU]/.test(AS_CONF[c]) ? 'an' : 'a'} ${AS_CONF[c]} reserve`}.`)
+  }
+  const mvp = g?.mvp != null ? manOf(F, g.mvp) : null, mvpT = mvp ? teamOfMan(F, mvp.i) : null
+  const row = (i, k) => {
+    const p = manOf(F, i); if (!p) return null
+    const t = teamOfMan(F, i), r = F.ss?.[i]
+    return (
+      <div key={i} className={`nb-asg-row${t === F.team ? ' is-me' : ''}${g?.mvp === i ? ' is-mvp' : ''}`} style={t ? fkVars(t) : undefined} {...tapMan(open, F, i)}>
+        {t ? <KLogo s={t} size={22} /> : <i />}
+        <b>{p.n}</b>
+        <span>{g?.mvp === i ? 'MVP · ' : ''}{p.p}{r?.gp ? ` · ${(r.pts / r.gp).toFixed(1)}` : ''}</span>
+      </div>
+    )
+  }
+  return (
+    <section className="fh-next nb-asg" aria-label="All-Star Game">
+      <div className="fh-next-h"><b>All-Star Game</b><span>{dateText(F, allStarDay(F))} · {g ? 'Final' : 'Sunday'}</span></div>
+      {g && (
+        <div className="nb-asg-score" role="status" aria-label={`East ${g.E}, West ${g.W}`}>
+          {confs.map(c => <span key={c} className={g.s === c ? 'is-win' : 'is-lost'}><small>{AS_CONF[c]}</small><b>{g[c]}</b></span>)}
+        </div>
+      )}
+      {mvp && <p className="fh-next-note">{mvp.n}{mvpT ? ` (${nick(mvpT)})` : ''} is the All-Star Game MVP with {g.pts} points.</p>}
+      <p className="fh-next-note">{lines.length ? lines.join(' ') : `No ${nick(F.team)} were named to the All-Star teams.`}</p>
+      {!g && onPlay && <div className="fh-go"><Go onClick={onPlay}>Sim the All-Star Game</Go></div>}
+      <div className="nb-asg-confs">
+        {confs.map(c => (
+          <div key={c} className="nb-asg-conf">
+            <h4 className="nb-conf-h">{AS_CONF[c]}</h4>
+            <small>Starters</small>
+            {A[c].st.map(row)}
+            <small>Reserves</small>
+            {(A[c].res ?? []).map(row)}
+          </div>
+        ))}
       </div>
     </section>
   )

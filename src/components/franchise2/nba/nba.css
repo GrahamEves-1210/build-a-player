@@ -12,6 +12,25 @@
 .nb-rung.is-me span small { color: var(--tct); }
 .fh-rung.is-cut, .nb-st-row.is-cut { margin-bottom: 6px; box-shadow: 0 3px 0 -1px rgba(244,245,247,.35); }
 
+/* the All-Star break (NbaHub AllStarCard): the score, then East and West side by side on a wide screen */
+.nb-asg-score { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.nb-asg-score span { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 8px 14px; background: var(--fk-g2, #1b1e23); }
+.nb-asg-score small { font-family: var(--fk-d); font-size: 20px; letter-spacing: .3px; text-transform: uppercase; color: #fff; }
+.nb-asg-score b { font-family: var(--fk-d); font-weight: 400; font-size: 40px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.nb-asg-score .is-lost :is(small, b) { color: var(--fk-mute); }
+.nb-asg-score .is-win { box-shadow: inset 0 -3px 0 #fff; }
+.nb-asg-confs { display: grid; gap: 14px; }
+.nb-asg-conf { display: grid; gap: 3px; min-width: 0; }
+.nb-asg-conf > small { margin-top: 4px; font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; text-transform: uppercase; color: var(--fk-mute); }
+.nb-asg-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 36px; padding: 0 12px 0 8px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--tc); }
+.nb-asg-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--fk-b); font-weight: 700; font-size: 15px; color: #fff; }
+.nb-asg-row span { font-family: var(--fk-b); font-weight: 600; font-size: 13px; color: var(--fk-mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nb-asg-row.is-me { background: var(--tc); box-shadow: inset 0 -3px 0 var(--tc2); }
+.nb-asg-row.is-me :is(b, span) { color: var(--tct); }
+.nb-asg-row.is-mvp:not(.is-me) span { color: var(--fk-gold); }
+.nb-asg-row[data-tap] { cursor: pointer; }
+@media (min-width: 720px) { .nb-asg-confs { grid-template-columns: 1fr 1fr; } }
+
 /* the bracket */
 .nb-bracket { display: grid; gap: 12px; }
 .nb-round, .nb-pi { display: grid; gap: 4px; }

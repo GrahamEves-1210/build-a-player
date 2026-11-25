@@ -17,7 +17,9 @@
 //         { st: [ids] }        his five starters (any left out or not available: filled by the coach)
 //         { order: [ids] }     his order for the bench
 //         { po: true }         the playoffs' shorter rotation
-//         { min: { id: m } }   minutes he wants for a man (0 = out of the rotation); the rest are scaled to fill 240
+//         { min: { id: m } }   minutes he wants for a man (0 = DNP: he doesn't start and doesn't play, garbage time
+//                              included, unless fewer than five others can; the plan lists him in `sat`); the rest
+//                              are scaled to fill 240
 //   startersOf(players)        the coach's best five: the best men who fit the five spots
 //   dressed(T, { po, year })   tonight's men: healthy (the playoffs: day-to-day plays), not resting; a two-way man only in the regular season, 50 games
 //                              at most (p.twa = [season, games active]), and only when the team needs him (to make 13
@@ -125,8 +127,12 @@ export function planRotation(players, set = {}) {
   const byId = new Map(players.map(p => [p.i, p]))
   const po = !!set.po
   const CAP = po ? MIN_CAP_PO : MIN_CAP
-  const want = (set.st ?? []).filter(id => ids.has(id)).slice(0, 5).map(id => byId.get(id))
-  const fit = fitFive(players, want)
+  // the men the GM sat (minutes set to 0, DNP): out of the five and off the floor, unless that leaves fewer than five
+  const zero = new Set(Object.entries(set.min ?? {}).filter(([, m]) => !(+m > 0)).map(([k]) => +k))
+  const up = players.filter(p => !zero.has(p.i))
+  const sat = up.length >= 5 ? players.filter(p => zero.has(p.i)) : []
+  const want = (set.st ?? []).filter(id => ids.has(id) && !sat.some(p => p.i === id)).slice(0, 5).map(id => byId.get(id))
+  const fit = fitFive(sat.length ? up : players, want)
   const spot = new Map(fit.map(([p, j]) => [p, j]))
   const five = fit.map(([p]) => p).sort((a, b) => ovr(b) - ovr(a))
   for (const p of players) spot.has(p) || spot.set(p, spotOf(p))
@@ -219,5 +225,5 @@ export function planRotation(players, set = {}) {
   let closers = [...real].sort((a, b) => ovr(b) - ovr(a)).slice(0, 5)
   for (const p of order) if (closers.length < 5 && !closers.includes(p)) closers.push(p)
   closers = reshape(closers, real.length >= 5 ? real : order, p => ovr(p) / 3)
-  return { st: five.map(p => p.i), order: order.map(p => p.i), min, closers: closers.map(p => p.i), spot: Object.fromEntries(order.map(p => [p.i, spot.get(p)])) }
+  return { st: five.map(p => p.i), order: order.map(p => p.i), min, closers: closers.map(p => p.i), spot: Object.fromEntries(order.map(p => [p.i, spot.get(p)])), ...(sat.length && { sat: sat.map(p => p.i) }) }
 }

@@ -19,11 +19,13 @@ const hashOf = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 
 const SUFFIX = /\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i
 const lastOf = n => String(n).replace(SUFFIX, '').split(' ').slice(-1)[0].toUpperCase()
 // a man's name in a game's lines: his last name, with a first initial when another man in the game shares it
-// ("D. White gets the stop on C. White")
+// ("D. White gets the stop on C. White"), his first name when the initial is shared too (Jalen and Jaylin Williams)
 export const lastName = n => String(n ?? '').replace(SUFFIX, '').trim().split(/\s+/).slice(-1)[0] ?? ''
 export function nameIn(p, men) {
-  const l = lastName(p.n)
-  return (men ?? []).some(x => x && x.i !== p.i && lastName(x.n) === l) ? `${String(p.n).trim()[0]}. ${l}` : l
+  const l = lastName(p.n), first = String(p.n).trim().split(/\s+/)[0] ?? ''
+  const same = (men ?? []).filter(x => x && x.i !== p.i && lastName(x.n) === l)
+  if (!same.length || first === l) return l
+  return same.some(x => String(x.n).trim()[0] === first[0]) ? `${first} ${l}` : `${first[0]}. ${l}`
 }
 export const asBuild = a => Object.fromEntries(Object.entries(a ?? {}).map(([k, v]) => [k, { val: v }]))
 export function castMan(p, me = false) {

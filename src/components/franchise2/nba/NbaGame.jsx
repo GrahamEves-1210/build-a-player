@@ -68,7 +68,7 @@ function Moment({ F, plan, onPlay, onSim }) {
   const mode = F.moments ?? 'advanced'
   const title = (mode === 'simple' ? SIMPLE_GAMES[plan.game]?.title : null) ?? GAMES[plan.game]?.title ?? 'KEY MOMENT'
   const tag = P.po != null ? (poTag(F) === 'PLAY-IN' ? 'PLAY-IN' : P.n ? `GAME ${P.n}` : 'PLAYOFFS') : 'KEY MOMENT'
-  const role = plan.spot === 'ft' ? 'AT THE LINE' : plan.def ? 'ON THE BALL' : 'LAST SHOT'
+  const role = plan.spot === 'ft' ? 'AT THE LINE' : plan.def ? 'ON THE BALL' : plan.early ? 'THREE TO TIE' : 'LAST SHOT'
   useEffect(() => { sfx('swap'); haptic('medium') }, [])
   return (
     <div className="nb-gd-moment">

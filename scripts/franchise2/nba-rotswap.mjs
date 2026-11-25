@@ -3,7 +3,7 @@
 //   bash scripts/franchise2/run.sh scripts/franchise2/nba-rotswap.mjs [ls_dump.json]
 import { readFileSync } from 'node:fs'
 import * as N from '../../src/lib/franchise2/nba/index'
-import { rotOrder, swapRot, moveRot } from '../../src/components/franchise2/nba/rotOrder'
+import { rotOrder, swapRot, moveRot, benchDnp, dnpStarter } from '../../src/components/franchise2/nba/rotOrder'
 const file = process.argv[2]
 let F
 if (file) { const o = JSON.parse(readFileSync(file, 'utf8')); F = N.unpackNba(o.bap_frnba_slot_0) }
@@ -46,4 +46,39 @@ const m0 = o.slice(); moveRot(F, o[4], 1, opts); check(m0, m0[4], m0[5]); o = sh
 const G = N.unpackNba(N.packNba(F))
 const o2 = rotOrder(G, opts).map(p => p.i)
 if (o2.join() !== o.join()) { bad++; console.log('  RELOAD CHANGED THE ORDER') }
-console.log(bad ? `FAIL ${bad}` : 'OK: swaps exact, starters the first five, min kept, reload same')
+// DNP: a man set to 0 minutes can't start and doesn't play (a starter set to DNP goes to the bench; swapped back into
+// the five his DNP comes off)
+{
+  const minsIn = id => { let m = 0, n = 0; for (let k = 0; k < 12; k++) { const g = F.sched.find(x => x.hs == null && (x.h === F.team || x.a === F.team)); const r = N.CAP_SIM.simGame(F, g.h, g.a, { seed: `dnp-${k}` }); m += r.box[F.team].find(l => l.i === id)?.min ?? 0; if (r.box[F.team].find(l => l.i === id)?.st) n++ } return [m, n] }
+  // (his own order, a starter set to DNP)
+  o = show('before DNP')
+  const star = o[0]
+  T.min = { ...(T.min ?? {}), [star]: 0 }; benchDnp(F, opts)
+  o = show('1st set to DNP')
+  if (o.slice(0, 5).includes(star)) { bad++; console.log('  DNP: STILL IN THE FIVE') }
+  if (st().split(',').includes(String(star))) { bad++; console.log('  DNP: THE SIM STARTS HIM') }
+  if (st() !== o.slice(0, 5).sort().join()) { bad++; console.log('  DNP: STARTERS NOT THE FIRST FIVE SHOWN') }
+  let [m, n] = minsIn(star)
+  if (m || n) { bad++; console.log(`  DNP: HE PLAYED ${m} MINUTES, STARTED ${n} OF 12`) }
+  // (swapped back into the five: a starter again, with minutes)
+  swapRot(F, star, o[1], opts); o = show('DNP man swapped into the five')
+  if (!o.slice(0, 5).includes(star) || T.min?.[star] === 0 || dnpStarter(F, opts) != null) { bad++; console.log('  DNP: SWAPPED IN BUT STILL DNP') }
+  ;[m, n] = minsIn(star)
+  if (n !== 12 || m < 12 * 20) { bad++; console.log(`  SWAPPED IN: STARTED ${n} OF 12, ${m} MINUTES`) }
+  // (the coach's order, the best man set to DNP)
+  T.rot = null; T.min = { [star]: 0 }
+  o = show('coach order, DNP on a starter')
+  if (o.slice(0, 5).includes(star) || st().split(',').includes(String(star))) { bad++; console.log('  COACH ORDER: A DNP MAN STARTS') }
+  ;[m, n] = minsIn(star)
+  if (m || n) { bad++; console.log(`  COACH ORDER DNP: HE PLAYED ${m} MINUTES, STARTED ${n}`) }
+  // (a save from before the rule: a DNP man stored in the five is benched when the screen opens)
+  T.rot = rotOrder(F, opts).map(p => p.i); T.rot = [star, ...T.rot.filter(i => i !== star)]; T.min = { [star]: 0 }
+  if (dnpStarter(F, opts) !== star) { bad++; console.log('  OLD SAVE: NOT SEEN') }
+  ;[m, n] = minsIn(star)
+  if (m || n) { bad++; console.log(`  OLD SAVE: THE SIM PLAYED HIM ${m} MINUTES`) }
+  benchDnp(F, opts)
+  if (dnpStarter(F, opts) != null || rotOrder(F, opts).slice(0, 5).some(p => p.i === star)) { bad++; console.log('  OLD SAVE: NOT BENCHED') }
+  T.rot = null; T.min = null
+}
+console.log(bad ? `FAIL ${bad}` : 'OK: swaps exact, starters the first five, min kept, reload same, a DNP man never starts or plays')
+if (bad) process.exit(1)
