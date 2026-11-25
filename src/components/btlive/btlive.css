@@ -144,11 +144,12 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-game.has-keys .btlv-court { --ch: var(--chk); width: calc(var(--chk) * 4 / 3); }
 .btlv-game.has-keys .btlv-pad { position: absolute; inset: auto 0 var(--rail) 0; height: auto; background: none; border: 0; pointer-events: none; overflow: visible; }
 .btlv-game.has-keys .btlv-stick-home, .btlv-game.has-keys .btlv-stick-base, .btlv-game.has-keys .btlv-stick-knob, .btlv-game.has-keys .btlv-btns { display: none; }
-.btlv-game.has-keys .btlv-keys { display: grid; position: absolute; left: 20px; bottom: 22px; width: calc((100vw - var(--chk) * 4 / 3) / 2 - 36px); max-width: 230px; gap: 7px; margin: 0; padding: 12px 12px 13px; color: var(--muted);
+.btlv-game.has-keys .btlv-keys { display: grid; position: absolute; left: 20px; bottom: 22px; width: calc((100vw - var(--chk) * 4 / 3) / 2 - 36px); max-width: 230px; gap: 10px; margin: 0; padding: 12px 12px 13px; color: var(--muted);
   background: rgba(12, 16, 22, .9); border: 1px solid var(--line); border-radius: 8px; }
-.btlv-keys-row { display: grid; grid-template-columns: 98px 1fr; column-gap: 9px; align-items: center; transition: opacity .15s; }
+.btlv-keys-row { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 3px; align-items: center; transition: opacity .15s; }
+.btlv-keys-row > .btlv-kk { grid-column: 1 / -1; }
 .btlv-keys-row b { font-weight: 400; font-size: 15px; letter-spacing: 1.3px; color: var(--text); white-space: nowrap; }
-.btlv-keys-row small { grid-column: 2; font-size: 13px; letter-spacing: 1px; color: var(--faint); line-height: 1; white-space: nowrap; }
+.btlv-keys-row small { font-size: 13px; letter-spacing: .8px; color: var(--faint); line-height: 1.1; }
 .btlv-kk { display: flex; gap: 3px; min-width: 0; }
 .btlv-keys kbd { font: inherit; font-size: 13px; line-height: 1; min-width: 21px; text-align: center; padding: 4px 5px 3px; border-radius: 4px; border: 1px solid var(--line-hi); color: var(--text); background: rgba(255, 255, 255, .06); box-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
 .btlv-keys kbd.is-wide { padding: 4px 12px 3px; }

@@ -294,7 +294,7 @@ export function createPoser(N) {
     if (key === 'btb' && mid > 0.25) set3(bh, -0.12, sg * 0.42, 0.2)                       // reaching round behind him
     else if (key === 'btl' && mid > 0.25) set3(bh, 0.12, sg * 0.3, 0.12)                    // down through his legs
     if ((key === 'cross' || key === 'btl' || key === 'btb') && mid > 0.3) set3(oh, bx - 0.02, -sg * 0.34, 0.24)   // the other hand takes it
-    else set3(oh, 0.22, -sg * 0.55, 0.32)
+    else set3(oh, 0.16, -sg * 0.5, 0.3)
   }
 
   // rising for a shot: by its kind. g: 0 as he starts, 1 where the green is

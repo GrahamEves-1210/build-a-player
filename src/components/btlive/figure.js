@@ -160,12 +160,11 @@ function torso(ctx, f, L, ink) {
   // the bare shoulders (a singlet): the arm holes, trimmed
   for (const sd of [-1, 1]) {
     const p = P(0.0, sd * SH)
-    ctx.fillStyle = L.trim; ctx.beginPath(); ctx.arc(p[0], p[1], FR.sc * 0.098, 0, TAU); ctx.fill()
-    dot2(ctx, p[0], p[1], FR.sc * 0.082, L.skin, L.skinD, 0)
+    dot2(ctx, p[0], p[1], FR.sc * 0.074, L.skin, L.skinD, 0)
   }
   // his number across his upper back (it reads from behind him)
   if (L.num) {
-    const c0 = P(-0.215, 0), fs = FR.sc * (L.num.length > 1 ? 0.2 : 0.22)
+    const c0 = P(-0.2, 0), fs = FR.sc * (L.num.length > 1 ? 0.22 : 0.25)
     ctx.save(); ctx.translate(c0[0], c0[1]); ctx.rotate(f.ang + Math.PI / 2)
     ctx.font = `${fs.toFixed(1)}px "BAP Anton", "Anton", "BAP Bebas", Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, fs * 0.14); ctx.strokeStyle = L.ink === '#10151a' ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.35)'; ctx.strokeText(L.num, 0, fs * 0.04)
@@ -175,7 +174,7 @@ function torso(ctx, f, L, ink) {
 }
 
 function head(ctx, f, L, ink) {
-  const ln = (f.lean || 0) * 1.5, cx = 0.05 + ln, R = 0.165, sc = FR.sc
+  const ln = (f.lean || 0) * 1.5, cx = 0.085 + ln, R = 0.16, sc = FR.sc
   const hx = PX(cx, 0), hy = PY(cx, 0), r = R * sc
   // the collar round his neck
   ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(PX(cx - 0.03, 0), PY(cx - 0.03, 0), r * 1.16 + ink, 0, TAU); ctx.fill()
