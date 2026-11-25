@@ -7,10 +7,12 @@
 //     hello  { vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
 //                                                              take a seat (or take it back). The first one in sets the
 //                                                              mode; humans (dev): start before every seat has a person
-//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, c], rel: { sn, q } | null }
+//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m], d: [[x, y], ...], rel: { sn, q } | null }
 //            k: his own count of messages (old ones are dropped). mx/my: the stick. x..vy: where his device has him.
-//            h: the buttons held now (bits: 1 A, 2 B, 4 C). n: how many times each button has been pressed, ever:
-//            a press is never lost to a dropped or late message, the next one carries it. rel: the release of his
+//            h: the buttons held now (bits: 1 A, 2 B). n: how many times each button has been pressed, ever, and
+//            (m) how many dribble moves his small stick has flicked, ever: a press or a flick is never lost to a
+//            dropped or late message, the next one carries it. d: the way each of his latest flicks pointed (unit,
+//            the newest last, MOVE_KEEP of them at most; the last one is flick number m). rel: the release of his
 //            shot as his own device timed it (sn: his A-press count when that shot started, q: quality 0-1); sent
 //            again with every message until the referee says it has it (ack)
 //     ping   { c }                                             (pong { c, k }: the round trip, and the referee's tick)
@@ -31,13 +33,15 @@ export const SEND_EVERY = 2                       // the referee sends a snapsho
 export const EVENT_KEEP = Math.round(1.5 * HZ)    // ...with the events of the last 1.5 s
 export const AWAY_MS = 1500                       // a player not heard from for this long is played by the CPU
 const r2 = v => Math.round(v * 100) / 100
-const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy']
-const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom']
+export const MOVE_KEEP = 3                        // a message carries his last 3 flicks (a move and the turn that made it a spin)
+const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs']
+const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn']
+export const SNAP_ACT = PF.length + PI.length     // where a snapshot's row for a player keeps what he's doing (act)
 
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────
 
 // A seat's input as it comes in, and the input the step gets from it each tick
-export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0], used: [0, 0, 0], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
+export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0], used: [0, 0, 0], d: [], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
 const num = (v, lo, hi, d = 0) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d)
 export function seatMsg(seat, m, now) {
   if (!Number.isInteger(m.k) || m.k <= seat.k) return false                 // old or repeated
@@ -46,17 +50,30 @@ export function seatMsg(seat, m, now) {
   const l = Math.hypot(mx, my); if (l > 1) { mx /= l; my /= l }
   seat.mx = mx; seat.my = my
   if (Number.isFinite(+m.x) && Number.isFinite(+m.y)) seat.pos = { x: +m.x, y: +m.y, vx: num(m.vx, -30, 30), vy: num(m.vy, -30, 30) }
-  seat.h = (m.h | 0) & 7
+  seat.h = (m.h | 0) & 3
+  const was = seat.n[2]
   if (Array.isArray(m.n)) for (let b = 0; b < 3; b++) { const c = m.n[b] | 0; if (c > seat.n[b] && c < seat.n[b] + 50) seat.n[b] = c }
+  // his flicks: the new ones, in order, each with the number it is (one the message no longer carries is lost: it
+  // was made too long ago to be a move now anyway)
+  if (seat.n[2] > was && Array.isArray(m.d)) {
+    const list = m.d.slice(-MOVE_KEEP)
+    for (let j = 0; j < list.length; j++) {
+      const no = seat.n[2] - (list.length - 1 - j), v = list[j]
+      if (no <= was || !Array.isArray(v)) continue
+      const x = num(v[0], -1, 1), y = num(v[1], -1, 1), l = Math.hypot(x, y)
+      if (l > 0.01) seat.d.push({ no, x: x / l, y: y / l })
+    }
+    if (seat.d.length > MOVE_KEEP) seat.d.splice(0, seat.d.length - MOVE_KEEP)
+  }
   if (m.rel && Number.isInteger(m.rel.sn) && m.rel.sn > seat.relDone) seat.rel = { sn: m.rel.sn, q: num(m.rel.q, 0, 1) }
   return true
 }
 // The input for this tick. Every press makes its own edge (a press that came in while the button already showed as
 // held is let go for one tick first), so a tap that fell between two ticks still happens.
 export function seatInput(seat, s, i) {
-  const out = { mx: seat.mx, my: seat.my, pos: seat.pos, q: null, t: s.tick }
+  const out = { mx: seat.mx, my: seat.my, pos: seat.pos, q: null, t: s.tick, dx: 0, dy: 0 }
   let bits = 0
-  for (let b = 0; b < 3; b++) {
+  for (let b = 0; b < 2; b++) {
     const bit = 1 << b, was = seat.last & bit
     if (seat.used[b] < seat.n[b]) {
       if (!was) { bits |= bit; seat.used[b]++ }                // the press, now
@@ -67,7 +84,9 @@ export function seatInput(seat, s, i) {
   // the same as in practice)
   const p = s.players[i]
   seat.last = bits
-  out.shoot = out.steal = !!(bits & 1); out.pass = out.jump = !!(bits & 2); out.move = !!(bits & 4)
+  out.shoot = out.steal = !!(bits & 1); out.pass = out.jump = !!(bits & 2)
+  // a dribble move: his next flick, one a tick (a move, then the turn that makes it a spin, go on two ticks)
+  if (seat.d.length) { const f = seat.d.shift(); out.dx = f.x; out.dy = f.y; seat.used[2] = f.no } else seat.used[2] = seat.n[2]
   // his shot: the one that started with his latest A press goes with the quality his device timed
   if (p.act === 'gather') {
     if (seat.gatherSn == null) seat.gatherSn = seat.used[0]

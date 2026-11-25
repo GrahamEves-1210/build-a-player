@@ -4,7 +4,7 @@
 // Each function takes plain facts (positions, ratings, what each player is doing) and the rolls it needs, and
 // returns a verdict: no state of its own, no clock, no randomness of its own. The simulation calls it locally in
 // practice; online the same file runs on the live server, so nobody's phone decides its own makes. Pure.
-import { COURT, RULES, T } from './tune.js'
+import { COURT, RULES, T, MOVES } from './tune.js'
 import { releaseMult } from './meter.js'
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
@@ -140,16 +140,27 @@ export function judgeShot(shooter, defenders, shot, rolls) {
   }
 }
 
-// A swipe at the ball. def/handler: { x, y, fx, fy (the handler's facing), act, burst, R }
+// A swipe at the ball. def/handler: { x, y, fx, fy (the handler's facing), act, burst, mv (his move, if one is on), R }
 export function judgeSteal(def, handler, roll) {
   const dd = dist(def, handler)
   if (dd > T.stealReach) return { ok: false, reach: true }
   const behind = dd > 0.01 && ((def.x - handler.x) * handler.fx + (def.y - handler.y) * handler.fy) / dd < -0.25
   const p = clamp(T.stealBase * (0.55 + T.stealPer * def.R.per) * (1.3 - T.stealHnd * handler.R.hnd) * (1 + T.stealIq * (0.75 - handler.R.iq))
-    * (handler.burst > 0 ? T.stealBurst : 1) * (handler.act === 'gather' ? T.stealGather : 1) * (behind ? T.stealBehind : 1), 0, T.stealMax)
+    * (handler.burst > 0 ? T.stealBurst * (handler.mv === MOVES.btb.n ? MOVES.btb.steal : 1) : 1) * (handler.act === 'gather' ? T.stealGather : 1) * (behind ? T.stealBehind : 1), 0, T.stealMax)
   const ok = roll < p
   return { ok, reach: !ok && behind }
 }
+
+// Which dribble move a flick is: by the angle between it and the way to the basket from where he stands (the basket
+// is "forward" wherever he is on the floor, so the same flick is the same move every time). dir: the flick (unit)
+export function moveKind(p, dir) {
+  const d = rimDist(p)
+  const fx = d > 0.5 ? (RIM.x - p.x) / d : 0, fy = d > 0.5 ? (RIM.y - p.y) / d : -1
+  const a = Math.acos(clamp(dir.x * fx + dir.y * fy, -1, 1)) * 180 / Math.PI
+  return a <= T.hesiTo ? 'hesi' : a <= T.crossTo ? 'cross' : a <= T.btbTo ? 'btb' : 'back'
+}
+// a second flick while a move is on: far enough round from the way it's going to be a spin
+export const spinTurn = (p, dir) => Math.acos(clamp(dir.x * p.bdx + dir.y * p.bdy, -1, 1)) * 180 / Math.PI >= T.spinTurn
 
 // A dribble move against his man: frozen, or sat down. dir: the way the burst goes (unit)
 export function judgeMove(handler, def, dir, roll1, roll2) {

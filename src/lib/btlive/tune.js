@@ -5,7 +5,17 @@
 // Distances are feet, times are seconds unless a name says Ms or Ticks.
 
 export const HZ = 30                 // simulation ticks a second (the screen draws at 60 and interpolates)
-export const DT = 1 / HZ
+// THE PACE (the owner, 2026-11-24: "speed up player movement and game in general 20%"). Every speed and time below is
+// written in the game's own seconds, and the game's clock runs this much quicker than a watch: a tick moves the game
+// on PACE / HZ of its seconds. So one number makes every man, the ball, a pass, a shot's flight, a jump, a cooldown,
+// a freeze, the dead ball and the check this much quicker together, and the game inside is the same game.
+// What a person does is NOT on the game's clock and stays in real time: the shot meter (ms), the shot clock (the
+// seconds on the scorebug), a pressed SHOOT waiting for the ball, a CPU's reaction time.
+export const PACE = 1.2
+export const DT = PACE / HZ          // the game's seconds in one tick
+// a time in the game's seconds as ticks (gticks), and a real one, on a watch (rticks)
+export const gticks = sec => Math.max(1, Math.round(sec * HZ / PACE))
+export const rticks = sec => Math.max(1, Math.round(sec * HZ))
 
 // The half court, in feet, laid over the court picture (public/court-*.webp, 4:3, 56 x 42 ft edge to edge;
 // the same lines on every court in the shop). x runs left to right, y from the baseline wall down to half court.
@@ -23,10 +33,10 @@ export const COURT = {
 
 export const RULES = {
   goal: 11, winBy: 2, cap: 15,       // first to 11 by ones and twos, win by 2, capped at 15 (today's Blacktop; King of the Hill too)
-  shotClock: [12, 14],               // seconds, by players a side (1v1 and King of the Hill, 2v2)
-  orebClock: 8,                      // the clock after an offensive rebound
-  checkTime: 0.8,                    // the ball is checked: nobody moves for this long
-  deadTime: 1.1,                     // after a basket or a turnover, before the next check
+  shotClock: [12, 14],               // real seconds (the scorebug's), by players a side (1v1 and King of the Hill, 2v2)
+  orebClock: 8,                      // the clock after an offensive rebound (real seconds)
+  checkTime: 0.8,                    // the ball is checked: nobody moves for this long (the game's seconds: PACE)
+  deadTime: 1.1,                     // after a basket or a turnover, before the next check (the game's seconds)
   makeItTakeIt: true,                // score and keep the ball (today's Blacktop)
   // Fouls: none. A reach is its own punishment (the defender is frozen), bodies just collide.
 }
@@ -128,7 +138,7 @@ export const T = {
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
-  cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
+  cpuRespect: 10,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
   cpuRace: 0.35,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
   cpuNeed: 0.42,                     // early in the clock a CPU wants a shot worth this (later, less)...
   cpuHurry: 0.05,                    // ...and this much less every second he has had it (a streetball possession doesn't wait around)
@@ -166,9 +176,14 @@ export const T = {
   stealMiss: 0.34,                   // frozen this long after any miss...
   stealReachFreeze: 0.62,            // ...this long after a reach (out of range or from behind)
 
-  // ── MOVE (a dribble move: a burst, and maybe a frozen defender) ─────────────────────────────────
-  moveTime: 0.30,                    // the burst lasts this long...
-  moveSpeed: 1.6,                    // ...at this much of top speed
+  // ── Dribble moves (the small stick, or the arrow keys: a flick picks the move; MOVES below) ──────
+  // Every move is a burst that may freeze his man (referee.judgeMove), and they share one cooldown.
+  moveAt: 0.5,                       // the small stick pushed this far is a flick (the screen and the CPU send it once)
+  // which move: the angle between the flick and the way to the basket, in degrees (referee.moveKind). Toward the
+  // basket: a hesitation. Across: a crossover that way. Back and across: behind the back. Straight back: a step-back.
+  hesiTo: 40, crossTo: 105, btbTo: 150,
+  spinTurn: 60,                      // a second flick this far round from the first, while the burst is on: a spin to there
+  moveSpeed: 1.75,                   // the fastest any move goes, x top speed (what a device's own position is held to)
   moveCd: 3.4, moveCdHnd: 1.0,       // cooldown: 3.4 s at Handles 1, 2.4 s at 11
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.15,                    // chance to freeze him...
@@ -223,3 +238,21 @@ export const T = {
   deepWord: 29.5,                    // a made three from here is a deep three
   chaseAngle: 0.2,                   // a block from behind the shooter (his back to the blocker) is a chase-down
 }
+
+// The dribble moves. time: the burst (s). speed: x top speed with the ball. All go about as far (half a second of
+// running in a third of one), so which one is a matter of where it takes him, not of which is strongest.
+//   cross  the crossover: a hard step across, the ball switched in front of him
+//   hesi   the hesitation: a beat almost standing (stall, at stallSpeed), then gone toward the basket
+//   back   the step-back: a hop away from the basket, and he lands with his feet set (he keeps `set` of the speed):
+//          the jumper after it isn't a jumper on the run
+//   btb    behind the back: back and across with the ball out of reach (a swipe at it lands `steal` as often)
+//   spin   a move turned a quarter turn or more while it's on: the burst bends round to the new way over `time`
+// n: the number a move goes by in the state and on the wire (player.mv; 0: none)
+export const MOVES = {
+  cross: { n: 1, time: 0.30, speed: 1.6 },
+  hesi: { n: 2, time: 0.34, speed: 1.75, stall: 0.09, stallSpeed: 0.3 },
+  back: { n: 3, time: 0.26, speed: 1.3, set: 0.25 },
+  btb: { n: 4, time: 0.30, speed: 1.5, steal: 0.6 },
+  spin: { n: 5, time: 0.34, speed: 1.5 },
+}
+export const MOVE_KEYS = [null, 'cross', 'hesi', 'back', 'btb', 'spin']
