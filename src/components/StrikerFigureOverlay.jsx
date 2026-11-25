@@ -96,8 +96,9 @@ const SOCKETS = [[715, 239.5, 26, 11, 8], [752, 242.5, 10, 6.5, -12]]   // [cx, 
 // the dark iris half under a heavy lowered upper lid (its lash line the darkest stroke), a faint lower lid and a soft
 // crease above. [opening, iris [cx, cy, r], upper lid, lower lid, crease]
 const EYES = [
-  ['M702 241 Q716 233.6 732 241.6 Q717 249.4 702 241 Z', [718.2, 243.6, 4.7], 'M700.8 241.2 Q716 232.4 733.2 241.8', 'M705 244 Q717 249.2 729.4 243.6', 'M703.6 236.2 Q716 229.4 730.4 236.6'],
-  ['M745 245 Q750.8 241.6 757 243.2 Q751.4 247.8 745 245 Z', [750.6, 244.8, 2.1], 'M744.4 245.2 Q750.8 240.8 757.6 243', 'M746.4 246.2 Q751.4 248.4 755.8 244.6', 'M745 241.6 Q750.6 238.4 756.4 239.8'],
+  // hooded and nearly closed, the line of each eye sloping down to the nose with the tilt of his head
+  ['M701.4 237.6 Q716 236.2 731.6 244.6 Q716 243 701.4 237.6 Z', [717.6, 242.6, 4], 'M700.6 237.4 Q716 234.8 732.4 244.6', 'M705 239.8 Q717 244 729.6 245.4', 'M702.6 233.6 Q716 230.6 730.8 238.8'],
+  ['M745.4 243.8 Q750.8 241.8 756.8 244.2 Q751 245.2 745.4 243.8 Z', [750.8, 245, 1.8], 'M744.8 243.8 Q750.8 241.2 757.4 244.2', 'M746.6 245 Q751.4 246.2 755.8 245', 'M745.2 240.4 Q750.8 238.2 756.6 240.8'],
 ]
 // the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
 // path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
@@ -230,15 +231,16 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               {SOCKETS.map(([cx, cy, rx, ry, rot]) => (
                 <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} transform={`rotate(${rot} ${cx} ${cy})`} fill={url('sock')} />
               ))}
+              <filter id={id('eyeblur')} x="-0.2" y="-0.5" width="1.4" height="2"><feGaussianBlur stdDeviation="0.45" /></filter>
               {EYES.map(([open, [ix, iy, ir], lid, low, crease], n) => (
-                <g key={n}>
+                <g key={n} filter={url('eyeblur')}>
                   <clipPath id={id(`eye-${n}`)}><path d={open} /></clipPath>
-                  <path d={open} fill="#ece2d8" opacity={n ? 0.24 : 0.32} />
-                  <circle cx={ix} cy={iy} r={ir} fill={IRIS} opacity="0.92" clipPath={url(`eye-${n}`)} />
+                  <path d={open} fill="#ece2d8" opacity="0.1" />
+                  <circle cx={ix} cy={iy} r={ir} fill={IRIS} opacity="0.75" clipPath={url(`eye-${n}`)} />
                   <g fill="none" strokeLinecap="round">
-                    <path d={lid} stroke={LASH} strokeWidth={n ? 1.5 : 2.3} opacity="0.92" />
-                    <path d={low} stroke={featureOf(face)} strokeWidth={n ? 0.7 : 1} opacity="0.4" />
-                    <path d={crease} stroke={featureOf(face)} strokeWidth={n ? 0.8 : 1.1} opacity="0.28" />
+                    <path d={lid} stroke={LASH} strokeWidth={n ? 1.2 : 1.8} opacity="0.78" />
+                    <path d={low} stroke={featureOf(face)} strokeWidth={n ? 0.6 : 0.8} opacity="0.22" />
+                    <path d={crease} stroke={featureOf(face)} strokeWidth={n ? 1 : 1.6} opacity="0.2" />
                   </g>
                 </g>
               ))}
