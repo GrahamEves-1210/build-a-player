@@ -27,7 +27,7 @@
 import { coachPull } from './coach'
 import { rngOf, clamp, r1 } from '../rng'
 import { signText, termsText } from './news'
-import { capOf, minOf, maxOf, twoWayOf, payroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf } from './cap'
+import { capOf, minOf, maxOf, twoWayOf, payroll, capPayroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf } from './cap'
 import {
   marketValue, worthOf, rankOf, termOf, canSign, signMan, rightsOf, resignOffer, renounce, situationOf,
   taxTolerance, lineOf, teamStrength, BIG_MARKET, mleFor, excFor, cutMan, cutCost, extensionAsk, extendMan,
@@ -167,9 +167,9 @@ export function keepsOwn(F, s, p) {
   if (w < ask.$ * (star ? 0.75 : role === 1 ? 0.85 : 1)) return null
   // (the front office's sums leave out the cap holds of its other free agents: holds aren't salary, and the men it
   // won't bring back come off when it renounces them)
-  const spend = payroll(F, s, year, { holds: false }) + ask.$
+  const spend = payroll(F, s, year) + ask.$
   if (spend > keepLine(F, s, p, year) && ask.$ > mn + 0.05) return null
-  if (payroll(F, s, year) - holdOf(p, year) + ask.$ + reserveOf(F, s, 1) > hardCapOf(F, s, year) + 0.01) return null
+  if (spend + reserveOf(F, s, 1) > hardCapOf(F, s, year) + 0.01) return null
   return ask
 }
 // the best deal team s would offer free agent p now (or null): his ask, inside what it can use and will spend
@@ -184,7 +184,7 @@ function bidFor(F, s, p, day, ctx) {
   // rebuilder with room left late in the summer takes a veteran on a short deal, to play him or trade him)
   if (role === 0 && st >= 13) return null
   const short = sit === 'reb' && ag >= 30 && a.$ > minOf(p.ys ?? 0, year) * 1.6
-  if (short && (day < 3 || capOf(year) - payroll(F, s, year) < a.$ * 0.6)) return null
+  if (short && (day < 3 || capOf(year) - capPayroll(F, s, year) < a.$ * 0.6)) return null
   const w = worthOf(F, p, year) * (sit === 'win' && role > 0 && ag >= 26 ? 1.1 : sit === 'reb' && ag <= 25 ? 1.1 : 1)
   const tol = taxTolerance(F, s)
   const own = rightsOf(p, s)
@@ -194,10 +194,9 @@ function bidFor(F, s, p, day, ctx) {
   const under = payroll(F, s, year) < floorOf(year)
   // (the least it offers: most of his ask in the first days; on the last, whatever it has)
   const lo = day >= FA_DAYS ? 0 : 0.75
-  const tries = [base, a.$ * 0.9, ...(under ? [Math.min(a.$ * 1.25, w * 1.6, capOf(year) - payroll(F, s, year))] : [])]
+  const tries = [base, a.$ * 0.9, ...(under ? [Math.min(a.$ * 1.25, w * 1.6, capOf(year) - capPayroll(F, s, year))] : [])]
   // (its channels: what's left under the cap, its mid-level, the bi-annual, the minimum)
-  const pay = payroll(F, s, year) - (own ? holdOf(p, year) : 0)
-  const room = capOf(year) - pay
+  const room = capOf(year) - (capPayroll(F, s, year) - (own ? holdOf(p, year) : 0))
   if (room > mn) tries.push(Math.min(room, base))
   const m = mleFor(F, s, year)
   if (m) tries.push(Math.min(m.$, base))
@@ -216,9 +215,9 @@ function bidFor(F, s, p, day, ctx) {
       const c = canSign(F, s, p, d)
       if (!c.ok) continue
       // (the line its front office spends to; a minimum deal always fits; a hard-capped team keeps room to fill out)
-      const after = payroll(F, s, year) - (own ? holdOf(p, year) : 0) + v
+      const after = payroll(F, s, year) + v
       const line = own ? keepLine(F, s, p, year) : lineOf(tol.add, year)
-      if (c.via !== 'min' && payroll(F, s, year, { holds: false }) + v > line) continue
+      if (c.via !== 'min' && after > line) continue
       if (after + reserveOf(F, s, 1) > hardCapOf(F, s, year) + 0.01) continue
       return { ...d, via: c.via }
     }
@@ -246,7 +245,7 @@ function openMarket(F) {
     }
     // the rest: renounced when the team wants its room, held (Bird rights for later) when it's over the cap anyway (a
     // star it would bring back stays held)
-    const pay = payroll(F, s, year, { holds: false })
+    const pay = payroll(F, s, year)
     if (pay < capOf(year) - 5) for (const p of (F.fa ?? []).filter(x => x.fr === s && !x.rn && x.hy === year && !x.rfa && !keeperOf(F, s, x))) renounce(F, s, p.i)
   }
   news.push(...salaryDumps(F))
@@ -348,7 +347,7 @@ function faRound(F, day) {
     for (const s of R.shuffle(S)) {
       if (s === F.team || busy[s] >= 3) continue
       // (what it's already offered this round counts against its room)
-      if (spent[s] > 0 && payroll(F, s, year) + spent[s] > capOf(year) && busy[s] >= 1 && (p.o ?? 0) < 75) continue
+      if (spent[s] > 0 && capPayroll(F, s, year) + spent[s] > capOf(year) && busy[s] >= 1 && (p.o ?? 0) < 75) continue
       const st = standardOf(F.teams[s]).length + busy[s]
       if (st >= ROSTER_MAX + (F.phase === 'off' && (p.o ?? 0) >= 78 ? 3 : 0)) continue
       const b = bidFor(F, s, p, day, ctx)
@@ -424,8 +423,8 @@ function faRound(F, day) {
 function aiMatches(F, s, p, d) {
   const year = capYear(F)
   const w = worthOf(F, p, year)
-  const after = payroll(F, s, year) - holdOf(p, year) + d.$
-  const spend = payroll(F, s, year, { holds: false }) + d.$
+  const after = payroll(F, s, year) + d.$
+  const spend = after
   const young = (p.ag ?? 27) <= 25
   const star = keeperOf(F, s, p)
   return w >= d.$ * (star ? 0.75 : young ? 0.85 : 0.95) && spend <= Math.max(keepLine(F, s, p, year), lineOf(taxTolerance(F, s).keep, year)) && after + reserveOf(F, s, 1) <= hardCapOf(F, s, year) && canSign(F, s, p, { $: d.$, y: d.y, r: Math.min(d.r ?? 0, raiseMax(rightsOf(p, s))), sheet: 1 }).ok
@@ -584,7 +583,7 @@ function lateSignings(F) {
   const S = shortsOf(F).filter(s => s !== F.team && situationOf(F, s) !== 'reb')
   const left = [...(F.fa ?? [])].filter(p => rankOf(F, p) <= 300 && !p.fl).sort((a, b) => rankOf(F, a) - rankOf(F, b))
   const used = new Set()
-  const chan = s => { const m = mleFor(F, s, year); return Math.max(capOf(year) - payroll(F, s, year), m?.$ ?? 0, minOf(0, year)) }
+  const chan = s => { const m = mleFor(F, s, year); return Math.max(capOf(year) - capPayroll(F, s, year), m?.$ ?? 0, minOf(0, year)) }
   for (const p of left) {
     const tier = tierOf(F, p)
     const mn = minOf(p.ys ?? 0, year)

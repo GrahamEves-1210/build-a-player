@@ -61,7 +61,7 @@
 // value)] · p.txd (calDay he was traded) · p.osm ({ s, y }: the team whose offer sheet was matched, the league year) · team.tpe [{ $, n, until }]
 import { rngOf, clamp, r1 } from '../rng'
 import { fixNumbers } from './numbers'
-import { capOf, apron1Of, apron2Of, payroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
+import { capOf, apron1Of, apron2Of, payroll, capPayroll, capYear, standardOf, twoWaysOf, hitOf, taxBill, taxOf, isRepeater, hardCapOf, minOf } from './cap'
 const minOfY = year => minOf(5, year)
 import { rankOf, rankAt, worthAt, scoreOf, worthOf, marketValue, situationOf, teamStrength, excFor, ROSTER_MAX, OFF_MAX, TWO_WAY_MAX, dayOf, cutMan, ownerCap } from './contracts'
 
@@ -442,21 +442,23 @@ function sideRules(F, s, outMen, inMen, outPk, inPk, cuts = 0) {
   const pay = payroll(F, s, year)
   const after = pay - O + I
   const cap = capOf(year)
+  // (cap room is counted with the summer's cap holds in; the aprons and hard caps read salaries only: cap.js)
+  const capPay = capPayroll(F, s, year), capAfter = capPay - O + I
   // (the men it takes in on the minimum exception need no salary back)
   const IM = I - inMen.filter(p => onMinimum(p, year)).reduce((a, p) => a + hitOf(p, year, year), 0)
   const big = Math.max(0, ...outMen.map(p => hitOf(p, year, year)))
-  const agg = !free && outMen.length >= 2 && IM > big + 0.001 && after > cap + 0.001
+  const agg = !free && outMen.length >= 2 && IM > big + 0.001 && capAfter > cap + 0.001
   let hc1 = false, tpe = null
   if (!free && I > 0.001) {
-    if (after > cap + 0.001 && IM > 0.001) {
-      const room = pay < cap ? O + cap - pay + 0.25 : 0
+    if (capAfter > cap + 0.001 && IM > 0.001) {
+      const room = capPay < cap ? O + cap - capPay + 0.25 : 0
       const lim = Math.max(matchLimit(F, s, O, after, year), room)
       if (IM > lim + 0.001) {
         // (a trade exception can absorb it instead: all the salary coming in under one exception, nothing combined
         // with it, and the team no further than the first apron after)
         const fit = tpesOf(F, s).filter(x => IM <= x.$ + 0.001).sort((x, y) => x.$ - y.$)[0]
         if (fit && after <= apron1Of(year) + 0.001) tpe = fit
-        else return { ok: false, why: `The ${s} would take back $${r1(IM)}M for $${r1(O)}M out; they can take back $${r1(lim)}M at most`, k: 'match' }
+        else return { ok: false, why: O < 0.05 ? `The ${s} are over the cap: they can't take in $${r1(IM)}M in salary without sending salary back` : `The ${s} would take back $${r1(IM)}M in salary for $${r1(O)}M out; over the cap they can take back $${r1(lim)}M at most`, k: 'match' }
       }
       // (taking back more than it sends, past what its room covers: hard-capped at the first apron, the 2023 CBA)
       if (IM > O + 0.001 && IM > room + 0.001) hc1 = true
@@ -481,7 +483,7 @@ function sideRules(F, s, outMen, inMen, outPk, inPk, cuts = 0) {
   // frozen pick (over the second apron: its first seven drafts out)
   const frozenY = nextDraft(F) + 6
   if (!free && (after > apron2Of(year) || pay > apron2Of(year)) && outPk.some(k => k.r === 1 && k.y >= frozenY)) return { ok: false, why: `The ${s} are over the second apron: their first-round pick seven years out is frozen`, k: 'frozen' }
-  return { ok: true, O, I, IM, after, hc1, tpe, agg, big }
+  return { ok: true, O, I, IM, after, capAfter, hc1, tpe, agg, big }
 }
 // the picks after a deal (for the Stepien check and to make it): [Pick]
 function picksAfter(F, deal) {
@@ -721,7 +723,7 @@ export function doTrade(F, deal, { user = null } = {}) {
       team.tpe = team.tpe.filter(t => t.$ > 0.05)
       continue
     }
-    if (sr.after > capOf(year) + 0.001 && !sr.agg && out.length) {
+    if (sr.capAfter > capOf(year) + 0.001 && !sr.agg && out.length) {
       // (each man out matched against what comes in, the biggest salary first; what's left of each is an exception)
       let left = sr.IM ?? 0
       for (const p of [...out].sort((x, y) => hitOf(y, year, year) - hitOf(x, year, year))) {
@@ -803,11 +805,11 @@ function tryBuy(F, R, a, b, wide = false) {
   for (const p of R.shuffle(vets).slice(0, wide ? 5 : 3)) {
     // (the contender's filler, enough to match; none needed if it has the room)
     const sal = hitOf(p, year, year)
-    const payB = payroll(F, b, year)
+    const payB = payroll(F, b, year), capB = capPayroll(F, b, year)
     let fill = []
     // (a trade exception big enough takes him in with nothing going back)
     const tpeOk = tpesOf(F, b).some(x => x.$ >= sal) && payB + sal <= apron1Of(year) && !onMinimum(p, year)
-    if (payB + sal > capOf(year) && !tpeOk && !onMinimum(p, year)) {
+    if (capB + sal > capOf(year) && !tpeOk && !onMinimum(p, year)) {
       // smallest out that matches: invert the brackets (out such that limit(out) >= sal)
       let lo = 0, hi = sal * 1.2
       for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (matchLimit(F, b, m, payB - m + sal, year) >= sal) hi = m; else lo = m }
@@ -898,7 +900,7 @@ export function salaryDumps(F) {
     const bad = F.teams[a].r.filter(p => !p.tw && !whyNot(F, a, p) && (p.$ ?? 0) >= 6).map(p => ({ p, v: manValue(F, p) })).filter(x => x.v < 0).sort((x, y) => x.v - y.v).slice(0, 3)
     for (const { p } of bad) {
       const sal = hitOf(p, year, year)
-      const takers = S.filter(b => b !== a && payroll(F, b, year) + sal <= capOf(year) + 0.25)
+      const takers = S.filter(b => b !== a && capPayroll(F, b, year) + sal <= capOf(year) + 0.25)
       let made = false
       for (const b of R.shuffle(takers).slice(0, 6)) {
         const base = { a, b, ga: [p.i], gb: [], pa: [], pb: [] }
