@@ -481,7 +481,21 @@ function careerDeadline(c, d) {
 // ═════════════════════════════════════════════════════════════════════════════
 // FOOTBALL — playoffs (only when you're in)
 // ═════════════════════════════════════════════════════════════════════════════
+// Career, the podium before the playoffs: a team that has waited a long time for a title (or never won one) is asked
+// about it (the wait, as lib/careerPress.js works it out from the real titles and the ones this career won there)
+const PO_WAIT = { id: 'po-wait', at: ['playoffs'], w: 4, when: c => !!c.cr?.lore?.wait && c.cr.role === 'starter' && c.roleHas('nerve'),
+  make: c => {
+    const L = c.cr.lore
+    return { kicker: 'PLAYOFF MEDIA DAY', title: 'The question about the wait',
+      body: `${L.wait} At the podium before the playoffs, a reporter asks ${c.name} whether this team feels that history.`,
+      options: [
+        o('own', 'Take it on', gam(pOf(c, 0.5, ROLE[c.pos]?.nerve ?? []), { attr: c.R1('nerve', 1), team: { [c.sideKey]: 0.5 } }, `He says ${L.town} has waited long enough. The locker room likes hearing it.`,
+          { attr: c.R1('nerve', -1) }, 'The quote leads every show. He plays tight.')),
+        o('now', 'Keep it on this team', { team: { [c.otherKey]: 0.5 } }, '"Nobody in here played in those games." The room stays loose.'),
+      ] }
+  } }
 const NFL_PLAYOFFS = [
+  PO_WAIT,
   { id: 'po-plan', at: ['playoffs'], w: 5, when: () => true,
     make: c => ({ kicker: 'PLAYOFF WEEK', title: 'How do they win it?',
       body: `One-and-done football. The staff asks whether the postseason runs through ${c.name}, or through the whole roster.`,
@@ -525,6 +539,7 @@ const NBA_ALL = [
 ]
 const GUARD = [], BIG = []
 const NBA_PLAYOFFS = [
+  PO_WAIT,
   { id: 'nbapo-takeover', at: ['playoffs'], w: 2, when: () => true,
     make: c => ({ kicker: 'BEFORE THE PLAYOFFS', title: 'The second season', body: `The stage gets bigger. How does ${c.name} want to play the postseason?`,
       options: [
@@ -632,6 +647,17 @@ const shareWord = u => (u >= 0.5 ? 'half the snaps' : u >= 0.4 ? 'almost half th
 
 // ── Both sports ──────────────────────────────────────────────────────────────
 const LIFE_ANY = [
+  // a franchise record in reach before the season ends (lib/careerPress.js recordChase: the team's real career leader)
+  { id: 'record-watch', at: ['mid', 'late', 'stretch'], w: 5, when: c => { const R = chaseNow(c); return !!R && starts(c) && R.gap > 0 && R.gap <= R.pace * c.left * 1.1 && c.roleHas('make') },
+    make: c => {
+      const R = chaseNow(c), W = G(c, 3, 10)
+      return { kicker: 'RECORD WATCH', title: `${fmtN(R.gap)} ${R.short} from the record`,
+        body: `${c.name} is ${fmtN(R.gap)} ${R.short} away from ${R.holder}'s franchise record of ${fmtN(R.value)}, with ${c.left} games left. A reporter asks whether he is thinking about it.`,
+        options: [
+          o('chase', 'Say he wants it', { attr: c.R('make', 1), team: { [c.sideKey]: -0.5 }, window: W, tag: 'RECORD WATCH' }, `"I know the number." The game plan bends his way, and the ${c.isBucket ? 'offense' : c.side} gets easier to read.`),
+          o('team', 'Wins first', { team: { [c.sideKey]: 0.5 }, window: W, tag: 'RECORD WATCH' }, '"If it comes, it comes with wins." The room plays for him.'),
+        ] }
+    } },
   { id: 'ct-year', at: ['mid', 'late'], w: 3, when: c => c.cr.contractYear && starts(c) && c.left >= 3 && c.roleHas('make') && c.roleHas('feel'),
     make: c => ({ kicker: 'CONTRACT YEAR', title: 'Playing for the next deal',
       body: `${c.name}'s contract is up after the season. ${PAID[c.pos]} set the price, the ${c.nick} are ${c.rec}, and the game plan doesn't always run through him.`,
@@ -732,6 +758,17 @@ const gameKicker = (c, flavor) => [flavor, `WEEK ${c.next.wk} · ${c.next.home ?
 const risk = (id, label, od, good, bad, goodSub, badSub) => ({ id, label, sub: oddsSub(od, goodSub, badSub), effect: { outcomes: [{ p: od.p, good: true, ...good }, { p: 1 - od.p, good: false, ...bad }] } })
 const safe = (id, label, line, text) => ({ id, label, sub: text, effect: { outcomes: [{ p: 1, good: true, line, game: { add: {} } }] } })
 const upcoming = c => !!c.next && !c.next.sat && !!c.cr.opp
+// what the team's writers know about this opponent (lib/careerPress.js, through lib/career.js lifeView): the rivalry's
+// line when the next game is against one of the team's rivals (Bears and Packers, Celtics and Lakers), or null
+const rivalLine = c => (upcoming(c) ? c.cr.lore?.rival?.(c.cr.opp.short) ?? null : null)
+// a franchise record he can reach this season (lifeView's chase), as it stands this week: how far, and his pace
+const chaseNow = c => {
+  const ch = c.cr?.lore?.chase
+  if (!ch || !c.played.length) return null
+  const done = c.played.reduce((s, g) => s + (g[ch.key] ?? 0), 0)
+  return { ...ch, gap: ch.value - (ch.before + done), pace: done / c.played.length }
+}
+const fmtN = n => Math.round(n).toLocaleString('en-US')
 // December in a cold, open stadium (the home team's): where a late-season game can turn on the weather
 const COLD_HOME = { BUF: 'Orchard Park', GB: 'Green Bay', CHI: 'Chicago', CLE: 'Cleveland', PIT: 'Pittsburgh', NE: 'Foxborough', DEN: 'Denver', KC: 'Kansas City', CIN: 'Cincinnati', NYJ: 'East Rutherford', NYG: 'East Rutherford', PHI: 'Philadelphia', BAL: 'Baltimore', WAS: 'Landover' }
 const coldCity = c => (upcoming(c) && c.next.wk >= 14 ? COLD_HOME[c.next.home ? c.team : c.cr.opp.short] ?? null : null)
@@ -803,11 +840,13 @@ const LIFE_NFL = [
         o('skip', 'Stay in his routine', { attr: c.R1('nerve', 1), window: 1, tag: 'SUNDAY NIGHT' }, 'The PR staff sends a teammate. He sleeps.'),
       ] }) },
   // inGame: a division opponent, the second time around the league's calendar
-  { id: 'rival-week', at: ['mid', 'late', 'stretch'], w: 3, when: c => upcoming(c) && c.cr.opp.div && starts(c) && c.alive && c.k >= 6 && !!EDGE[c.pos] && c.roleHas('nerve'),
+  // (a rival the team's history names, in the division or out of it, is asked about as that rivalry: lib/careerPress.js)
+  { id: 'rival-week', at: ['mid', 'late', 'stretch'], w: 3, when: c => upcoming(c) && (c.cr.opp.div || !!rivalLine(c)) && starts(c) && c.alive && c.k >= 6 && !!EDGE[c.pos] && c.roleHas('nerve'),
     make: c => {
-      const e = EDGE[c.pos], od = odds(c, 0.5, ROLE[c.pos].nerve), them = c.cr.opp.nick
-      return { inGame: true, kicker: gameKicker(c, 'DIVISION GAME'), title: `${them} week`,
-        body: `A division game, ${c.next.home ? 'at home' : 'on the road'}, and the ${c.nick} are ${c.rec}. On Wednesday a reporter asks ${c.name} what he thinks of the ${them} ${c.other}.`,
+      const e = EDGE[c.pos], od = odds(c, 0.5, ROLE[c.pos].nerve), them = c.cr.opp.nick, lore = rivalLine(c)
+      return { inGame: true, kicker: gameKicker(c, lore ? 'RIVALRY WEEK' : 'DIVISION GAME'), title: `${them} week`,
+        body: lore ? `${lore} This one is ${c.next.home ? 'at home' : 'on the road'}, and the ${c.nick} are ${c.rec}. On Wednesday a reporter asks ${c.name} what he thinks of the ${them} ${c.other}.`
+          : `A division game, ${c.next.home ? 'at home' : 'on the road'}, and the ${c.nick} are ${c.rec}. On Wednesday a reporter asks ${c.name} what he thinks of the ${them} ${c.other}.`,
         options: [
           risk('talk', 'Give them a headline', od, { line: `He said it, then backed it up: ${e.upTxt}.`, tag: 'BACKED IT UP', game: { add: e.up } }, { line: `The ${them} had the quote on their wall all week. ${cap(e.dnTxt)}.`, tag: 'BULLETIN BOARD', game: { add: e.dn } }, `he backs it up with ${e.upTxt}`, `it costs him ${e.dnTxt}`),
           safe('quiet', 'Say the right things', 'Nothing for the bulletin board. An ordinary Sunday.', 'Nothing changes: his game stays as it was going to be.'),
@@ -1157,6 +1196,18 @@ const LIFE_DB = [
 
 // ── Basketball ───────────────────────────────────────────────────────────────
 const LIFE_NBA = [
+  // a rival the franchise's history names (lib/careerPress.js): the question at shootaround
+  { id: 'rival-night', at: ANY, w: 3, when: c => !!rivalLine(c) && starts(c) && c.k >= 6 && c.roleHas('nerve') && c.roleHas('make'),
+    make: c => {
+      const them = c.cr.opp.nick
+      return { kicker: `RIVALRY · ${c.next.home ? 'VS' : 'AT'} ${them.toUpperCase()}`, title: `${them} next`,
+        body: `${rivalLine(c)} The ${c.nick} are ${c.rec}. At shootaround a reporter asks ${c.name} what the ${them} mean to this team.`,
+        options: [
+          o('talk', 'Give them a headline', gam(pOf(c, 0.5, ROLE[c.pos].nerve), { attr: c.R('make', 1), window: 3, tag: 'BACKED IT UP' }, 'He said it, then played like it.',
+            { attr: c.R1('nerve', -1), window: 3, tag: 'BULLETIN BOARD' }, `The ${them} had the quote up in their locker room. He pressed.`)),
+          o('quiet', 'Say the right things', { attr: c.R1('nerve', 1), window: 1 }, 'Nothing for the other locker room.'),
+        ] }
+    } },
   { id: 'nba-rk-wall', at: ['late', 'stretch'], w: 4, when: c => c.cr.rookie && c.k >= 45 && c.left >= 10 && c.roleHas('legs'),
     make: c => ({ kicker: 'ROOKIE YEAR', title: 'The rookie wall',
       body: `${c.k} games in. A college season is 35 at the most, and there are ${c.left} still to play. ${c.name}'s legs feel every one of them.`,

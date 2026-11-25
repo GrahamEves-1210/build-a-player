@@ -50,6 +50,7 @@ import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { BIRTH } from '../data/player-ages'
 import { allStarBeat, allStarSkip, allStarSeason, ASW_LEGACY } from './allStarBreak.js'   // (basketball's All-Star Saturday: the 3-Point and Slam Dunk Contests)
+import { roomQuestion, pressQuestion, PRESS_TONES, lifeLore, recordChase, recordStat, registerLore, hasLore } from './careerPress.js'   // (the team's own questions: his position's greats, its titles, its rivals)
 import { LEGENDS, QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 import { RB_LEGENDS, RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import { WR_LEGENDS, WR_LEGEND_PHYSICALS } from '../data/wr-legends'
@@ -2138,8 +2139,95 @@ function divRival(c) {
   const t = mates[Math.floor(seeded(`${c.seed}-div-${c.year}`)() * mates.length)]
   return { ...t, nick: nick(t.name), div: me.div }
 }
+// ── The press: what a team's own people and its writers ask him (lib/careerPress.js) ──
+// The career as one team sees it: who is on its roster, who plays his spot, how he got there, what he has done
+// there. team: his own, or one he is meeting before the draft. null: a sport with no team lore (baseball).
+const DEF_POS = new Set(['db', 'dl', 'lb'])
+function pressView(c, team = c.team) {
+  const S = sportOf(c), t = team ? S.teamOf(team) : null
+  if (!t || !hasLore(c.sport)) return null
+  const ro = rosterFor(c, team)
+  const names = Object.values(ro ?? {}).filter(Array.isArray).flat().map(p => p?.name).filter(n => n && n !== c.name)
+  const mine = team === c.team
+  const dc = depthChart(mine ? c : { ...c, team, roster: ro, contract: {}, lastRole: null }, ro)
+  const best = dc.all.find(p => !p.you && !p.out) ?? null
+  const here = (c.seasons ?? []).filter(s => s.team === team)
+  const yr = y => (y ?? FIRST_SEASON) + (c.sport === 'nfl' ? 0 : 1)   // (basketball and soccer: the year the season ends)
+  const R = recordStat(c.pos)
+  const totals = R ? { [R.key]: here.reduce((a, s) => a + (s.stats?.[R.key] ?? 0), 0) } : {}
+  const last = c.seasons[c.seasons.length - 1] ?? null, lastHere = last?.team === team ? last : null
+  const rookie = !c.seasons.length && !c.unretired
+  // how he got here: drafted (a soccer player signs), or the summer's move as the decisions have it
+  const how = rookie ? (S.isSoccer ? 'sign' : 'draft') : S.isSoccer ? 'sign' : (c.decisions ?? []).some(d => d.year === c.year && /traded|dealt/i.test(d.text ?? '')) ? 'trade' : 'sign'
+  // a name the room treats as one: a first-round projection before the draft, a high pick after it, a starter of standing later
+  const pk = c.draft?.pick
+  const top = c.phase === 'draft' && !c.team ? S.isSoccer || stockOf(c).hi <= (S.isBucket ? 30 : 64)
+    : rookie && !S.isSoccer ? !!pk && !pk.udfa && pk.round <= (S.isBucket ? 1 : 2)
+    : (dc.starter && c.ovr >= 80) || c.ovr >= 85
+  // soccer: the seasons the career saw this club top his league's table (the tables it kept), his own titles aside
+  const alsoWon = S.isSoccer ? (c.seasons ?? []).filter(s => s.table?.[0]?.[0] === team).map(s => yr(s.season)) : []
+  const real = c.sport === 'nfl' && rookie ? lastSeason(team) : null
+  return {
+    sport: c.sport, team, name: t.name, nick: nickOf(S, team), pos: c.pos, spot: S.isBucket ? hoopSpot(c) : null, player: c.name, league: t.league ?? null,
+    year: yr(c.season), roster: names, star: best && best.ovr >= 84 ? { name: best.name, ovr: best.ovr } : null, ahead: !dc.starter, starter: dc.starter,
+    ovr: c.ovr, rep: c.rep ?? 5, here: here.length, proYears: (c.seasons ?? []).length, first: !here.length, how, top,
+    titlesHere: here.filter(s => s.champion).map(s => yr(s.season)), alsoWon,
+    lastHere: lastHere ? { wins: lastHere.wins, losses: lastHere.losses, champion: !!lastHere.champion } : null,
+    real: real ? { w: real.w, l: real.l, rec: real.rec } : null,
+    chase: recordChase({ sport: c.sport, team, pos: c.pos, totals, last: lastHere?.stats ?? null, roster: names }),
+  }
+}
+// The team's own question in most of the rooms: the man at his position there, its last season, the standard at his
+// position, the wait for a title, a rival. The other rooms keep the bank's question, and so does any team with
+// nothing to ask (the answers still move his stock the same way: an INTERVIEWS-shaped question)
+function teamRooms(c) {
+  const list = c.draft?.interviews ?? []
+  if (!list.length || !hasLore(c.sport)) return c
+  const r = seeded(`rooms-${c.seed}`), used = []
+  const interviews = list.map(x => {
+    if (x.answer != null || !x.team || r() >= 0.75) return x
+    const v = pressView(c, x.team), q = v ? roomQuestion(v, r, used) : null
+    if (!q) return x
+    used.push(q.kind)
+    return { ...x, who: q.who, q: q.q, a: [...q.a].sort(() => r() - 0.5), lore: q.id }
+  })
+  return { ...c, draft: { ...c.draft, interviews } }
+}
+// The press conference on the hub before a season: his first one with a team (after the draft, a trade, a signing),
+// or media day when there is something to ask (he won it all there, a franchise record is in reach, a great's number
+// is on the wall, the team has waited a long time). One question; null when there is none this year, or it is done.
+// c.press = { at: the season it was dealt for, seen: the questions he has had, said: his answer, vow: the season a
+// bold answer rides on }
+export function pressFor(c) {
+  if (!c || c.phase !== 'preseason' || !c.team || c.press?.at === c.seasons.length) return null
+  const v = pressView(c)
+  return v ? pressQuestion(v, seeded(`${c.seed}-press-${c.seasons.length}-${c.team}`), c.press?.seen ?? []) : null
+}
+// his answer (k: which one; -1 or null: no comment, nothing changes)
+export function answerPress(c, k = -1) {
+  const q = pressFor(c)
+  if (!q) return c
+  const at = c.seasons.length, a = k != null && k >= 0 ? q.a[k] : null, T = a ? PRESS_TONES[a.tone] ?? {} : {}
+  const press = { at, seen: [...(c.press?.seen ?? []), q.id].slice(-24), vow: T.vow ? at : c.press?.vow ?? null, said: a ? { who: q.who, q: q.q, t: a.t, tone: a.tone } : null }
+  const side = DEF_POS.has(c.pos) ? 'def' : 'off'
+  return {
+    ...c, press,
+    ...(T.rep ? { rep: clamp((c.rep ?? 5) + T.rep, 1, 10) } : {}),
+    ...(T.side ? { nextMods: { ...(c.nextMods ?? {}), [side]: r10(((c.nextMods ?? {})[side] ?? 0) + T.side) } } : {}),
+  }
+}
+// what the hub says under the answer he gave: { tag, line } (null: no comment, or nothing said this year)
+export function pressSaid(c) {
+  const s = c?.press?.at === c?.seasons?.length ? c.press.said : null
+  if (!s) return null
+  const T = PRESS_TONES[s.tone] ?? {}
+  const side = DEF_POS.has(c.pos) ? 'defense' : sportOf(c).isSoccer ? 'attack' : 'offense'
+  return { ...s, tag: T.tag ?? '', line: T.side ? `${T.line} Team ${side} +${T.side} this season.` : T.line ?? '' }
+}
+// a bold answer, a season on: backed up (+1), not (−1), or neither
+const pressVow = (c, perf) => (c.press?.vow === c.seasons.length ? (perf >= 0.55 ? 1 : perf < 0.3 ? -1 : 0) : 0)
 export function setupInterviews(c) {
-  if (sportOf(c).x?.interviews) return sportOf(c).x.interviews(c)
+  if (sportOf(c).x?.interviews) return teamRooms(sportOf(c).x.interviews(c))
   const S = sportOf(c)
   const r = seeded(`int-${c.seed}`)
   const { lo, hi } = stockOf(c)
@@ -2164,7 +2252,7 @@ export function setupInterviews(c) {
     teams = near.map(t => ({ t, k: Math.pow(r(), 1 / Math.max(0.001, wantOf(t))) })).sort((a, b) => b.k - a.k).slice(0, 4).map(x => x.t)
   }
   const qs = [...(c.pos === 'k' ? K_INTERVIEWS : c.pos === 'dl' ? [...INTERVIEWS.nfl.filter(DL_SWAPS), ...DL_INTERVIEWS] : c.pos === 'lb' ? [...INTERVIEWS.nfl.filter(DL_SWAPS), ...LB_INTERVIEWS] : c.pos === 'ol' ? [...INTERVIEWS.nfl.filter(DL_SWAPS), ...OL_INTERVIEWS] : INTERVIEWS[c.sport] ?? INTERVIEWS.nfl)].sort(() => r() - 0.5).slice(0, teams.length)
-  return { ...c, draft: { ...c.draft, interviews: qs.map((q, i) => ({ ...q, a: [...q.a].sort(() => r() - 0.5), team: teams[i], answer: null })) } }   // (the answers in a random order: the best one isn't always first)
+  return teamRooms({ ...c, draft: { ...c.draft, interviews: qs.map((q, i) => ({ ...q, a: [...q.a].sort(() => r() - 0.5), team: teams[i], answer: null })) } })   // (the answers in a random order: the best one isn't always first)
 }
 // The career's mini games, picked on the New Career screen: 'simple' (the original quick games,
 // MiniGameSimple), 'advanced' (the canvas games, MiniGame) or 'off' (simulated from the grades).
@@ -2448,6 +2536,8 @@ function lifeView(c, k, game = null) {
     raw: (g, name) => (S.pool[g] ?? []).find(p => p.name === name)?.attrs ?? null,
     wk: S.isBucket ? k + 1 : weekOfGame(c, k + 1), afterBye: !!a.bye && weekOfGame(c, k + 1) === a.bye.wk + 1,
     opp: short && short !== c.team ? { short, name: S.teamOf(short).name, nick: nickOf(S, short), home: !!game.home, div: !S.isBucket && !!S.teamOf(short).div && S.teamOf(short).div === S.teamOf(c.team).div, men: g => men((theirs ??= rosterFor(c, short)), g) } : null,
+    // what the team's writers know (lib/careerPress.js lifeLore): a rival's line, the title wait, a franchise record in reach
+    lore: (() => { const v = pressView(c); return v ? lifeLore(v) : null })(),
   }
 }
 // (build: the one the season was simulated on; a bye-week gain is a nudge on top of it, active.dirBuild keeps the old one)
@@ -3371,9 +3461,12 @@ export function bookSeason(c) {
   // a season that meets two of its three goals earns one more, playing well being the work the coaches see)
   s.goodYear = goodYearPoint(S, s)
   const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro && !S.isSoccer ? 1 : 0) + s.goodYear }
-  const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
+  // (a bold answer at his press conference rides on the season: lib/careerPress.js)
+  const vow = pressVow(c, perf)
+  const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0) + vow, 1, 10)
   const lastRole = S.isSoccer ? ((s.stats.starts ?? 0) >= (f.games?.length ?? 38) / 2 ? 'Starter' : 'Backup') : benched < (myW + myL || 17) / 2 ? 'Starter' : 'Backup'
   let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons.map(x => (x.race && Object.values(x.race).some(v => v?.rows?.length > 1) ? { ...x, race: shortVote(x.race) } : x)), s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false, ...healDurability(c) }
+  if (vow) next = { ...next, events: [...next.events, { year: c.year + 1, text: vow > 0 ? `${c.name} put himself on the record before the season and backed it up. His word carries more now.` : `${c.name} put himself on the record before the season and didn't back it up. The quote followed him all year.` }] }
   if (S.x?.afterSeason) next = S.x.afterSeason(next, s)
   // a kicker's year: his streak of makes, the franchise's records and the league's career marks, and whether he keeps the job
   if (c.pos === 'k') next = kAfterSeason(next, s, f, { nick: nickOf(S, c.team), totals: careerTotals(next) })
@@ -4458,12 +4551,18 @@ export function careerCard(c) {
 // module registers itself here: SPORT.soccer, its lookups, its greats, its offseason and interview banks.
 const NAMERS = {}
 const LOADERS = { soccer: () => import('./careerSoccer.js'), baseball: () => import('./careerBaseball.js') }
+// (a sport's team lore rides with its engine: soccer's 96 clubs, data/team-lore-soccer.js, for lib/careerPress.js.
+// It starts loading whenever the sport registers, whichever way its engine arrived)
+const LORE_LOADERS = { soccer: () => import('../data/team-lore-soccer.js').then(m => registerLore('soccer', m.SOCCER_LORE, m.LEAGUE_LORE)) }
+const loreLoading = {}
+export const ensureLore = id => (!LORE_LOADERS[id] || hasLore(id) ? Promise.resolve() : (loreLoading[id] ??= LORE_LOADERS[id]().catch(() => {})))
 const loading = {}
 export const sportReady = id => !!SPORT[id] || !LOADERS[id]
-export const ensureSport = id => (sportReady(id) ? Promise.resolve(SPORT[id] ?? null) : (loading[id] ??= LOADERS[id]().then(() => SPORT[id])))
+export const ensureSport = id => (sportReady(id) ? ensureLore(id).then(() => SPORT[id] ?? null) : (loading[id] ??= Promise.all([LOADERS[id](), ensureLore(id)]).then(() => SPORT[id])))
 export const legacyTiers = c => sportOf(c).tiers ?? LEGACY_TIERS
 export function registerSport(id, S, { resumes = {}, events = null, interviews = null, comps = {}, namers = {} } = {}) {
   SPORT[id] = S
+  ensureLore(id)
   for (const [obj, k] of [[POS_LABEL, 'label'], [POS_NAME, 'posName'], [POS_TYPES, 'types'], [POS_ATTR, 'attr'], [AWARD_NAME, 'awardName'], [STARTERS, 'starters'], [HEADLINE_STATS, 'headline'], [EXTRA_STATS, 'extra']]) Object.assign(obj, S[k] ?? {})
   Object.assign(RESUMES, resumes)
   for (const pos of Object.keys(resumes)) ALL_TIME[pos] = greats(scored(id, pos))
