@@ -6,6 +6,19 @@ import { registerMoments, odds, sub, score, pc, outs } from './gameMoments'
 // ═════════════════════════════════════════════════════════════════════════════
 // SOCCER: a striker's season (c.nick is the club's full name)
 // ═════════════════════════════════════════════════════════════════════════════
+// The clubs with a real derby against another club in their league, 2026-27 (the North London, West London, M23,
+// Merseyside, Manchester, Tyne-Wear and Roses derbies; Madrid, Barcelona, Seville, the Basque, Valencian and Galician
+// derbies; the Revierderby, the Rhine, Rhine-Main, North, Bavarian and Baden-Württemberg derbies; Milan, Rome, Turin,
+// the Apennine, Emilian and Lombard derbies; Paris, the Derby du Nord, the Breton and Côte d'Azur derbies).
+// A club without one (Hull City, Bournemouth, RB Leipzig) never gets the Derby Week card.
+const DERBY_CLUBS = new Set(('ARS TOT CHE FUL BRE CRY BHA LIV EVE MCI MUN NEW SUN LEE ' +
+  'RMA ATM GET RAY BAR RCD SEV BET ATH RSO ALA OSA VAL LEV VIL CEL DEP ' +
+  'BVB S04 BMG KOE B04 HSV SVW SGE M05 FCB FCA VFB SCF TSG ' +
+  'MIL INT ROM LAZ JUV TOR BOL FIO PRM SAS COM MNZ ' +
+  'PSG PFC RCL LIL REN LOR BST NIC MON OLM').split(' '))
+// the January window's story cards come up around the window (matchweeks 18 to 24 of 38), not in the autumn: one
+// came up at the November international break
+const inJanuary = c => { const t = c.total ?? 38; return c.k >= Math.round(t * 18 / 38) && c.k <= Math.round(t * 24 / 38) }
 const SOCCER_ALL = [
   { id: 'fc-sacked', at: ['mid', 'late'], w: 4, when: c => !c.ucl && c.struggling,
     make: c => ({ kicker: 'MANAGER SACKED', title: 'The board pulls the trigger',
@@ -14,7 +27,7 @@ const SOCCER_ALL = [
         o('buy', 'Buy into the new man', gam(0.55, { team: { off: 1.5 } }, 'It clicks. The new manager plays to the No. 9.', { team: { off: -1.5 }, window: 3, tag: 'NEW MANAGER', then: { team: { off: 1 } } }, 'Three matches to find the shape, then it starts to work.')),
         o('loyal', 'Back the old manager in public', gam(0.5, { team: { off: 0.5 } }, 'The dressing room respects it. They play for each other.', { attr: c.R1('nerve', -1), window: 3, tag: 'OUT OF FAVOUR' }, 'The new man hasn\'t forgotten it. In and out of the team for a few weeks.')),
       ] }) },
-  { id: 'fc-derby', at: ['early', 'mid', 'late'], w: 3, when: c => !c.ucl && c.k >= 2,
+  { id: 'fc-derby', at: ['early', 'mid', 'late'], w: 3, when: c => !c.ucl && c.k >= 2 && DERBY_CLUBS.has(c.team),
     make: c => ({ kicker: 'DERBY WEEK', title: 'The biggest match of the season',
       body: `Derby week at ${c.nick}. The press conference is on Thursday, and every question is for ${c.name}.`,
       options: [
@@ -28,7 +41,7 @@ const SOCCER_ALL = [
         o('nothing', 'Say nothing, let the football talk', { attr: c.R1('nerve', 1), window: 4, tag: 'FOCUSED' }, 'Head down. Goals do the talking.'),
         o('flirt', 'Flirt with it in an interview', gam(0.45, { xp: 40 }, 'His price goes up, and the club stays calm.', { team: { off: -1 }, window: 4, tag: 'UNSETTLED' }, 'The fans turn on him, and the dressing room notices.')),
       ] }) },
-  { id: 'fc-january', at: ['mid'], w: 4, when: c => !c.struggling,
+  { id: 'fc-january', at: ['mid'], w: 4, when: c => !c.struggling && inJanuary(c),
     make: c => ({ kicker: 'THE JANUARY WINDOW', title: 'The club has money to spend',
       body: `${c.nick} have one big signing in them before the window shuts. The manager asks the senior players what the team needs.`,
       options: [
@@ -36,7 +49,7 @@ const SOCCER_ALL = [
         o('cb', 'A centre-back', { team: { def: 1.5 } }, 'Fewer goals conceded, tighter matches.'),
         o('keep', 'Keep the squad together', { team: { off: 0.5, def: 0.5 } }, 'No new faces. Everyone knows their job.'),
       ] }) },
-  { id: 'fc-sale', at: ['mid'], w: 4, when: c => c.struggling,
+  { id: 'fc-sale', at: ['mid'], w: 4, when: c => c.struggling && inJanuary(c),
     make: c => ({ kicker: 'THE JANUARY WINDOW', title: 'The club sells',
       body: `${c.nick} need the money. Their best winger is going on deadline day. Stay quiet, or ask the club to keep him?`,
       options: [

@@ -152,6 +152,32 @@ for (const [from, to, kind] of [['BHA', 'FCB', 'bid'], ['SEV', 'BET', 'bid'], ['
   say(`January ${kind === 'loan' ? 'loan' : 'move'} ${from} -> ${to} after match ${did?.k}: ${s.stats.lgApps} league apps, ${s.stats.lgGoals} goals; ${s.teamName} finished ${s.pos} of ${s.size}; next season at ${c.team}`)
 }
 
+// ── 4c. A January offer says where its club stands, and that is the table he finds there (the move's own run) ──
+{
+  let seen = 0, same = 0, tried = 0
+  for (let i = 0; i < 40 && seen < 4; i++) {
+    let c = fresh(i % 2 ? 9 : 7, i % 2 ? 'BHA' : 'MCI', 'ENG', `world-place-${i}`)
+    if (i % 2) c = next(playSeason(c))
+    let done = false
+    playSeason(c, { onStop: (c, D) => {
+      if (done || !C.januaryNow(c)) return null
+      done = true; tried++
+      const offers = C.januaryOffers(c)
+      if (!offers.length) return null
+      ok(offers.every(o => o.place?.pos >= 1 && o.place.league), `January: every offer should say where its club stands (${offers.map(o => o.team).join(', ')})`)
+      const o = offers[0]
+      const [n, D2] = C.januaryMove(c, D, o)
+      if (n.team !== o.team) return null
+      seen++
+      const row = X.table(n, D2)?.find(r => r.isUs)
+      if (row?.pos === o.place?.pos) same++
+      return [n, D2]
+    } })
+  }
+  say(`January offers with a place: ${seen} taken in ${tried} windows; the club's place after the move matched the offer's in ${same}`)
+  ok(seen > 0 && same === seen, `January: the place an offer shows should be the new club's place after the move (${same} of ${seen})`)
+}
+
 // ── 5. The window ──
 {
   // a star at a mid-table club, three seasons in: who comes for him, over many summers

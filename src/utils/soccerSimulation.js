@@ -1151,7 +1151,8 @@ function otherCupWinner(L, rand) {
 // tier2: his club plays its country's second tier this season (a promoted side has its place in the top flight)
 // sched: a seed for his league's fixture list (Career: the season's own, so every re-run of the season by the season
 // director plays the same fixtures: each club home and away, once each)
-function clubWorld({ U, uRate, uComp, uPlace, hook, rand, tier2 = false, sched = null }) {
+// places: every other league's table at the January window too (Career's: where a bidding club stands, leagues[id].jan)
+function clubWorld({ U, uRate, uComp, uPlace, hook, rand, tier2 = false, sched = null, places = false }) {
   const out = []
   const lowerRates = new Map()
   const uL = leagueOfClub(CLUB_BY.get(U))
@@ -1164,7 +1165,8 @@ function clubWorld({ U, uRate, uComp, uPlace, hook, rand, tier2 = false, sched =
     const rows = Object.fromEntries(cs.map(c => [c.short, rowOf(c, rand)]))
     const fixtures = roundRobin(cs.map(c => c.short), keep && schedSeed != null ? seeded(`sched|${schedSeed}|${id}`) : rand)
     const scale = 38 / Math.max(1, fixtures.length)
-    const fm = keep ? Object.fromEntries(cs.map(c => [c.short, [[], []]])) : null
+    // (the scores are only noted: no draw of the seed is spent on it, so the season plays as it did)
+    const fm = keep || places ? Object.fromEntries(cs.map(c => [c.short, [[], []]])) : null
     const note = (ri, h, a, hs, as) => { if (!fm) return; fm[h][0][ri] = hs; fm[h][1][ri] = as; fm[a][0][ri] = as; fm[a][1][ri] = hs }
     const uOpp = []
     fixtures.forEach((round, ri) => {
@@ -1175,8 +1177,10 @@ function clubWorld({ U, uRate, uComp, uPlace, hook, rand, tier2 = false, sched =
       }
     })
     const digits = list => Array.from({ length: fixtures.length }, (_, i) => (list[i] == null ? '-' : String(Math.min(9, list[i])))).join('')
-    const form = fm ? { rounds: fixtures.length, by: Object.fromEntries(Object.entries(fm).map(([k, [f, a]]) => [k, [digits(f), digits(a)]])), names: Object.fromEntries(cs.map(c => [c.short, c.name])), opp: { [U]: uOpp } } : null
-    leagues[id] = { id, key, table: tableOut(sortRows(Object.values(rows)), U), games: fixtures.length, ...(form ? { form } : {}) }
+    const form = keep && fm ? { rounds: fixtures.length, by: Object.fromEntries(Object.entries(fm).map(([k, [f, a]]) => [k, [digits(f), digits(a)]])), names: Object.fromEntries(cs.map(c => [c.short, c.name])), opp: { [U]: uOpp } } : null
+    // (another league in January: each club's place after the matchweek the window opens in, 21 of 38)
+    const jan = !keep && fm ? Object.fromEntries(soccerTableAt({ rounds: fixtures.length, by: fm }, Math.round(fixtures.length * 21 / 38)).map(r => [r.short, r.pos])) : null
+    leagues[id] = { id, key, table: tableOut(sortRows(Object.values(rows)), U), games: fixtures.length, ...(form ? { form } : {}), ...(jan ? { jan } : {}) }
   }
   const schedSeed = sched
   for (const L of LEAGUES) {
@@ -1653,7 +1657,7 @@ function clubSeason(build, types, team, base, gameMode, script) {
   if (!world) {
     const place = team?.lastPos ?? lastPlace(club)
     const uComp = T2 ? null : team?.europe !== undefined ? team.europe : place <= meta.ucl ? 'ucl' : place <= meta.ucl + meta.uel ? 'uel' : null
-    world = clubWorld({ U, uRate, uComp, uPlace: place, hook: hookFor(S, base), rand: stream(base, 'world'), tier2: !!T2, sched: team?.sched ?? null })
+    world = clubWorld({ U, uRate, uComp, uPlace: place, hook: hookFor(S, base), rand: stream(base, 'world'), tier2: !!T2, sched: team?.sched ?? null, places: !!team?.career })
   } else {
     // a script's season: his minutes are planned now, from his own streams, match by match in each competition
     const plan = hookFor(S, base)
@@ -1749,6 +1753,8 @@ function clubSeason(build, types, team, base, gameMode, script) {
     cup: { name: cup.name, rounds: cupTies, result: cup.result, champion: cup.champion, winner: cup.winner },
     europe, trophies: T2 ? trophies.filter(x => x !== (LEAGUE_NAME[L.key] ?? L.name)) : trophies, qualified, relegated: !T2 && pos > size - meta.down, relegationPlayoff: !T2 && meta.playoff && pos === size - meta.down,
     otherLeagues: Object.fromEntries(Object.entries(world.leagues).filter(([id]) => id !== L.id).map(([id, x]) => [id, { champion: x.table[0]?.short, top: x.table.slice(0, 4) }])),
+    // (Career: where every club in the other leagues stands when the January window opens: { [short]: place })
+    ...(team?.career ? { places: Object.assign({}, ...Object.values(world.leagues).map(x => x.jan ?? {})) } : {}),
     europeWinners: { ucl: world.ucl.winner, uel: world.uel.winner, uecl: world.uecl?.winner ?? null },
     ...awards, book,
   }

@@ -2816,10 +2816,12 @@ export function januaryStay(c, D) {
 // new club: its matches from here (its league's calendar: a move to a league with a shorter season has fewer left),
 // the matches he's played kept. [career, director]: the director is a new one (the screen keeps it), as deadlineTrade's.
 // (o: one of active.jan.offers, or the talks' version of it with the terms he negotiated)
-export function januaryMove(c, D, o) {
+// Where a January offer would take him: signed, his place at the new club, and the season he'd finish there (the new
+// club's own run of it, on a seed of the career's, the season's and the club's: the same season whenever it's asked
+// for, so the table an offer shows for its club is the table he finds when he gets there). k: the matches played.
+export function januaryLanding(c, o, k = c?.active?.k ?? 0) {
   const S = sportOf(c), a = c?.active
-  if (!S.x?.january || !S.x?.sign || !januaryNow(c) || !D || !o || o.team === c.team) return [c, D]
-  const k = a.k, from = c.team, fromName = S.teamOf(from).name, fromLeague = S.teamOf(from).league ?? null
+  if (!S.x?.sign || !a || !o || o.team === c.team) return null
   let n = S.x.sign({ ...c, offers: null, talks: null }, o)
   n = { ...n, nextMods: null, off: c.off ?? null }
   const roster = n.roster, fit = n.fit
@@ -2827,7 +2829,17 @@ export function januaryMove(c, D, o) {
   const team = simTeam({ ...n, benchRole: !dc.starter }, fit)
   const benched = dc.starter ? null : { weeks: 999, behind: dc.ahead[dc.ahead.length - 1]?.name ?? dc.ahead[0]?.name, label: dc.label, bench: true, from: k, ...(S.x.role ? { role: S.x.role({ ...n, active: null }) } : {}) }
   const simFn = S.sim(c.pos), build = a.dirBuild ?? c.build
-  const run = simFn(build, team)
+  const run = simFn(build, team, `${c.seed}-jan-${c.year}-${o.team}`)
+  return { n, roster, fit, dc, team, benched, simFn, build, run }
+}
+export function januaryMove(c, D, o) {
+  const S = sportOf(c), a = c?.active
+  if (!S.x?.january || !S.x?.sign || !januaryNow(c) || !D || !o || o.team === c.team) return [c, D]
+  const k = a.k, from = c.team, fromName = S.teamOf(from).name, fromLeague = S.teamOf(from).league ?? null
+  const L = januaryLanding(c, o, k)
+  if (!L) return [c, D]
+  let { n } = L
+  const { fit, dc, team, benched, simFn, build, run } = L
   if (!run?.games?.length || run.games.length <= k) return [c, D]
   const cross = (S.teamOf(o.team).league ?? null) !== fromLeague
   const base = { ...run, moved: { k, cross }, games: run.games.map((g, i) => (i < k ? D.games[i] : g)) }

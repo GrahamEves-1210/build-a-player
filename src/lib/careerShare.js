@@ -238,16 +238,22 @@ export async function careerShareCanvas(c, { username } = {}) {
   // soccer: his country and the two biggest cups, a line under the hardware
   let extra = 0
   if (S.isSoccer) {
-    const cells = [[t.caps ?? 0, (t.caps ?? 0) === 1 ? 'CAP' : 'CAPS'], [t.wc ?? 0, t.wc === 1 ? 'WORLD CUP' : 'WORLD CUPS'], [t.ucl ?? 0, t.ucl === 1 ? 'CHAMPIONS LEAGUE' : 'CHAMPIONS LEAGUES']]
+    // (his country's continental titles between them when he has one: 2 EUROS, 1 COPA AMÉRICA; a Conference League
+    // where there's no Champions League to show)
+    const cont = t.contTitles ?? [], same = cont.length && cont.every(x => x.short === cont[0].short) ? String(cont[0].short ?? cont[0].name).toUpperCase() : null
+    const contK = !same ? (cont.length === 1 ? 'CONTINENTAL TITLE' : 'CONTINENTAL TITLES') : cont.length === 1 || /S$/.test(same) ? same : same === 'COPA AMÉRICA' ? 'COPAS AMÉRICA' : `${same}S`
+    const euro = !t.ucl && t.uecl ? [t.uecl, t.uecl === 1 ? 'CONFERENCE LEAGUE' : 'CONFERENCE LEAGUES'] : [t.ucl ?? 0, t.ucl === 1 ? 'CHAMPIONS LEAGUE' : 'CHAMPIONS LEAGUES']
+    const cells = [[t.caps ?? 0, (t.caps ?? 0) === 1 ? 'CAP' : 'CAPS'], [t.wc ?? 0, t.wc === 1 ? 'WORLD CUP' : 'WORLD CUPS'], ...(cont.length ? [[cont.length, contK]] : []), euro]
     const cw = (W - PAD * 2) / cells.length, by = TY + TILE_H + 80
+    const vs = cells.length > 3 ? 48 : 60, sp = cells.length > 3 ? 2 : 3
     cells.forEach(([v, k], i) => {
       const cx = PAD + cw * i + cw / 2, won = i > 0 && v > 0
-      ctx.font = `60px ${ANTON}`; const vw = ctx.measureText(String(v)).width
-      const ks = fit(ctx, k, BEBAS, 30, cw - vw - 44, 3)
-      ctx.font = `${ks}px ${BEBAS}`; const kw = ctx.measureText(k).width + k.length * 3
-      const x0 = cx - (vw + 14 + kw) / 2
-      text(ctx, String(v), x0, by, { font: `60px ${ANTON}`, color: won ? GOLD : '#fff' })
-      text(ctx, k, x0 + vw + 14, by - 4, { font: `${ks}px ${BEBAS}`, color: 'rgba(255,255,255,.62)', spacing: 3 })
+      ctx.font = `${vs}px ${ANTON}`; const vw = ctx.measureText(String(v)).width
+      const ks = fit(ctx, k, BEBAS, 30, cw - vw - (cells.length > 3 ? 26 : 44), sp)
+      ctx.font = `${ks}px ${BEBAS}`; const kw = ctx.measureText(k).width + k.length * sp
+      const x0 = cx - (vw + 12 + kw) / 2
+      text(ctx, String(v), x0, by, { font: `${vs}px ${ANTON}`, color: won ? GOLD : '#fff' })
+      text(ctx, k, x0 + vw + 12, by - 4, { font: `${ks}px ${BEBAS}`, color: 'rgba(255,255,255,.62)', spacing: sp })
       if (i) { ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD + cw * i, by - 50); ctx.lineTo(PAD + cw * i, by + 8); ctx.stroke() }
     })
     extra = 68
@@ -300,9 +306,9 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
   const rec = S.isSoccer ? `${s.wins}–${s.draws ?? 0}–${s.losses}` : `${s.wins}–${s.losses}`
   text(ctx, rec, W / 2, PY + 272, { font: `${fit(ctx, rec, ANTON, 200, W - PAD * 2 - 80)}px ${ANTON}`, color: '#fff', align: 'center' })
   const lost = (s.rounds ?? []).find(r => !r.won)
-  const end = S.isSoccer ? (s.trophies?.length ? s.trophies.join(' · ').toUpperCase() : `${ordinal(s.pos ?? 0)} IN ${(/^(Premier League|Bundesliga)$/.test(s.league ?? '') ? `the ${s.league}` : s.league ?? 'the league').toUpperCase()}`) : s.champion ? `${S.final.toUpperCase()} CHAMPIONS` : lost ? lostIn(lost.round) : s.playoffs ? 'PLAYOFFS' : 'NO PLAYOFFS'
+  const end = S.isSoccer ? (s.trophies?.length ? s.trophies.join(' · ').toUpperCase() : `${s.promoted ? 'PROMOTED · ' : ''}${ordinal(s.pos ?? 0)} IN ${(/^(Premier League|Bundesliga|Championship|Segunda División|2\. Bundesliga)$/.test(s.league ?? '') ? `the ${s.league}` : s.league ?? 'the league').toUpperCase()}`) : s.champion ? `${S.final.toUpperCase()} CHAMPIONS` : lost ? lostIn(lost.round) : s.playoffs ? 'PLAYOFFS' : 'NO PLAYOFFS'
   const ef = fit(ctx, end, BEBAS, 48, W - PAD * 2 - 140, 4)
-  if (s.champion) { ctx.font = `${ef}px ${BEBAS}`; const ew = ctx.measureText(end).width + end.length * 4; icon(ctx, 'ring', W / 2 - ew / 2 - 36, PY + 334, 42, GOLD) }
+  if (s.champion) { ctx.font = `${ef}px ${BEBAS}`; const ew = ctx.measureText(end).width + end.length * 4; icon(ctx, S.isSoccer ? 'trophy' : 'ring', W / 2 - ew / 2 - 36, PY + 334, 42, GOLD) }
   text(ctx, end, W / 2 + (s.champion ? 24 : 0), PY + 370, { font: `${ef}px ${BEBAS}`, color: s.champion ? GOLD : 'rgba(255,255,255,.72)', align: 'center', spacing: 4 })
 
   // the season's numbers
@@ -311,6 +317,9 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
   // the honors (only the ones won), then the overall, the goals, the role
   const honors = [
     s.award && { v: s.awardName, k: 'WINNER', icon: 'trophy', gold: true },
+    // (soccer: his country's summer, the World Cup or the continental championship won)
+    S.isSoccer && s.wc?.champion && { v: 'WORLD CUP', k: 'WINNERS', icon: 'trophy', gold: true },
+    S.isSoccer && s.cont?.champion && { v: String(s.cont.short ?? s.cont.name).toUpperCase(), k: 'WINNERS', icon: 'trophy', gold: true },
     s.allPro && { v: S.first.toUpperCase(), k: S.isSoccer ? 'WINNER' : 'FIRST TEAM', icon: 'medal', gold: true },
     s.proBowl && !s.allPro && { v: S.honor.toUpperCase(), k: 'SELECTED', icon: 'star' },
     (s.records?.length ?? 0) > 0 && { v: String(s.records.length), k: s.records.length === 1 ? 'RECORD SET' : 'RECORDS SET', icon: 'star', gold: true },

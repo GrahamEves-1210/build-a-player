@@ -9,7 +9,7 @@
 // in; national teams that age, qualify and play the continental championships (lib/soccerIntl.js).
 import {
   SPORT, registerSport, depthChart, teamFit, makeRoster, seasonScore, bookSeason, closeChance, playoffPlan,
-  countedHonors, earnLegacy, HOF_LEGACY, CAREER_X,
+  countedHonors, earnLegacy, HOF_LEGACY, CAREER_X, januaryLanding,
 } from './career'
 import { seeded } from './rng'
 import { momentFacts } from './situations'
@@ -153,9 +153,9 @@ const INTERVIEWS_SOCCER = [
     { t: 'I\'ve never missed a game with it.', stock: 1, persona: 'confident' },
     { t: 'Physios worry too much.', stock: -2, persona: 'cocky' } ] },
   { who: 'First-team manager', q: 'A penalty missed in a cup tie. We get another one. Who takes it?', a: [
-    { t: 'Yes. I\'ve practised them every day since the last one.', stock: 2, persona: 'grinder' },
-    { t: 'Of course. I don\'t miss twice.', stock: 1, persona: 'confident' },
-    { t: 'Only if nobody else wants it.', stock: -1, persona: 'cocky' } ] },
+    { t: 'I do. I\'ve practised them every day since the last one.', stock: 2, persona: 'grinder' },
+    { t: 'Me. I don\'t miss twice.', stock: 1, persona: 'confident' },
+    { t: 'Somebody else, unless nobody wants it.', stock: -1, persona: 'cocky' } ] },
   { who: 'Academy director', q: 'A teammate has a go at the new signing in the papers. What happens next?', a: [
     { t: 'Talk to him face to face. Keep it in the dressing room.', stock: 2, persona: 'grinder' },
     { t: 'Let my football answer it on Saturday.', stock: 1, persona: 'confident' },
@@ -307,9 +307,11 @@ export const rememberNation = n => { try { if (NATION_BY.has(n)) localStorage.se
 const soccerNationOf = n => (NATION_BY.has(n) ? n : lastNation() ?? 'ENG')
 // (the countries a career can be started with: the 48 of the 2026 World Cup and the ones that stayed at home, Italy,
 // Denmark, Poland, Nigeria, Wales, Ireland, Serbia...; the rest of CAREER_NATIONS are opponents)
-export const SOCCER_NATIONS = WC_NATIONS.filter(n => n.pick).sort((a, b) => a.name.localeCompare(b.name)).map(n => ({ short: n.short, name: n.name }))
+export const SOCCER_NATIONS = WC_NATIONS.filter(n => n.pick).sort((a, b) => a.name.localeCompare(b.name)).map(n => ({ short: n.short, name: n.name, conf: n.conf ?? null }))
 export const nationName = short => NATION_BY.get(short)?.name ?? short
 export const nationFlag = short => `/logos/nations/${short}.png`
+// a country in a sentence: the United States, the Netherlands, the Ivory Coast (England, Brazil and the rest as they are)
+export const theNation = short => { const n = nationName(short); return /^(United States|Netherlands|Ivory Coast|Republic of Ireland|United Arab Emirates|Dominican Republic|Gambia|Comoros)$/.test(n) ? `the ${n}` : n }
 
 // His place at the club: first choice, in the rotation (close behind, or a teenager they want to play), or on the bench
 export function soccerRole(c) {
@@ -774,6 +776,8 @@ function soccerSeason(c, f, po) {
 // the second tiers' names (the engine's own, for the words here)
 const TIER2_NAME = { 'eng.1': 'the Championship', 'esp.1': 'the Segunda División', 'ita.1': 'Serie B', 'ger.1': 'the 2. Bundesliga', 'fra.1': 'Ligue 2' }
 const topFlight = short => soccerLeagueInfo(CLUB_BY.get(short)?.league)?.name ?? 'the top flight'
+// (the Premier League and the Bundesliga take 'the'; La Liga, Serie A and Ligue 1 don't)
+const theLeague = n => (/^(Premier League|Bundesliga)$/.test(n ?? '') ? `the ${n}` : n)
 // after the season: next year's Europe, the caps, relegation and promotion, a loan that's over
 function soccerAfterSeason(n, s) {
   let next = { ...n, europe: s.qualified ?? null, europeFor: s.team, caps: (n.caps ?? 0) + (s.caps ?? 0), intlGoals: (n.intlGoals ?? 0) + (s.intlGoals ?? 0) }
@@ -791,7 +795,7 @@ function soccerAfterSeason(n, s) {
   }
   // a season in the second tier: promoted (back in the top flight), or another year down there
   if (s.tier === 2 && next.down?.team === s.team && !next.loan) {
-    if (s.promoted) { next = { ...next, down: null }; ev(`${s.teamName} are promoted${s.promotedHow === 'playoff' ? ' through the play-offs' : s.pos === 1 ? ' as champions' : ''}. Back in ${topFlight(s.team)}.`) }
+    if (s.promoted) { next = { ...next, down: null }; ev(`${s.teamName} are promoted${s.promotedHow === 'playoff' ? ' through the play-offs' : s.pos === 1 ? ' as champions' : ''}. Back in ${theLeague(topFlight(s.team))}.`) }
     else ev(`${s.teamName} finish ${ordinal(s.pos)} and miss out on promotion. Another season in ${TIER2_NAME[CLUB_BY.get(s.team)?.league] ?? 'the second tier'}.`)
   }
   if (next.loan && s.year >= next.loan.until) {
@@ -1070,18 +1074,42 @@ function soccerMovedLine(c, k, D) {
   const sum = (list, key) => list.reduce((a, g) => a + (g[key] ?? 0), 0)
   return { wk, before: { cupGoals: sum(cup, 'goals'), euroGoals: sum(euro, 'goals'), assists: sum(cup, 'assists') + sum(euro, 'assists'), apps: sum(cup, 'app') + sum(euro, 'app') } }
 }
+// Where an offer's club stands in its league as the January window opens. → { pos, league } or null
+// The table he would find there: a move plays the rest of the season as the new club's own run of it (lib/career.js
+// januaryLanding, the same run a move then uses), so its place is read off that run, not off the season he is leaving.
+// (Without it, a season from before the run was seeded: his league's table as it stands, another league's from the
+// season's own run, base.places.)
+function placeNow(c, D, k, short, o = null) {
+  const a = c.active, club = CLUB_BY.get(short)
+  if (!club) return null
+  const league = soccerLeagueInfo(club.league)?.name ?? null
+  if (o) {
+    try {
+      const run = januaryLanding(c, o, k)?.run
+      const row = run?.form ? soccerTableAt(run.form, Math.min(k, run.form.rounds))?.find(r => r.short === short) : null
+      if (row) return { pos: row.pos, league: run.league?.name ?? league }
+    } catch { /* the table as it stands, below */ }
+  }
+  if (club.league === a.base?.league?.id && a.base?.form) {
+    const row = soccerTableAt(a.base.form, k, { short: c.team, games: (D?.games ?? []).slice(0, k) })?.find(r => r.short === short)
+    return row ? { pos: row.pos, league } : null
+  }
+  const pos = a.base?.places?.[short]
+  return pos ? { pos, league } : null
+}
 function soccerBeat(c, D, k) {
   const a = c.active, total = D.total
   if (total < 20 || a.out) return null
   if (k === breakAt(total) && !a.brk) {
     const call = soccerCallUp(c, null)
-    return { stop: true, set: { brk: { k, called: !!call.called, nation: c.nation } }, notes: [{ note: call.called ? `The November international break. ${c.name} is away with ${nationName(c.nation)}.` : `The November international break. ${c.name} stays at the training ground with the players who weren't called up.`, noteKind: 'INTERNATIONAL BREAK' }] }
+    return { stop: true, set: { brk: { k, called: !!call.called, nation: c.nation } }, notes: [{ note: call.called ? `The November international break. ${c.name} is away with ${theNation(c.nation)}.` : `The November international break. ${c.name} stays at the training ground with the players who weren't called up.`, noteKind: 'INTERNATIONAL BREAK' }] }
   }
   if (k === janAt(total) && !a.jan) {
-    const offers = januaryOffers(c, D, k)
+    // (each offer says where its club stands in its league: offer.place)
+    const offers = januaryOffers(c, D, k).map(o => { const place = placeNow(c, D, k, o.team, o); return place ? { ...o, place } : o })
     const bids = offers.filter(o => o.kind === 'bid'), loans = offers.filter(o => o.kind === 'loan')
     const names = list => list.map(o => o.fit.name).join(' and ')
-    return { stop: true, set: { jan: { k, offers } }, notes: offers.length ? [{ note: bids.length ? `The January window. ${names(bids)} ${bids.length === 1 ? 'has' : 'have'} made ${bids.length === 1 ? 'a bid' : 'bids'} for ${c.name}.` : `The January window. ${names(loans)} ${loans.length === 1 ? 'wants' : 'want'} ${c.name} on loan until the end of the season.`, noteKind: 'JANUARY WINDOW' }] : [] }
+    return { stop: true, set: { jan: { k, offers } }, notes: offers.length ? [{ note: bids.length ? `The January window. ${names(bids)} have made ${bids.length === 1 ? 'a bid' : 'bids'} for ${c.name}.` : `The January window. ${names(loans)} want ${c.name} on loan until the end of the season.`, noteKind: 'JANUARY WINDOW' }] : [] }
   }
   return null
 }
@@ -1183,7 +1211,7 @@ SOCCER.x = {
   // (a striker is compared with strikers: before 2026-11-24 the pool was every attacker and midfielder)
   compPool: SOCCER_STRIKERS.filter(isNine),
   // (for the screens: money, the country, the window)
-  wageText, feeText, soccerCur, nationName, nationFlag, SOCCER_NATIONS, rememberNation, lastNation, signAcademy, stayPut,
+  wageText, feeText, soccerCur, nationName, theNation, nationFlag, SOCCER_NATIONS, rememberNation, lastNation, signAcademy, stayPut,
   // (2026-11-24, for the screens)
   // money: what he's worth (€M), what his club can pay; the clause in his deal and in the deal on the table
   value: soccerValue, purse: clubPurse, releaseFee, talksRelease, releaseText: c => { const f = releaseFee(c); return f == null ? null : `${feeText(f, c.team)} release clause` },
