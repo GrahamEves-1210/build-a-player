@@ -346,6 +346,7 @@ const STACK_MASK = {
   lb: { src: '/lb-silhouette.webp',  scale: 1 },
   ol: { src: '/ol-silhouette.webp',  scale: 1 },
   k:  { src: '/k-silhouette.webp',   scale: 1 },
+  st: { src: '/st-silhouette.webp',  scale: 1 },   // soccer's striker (SoccerApp's Home)
 }
 
 // Silhouette body re-rendered as stacked, color-coded bands — one per build

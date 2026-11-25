@@ -48,6 +48,7 @@ import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/a
 import { SOCCER_SILHOUETTE, SOCCER_POOL, SOCCER_MODES, SOCCER_KIT_SLOT, SOCCER_SIZE_SLOT, soccerPoolOf, soccerArchetype } from '../lib/soccerUi'
 import { encodeSoccerBuild, decodeSoccerBuild } from '../lib/soccerShare'
 import { switchSport } from './app/AppHome'
+import { StackedSilhouette } from './SplashScreen'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import SoccerComingSoon from './SoccerComingSoon'
@@ -159,37 +160,33 @@ function avgAttr(p) { const v = Object.values(p.attrs ?? {}); return v.length ? 
 const SHAPE_SPOTS = { '433': ['LW', 'ST', 'RW'], '4312': ['LS', 'RS', 'CAM'] }
 const squadSpotLabel = (sq, id) => SHAPE_SPOTS[sq?.shape ?? '433']?.[sq?.lineup?.[id]] ?? 'ST'
 
-// ── Home's figure: the striker's traits, colour by colour, falling into the silhouette ──
-const SOCCER_SPLASH_ATTRS = ['heading', 'composure', 'passing', 'finishing', 'dribbling', 'positioning', 'size', 'pace', 'shotPower']
-  // (the card-style short labels, PAC, FIN, DRI...: the full words were cut off by the figure's outline, "INISHING")
-  .map(t => ({ label: SOCCER_ATTR[t]?.shortLabel ?? SOCCER_ATTR[t]?.label ?? t, col: SOCCER_ATTR[t]?.hex ?? '#ffffff', tall: t === 'heading', grow: t === 'composure' ? 1.6 : undefined }))
-function useRevealOnMount(ready) {
-  const [visible, setVisible] = useState(false)
-  useEffect(() => { if (!ready) return; const t = setTimeout(() => setVisible(true), 360); return () => clearTimeout(t) }, [ready])
-  return visible
-}
-function SoccerStackedSilhouette({ ready, fast = false }) {
-  const visible = useRevealOnMount(ready)
-  const attrs = SOCCER_SPLASH_ATTRS
-  return (
-    <div className="splash-stack-figure" style={{ WebkitMaskImage: `url(${SOCCER_SILHOUETTE.src})`, maskImage: `url(${SOCCER_SILHOUETTE.src})` }}>
-      {attrs.map((a, i) => (
-        <div key={a.label} className="splash-stack-band" style={{
-          background: a.col, flex: a.grow ?? (a.tall ? 1.4 : 1), opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
-          transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
-        }}>
-          <span className="splash-stack-band-label">{a.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
+// ── Home's figure: the striker's traits, colour by colour, falling into his silhouette ──
+// (on public/st-silhouette.webp, measured off the art's outline the way football's are, SplashScreen.jsx: each
+// band's height is its share of the art (flex), and each word sits on the widest solid stretch of its band: x is
+// the % of the figure's box to move it off centre (his body is right of the art's middle), y a nudge in the word's
+// own em (the classic splash draws him at other sizes). He is
+// slim, so a word goes where it fits whole, a size down where the stretch is short: the long words on the chest
+// and the hips, Size on the head, Pace on the thigh, Dribbling upright down the sock, "Power" (Shot Power) on the
+// boot and the ball.)
+const stBand = (t, o) => ({ label: o.label ?? SOCCER_ATTR[t]?.label ?? t, col: SOCCER_ATTR[t]?.hex ?? '#ffffff', ...o })
+const SOCCER_SPLASH_ATTRS = [
+  stBand('size',        { flex: 290, x: 14.9, y: '.45em' }),
+  stBand('heading',     { flex: 140, x: 7.4, y: '.45em' }),
+  stBand('composure',   { flex: 115, x: 5.6, sm: true }),
+  stBand('passing',     { flex: 155, x: 6.7, y: '.45em', sm: true }),
+  stBand('positioning', { flex: 115, x: 3.7, y: '.18em' }),
+  stBand('finishing',   { flex: 115, x: 12.2, y: '-.38em', xs: true }),
+  stBand('pace',        { flex: 130, x: 19.7, y: '-.25em', xs: true }),
+  stBand('dribbling',   { flex: 230, x: 21.8, xs: true, v: true }),
+  stBand('shotPower',   { flex: 246, x: 27.4, y: '-.72em', label: 'Power' }),
+]
+// (the art has empty margins round him: the box is drawn a little past the stage's figure box, so he stands as tall
+// as the other figures)
 const renderSoccerFigure = (pos, ready, fast) => (
-  <>
+  <div className="st-home-fig">
     <img src={SOCCER_SILHOUETTE.src} className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />
-    <SoccerStackedSilhouette ready={ready} fast={fast} />
-  </>
+    <StackedSilhouette position="st" attrs={SOCCER_SPLASH_ATTRS} ready={ready} fast={fast} />
+  </div>
 )
 
 // ── The classic look (Settings → Classic look): the old splash, soccer's way ──

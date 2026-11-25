@@ -7805,3 +7805,19 @@ html.app-art:not(#_):not(#_) .crl-man .crl-face:has(img[data-art-bare]) { width:
 }
 /* (the face's shading layer needs its filter: weak machines, where figure filters are off, go without the layer) */
 html.low-power .sil-wrap svg.st-face-detail { display: none; }
+
+/* ═══ Soccer's Home: the striker's banded figure (SoccerApp.jsx SOCCER_SPLASH_ATTRS) ═══
+   His art has empty margins round him, so his box reaches a little past the stage's figure box and he stands as
+   tall as the other sports' figures. */
+.st-home-fig { position: absolute; left: -6%; right: -6%; top: -9%; bottom: -3%; }
+/* the classic Home (Settings → Classic Home) draws its figure 2.15x on a desktop: his head met the stage's top edge */
+@media (min-width: 1024px) {
+  html.app-look .ag-home.ag-home--soccer.ag-home--classic.ag-home--classic.ag-home--classic .agc-figure { transform: scale(1.95); }
+}
+/* the classic look's splash (Settings → Classic look): his box in the stage figure's proportions, and the words in
+   the same type and the same size against him as on Home (11 / 9 / 8px on a 208px box) */
+.soccer-splash .splash-figure-wrap.bucket-figure-wrap { aspect-ratio: 186 / 214 !important; width: clamp(190px, 26vw, 320px) !important; margin-top: 54px !important; }
+.soccer-splash .st-home-fig { container-type: inline-size; }
+.soccer-splash .st-home-fig .splash-stack-band-label { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; letter-spacing: 0; font-size: 5.28cqw; }
+.soccer-splash .st-home-fig .splash-stack-band-label.is-sm { font-size: 4.32cqw; }
+.soccer-splash .st-home-fig .splash-stack-band-label.is-xs { font-size: 3.84cqw; }
