@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  TEAM, GROUP, SIT_TEXT, FIND_GROUPS, FIND_CAP, TRADE_MAX, shopOffers, findDeals, tradeAssets, acceptDeal, parsePick, capSheet,
+  TEAM, GROUP, SIT_TEXT, FIND_GROUPS, FIND_CAP, TRADE_MAX, shopOffers, findDeals, tradeAssets, acceptDeal, parsePick, pickText, capSheet,
 } from '../../lib/franchise2'
 import { sfx, haptic } from '../../lib/juice'
 import { Chyron, Go, KLogo, fkVars, Fold, ActionBar } from './kit'
@@ -21,7 +21,8 @@ const AGES = [[0, 'ANY'], [1, '25 & UNDER'], [2, '26-29'], [3, '30+']]
 const PAYS = [[0, 'ANY'], [5, 'UNDER $5M'], [10, 'UNDER $10M'], [20, 'UNDER $20M']]
 const AGE_Q = { 1: { ageMax: 25 }, 2: { ageMin: 26, ageMax: 29 }, 3: { ageMin: 30 } }
 const queryOf = q => ({ g: q.g, ...(q.o && { minO: q.o }), ...(AGE_Q[q.a] ?? null), ...(q.m && { max$: q.m }) })
-const pickLabel = (k, team) => { const { y, r, o } = parsePick(k); return [`${y} · RD ${r}`, o !== team ? `FROM ${o}` : null] }
+// a pick as a tag: '2027 · RD 2', and under it its slot once the draft's order is set, or the team it came from
+const pickLabel = (F, k, team) => { const { y, r, o } = parsePick(k), slot = pickText(F, k, team).match(/No\. \d+/)?.[0]; return [`${y} · RD ${r}`, [slot?.toUpperCase(), o !== team ? `FROM ${o}` : null].filter(Boolean).join(' · ') || null] }
 
 export default function Finder({ F, act, owner, st, set, onOpen }) {
   const [page, setPage] = useState(null)
@@ -179,7 +180,7 @@ const leanShort = (F, s, lean) => (Math.abs(lean) < 0.08 ? 'EVEN' : `${TEAM[lean
 function Found({ F, owner, o, man = false, make, onOpen, onMan }) {
   const theirs = o.get.pl.map(id => F.teams[o.s].r.find(p => p.i === id)).filter(Boolean)
   const mine = o.give.pl.map(id => F.teams[F.team].r.find(p => p.i === id)).filter(Boolean)
-  const pk = (k, team) => { const [a, b] = pickLabel(k, team); return <span key={k} className="tf-pk"><b>{a}</b>{b && <small>{b}</small>}</span> }
+  const pk = (k, team) => { const [a, b] = pickLabel(F, k, team); return <span key={k} className="tf-pk"><b>{a}</b>{b && <small>{b}</small>}</span> }
   const dump = o.k === 'dump', c = o.cap
   return (
     <section className="tf-deal" style={fkVars(o.s)}>

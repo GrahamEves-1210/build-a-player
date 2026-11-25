@@ -44,7 +44,7 @@ export function marketWindow(F) {
     if (F.dr && F.dr.ph === 'night' && !draftDone(F)) return { k: 'street', open: false, why: 'Draft night: signings wait until the last pick is in.' }
     return { k: 'street', open: true }
   }
-  return { k: 'shut', open: false, why: 'The season is over. Free agency opens with the new league year.' }
+  return { k: 'shut', open: false, why: 'The regular season is over. Free agency opens with the new league year.' }
 }
 // the men on the list (a filler backup is never one)
 export const marketMen = F => (F.fa ?? []).filter(p => !p.fl && p.b == null)
