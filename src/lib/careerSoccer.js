@@ -27,7 +27,7 @@ import { CAREER_NATIONS } from '../data/soccer-nations'
 import { SOCCER_ALL_STRIKERS, WC2026_STRIKERS as WC_STRIKERS, ST_TYPES } from '../data/soccer-strikers'
 import { worldCupOf, continentalOf, continentalField, peckingOrder, intlNation } from './soccerIntl'
 import { SOCCER_ATTR } from '../data/soccer-attrs'
-import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
+import { soccerFaceKey } from './soccerFace'
 import { SOCCER_RESUMES } from '../data/legacy-resumes-soccer'
 import './soccerFacts'       // the records and milestones (lib/seasonFacts.js RECORDS.soccer)
 import './soccerSeason'      // the season's story cards and the in-match moments (scenarios.js, gameMoments.js)
@@ -196,8 +196,8 @@ function isNine(p) { return !p?.role || p.role === 'ST' || p.role === 'SS' }
 const SOCCER_BY_NAME = new Map([...WC_STRIKERS, ...SOCCER_STRIKERS].map(p => [p.name, p]))
 // real ages: the data's age is this season's
 const SOCCER_BORN = new Map([...WC_STRIKERS, ...SOCCER_STRIKERS].filter(p => typeof p.age === 'number').map(p => [p.name, FIRST_SEASON - p.age]))
-// a photo only where the data has one (ESPN, data/soccer-headshots.json); everyone else shows initials
-const soccerPhoto = p => { const v = p?.espn != null ? SOCCER_HEADSHOTS[String(p.espn)] : null; return v ? `${HEADSHOT_BASE}/${String(v).replace(/\.webp$/, '')}.webp` : null }
+// a photo only where the data has one (ESPN, else FotMob: lib/soccerFace.js); everyone else shows initials
+const soccerPhoto = p => { const k = soccerFaceKey(p); return k ? `${HEADSHOT_BASE}/${k}.webp` : null }
 const CLUB_BY = new Map(SOCCER_CLUBS.map(c => [c.short, c]))
 const NATION_BY = new Map(WC_NATIONS.map(n => [n.short, n]))
 const clubMemo = new Map()

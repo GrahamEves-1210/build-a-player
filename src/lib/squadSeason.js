@@ -41,7 +41,7 @@ import NBA_HEADSHOTS from '../data/nba-headshots.json'
 // engine load only for a soccer squad (lib/squadSoccer.js): football and basketball never download them.
 // SoccerApp calls loadSquadSoccer() before Squad Builder shows; until then soccer's lists are empty.
 import { SOCCER_TYPES as ST_TYPES } from '../data/soccer-attrs'
-let SX = { SOCCER_CLUBS: [], WC_NATIONS: [], WC_ALL_NATIONS: [], SOCCER_STRIKERS: [], WC_STRIKERS: [], SOCCER_HEADSHOTS: {} }
+let SX = { SOCCER_CLUBS: [], WC_NATIONS: [], WC_ALL_NATIONS: [], SOCCER_STRIKERS: [], WC_STRIKERS: [], SOCCER_HEADSHOTS: {}, soccerFaceKey: () => null }
 let sxLoad = null
 export const loadSquadSoccer = () => (sxLoad ??= import('./squadSoccer.js').then(m => { SX = m; return m }))
 // baseball (the fourth sport): the whole club's season is lib/squadBaseball.js (its rosters and engine with it),
@@ -671,8 +671,8 @@ const soccerPool = sq => (sq?.pool === 'alltime' ? 'alltime' : 'current')
 const FORWARD_ROLES = new Set(['ST', 'SS', 'LW', 'RW'])
 const roleOfReal = p => p?.role ?? 'ST'
 function soccerPhoto(p) {
-  const f = p?.espn != null ? SX.SOCCER_HEADSHOTS[String(p.espn)] : null
-  return f ? `${HEADSHOT_BASE}/${String(f).replace(/\.(webp|png|jpe?g)$/i, '')}.webp` : null
+  const k = SX.soccerFaceKey(p)   // (ESPN, else FotMob: lib/soccerFace.js)
+  return k ? `${HEADSHOT_BASE}/${k}.webp` : null
 }
 // where a real player plays each spot, best fit first (a spot no one fits stays open)
 const SPOT_FIT = {

@@ -492,7 +492,7 @@ export function setGradesHidden(v) {
   window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
 }
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isAllTime = false, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', getPlayerSub = null, teamLabel = 'TEAM', getTeamSub = null, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false, oneTeam = false, group = null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isK = false, isAllTime = false, isBucket = false, isSoccer = false, isBaseball = false, baseballPos = 'bat', getPlayerSub = null, teamLabel = 'TEAM', getTeamSub = null, getTeamDisplay = null, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false, oneTeam = false, group = null }) {
   // group (College Football): the first wheel deals a group of teams, not a team ({ key: the player's
   // field it matches, display: a row's look, logo: its logo, respin: the respin button's word }).
   // Without it the first wheel is teams, as always
@@ -870,7 +870,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 idle={!paused && !isSpinning && !selectedTeam}
                 locked={!!selectedTeam}
                 blurred={hideTeamResult && !!selectedTeam}
-                getDisplay={group?.display ?? (t => t.short)}
+                getDisplay={group?.display ?? getTeamDisplay ?? (t => t.short)}
                 getSub={getTeamSub ?? (t => t.name.split(' ').slice(-1)[0])}
                 onStop={handleTeamStop}
                 durationMs={kOne ? 40 : 800}

@@ -26,7 +26,7 @@ import { SOCCER_STRIKERS, UCL_STRIKERS, WC_STRIKERS, WC2026_STRIKERS } from '../
 import { SOCCER_CLUBS, UCL_CLUBS, SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
 import { migrateSoccerKeys } from '../data/soccer-attrs'
 import { WC_NATIONS, WC_ALL_NATIONS } from '../data/soccer-nations'
-import SOCCER_HEADSHOTS from '../data/soccer-headshots.json'
+import { soccerFaceKey } from '../lib/soccerFace'
 import * as SoccerSim from '../utils/soccerSimulation'
 import { HEADSHOT_BASE } from '../utils/simulation'
 import { supabase, apiHeaders } from '../lib/supabase'
@@ -42,6 +42,7 @@ import { BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet
 import { useCompete, botBuild, competeQueue } from '../lib/compete'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { FORFEIT_RATING, dailyState } from '../lib/progress'
+import { flagEmoji, ensureFlagFont } from '../lib/flagEmoji'
 import { setSandboxGate, sandboxItemFor, sandboxLocked, clearSandboxHint } from './app/AppSandbox'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
@@ -108,11 +109,8 @@ const NATION_MAP = Object.fromEntries(WC_ALL_NATIONS.map(t => [t.short, t]))
 const TEAMS_OF = { current: UCL_CLUBS, alltime: WC_NATIONS }
 const TEAM_MAP_OF = { current: CLUB_MAP, alltime: NATION_MAP, wc2026: NATION_MAP }
 export const LOGO_DIR = { current: '/logos/soccer/', alltime: '/logos/nations/' }
-const hsKey = p => {
-  const f = p?.espn != null ? SOCCER_HEADSHOTS[String(p.espn)] : null
-  return f ? String(f).replace(/\.(webp|png|jpe?g)$/i, '') : null
-}
-// (no ESPN photo: no face at all, the crest and the name carry it; never a stand-in photo)
+// his ESPN photo, else his FotMob one (lib/soccerFace.js); neither: no face, the crest and the name carry it
+const hsKey = soccerFaceKey
 export const soccerPhoto = p => { const k = p?.headshot ?? hsKey(p); return k ? `${HEADSHOT_BASE}/${k}.webp` : null }
 function enrich(p, pool) {
   const t = TEAM_MAP_OF[pool][p.team]
@@ -137,6 +135,8 @@ const kitNickFor = pool => chip => {
   return t ? String(t.kit ?? t.name).toUpperCase() : chip?.team ?? null
 }
 const teamSub = t => t.name
+// the World Cup wheel shows a nation's flag in place of its code (the owner, 2026-11-25); a club keeps its code
+const teamFlag = t => { const f = flagEmoji(t.short); return f ? <span className="flag-emoji">{f}</span> : t.short }
 
 // OVR and the striker's name for him (the sim's own, when it has one)
 const calcOvr = (b, types) => Math.round(SoccerSim.calcSoccerOVR?.(b, types) ?? 0)
@@ -361,6 +361,7 @@ export default function SoccerApp() {
   // once Sandbox is on in a build, the build stays marked until a reset (no toggle-off-and-save)
   const sandboxTainted = useRef(isCustomMode)
   useEffect(() => { if (isCustomMode) { sandboxTainted.current = true; clearSandboxHint() } }, [isCustomMode])
+  useEffect(() => { ensureFlagFont() }, [])   // (flags on Windows: lib/flagEmoji.js)
 
   // the rubber-band bounce only at the bottom of the build screen's scroll (as BucketApp)
   useEffect(() => {
@@ -936,6 +937,7 @@ export default function SoccerApp() {
             teamsPool={squadClubSpin ? SOCCER_CLUBS : TEAMS_OF[pool]}
             teamLabel={SOCCER_POOL[pool].team}
             getTeamSub={teamSub}
+            getTeamDisplay={pool === 'alltime' && !squadClubSpin ? teamFlag : null}
             logoDir={logoDir}
             playerLabel="PLAYER"
             headshotsMap={{}}
