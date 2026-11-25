@@ -75,7 +75,8 @@ export const WC2026_NATIONS = [
 //   half lower so today's read sits where the 48 (read 11-07) do: ovr = 100 - (2258 - Elo) x 0.04 - 1.5.
 //   att = def = ovr (no World Cup to split them by).
 // pick: a country a Career can be started with (its squad is its players in the club data, data/soccer-strikers.js;
-//   lib/soccerIntl.js fills the rest). The others are opponents only.
+//   lib/soccerIntl.js fills the rest). The others were opponents only until 2026-11-25; now every nation is
+//   (CAREER_NATIONS below).
 // Flags: ESPN (a.espncdn.com/i/teamlogos/countries/500), public/logos/nations, as the 48's.
 export const CAREER_EXTRA_NATIONS = [
   { short: 'ITA', name: "Italy", color: '#0066B2', color2: '#FFFFFF', att: 85, def: 85, ovr: 85, conf: 'UEFA', pick: true },
@@ -147,6 +148,115 @@ export const CAREER_EXTRA_NATIONS = [
   { short: 'DOM', name: "Dominican Republic", color: '#002D62', color2: '#CE1126', att: 61, def: 61, ovr: 61, conf: 'CONCACAF' },
   { short: 'NCA', name: "Nicaragua", color: '#0067C6', color2: '#FFFFFF', att: 59, def: 59, ovr: 59, conf: 'CONCACAF' },
 ]
+// ── The rest of FIFA (2026-11-25) ──────────────────────────────────────────────────────────────────────────────
+// FIFA has 211 members; the 48 and the 68 above are 116 of them. FIFA_REST_NATIONS: the other 95, so every FIFA
+// nation (England, Scotland, Wales and Northern Ireland each their own) can be a Career player's country.
+// UEFA 55, CONMEBOL 10, CAF 54, AFC 46 (the Northern Mariana Islands are AFC but not FIFA), CONCACAF 35 (FIFA's
+// members only: no Guadeloupe, Martinique, French Guiana, Sint Maarten, Saint Martin, Bonaire), OFC 11.
+// ovr: World Football Elo on the extras' line (eloratings.net World.tsv, read 2026-11-25, Spain still 2258):
+//   ovr = 100 - (2258 - Elo) x 0.04 - 1.5, so Russia 80, Estonia 66, Luxembourg 62, Kenya 62, Fiji 54, Andorra 51,
+//   San Marino 41, Anguilla 33, Tonga 29, American Samoa 23 (lib/soccerIntl.js's level floor is 40 in a match).
+//   att = def = ovr. color / color2: the home kit's colours.
+// suspended: banned from FIFA and UEFA competitions (Russia, since 2022): never in a qualifying draw or a finals,
+//   still called up for the friendlies.
+// Flags: flagcdn.com (Flagpedia), public/logos/nations/README.md.
+export const FIFA_REST_NATIONS = [
+  { short: 'RUS', name: "Russia", color: '#C8102E', color2: '#FFFFFF', att: 80, def: 80, ovr: 80, conf: 'UEFA', suspended: true },
+  { short: 'BLR', name: "Belarus", color: '#D22730', color2: '#FFFFFF', att: 69, def: 69, ovr: 69, conf: 'UEFA' },
+  { short: 'EST', name: "Estonia", color: '#0072CE', color2: '#000000', att: 66, def: 66, ovr: 66, conf: 'UEFA' },
+  { short: 'FRO', name: "Faroe Islands", color: '#FFFFFF', color2: '#005EB8', att: 65, def: 65, ovr: 65, conf: 'UEFA' },
+  { short: 'KAZ', name: "Kazakhstan", color: '#FFEC2D', color2: '#00AFCA', att: 63, def: 63, ovr: 63, conf: 'UEFA' },
+  { short: 'LUX', name: "Luxembourg", color: '#EF3340', color2: '#FFFFFF', att: 62, def: 62, ovr: 62, conf: 'UEFA' },
+  { short: 'ARM', name: "Armenia", color: '#D90012', color2: '#0033A0', att: 62, def: 62, ovr: 62, conf: 'UEFA' },
+  { short: 'AZE', name: "Azerbaijan", color: '#0092BC', color2: '#FFFFFF', att: 62, def: 62, ovr: 62, conf: 'UEFA' },
+  { short: 'CYP', name: "Cyprus", color: '#0047AB', color2: '#FFFFFF', att: 61, def: 61, ovr: 61, conf: 'UEFA' },
+  { short: 'MDA', name: "Moldova", color: '#0046AE', color2: '#FFD200', att: 60, def: 60, ovr: 60, conf: 'UEFA' },
+  { short: 'LTU', name: "Lithuania", color: '#FDB913', color2: '#006A44', att: 59, def: 59, ovr: 59, conf: 'UEFA' },
+  { short: 'MLT', name: "Malta", color: '#CF142B', color2: '#FFFFFF', att: 58, def: 58, ovr: 58, conf: 'UEFA' },
+  { short: 'LVA', name: "Latvia", color: '#9E3039', color2: '#FFFFFF', att: 58, def: 58, ovr: 58, conf: 'UEFA' },
+  { short: 'AND', name: "Andorra", color: '#0032A0', color2: '#FEDD00', att: 51, def: 51, ovr: 51, conf: 'UEFA' },
+  { short: 'GIB', name: "Gibraltar", color: '#DA000C', color2: '#FFFFFF', att: 49, def: 49, ovr: 49, conf: 'UEFA' },
+  { short: 'LIE', name: "Liechtenstein", color: '#002B7F', color2: '#CE1126', att: 43, def: 43, ovr: 43, conf: 'UEFA' },
+  { short: 'SMR', name: "San Marino", color: '#5EB6E4', color2: '#FFFFFF', att: 41, def: 41, ovr: 41, conf: 'UEFA' },
+  { short: 'LBY', name: "Libya", color: '#E70013', color2: '#000000', att: 66, def: 66, ovr: 66, conf: 'CAF' },
+  { short: 'GNB', name: "Guinea-Bissau", color: '#CE1126', color2: '#009E49', att: 63, def: 63, ovr: 63, conf: 'CAF' },
+  { short: 'NIG', name: "Niger", color: '#E05206', color2: '#0DB02B', att: 63, def: 63, ovr: 63, conf: 'CAF' },
+  { short: 'RWA', name: "Rwanda", color: '#FAD201', color2: '#20603D', att: 63, def: 63, ovr: 63, conf: 'CAF' },
+  { short: 'MAD', name: "Madagascar", color: '#FC3D32', color2: '#007E3A', att: 62, def: 62, ovr: 62, conf: 'CAF' },
+  { short: 'KEN', name: "Kenya", color: '#BB0000', color2: '#006600', att: 62, def: 62, ovr: 62, conf: 'CAF' },
+  { short: 'SDN', name: "Sudan", color: '#D21034', color2: '#FFFFFF', att: 62, def: 62, ovr: 62, conf: 'CAF' },
+  { short: 'SLE', name: "Sierra Leone", color: '#1EB53A', color2: '#0072C6', att: 61, def: 61, ovr: 61, conf: 'CAF' },
+  { short: 'LBR', name: "Liberia", color: '#BF0A30', color2: '#002868', att: 61, def: 61, ovr: 61, conf: 'CAF' },
+  { short: 'BOT', name: "Botswana", color: '#75AADB', color2: '#000000', att: 61, def: 61, ovr: 61, conf: 'CAF' },
+  { short: 'MTN', name: "Mauritania", color: '#006233', color2: '#FFC400', att: 60, def: 60, ovr: 60, conf: 'CAF' },
+  { short: 'BDI', name: "Burundi", color: '#CE1126', color2: '#1EB53A', att: 60, def: 60, ovr: 60, conf: 'CAF' },
+  { short: 'NAM', name: "Namibia", color: '#003580', color2: '#D21034', att: 60, def: 60, ovr: 60, conf: 'CAF' },
+  { short: 'TAN', name: "Tanzania", color: '#1EB53A', color2: '#00A3DD', att: 60, def: 60, ovr: 60, conf: 'CAF' },
+  { short: 'ETH', name: "Ethiopia", color: '#078930', color2: '#FCDD09', att: 59, def: 59, ovr: 59, conf: 'CAF' },
+  { short: 'MWI', name: "Malawi", color: '#CE1126', color2: '#000000', att: 58, def: 58, ovr: 58, conf: 'CAF' },
+  { short: 'LES', name: "Lesotho", color: '#00209F', color2: '#FFFFFF', att: 57, def: 57, ovr: 57, conf: 'CAF' },
+  { short: 'CGO', name: "Congo", color: '#009543', color2: '#DC241F', att: 56, def: 56, ovr: 56, conf: 'CAF' },
+  { short: 'ERI', name: "Eritrea", color: '#4189DD', color2: '#EA0437', att: 56, def: 56, ovr: 56, conf: 'CAF' },
+  { short: 'CTA', name: "Central African Republic", color: '#003082', color2: '#FFCE00', att: 56, def: 56, ovr: 56, conf: 'CAF' },
+  { short: 'SWZ', name: "Eswatini", color: '#3E5EB9', color2: '#FFD900', att: 54, def: 54, ovr: 54, conf: 'CAF' },
+  { short: 'SSD', name: "South Sudan", color: '#FFFFFF', color2: '#DA121A', att: 52, def: 52, ovr: 52, conf: 'CAF' },
+  { short: 'CHA', name: "Chad", color: '#002664', color2: '#FECB00', att: 51, def: 51, ovr: 51, conf: 'CAF' },
+  { short: 'MRI', name: "Mauritius", color: '#EA2839', color2: '#1A206D', att: 51, def: 51, ovr: 51, conf: 'CAF' },
+  { short: 'STP', name: "São Tomé and Príncipe", color: '#12AD2B', color2: '#D21034', att: 50, def: 50, ovr: 50, conf: 'CAF' },
+  { short: 'SOM', name: "Somalia", color: '#4189DD', color2: '#FFFFFF', att: 47, def: 47, ovr: 47, conf: 'CAF' },
+  { short: 'DJI', name: "Djibouti", color: '#6AB2E7', color2: '#12AD2B', att: 46, def: 46, ovr: 46, conf: 'CAF' },
+  { short: 'SEY', name: "Seychelles", color: '#D92223', color2: '#003F87', att: 41, def: 41, ovr: 41, conf: 'CAF' },
+  { short: 'YEM', name: "Yemen", color: '#CE1126', color2: '#FFFFFF', att: 57, def: 57, ovr: 57, conf: 'AFC' },
+  { short: 'TKM', name: "Turkmenistan", color: '#00843D', color2: '#FFFFFF', att: 57, def: 57, ovr: 57, conf: 'AFC' },
+  { short: 'SGP', name: "Singapore", color: '#EF3340', color2: '#FFFFFF', att: 54, def: 54, ovr: 54, conf: 'AFC' },
+  { short: 'PHI', name: "Philippines", color: '#0038A8', color2: '#CE1126', att: 53, def: 53, ovr: 53, conf: 'AFC' },
+  { short: 'HKG', name: "Hong Kong", color: '#DE2408', color2: '#FFFFFF', att: 53, def: 53, ovr: 53, conf: 'AFC' },
+  { short: 'MYA', name: "Myanmar", color: '#EA2839', color2: '#FFFFFF', att: 49, def: 49, ovr: 49, conf: 'AFC' },
+  { short: 'AFG', name: "Afghanistan", color: '#D32011', color2: '#FFFFFF', att: 47, def: 47, ovr: 47, conf: 'AFC' },
+  { short: 'PAK', name: "Pakistan", color: '#01411C', color2: '#FFFFFF', att: 46, def: 46, ovr: 46, conf: 'AFC' },
+  { short: 'BAN', name: "Bangladesh", color: '#006A4E', color2: '#F42A41', att: 45, def: 45, ovr: 45, conf: 'AFC' },
+  { short: 'NEP', name: "Nepal", color: '#DC143C', color2: '#003893', att: 44, def: 44, ovr: 44, conf: 'AFC' },
+  { short: 'CAM', name: "Cambodia", color: '#032EA1', color2: '#E00025', att: 43, def: 43, ovr: 43, conf: 'AFC' },
+  { short: 'SRI', name: "Sri Lanka", color: '#8D153A', color2: '#FFB700', att: 42, def: 42, ovr: 42, conf: 'AFC' },
+  { short: 'TPE', name: "Chinese Taipei", color: '#0033A0', color2: '#FFFFFF', att: 41, def: 41, ovr: 41, conf: 'AFC' },
+  { short: 'MDV', name: "Maldives", color: '#D21034', color2: '#007E3A', att: 39, def: 39, ovr: 39, conf: 'AFC' },
+  { short: 'MNG', name: "Mongolia", color: '#C4272F', color2: '#015197', att: 37, def: 37, ovr: 37, conf: 'AFC' },
+  { short: 'LAO', name: "Laos", color: '#CE1126', color2: '#002868', att: 37, def: 37, ovr: 37, conf: 'AFC' },
+  { short: 'TLS', name: "Timor-Leste", color: '#DC241F', color2: '#000000', att: 37, def: 37, ovr: 37, conf: 'AFC' },
+  { short: 'GUM', name: "Guam", color: '#00297B', color2: '#C62139', att: 36, def: 36, ovr: 36, conf: 'AFC' },
+  { short: 'BHU', name: "Bhutan", color: '#FFD520', color2: '#FF4E12', att: 33, def: 33, ovr: 33, conf: 'AFC' },
+  { short: 'MAC', name: "Macau", color: '#00785E', color2: '#FFFFFF', att: 32, def: 32, ovr: 32, conf: 'AFC' },
+  { short: 'BRU', name: "Brunei", color: '#F7E017', color2: '#000000', att: 30, def: 30, ovr: 30, conf: 'AFC' },
+  { short: 'CUB', name: "Cuba", color: '#CF142B', color2: '#002A8F', att: 59, def: 59, ovr: 59, conf: 'CONCACAF' },
+  { short: 'VIN', name: "Saint Vincent and the Grenadines", color: '#FCD116', color2: '#009E60', att: 56, def: 56, ovr: 56, conf: 'CONCACAF' },
+  { short: 'PUR', name: "Puerto Rico", color: '#ED0000', color2: '#0050F0', att: 54, def: 54, ovr: 54, conf: 'CONCACAF' },
+  { short: 'LCA', name: "Saint Lucia", color: '#66CCFF', color2: '#FCD116', att: 53, def: 53, ovr: 53, conf: 'CONCACAF' },
+  { short: 'SKN', name: "Saint Kitts and Nevis", color: '#009E49', color2: '#CE1126', att: 51, def: 51, ovr: 51, conf: 'CONCACAF' },
+  { short: 'ARU', name: "Aruba", color: '#418FDE', color2: '#FBE122', att: 49, def: 49, ovr: 49, conf: 'CONCACAF' },
+  { short: 'GRN', name: "Grenada", color: '#CE1126', color2: '#FCD116', att: 49, def: 49, ovr: 49, conf: 'CONCACAF' },
+  { short: 'MSR', name: "Montserrat", color: '#00843D', color2: '#FFFFFF', att: 49, def: 49, ovr: 49, conf: 'CONCACAF' },
+  { short: 'BER', name: "Bermuda", color: '#003F87', color2: '#FFFFFF', att: 48, def: 48, ovr: 48, conf: 'CONCACAF' },
+  { short: 'BLZ', name: "Belize", color: '#003F87', color2: '#CE1126', att: 48, def: 48, ovr: 48, conf: 'CONCACAF' },
+  { short: 'BRB', name: "Barbados", color: '#00267F', color2: '#FFC726', att: 47, def: 47, ovr: 47, conf: 'CONCACAF' },
+  { short: 'ATG', name: "Antigua and Barbuda", color: '#CE1126', color2: '#FCD116', att: 45, def: 45, ovr: 45, conf: 'CONCACAF' },
+  { short: 'DMA', name: "Dominica", color: '#006B3F', color2: '#FCD116', att: 44, def: 44, ovr: 44, conf: 'CONCACAF' },
+  { short: 'CAY', name: "Cayman Islands", color: '#CF142B', color2: '#00247D', att: 39, def: 39, ovr: 39, conf: 'CONCACAF' },
+  { short: 'VIR', name: "US Virgin Islands", color: '#FFFFFF', color2: '#002868', att: 36, def: 36, ovr: 36, conf: 'CONCACAF' },
+  { short: 'TCA', name: "Turks and Caicos Islands", color: '#FFFFFF', color2: '#012169', att: 36, def: 36, ovr: 36, conf: 'CONCACAF' },
+  { short: 'VGB', name: "British Virgin Islands", color: '#00843D', color2: '#FFD100', att: 35, def: 35, ovr: 35, conf: 'CONCACAF' },
+  { short: 'BAH', name: "Bahamas", color: '#00ABC9', color2: '#FFC72C', att: 33, def: 33, ovr: 33, conf: 'CONCACAF' },
+  { short: 'AIA', name: "Anguilla", color: '#00247D', color2: '#F39200', att: 33, def: 33, ovr: 33, conf: 'CONCACAF' },
+  { short: 'NCL', name: "New Caledonia", color: '#8C8C8C', color2: '#D52B1E', att: 56, def: 56, ovr: 56, conf: 'OFC' },
+  { short: 'VAN', name: "Vanuatu", color: '#FDCE12', color2: '#000000', att: 54, def: 54, ovr: 54, conf: 'OFC' },
+  { short: 'TAH', name: "Tahiti", color: '#E03C31', color2: '#FFFFFF', att: 54, def: 54, ovr: 54, conf: 'OFC' },
+  { short: 'FIJ', name: "Fiji", color: '#FFFFFF', color2: '#68BFE5', att: 54, def: 54, ovr: 54, conf: 'OFC' },
+  { short: 'PNG', name: "Papua New Guinea", color: '#CE1126', color2: '#000000', att: 53, def: 53, ovr: 53, conf: 'OFC' },
+  { short: 'SOL', name: "Solomon Islands", color: '#FCD116', color2: '#215B33', att: 53, def: 53, ovr: 53, conf: 'OFC' },
+  { short: 'SAM', name: "Samoa", color: '#002B7F', color2: '#CE1126', att: 37, def: 37, ovr: 37, conf: 'OFC' },
+  { short: 'COK', name: "Cook Islands", color: '#00843D', color2: '#FFFFFF', att: 34, def: 34, ovr: 34, conf: 'OFC' },
+  { short: 'TGA', name: "Tonga", color: '#C10000', color2: '#FFFFFF', att: 29, def: 29, ovr: 29, conf: 'OFC' },
+  { short: 'ASA', name: "American Samoa", color: '#002B7F', color2: '#BF0A30', att: 23, def: 23, ovr: 23, conf: 'OFC' },
+]
 // the confederation of each of the 48 (the extras carry their own)
 const CONF_2026 = {
   UEFA: ['CZE', 'SUI', 'BIH', 'SCO', 'TUR', 'GER', 'NED', 'SWE', 'BEL', 'ESP', 'FRA', 'NOR', 'AUT', 'POR', 'ENG', 'CRO'],
@@ -157,19 +267,22 @@ const CONF_2026 = {
   OFC: ['NZL'],
 }
 const confOf = short => Object.keys(CONF_2026).find(k => CONF_2026[k].includes(short)) ?? null
-// every nation Career knows: the 48 of 2026 (all of them can be picked) and the extras
-export const CAREER_NATIONS = [...WC2026_NATIONS.map(n => ({ ...n, conf: confOf(n.short), pick: true })), ...CAREER_EXTRA_NATIONS]
+// every nation Career knows: all 211 of FIFA's, each one a country a Career can be started with (2026-11-25: before,
+// the 48 and the extras marked pick, 70)
+export const CAREER_NATIONS = [...WC2026_NATIONS.map(n => ({ ...n, conf: confOf(n.short) })), ...CAREER_EXTRA_NATIONS, ...FIFA_REST_NATIONS].map(n => ({ ...n, pick: true }))
 // The tournaments between World Cups, on their real cycles (the summer a season ends in; AFCON and the Asian Cup are
 // booked with the season they fall in). size: the finals' field; slots: who else comes (the Copa América's guests).
 //   Euros 2028, 2032... (24) · Copa América 2028, 2032... (the ten of CONMEBOL and six CONCACAF guests, as 2024)
-//   AFCON 2027, 2028, then every four years (CAF's calendar from 2028) (24) · Asian Cup 2027, 2031... (24)
-//   Gold Cup 2027, 2029... every two years (16). The OFC Nations Cup isn't played (New Zealand has none).
+//   AFCON 2027 (Kenya, Uganda, Tanzania: hosts since 2026-11-25, when Tanzania came in), 2028, then every four
+//   years (CAF's calendar from 2028) (24) · Asian Cup 2027, 2031... (24)
+//   Gold Cup 2027, 2029... every two years (16). The OFC Nations Cup isn't played (eight teams: the engine's
+//   continental format needs four groups), so an Oceania side's summers are the World Cup's qualifying alone.
 // The World Cup: 2030 (Spain, Portugal, Morocco), 2034 (Saudi Arabia), then no host named; 48 nations by
 // confederation (FIFA's 2026 allocation with the play-off places shared out).
 export const CONTINENTALS = [
   { id: 'euro', name: 'European Championship', short: 'Euros', conf: 'UEFA', size: 24, every: 4, from: 2028, hosts: { 2028: ['ENG', 'SCO', 'WAL', 'IRL'], 2032: ['ITA', 'TUR'] } },
   { id: 'copa', name: 'Copa América', short: 'Copa América', conf: 'CONMEBOL', size: 16, every: 4, from: 2028, guests: ['CONCACAF', 6] },
-  { id: 'afcon', name: 'Africa Cup of Nations', short: 'AFCON', conf: 'CAF', size: 24, every: 4, from: 2028, also: [2027] },
+  { id: 'afcon', name: 'Africa Cup of Nations', short: 'AFCON', conf: 'CAF', size: 24, every: 4, from: 2028, also: [2027], hosts: { 2027: ['KEN', 'UGA', 'TAN'] } },
   { id: 'asian', name: 'Asian Cup', short: 'Asian Cup', conf: 'AFC', size: 24, every: 4, from: 2027, hosts: { 2027: ['KSA'] } },
   { id: 'gold', name: 'Gold Cup', short: 'Gold Cup', conf: 'CONCACAF', size: 16, every: 2, from: 2027 },
 ]

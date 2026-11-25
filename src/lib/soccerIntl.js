@@ -21,11 +21,13 @@ const ovrOf = attrs => calcSoccerOVR(Object.fromEntries(SOCCER_TRAITS.map(t => [
 const gradeAt = lvl => 1 + (lvl - 57) * 9 / 44
 
 // ── The real players of a nation: its 2026 World Cup five, then everyone of that country in the club data ──
+// (the club data's own code for a country where it isn't FIFA's: Kosovo is KVX there)
+const DATA_CODE = { KVX: 'KOS' }
 const REAL = new Map()
 function realPool(short) {
   if (REAL.has(short)) return REAL.get(short)
   const seen = new Set(), out = []
-  for (const p of [...WC2026_STRIKERS.filter(x => x.team === short), ...SOCCER_ALL_STRIKERS.filter(x => x.nation === short)]) {
+  for (const p of [...WC2026_STRIKERS.filter(x => x.team === short), ...SOCCER_ALL_STRIKERS.filter(x => (DATA_CODE[x.nation] ?? x.nation) === short)]) {
     if (seen.has(p.name)) continue
     seen.add(p.name)
     out.push({ name: p.name, short: p.short ?? null, role: p.role ?? 'ST', age: p.age ?? 27, attrs: p.attrs, espn: p.espn ?? null, ovr0: ovrOf(p.attrs) })
@@ -68,6 +70,10 @@ const NAMES = {
   korean: [['Min-jae', 'Ji-ho', 'Seung-woo', 'Hyun-woo', 'Tae-yang', 'Jun-seo', 'Do-yun', 'Sung-min'], ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Kang', 'Yoon', 'Han']],
   easia: [['Wei', 'Hao', 'Jun', 'Minh', 'Anh', 'Thanh', 'Rizky', 'Arif', 'Somchai', 'Faiz', 'Chanathip', 'Yong'], ['Wang', 'Li', 'Zhang', 'Chen', 'Nguyen', 'Tran', 'Pham', 'Pratama', 'Saputra', 'Rahman', 'Srisuk', 'Ri']],
   indian: [['Rahul', 'Sahal', 'Anirudh', 'Liston', 'Vikram', 'Suresh', 'Manvir', 'Ashique'], ['Singh', 'Thapa', 'Chhetri', 'Colaco', 'Fernandes', 'Kumar', 'Rao', 'Das']],
+  // (2026-11-25, with the rest of FIFA)
+  pacific: [['Setareki', 'Tiko', 'Malakai', 'Sione', 'Iosefa', 'Kalani', 'Tevita', 'Jone', 'Micah', 'Raphael', 'Teaonui', 'Bertrand'], ['Krishna', 'Tuilagi', 'Vakatawa', 'Fifita', 'Kaufana', 'Tapueluelu', 'Naidu', 'Kami', 'Tehau', 'Wajoka', 'Kalsakau', 'Faitala']],
+  baltic: [['Kristers', 'Rauno', 'Henri', 'Edgaras', 'Arminas', 'Vladislavs', 'Mattias', 'Fedor', 'Gytis', 'Raivis', 'Karol', 'Martynas'], ['Tamm', 'Sappinen', 'Kazlauskas', 'Ikaunieks', 'Uldriķis', 'Vaštakas', 'Zenjovs', 'Sorga', 'Golubickas', 'Kask', 'Novikovas', 'Jaunzems']],
+  caucasus: [['Artur', 'Tigran', 'Narek', 'Vahan', 'Eduard', 'Lucas', 'Emin', 'Ramil', 'Mahir', 'Toral', 'Renat', 'Rustam'], ['Grigoryan', 'Barseghyan', 'Spertsyan', 'Ranos', 'Hovhannisyan', 'Mkhitaryan', 'Mahmudov', 'Bayramov', 'Emreli', 'Sheydayev', 'Huseynov', 'Aliyev']],
 }
 const REGION = {
   iberian: 'ESP ARG MEX COL URU PAR ECU CHI PER VEN BOL CRC PAN HON GUA SLV DOM NCA EQG',
@@ -78,7 +84,17 @@ const REGION = {
   african: 'SEN CIV GHA NGA CMR MLI BFA GUI GAM BEN TOG GAB COD RSA UGA ZIM ZAM', japanese: 'JPN', korean: 'KOR',
   easia: 'CHN PRK THA VIE IDN MAS', indian: 'IND',
 }
-const REGION_OF = new Map(Object.entries(REGION).flatMap(([k, v]) => v.split(' ').map(s => [s, k])))
+// the rest of FIFA (2026-11-25): each to the names its football is full of
+const REGION_REST = {
+  iberian: 'CUB PUR AND', luso: 'GNB STP', italian: 'SMR', german: 'LIE', dutch: 'ARU', nordic: 'FRO', greek: 'CYP',
+  franco: 'LUX MRI NCL TAH', slavic: 'RUS BLR MDA', baltic: 'EST LVA LTU', caucasus: 'ARM AZE', turkic: 'KAZ TKM',
+  anglo: 'GIB MLT AIA ATG BAH BRB BLZ BER VGB CAY DMA GRN MSR SKN LCA VIN TCA VIR GUM',
+  arabic: 'LBY SDN MTN DJI SOM YEM AFG',
+  african: 'BOT BDI CTA CHA CGO ERI SWZ ETH KEN LES LBR MAD MWI NAM NIG RWA SEY SLE SSD TAN',
+  easia: 'BRU CAM TPE HKG LAO MAC MNG MYA PHI SGP TLS', indian: 'BAN BHU MDV NEP PAK SRI',
+  pacific: 'ASA COK FIJ PNG SAM SOL TGA VAN',
+}
+const REGION_OF = new Map([REGION, REGION_REST].flatMap(R => Object.entries(R).flatMap(([k, v]) => v.split(' ').map(s => [s, k]))))
 const genName = (short, r) => { const [f, l] = NAMES[REGION_OF.get(short) ?? 'anglo']; return `${f[Math.floor(r() * f.length)]} ${l[Math.floor(r() * l.length)]}` }
 // how good a country's next player is: around its level (Spain's high 80s, England's mid-80s, Qatar's high 60s), the
 // odd one far better: every generation has its star. (Set against 2026: a country's best No. 9 is about its own
@@ -208,7 +224,8 @@ function liftFor(me, year, seed) {
 }
 const FIELDS = new Map()
 const keep = (id, make) => { if (FIELDS.has(id)) return FIELDS.get(id); if (FIELDS.size > 24) FIELDS.clear(); const v = make(); FIELDS.set(id, v); return v }
-const allIn = (year, seed) => CAREER_NATIONS.map(n => nationIn(n.short, year, seed))
+// (a suspended nation, Russia, is in no qualifying and no finals)
+const allIn = (year, seed) => CAREER_NATIONS.filter(n => !n.suspended).map(n => nationIn(n.short, year, seed))
 
 // The World Cup of `year` (2030, 2034...): 48 nations by confederation, the hosts in, twelve groups drawn.
 // → { field (for the engine: team.field), nations: [short], hosts, in: his country qualified }
