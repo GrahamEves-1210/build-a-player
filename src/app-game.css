@@ -8192,9 +8192,10 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   display: inline-block; line-height: 1; font-style: normal;
   -webkit-mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000); mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  padding: 0 .12em; margin: 0 -.12em;   /* (the mask only reaches its own box: padded out, so the letter's ink past the box isn't clipped) */
   -webkit-mask-size: 100% 100%, .33em .124em; mask-size: 100% 100%, .33em .124em;
-  -webkit-mask-position: 0 0, -.01em .292em; mask-position: 0 0, -.01em .292em;
+  -webkit-mask-position: 0 0, .11em .287em; mask-position: 0 0, .11em .287em;
   -webkit-mask-composite: xor; mask-composite: exclude;
 }
-.wm-cp { -webkit-mask-size: 100% 100%, .33em .148em; mask-size: 100% 100%, .33em .148em; -webkit-mask-position: 0 0, -.01em .315em; mask-position: 0 0, -.01em .315em; }
+.wm-cp { -webkit-mask-size: 100% 100%, .33em .148em; mask-size: 100% 100%, .33em .148em; -webkit-mask-position: 0 0, .11em .326em; mask-position: 0 0, .11em .326em; }
 .wm-cb, .wm-cp { text-shadow: none !important; }   /* (the glow would be cut square at the mask's edge) */
