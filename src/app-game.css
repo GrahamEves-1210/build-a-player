@@ -8161,3 +8161,5 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   .ag-home--soccer .ag-stage-photo { background-size: auto 230% !important; background-position: center 22% !important; }
   .ag-home--soccer .st-home-fig { left: 6%; right: 6%; top: 6%; bottom: -1%; }
 }
+/* Phone Home: the footer's thin divider again between the game modes and the Builder Pass (owner 11-25) */
+@media (max-width: 1023px) { .ag-home .ag-promos { border-top: 1px solid rgba(149,213,178,.09); padding-top: 18px; margin-top: 4px; } }
