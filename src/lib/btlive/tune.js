@@ -188,7 +188,8 @@ export const T = {
   spinWithin: 0.5,                   // ...inside this share of the first move
   moveBuffer: 0.32,                  // a flick made while a move is still on goes the moment it can (the chain), this long at most
   chainRec: 0.12, chainRecHnd: 0.06, // after a move, this long (less at Handles 11) before the next one starts
-  moveSpeed: 1.75,                   // the fastest any move goes, x top speed (what a device's own position is held to)
+  chainSlow: 0.7, chainGap: 0.4,     // a move started this soon after the last one ended goes at this share of its speed
+  moveSpeed: 1.95,                   // the fastest any move goes, x top speed (what a device's own position is held to)
   moveCd: 3.4, moveCdHnd: 1.0,       // a move can freeze his man once in this long: 3.4 s at Handles 1, 2.4 s at 11
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.15,                    // chance to freeze him...
@@ -245,8 +246,8 @@ export const T = {
 }
 
 // The dribble moves (NBA 2K's pro stick; "toward" a hand is that side of him as he faces the basket). time: the burst
-// (s). speed: x top speed with the ball at the burst's peak (it builds, holds, and eases off: about 0.8 of it on
-// average), so each goes about the floor the real move covers. swap: the ball changes hands.
+// (s). speed: x top speed with the ball at the burst's peak (it builds, holds, and eases off: about 0.9 of it on
+// average; a move chained straight off another goes at T.chainSlow of it), so each goes about the floor the real move covers. swap: the ball changes hands.
 //   hesi   flick at the basket: the hesitation. A beat almost standing (stall), then gone at the rim
 //   cross  forward and toward the off hand: the crossover, in front of him, to the other side
 //   btl    straight toward the off hand: between the legs, across, a shorter step
@@ -258,12 +259,12 @@ export const T = {
 //   spin   the stick rolled a quarter turn round early in a move: the burst bends round to the new way over `time`
 // n: the number a move goes by in the state and on the wire (player.mv; 0: none)
 export const MOVES = {
-  cross: { n: 1, time: 0.30, speed: 1.4, swap: true },
-  hesi: { n: 2, time: 0.38, speed: 1.55, stall: 0.12, stallSpeed: 0.2 },
-  back: { n: 3, time: 0.28, speed: 1.35, set: 0.2 },
-  btb: { n: 4, time: 0.32, speed: 1.35, swap: true, steal: 0.6 },
-  spin: { n: 5, time: 0.36, speed: 1.4 },
-  inout: { n: 6, time: 0.34, speed: 1.45, stall: 0.11, stallSpeed: 0.4, fake: true },
-  btl: { n: 7, time: 0.26, speed: 1.3, swap: true },
+  cross: { n: 1, time: 0.30, speed: 1.75, swap: true },
+  hesi: { n: 2, time: 0.38, speed: 1.9, stall: 0.12, stallSpeed: 0.2 },
+  back: { n: 3, time: 0.28, speed: 1.45, set: 0.2 },
+  btb: { n: 4, time: 0.32, speed: 1.65, swap: true, steal: 0.6 },
+  spin: { n: 5, time: 0.36, speed: 1.65 },
+  inout: { n: 6, time: 0.34, speed: 1.75, stall: 0.11, stallSpeed: 0.4, fake: true },
+  btl: { n: 7, time: 0.26, speed: 1.65, swap: true },
 }
 export const MOVE_KEYS = [null, 'cross', 'hesi', 'back', 'btb', 'spin', 'inout', 'btl']

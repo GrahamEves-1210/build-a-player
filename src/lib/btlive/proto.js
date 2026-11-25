@@ -35,8 +35,8 @@ export const EVENT_KEEP = Math.round(1.5 * HZ)    // ...with the events of the l
 export const AWAY_MS = 1500                       // a player not heard from for this long is played by the CPU
 const r2 = v => Math.round(v * 100) / 100
 export const MOVE_KEEP = 3                        // a message carries his last 3 flicks (a move and the turn that made it a spin)
-const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs']
-const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn', 'hand', 'frzCd']
+const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs', 'bk']
+const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn', 'hand', 'frzCd', 'chn']
 export const SNAP_ACT = PF.length + PI.length     // where a snapshot's row for a player keeps what he's doing (act)
 
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────

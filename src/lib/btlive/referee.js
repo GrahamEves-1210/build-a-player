@@ -162,8 +162,9 @@ export function moveOf(p, dir) {
   const fwd = dir.x * fx + dir.y * fy, lat = dir.x * rx + dir.y * ry
   const a = Math.acos(clamp(fwd, -1, 1)) * 180 / Math.PI
   const s = lat >= 0 ? 1 : -1, hand = p.hand || 1, off = s !== hand
-  const go = (kind, f, l) => { const x = fx * f + rx * s * l, y = fy * f + ry * s * l, n = Math.hypot(x, y) || 1; return { kind, x: x / n, y: y / n, swap: !!MOVES[kind].swap } }
-  if (a <= T.hesiTo) return go('hesi', 1, 0)
+  const go = (kind, f, l, side = s) => { const x = fx * f + rx * side * l, y = fy * f + ry * side * l, n = Math.hypot(x, y) || 1; return { kind, x: x / n, y: y / n, swap: !!MOVES[kind].swap } }
+  // (the hesitation goes at the basket by his man's hip on the ball's side, not into his chest)
+  if (a <= T.hesiTo) return go('hesi', 0.88, 0.47, hand)
   if (a > T.btbTo) return go('back', -1, 0)
   if (a > T.btlTo) return off ? go('btb', -0.45, 1) : go('back', -0.8, 0.6)
   if (!off) return go('inout', 0.6, 0.8)

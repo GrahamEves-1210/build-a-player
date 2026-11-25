@@ -371,7 +371,7 @@ head('The room: a flick of the small stick reaches the game once, with the way i
   di = r.tickOnce(now)[d]
   ok(di.jump && !di.steal && !r.tickOnce(now)[d].jump, '...up: one jump')
   const snap = last(ws[0], 's')
-  ok(snap.p[h].length === 23 && typeof snap.p[h][21] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going, his ball hand) for the screens')
+  ok(snap.p[h].length === 25 && typeof snap.p[h][23] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going, his ball hand) for the screens')
 }
 head('2v2 with four people: each one moves his own man, and only his')
 {

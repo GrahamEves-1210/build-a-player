@@ -59,7 +59,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const EVLOG = [], PFN = SNAP_ACT                 // (PFN: where a snapshot row keeps the act: proto.js snapOf)
   // the men as they're drawn: each one's look (his side's colour, his skin and number) and his pose (pose.js)
   const poser = createPoser(N)
-  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE' }
+  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS' }
 
   // The court is a window onto the half court: its height always shows the whole depth (baseline to half court);
   // on a narrow screen (a phone held upright) it shows about 34 of the 56 feet across and pans with the play.
@@ -251,7 +251,7 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   // this device's own move: kept through the referee's snapshots (they carry his word on it, a beat old)
   // (and the hand the ball is in, the chain's clock and the flick waiting in it: all his device's own a beat early)
-  const MVF = ['burst', 'mv', 'bn', 'hand', 'moveCd', 'mqT', 'mqx', 'mqy', 'fkx', 'fky', 'bdx', 'bdy', 'bs']
+  const MVF = ['burst', 'mv', 'bn', 'hand', 'moveCd', 'mqT', 'mqx', 'mqy', 'fkx', 'fky', 'bdx', 'bdy', 'bs', 'bk', 'chn']
   function mvSave(p) { for (const f of MVF) NB.mv[f] = p[f] }
   function mvLoad(p) { if (NB.mv.hand == null) return; for (const f of MVF) p[f] = NB.mv[f]; if (!NB.mv.burst) p.bs = 0 }
   function onSnap(m) {
@@ -460,9 +460,11 @@ export function createEngine({ setup, els, on, net = null }) {
   // the shoulders as the body the game collides, so two men in contact stand shoulder to shoulder.
   const LOOKS = setup.looks.map((l, i) => lookOf({ name: l.who || l.label || `p${i}`, skin: l.skin, num: l.num, col: colOf(i) }))
   const FIG = LOOKS.map(look => ({ x: 0, y: 0, s: 30, ang: 0, scale: 1, air: 0, lean: 0, down: 0, lh: null, rh: null, lf: null, rf: null, toeL: 0, toeR: 0, look, hs: 20, cy: 0, ball: false, bounce: false, bl: null }))
+  // (a man is drawn a little bigger than the body the game collides: from above, his arms reach past it)
+  const FIGK = T.radius * 2 * 1.16
   const ENV = { x: 0, y: 0, a: 0, dt: 0, held: 0, sFt: 3 }, BQ = [0, 0, 0]
   function figures(now, dt, a, tk) {
-    const sF = tk + 6
+    const sF = FIGK * k
     for (let i = 0; i < N; i++) {
       const p = s.players[i], f = FIG[i]
       ENV.x = DX[i]; ENV.y = DY[i]; ENV.a = a; ENV.dt = dt; ENV.sFt = sF / k
@@ -470,11 +472,11 @@ export function createEngine({ setup, els, on, net = null }) {
       ENV.held = i === me && !levels[me] && meter.on ? (meter.grade ? meter.gradeAt : now) - meter.t0 : (p.actT + a) * STEP
       const z = poser.pose(s, i, now, ENV)
       f.x = (DX[i] + z.ox) * k; f.y = (DY[i] + z.oy) * k; f.s = sF; f.ang = z.ang; f.scale = z.scale; f.air = z.air; f.lean = z.lean; f.down = z.down
-      f.lh = z.lh; f.rh = z.rh; f.lf = z.lf; f.rf = z.rf; f.toeL = z.toeL; f.toeR = z.toeR; f.ball = z.ball; f.bounce = z.bounce; f.bl = z.bl
+      f.lh = z.lh; f.rh = z.rh; f.lf = z.lf; f.rf = z.rf; f.toeL = z.toeL; f.toeR = z.toeR; f.ball = z.ball; f.bounce = z.bounce; f.bl = z.bl; f.under = z.under
       // the ball off the floor: heard on each bounce
       if (z.thud && s.phase === 'live') sfx('dribble', i === me ? 1 : 0.7)
       // (the square the names, the meters and the words keep off: where he's drawn, a man in the air a touch up the screen)
-      f.hs = sF * 0.56 * (1 + 0.2 * z.air); f.cy = f.y - z.air * sF * 0.2
+      f.hs = sF * 0.5 * (1 + 0.16 * z.air); f.cy = f.y - z.air * sF * 0.2
     }
   }
   // a crown over the king (King of the Hill)
@@ -627,7 +629,7 @@ export function createEngine({ setup, els, on, net = null }) {
   // two men in contact never stand on each other on the screen: this device's man is drawn a touch ahead of the game
   // (and online the others a beat behind), so figures closer than shoulder to shoulder are eased apart, a few px at most
   function relax(tk) {
-    const need = (tk + 6) * 0.9
+    const need = FIGK * k * 0.86
     for (let it = 0; it < 2; it++) {
       for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
         const dx = (DX[j] - DX[i]) * k, dy = (DY[j] - DY[i]) * k, d = Math.hypot(dx, dy)
@@ -667,13 +669,13 @@ export function createEngine({ setup, els, on, net = null }) {
       ctx.beginPath(); ctx.arc(rx + wob, ry + wob * 0.4, r0 * (f.rim === 'make' ? 1 - t * 0.45 : 1), 0, 6.283); ctx.stroke()
     }
     // who is cut by the edge of the screen (a tab at the edge instead of half a man)
-    const half = (tk + 6) * 0.5
+    const half = FIGK * k * 0.5
     const cut = i => (worldW <= w + 1 ? 0 : X(i) - half < L ? -1 : X(i) + half > Rr ? 1 : 0)
     // every man's shadow first (no shadow lies on a man)
     for (let i = 0; i < N; i++) if (!cut(i)) drawShadow(ctx, FIG[i])
     // under the player this device controls: a white ring on the floor (his jersey is his side's colour, so the ring
     // isn't), a faint fill of his colour inside it; under the teammate the stick points at, a dashed one
-    const ringR = (tk + 6) * 0.72
+    const ringR = FIGK * k * 0.62
     if (s.phase !== 'over' && !cut(me)) {
       const mx = FIG[me].x, my = FIG[me].y, col = colOf(me)
       ctx.beginPath(); ctx.arc(mx, my, ringR, 0, 6.283); ctx.globalAlpha = 0.16; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1
@@ -692,7 +694,7 @@ export function createEngine({ setup, els, on, net = null }) {
     if (s.call && s.phase === 'live' && s.tick - s.call.tick < 45 && P[s.call.pid] && !cut(s.call.pid)) {
       const ci = s.call.pid, f = clamp((s.tick - s.call.tick) / 45, 0, 1)
       ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,255,255,${0.95 - 0.5 * f})`
-      ctx.beginPath(); ctx.arc(FIG[ci].x, FIG[ci].y, (tk + 6) * (0.74 + 0.2 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
+      ctx.beginPath(); ctx.arc(FIG[ci].x, FIG[ci].y, FIGK * k * (0.64 + 0.2 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
     }
     // players, the far ones first (a man in the air over the rest)
     const order = P.map((_, i) => i).sort((i, j) => (P[i].y + (P[i].act === 'jump' ? 99 : 0)) - (P[j].y + (P[j].act === 'jump' ? 99 : 0)))
@@ -702,6 +704,8 @@ export function createEngine({ setup, els, on, net = null }) {
       const f = FIG[i]
       DOTS.push([f.x - f.hs, f.cy - f.hs, f.x + f.hs, f.cy + f.hs, i])
       if (import.meta.env.DEV) LAY.dots[i] = [f.x, f.cy, f.hs]
+      // (the ball between his legs goes under him)
+      if (f.under && holder === i && f.ball) { const q = pointAt(f, f.bl[0], f.bl[1], BQ); drawBall(q[0], q[1], 0.84, q[0], q[2], 0.4) }
       drawFigure(ctx, f)
     }
     // the ball: in a hand it goes where the hand is (a dribble: up and down off the floor beside him); in the air it's
@@ -730,7 +734,7 @@ export function createEngine({ setup, els, on, net = null }) {
       BL.key = key
     }
     const e = clamp((now - BL.t0) / BL.dur, 0, 1), ef = BL.dur > 160 ? 1 - e * (2 - e) * 0.5 - e * 0.5 : (1 - e) * (1 - e)
-    const ballCut = carry >= 0 && cut(carry)
+    const ballCut = carry >= 0 && (cut(carry) || FIG[carry].under)
     if (!ballCut) drawBall(bx + BL.ox * ef, by + BL.oy * ef, bsc, gx + BL.ox * ef, gy + BL.oy * ef, bz)
     BL.x = bx + BL.ox * ef; BL.y = by + BL.oy * ef
     // a dunk on the rim: the rim dragged his way and springing back, a ring thrown off it, the hit marked round it
@@ -1088,6 +1092,8 @@ export function createEngine({ setup, els, on, net = null }) {
     flick, dstick: dribbleAt, tap, right: rightFlick,
     // DEV: each man's pose on the last frame (figure.js), and his animation's notes (pose.js)
     get figs() { return FIG }, get anim() { return poser.anim },
+    // DEV: where a man is on the page (px)
+    screenOf(i) { const r = els.court.getBoundingClientRect(); return [r.left + FIG[i].x - camPx, r.top + FIG[i].y] },
     // DEV: let time pass with the game stopped (the meter runs on this device's clock)
     wait(ms) { clockNow += ms; draw(clockNow) },
     draw() { camera(1e6); draw(clockNow) },

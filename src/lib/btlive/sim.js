@@ -56,7 +56,7 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
     mv: 0, bn: 0, bs: 0,                     // ...which one (MOVES[..].n), how many ticks it lasts, a spin's turn (radians, signed)
     moveCd: 0, stealCd: 0, noAct: 0, pb: 0,  // cooldowns (ticks: till the next move can start, a swipe...), the buttons held last tick
     hand: 1, frzCd: 0,                       // the hand the ball is in (1 his right, -1 his left); till a move can freeze his man again
-    fkx: 0, fky: -1, mqx: 0, mqy: 0, mqT: -1,  // the flick that made the move on now; a flick waiting for it to end (until tick mqT)
+    fkx: 0, fky: -1, mqx: 0, mqy: 0, mqT: -1, chn: 0, bk: 1,   // (chn: ticks since a move ended that make the next a chained one; bk: this move's speed share)  // the flick that made the move on now; a flick waiting for it to end (until tick mqT)
     sq: -1,                                  // the tick of his latest SHOOT press that hasn't started a shot (-1: none)
     shot: null,                              // going up: { kind, spec, d, three, run, read }
     catchT: -999, catchFrom: -1,             // the last catch: when, from whom (index)
@@ -332,6 +332,7 @@ export function moveBegin(p, dir) {
   const m = ref.moveOf(p, dir), M = MOVES[m.kind]
   p.mv = M.n; p.bn = p.burst = ticks(M.time); p.bdx = m.x; p.bdy = m.y; p.bs = 0; p.fkx = dir.x; p.fky = dir.y
   if (m.swap) p.hand = -(p.hand || 1)
+  p.bk = p.chn > 0 ? T.chainSlow : 1
   p.moveCd = p.bn + ticks(T.chainRec - T.chainRecHnd * p.R.hnd)
   p.mqT = -1
   return m.kind
@@ -347,6 +348,7 @@ export function moveSpin(p, dir) {
     if (Math.cos(m) * (RIM.x - p.x) + Math.sin(m) * (RIM.y - p.y) > 0) turn += turn > 0 ? -2 * Math.PI : 2 * Math.PI
   }
   p.mv = MOVES.spin.n; p.bn = p.burst = ticks(MOVES.spin.time); p.bdx = dir.x; p.bdy = dir.y; p.bs = turn; p.fkx = dir.x; p.fky = dir.y
+  if (p.chn > 0) p.bk = T.chainSlow
   p.moveCd = p.bn + ticks(T.chainRec - T.chainRecHnd * p.R.hnd)
   p.mqT = -1
 }
@@ -367,8 +369,10 @@ export function moveQueued(p, tick) {
 }
 // a tick of a move's clock; the step-back ends with his feet set
 function burstTick(p) {
+  if (p.chn > 0) p.chn--
   if (p.burst <= 0) return
   if (--p.burst > 0) return
+  p.chn = ticks(T.chainGap)
   const M = MOVES[MOVE_KEYS[p.mv]]
   if (M?.set != null) { p.vx *= M.set; p.vy *= M.set }
   p.mv = 0; p.bs = 0
@@ -379,7 +383,7 @@ const BV = [0, 0]
 function burstVel(p) {
   const M = MOVES[MOVE_KEYS[p.mv]] ?? MOVES.cross, done = p.bn - p.burst
   const f = p.bn > 1 ? done / (p.bn - 1) : 1
-  let sp = M.speed * (f < 0.18 ? 0.5 + 0.5 * f / 0.18 : f > 0.65 ? 1 - 0.3 * (f - 0.65) / 0.35 : 1), x = p.bdx, y = p.bdy
+  let sp = M.speed * (p.bk || 1) * (f < 0.18 ? 0.5 + 0.5 * f / 0.18 : f > 0.65 ? 1 - 0.3 * (f - 0.65) / 0.35 : 1), x = p.bdx, y = p.bdy
   if (M.stall && done < ticks(M.stall)) {
     sp = M.stallSpeed
     if (M.fake) {
