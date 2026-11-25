@@ -11,10 +11,11 @@ import { curlyHair } from '../lib/soccerHair'
 //                              shading and the face's features drawn on), and his hair
 //   clutch        COMPOSURE    the shirt and its long sleeve in the club's colour, the collar and the cuff in its
 //                              second colour, the crest on the chest and the number under it
-//   speed         PACE         the shorts (the second colour; white when the shirt is white), the socks (the club's colour)
-//                              with their turnover in the second colour, the bare thighs and knees
-//   bounce        SHOT POWER   the boots
-//   size          SIZE         the hand
+//   handles       DRIBBLING    the shorts (the second colour; white when the shirt is white), the socks (the club's colour)
+//                              with their turnover in the second colour, and the shorts' crest
+//   speed         PACE         the bare thighs and knees (the skin)
+//   finishing     FINISHING    the boots
+//   perimeterDefense POSITIONING the hand
 export const ST_FIG_W = 1024
 export const ST_FIG_H = 1536
 
@@ -88,7 +89,7 @@ const Group = ({ ids, fill, opacity, mask }) => (
   </g>
 )
 
-const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none', opacity: 0.9 }   // (every layer 10% lighter, owner 11-25)
+const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }
 const ART = '/st-silhouette.webp'
 
 // the face's features, on the art's own face (art pixels), kept to the scale and softness of the render: he looks
@@ -158,14 +159,15 @@ function Badge({ src, at, id, url, name }) {
 export default function StrikerFigureOverlay({ build, logoDir = null, box = null }) {
   const tf = box ? { inset: 'auto', ...box } : null
   const chip = s => build?.[s] ?? null
-  const shirt = chip('clutch'), legs = chip('speed'), boots = chip('bounce'), size = chip('size'), head = chip('basketballIQ')
+  // (owner 11-25: COMPOSURE the shirt, DRIBBLING the shorts and socks, PACE the legs' skin, FINISHING the boots, POSITIONING the hand, HEADING the head)
+  const shirt = chip('clutch'), kit = chip('handles'), legs = chip('speed'), boots = chip('finishing'), size = chip('perimeterDefense'), head = chip('basketballIQ')
   const dir = logoDir ?? '/logos/soccer/'
 
   const c1 = shirt?.teamColor ?? '#ffffff', c2 = shirt?.teamColor2 ?? '#111111'
   // the number in the trim colour, or white/black off the shirt when the trim is too close to it
   const numFill = lightHex(c1) === lightHex(c2) ? (lightHex(c1) ? '#111111' : '#ffffff') : c2
 
-  const l1 = legs?.teamColor ?? '#ffffff', l2 = legs?.teamColor2 ?? '#111111'
+  const l1 = kit?.teamColor ?? '#ffffff', l2 = kit?.teamColor2 ?? '#111111'
   // white shorts under a white shirt; any other shirt (a yellow one too: Dortmund, Brazil) takes the second colour
   const shorts = whiteHex(l1) ? l1 : l2
   const sockTop = lightHex(l1) === lightHex(l2) ? (lightHex(l1) ? '#111111' : '#ffffff') : l2
@@ -231,7 +233,15 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           </filter>
         </defs>
         <g mask={url('art')}>
-          {skins.map(({ ids, tone }) => <g key={ids[0]}>{ids.map(i => <path key={i} d={D[i]} fill={tone} />)}</g>)}
+          {skins.filter(s => s.ids[0] !== 'face').map(({ ids, tone }) => <g key={ids[0]}>{ids.map(i => <path key={i} d={D[i]} fill={tone} />)}</g>)}
+          <g className="st-fx">
+            {size && shade('hand')}
+            {legs && shade('thighs')}
+            <g clipPath={url('c-ball')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} filter={url('f-ball')} /></g>
+          </g>
+          {/* the head (face, neck, features, hair) as one layer, 10% see-through (owner 11-25) */}
+          <g opacity="0.9">
+          {head && <g>{['face', 'neck'].map(i => <path key={i} d={D[i]} fill={face} />)}</g>}
           {/* the jaw: the face stroked a hair over its seam with the neck (only there), so the hairline gap between the
               two can't show the art's black through it as a line round the jaw (EDGE) */}
           {head && (
@@ -243,9 +253,6 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           <g className="st-fx">
             {head && shade('face')}
             {head && shade('neck')}
-            {size && shade('hand')}
-            {legs && shade('thighs')}
-            <g clipPath={url('c-ball')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} filter={url('f-ball')} /></g>
           </g>
           {head && (
             <g clipPath={url('c-face')}>
@@ -277,6 +284,7 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               <rect x="600" y="90" width="230" height="160" fill={CURL_BASE} filter={url('curl')} />
             </g>
           )}
+          </g>
         </g>
       </svg>
       <svg viewBox={`0 0 ${ST_FIG_W} ${ST_FIG_H}`} preserveAspectRatio="xMidYMid meet" style={{ ...SVG_STYLE, ...tf, mixBlendMode: 'screen', zIndex: 6 }} aria-hidden="true">
@@ -291,13 +299,13 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
         <g mask={url('art2')}>
         {shirt && <Group ids={['jersey', 'sleeve']} fill={c1} opacity={KIT_OPACITY} />}
         {shirt && <Group ids={['collar', 'cuff']} fill={c2} opacity={TRIM_OPACITY} />}
-        {legs && <Group ids={['shorts']} fill={shorts} opacity={KIT_OPACITY - 0.02} mask={url('under')} />}
-        {legs && <Group ids={['left sock', 'right sock']} fill={l1} opacity={KIT_OPACITY} />}
-        {legs && <Group ids={['left sock top', 'right sock top']} fill={sockTop} opacity={TRIM_OPACITY} />}
+        {kit && <Group ids={['shorts']} fill={shorts} opacity={KIT_OPACITY - 0.02} mask={url('under')} />}
+        {kit && <Group ids={['left sock', 'right sock']} fill={l1} opacity={KIT_OPACITY} />}
+        {kit && <Group ids={['left sock top', 'right sock top']} fill={sockTop} opacity={TRIM_OPACITY} />}
         {boots && <Group ids={['left boot', 'right boot']} fill={boots.teamColor ?? '#111111'} opacity={KIT_OPACITY} />}
         </g>
       </svg>
-      {(shirt || legs) && (
+      {(shirt || kit) && (
         <svg viewBox={`0 0 ${ST_FIG_W} ${ST_FIG_H}`} preserveAspectRatio="xMidYMid meet" style={{ ...SVG_STYLE, ...tf, zIndex: 7, overflow: 'visible' }} aria-hidden="true">
           <defs>
             <clipPath id={id('c-jersey')}><path d={D.jersey} /></clipPath>
@@ -315,9 +323,9 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
             </g>
           )}
           {/* the crest again, on the front of the shorts (SHORTS_CREST) */}
-          {legs && (
+          {kit && (
             <g clipPath={url('c-shorts')} style={{ pointerEvents: 'none' }}>
-              <Badge src={`${dir}${legs.team}.png`} at={SHORTS_CREST} id={id} url={url} name="shorts" />
+              <Badge src={`${dir}${kit.team}.png`} at={SHORTS_CREST} id={id} url={url} name="shorts" />
             </g>
           )}
         </svg>
