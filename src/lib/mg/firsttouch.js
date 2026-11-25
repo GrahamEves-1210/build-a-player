@@ -16,6 +16,7 @@ export const how = {
 
 const MAX_UPS = 12, BALLS = 3, NEED = 15, PER_BALL = 3
 const FOOT_Y = 0.26          // where a touch meets it, m
+const FOOT_X = 0.26, PASS_X = 0.3   // how far off his middle a keep-up comes down, and a pass comes to: far enough to see which foot
 const SET = 1100
 const ME = { x: 0, z: -30 }, COACH = { x: 2.4, z: -15 }
 const GRAV = 9.8
@@ -74,7 +75,7 @@ export function make({ v, seed }) {
     g.ups++
     g.fx.push('tap', 'h:light')
     const at = g.nextAt
-    g.lastAt = at; g.lastX = g.side * 0.16
+    g.lastAt = at; g.lastX = g.side * FOOT_X
     if (g.ups >= MAX_UPS) { g.hang = 700; return partDone(`${MAX_UPS}: THAT’LL DO`) }
     // a clean one comes up the same; off it, higher or lower and quicker
     const base = lerp(780, 580, g.ups / MAX_UPS)
@@ -123,7 +124,7 @@ export function make({ v, seed }) {
     g.stamp = { text: hit ? (pts >= max - 2 ? 'SILKY' : 'GOOD FEET') : 'NOT ENOUGH', good: hit, at: g.t, size: 44 }
   }
   // where the ball is in the keep-ups (for the drop, and the picture)
-  g.ballX = () => (g.phase === 'ups' ? lerp(g.lastX, g.side * 0.16, clamp((g.t - g.lastAt) / g.hang, 0, 1)) : g.lastX)
+  g.ballX = () => (g.phase === 'ups' ? lerp(g.lastX, g.side * FOOT_X, clamp((g.t - g.lastAt) / g.hang, 0, 1)) : g.lastX)
   return g
 }
 
@@ -133,7 +134,7 @@ const camFor = view => camOf(view, { x: 0.35, y: 1.6, z: ME.z - 5.2, F: 500, hzA
 function touchPose(f, side) {
   const up = Math.sin(clamp(f, 0, 1) * Math.PI)
   const o = { ...POSE.stand, hy: 52, lx: -9, rx: 9, hlx: -30, hly: -60, hrx: 30, hry: -60, bow: 0.12 }
-  if (side > 0) { o.rx = 6; o.ry = -22 * up } else { o.lx = -6; o.ly = -22 * up }
+  if (side > 0) { o.rx = lerp(9, 15, up); o.ry = -22 * up } else { o.lx = lerp(-9, -15, up); o.ly = -22 * up }
   o.lean = -side * 0.05 * up
   return o
 }
@@ -160,7 +161,7 @@ function ballYAt(g, t) {
 }
 function ballPass(g) {
   const p = g.passes[g.k], me = ME
-  const tx = me.x + p.side * 0.2, tz = me.z + 0.45
+  const tx = me.x + p.side * PASS_X, tz = me.z + 0.45
   if (g.t < g.passAt) return { x: COACH.x - 0.3, y: 0.11, z: COACH.z - 0.5, spin: 0 }
   const f = clamp((g.t - g.passAt) / p.travel, 0, 1.4)
   const fx = lerp(COACH.x - 0.3, tx, Math.min(1, f)), fz = lerp(COACH.z - 0.5, tz, Math.min(1, f))
@@ -223,15 +224,19 @@ export function draw(ctx, g, view) {
   if (behind) ball(ctx, C, b.x, b.y, b.z, b.spin ?? (g.t / 90), 0, false)
   man(ctx, C, ME.x, ME.z, pose, me)
   if (!behind) ball(ctx, C, b.x, b.y, b.z, b.spin ?? (g.t / 90), 0, false)
-  // the ring closing on the pass as it gets to you
-  if (g.part === 'control' && g.phase === 'pass' && g.rolling && !g.touch) {
-    const p = g.passes[g.k], f = clamp((g.t - (g.arriveAt - 520)) / 520, 0, 1)
-    if (f > 0) {
-      const q = P(C, ME.x + p.side * 0.2, 0, ME.z + 0.45), rr = lerp(1.6, 0.25, easeOut(f)) * q.s
-      ctx.strokeStyle = g.t > g.arriveAt ? '#f7cf55' : 'rgba(255,255,255,.9)'; ctx.lineWidth = 2
-      ctx.beginPath(); ctx.ellipse(q.x, q.y, rr, rr * 0.3, 0, 0, 6.2832); ctx.stroke()
-    }
+  // which foot, and when: a chalk mark on the grass by the foot it's coming to (from the moment it's on its way: time
+  // to read it), and a ring closing on the mark as it gets there
+  const mark = (X, Z, at, lead) => {
+    const q = P(C, X, 0, Z)
+    if (!q.ok) return
+    const now = g.t >= at - 30
+    ctx.fillStyle = now ? 'rgba(247,207,85,.4)' : 'rgba(242,242,238,.3)'; ctx.strokeStyle = now ? '#f7cf55' : 'rgba(255,255,255,.92)'; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.ellipse(q.x, q.y, 0.19 * q.s, 0.06 * q.s, 0, 0, 6.2832); ctx.fill(); ctx.stroke()
+    const f = clamp((g.t - (at - lead)) / lead, 0, 1)
+    if (f > 0 && f < 1) { const rr2 = lerp(0.95, 0.19, easeOut(f)) * q.s; ctx.beginPath(); ctx.ellipse(q.x, q.y, rr2, rr2 * 0.32, 0, 0, 6.2832); ctx.stroke() }
   }
+  if (g.part === 'ups' && g.phase === 'ups') mark(ME.x + g.side * FOOT_X, ME.z + 0.35, g.nextAt, 420)
+  if (g.part === 'control' && g.phase === 'pass' && g.rolling && !g.touch) mark(ME.x + g.passes[g.k].side * PASS_X, ME.z + 0.45, g.arriveAt, 520)
   // the count, on the coach's sheet
   const y = 62
   text(ctx, g.part === 'ups' ? 'KEEP-UPS' : 'CONTROL', 12, y, { font: LABEL, size: 15, align: 'left', track: 1.4, color: 'rgba(255,255,255,.7)' })

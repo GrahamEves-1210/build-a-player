@@ -5,7 +5,7 @@
 import { make as dashMake, clockSlab, officialStrip, officialPunch, OFFICIAL_MS, calm, stopwatch } from './dash.js'
 import { clamp, lerp, prog, easeOut, text, DISPLAY, LABEL, GOOD, BAD, GOLD, nudge } from './kit.js'
 import { placeStamp } from './read.js'
-import { camOf, P, stadium, man, POSE, kitsOf, dress, line, scout } from './soccer.js'
+import { camOf, P, stadium, man, POSE, mix, kitsOf, dress, line, scout } from './soccer.js'
 
 export const how = {
   sprint30: 'Wait for the whistle. Then alternate LEFT and RIGHT as fast as possible.',
@@ -15,6 +15,7 @@ export const make = o => dashMake({ ...o, game: 'sprint30' })
 const YD = 0.9144
 const Z0 = -46.5, DIST = 30, LANE = 1.7
 const MPH = 2.045
+const TURN = 1.95            // radians: round to his right, back to the gate he's just come through
 function beats(g) {
   if (g.goAt != null && !g.done) g.topMph = Math.max(g.topMph ?? 0, g.speed * MPH)
   if (g.done && g.crossed != null && !g.settled) {
@@ -34,7 +35,10 @@ function camFor(g, view) {
   const fsAge = g.t - g.fsAt
   if (fsAge < 720 && first == null) fs = fsAge < 200 ? easeOut(fsAge / 200) : 1 - easeOut((fsAge - 200) / 520)
   const m = g.y * YD
-  return camOf(view, { x: 0, y: lerp(1.22, 1.68, Math.max(up, fs * 0.5)) + bob, z: Z0 + m - lerp(0.45, 0.1, up) + fs * 0.3, F: 300, hzAt: lerp(0.33, 0.3, up) + (quiet ? 0 : Math.cos(g.cycle * Math.PI * 4) * 0.004 * top) })
+  // through the gate he pulls up and turns round to the coaches and their watches: the time's theirs to give
+  const over = g.crossed == null ? -1 : g.t - g.crossed
+  const yaw = over < 0 ? 0 : smooth(prog(over, 260, 1300)) * TURN
+  return camOf(view, { x: 0, y: lerp(1.22, 1.68, Math.max(up, fs * 0.5)) + bob, z: Z0 + m - lerp(0.45, 0.1, up) + fs * 0.3, F: 300, yaw, hzAt: lerp(0.33, 0.3, up) + (quiet ? 0 : Math.cos(g.cycle * Math.PI * 4) * 0.004 * top) })
 }
 // a timing gate: a tripod each side, the reflector on top, the beam between
 function gate(ctx, C, Z, hit, finish) {
@@ -96,8 +100,9 @@ export function draw(ctx, g, view) {
   const staff = dress(K.staff, { skin: '#6d4229' })
   const watchUp = g.crossed == null || g.t < g.crossed + 240
   for (const [X, dz, sk] of [[-LANE - 1.7, 1.2, '#6d4229'], [LANE + 1.8, 1.6, '#c09060'], [LANE + 3.2, 3.2, '#8d5a3b']]) {
-    const pose = over >= OFFICIAL_MS && X > 0 && good ? POSE.point : watchUp ? { ...POSE.stand, hrx: 13, hry: -86 } : POSE.stand
-    const p = man(ctx, C, X, Z0 + DIST + dz, pose, { ...staff, skin: sk })
+    // (the watch up as he comes through; then the time's in: a point at him for a good one, hands on hips for a slow one)
+    const pose = over >= OFFICIAL_MS ? (good ? (X > 0 ? POSE.point : POSE.fist) : POSE.hips) : watchUp ? { ...POSE.stand, hrx: 13, hry: -86 } : mix({ ...POSE.stand, hrx: 13, hry: -86 }, { ...POSE.stand, hrx: 9, hry: -66, tilt: -0.5 }, prog(g.t - g.crossed, 240, 520))
+    const p = man(ctx, C, X, Z0 + DIST + dz, pose, { ...staff, skin: sk, front: true })
     if (p.ok && watchUp) { const k = p.s * 1.8 / 110; stopwatch(ctx, p.x + 13 * k, p.y - 88 * k, Math.max(0.6, k * 1.4)) }
   }
   // the scouts along the touchline, with their clipboards

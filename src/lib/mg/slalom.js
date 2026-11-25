@@ -36,7 +36,7 @@ export function make({ v, seed }) {
     poles, finishZ, pts, li: 0, k: 0, n: N, win, clean,
     phase: 'set', goAt: null, x: 0, z: Z0, sp: 0, cycle: 0,
     leg: null, cuts: poles.map(p => ({ res: null, why: null, at: 0, arrive: Infinity, want: -p.side })), slips: 0, crossed: null, finalSecs: null,
-    hud: { prompt: 'SET', dots: poles.map(() => null) },
+    hud: { prompt: 'WAIT FOR THE WHISTLE', dots: poles.map(() => null) },
     tick(dt) {
       g.t += dt
       const s = dt / 1000

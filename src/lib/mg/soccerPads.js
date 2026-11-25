@@ -6,6 +6,7 @@
 //   stickOf(ctl)                     the stick now, -1..1 each way (up +). Keys give the full corner, not a shortened one
 //   drawControls(ctx, view, ctl, { stick, a, b }, live, t)   the stick and the buttons on a phone, keycaps on a computer
 //   tip(ctx, view, str, y, size)     a line over the controls
+//   promptY(view)                    where the HUD's line sits clear of them
 import { clamp, text, rr, circle, keyCap, LABEL, DISPLAY } from './kit.js'
 
 // ── The controls ────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ export function drawControls(ctx, view, ctl, labels, live = true, t = 0) {
     ctx.fillStyle = ctl.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#e9eef0' : 'rgba(233,238,240,.7)'
     circle(ctx, ax + s.x * R, ay - s.y * R, 19); ctx.fill()
     ctx.strokeStyle = 'rgba(6,10,12,.5)'; ctx.lineWidth = 1.5; ctx.stroke()
-    if (ctl.tid == null) text(ctx, labels.stick, ax, ay + R + 18, { size: 12, track: 1.2, color: 'rgba(255,255,255,.62)' })
+    if (ctl.tid == null) text(ctx, labels.stick, ax, ay + R + 18, { size: 13, track: 1.2, color: 'rgba(255,255,255,.62)' })
   }
   const btn = (c, lit, label, size) => {
     ctx.fillStyle = lit ? view.accent : 'rgba(28,38,43,.9)'; circle(ctx, c.x, c.y, c.r); ctx.fill()
@@ -86,3 +87,6 @@ export function tip(ctx, view, str, y = view.h - (view.keys ? 60 : 168), size = 
   ctx.fillStyle = 'rgba(6,10,12,.72)'; rr(ctx, view.w / 2 - tw / 2, y - 14, tw, 28, 4); ctx.fill()
   text(ctx, str, view.w / 2, y + 1, { size, track: 1.4, color: '#fff' })
 }
+// where the HUD's own line (g.hud.prompt) goes in a game with these controls: over the stick and the buttons on a
+// phone, over the row of keys on a computer. A game sets g.hud.y = promptY(view) as it draws
+export const promptY = view => (view.keys ? view.h - 58 : view.h - 162)

@@ -415,7 +415,8 @@ export function hud(ctx, view, g, title) {
     text(ctx, `${g.sit.us} ${g.sit.mine}  ${g.sit.them} ${g.sit.opp}`, right, 23, { font: DISPLAY, size: 19, align: 'right' })
   }
   if (h.prompt) {
-    const y = view.h - (g.pads ? 96 : 0) - 30
+    // (h.y: a game with its own controls says where its line goes, clear of them)
+    const y = h.y ?? view.h - (g.pads ? 96 : 0) - 30
     ctx.font = `18px ${LABEL}`
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px'
     const tw = ctx.measureText(h.prompt).width + 24
