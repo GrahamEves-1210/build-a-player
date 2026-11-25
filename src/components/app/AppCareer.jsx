@@ -853,6 +853,8 @@ function PressCard({ c, q, onAnswer }) {
       <p className="cr-q-text">"{q.q}"</p>
       <div className="cr-q-opts">{q.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => onAnswer(k, a)}>{a.t}</button>)}</div>
       <button className="ag-btn ag-btn--ghost cr-q-skip" onClick={() => onAnswer(-1, null)}>NO COMMENT</button>
+      {/* (his first one: what an answer is worth) */}
+      {!c.press && <p className="cr-note">The coaches and the locker room read what he says. An answer can move his reputation or the team around him.</p>}
     </div>
   )
 }

@@ -263,7 +263,7 @@ export const NFL_LORE = {
     g: {
       qb: [L('Steve McNair', 'shared the league MVP award in 2003', { n: 9, ret: true }), L('Warren Moon', 'threw for more than 4,600 yards in back-to-back seasons with the Oilers', { n: 1, ret: true })],
       rb: [L('Earl Campbell', 'was the league MVP in 1979', { n: 34, ret: true }), L('Eddie George', 'started 130 games in a row at running back', { n: 27, ret: true }), L('Chris Johnson', 'ran for 2,006 yards in 2009')],
-      wr: [L('Ernest Givins', 'caught 542 passes for the Oilers')],
+      wr: [L('Ernest Givins', 'caught more than 500 passes for the Oilers')],
       te: [L('Frank Wycheck', 'threw the lateral on the Music City Miracle')],
       ol: [L('Bruce Matthews', 'played 296 games over 19 seasons, every one for this franchise', { n: 74, ret: true })],
       dl: [L('Jevon Kearse', 'had 14.5 sacks as a rookie in 1999'), L('Elvin Bethea', 'played 16 seasons on the Oilers\' defensive line', { n: 65, ret: true })],

@@ -81,7 +81,7 @@ export const SOCCER_LORE = {
     town: 'south London', lg: [0, null], eu: [0, null],
     mark: 'Crystal Palace won the FA Cup in 2025, the first major trophy in the club\'s history.',
     rivals: { BHA: 'Palace against Brighton is the derby they named after the M23, the road between the two grounds.' },
-    g: { st: [L('Ian Wright', 'came off the bench to score twice in the 1990 FA Cup final'), L('Mark Bright', 'scored 113 goals for Palace')] },
+    g: { st: [L('Ian Wright', 'came off the bench to score twice in the 1990 FA Cup final'), L('Mark Bright', 'scored more than 100 goals for Palace')] },
   },
   EVE: {
     town: 'Liverpool', lg: [9, 1987], eu: [0, null],
