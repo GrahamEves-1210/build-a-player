@@ -8172,3 +8172,6 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   .ag-home--soccer .ag-stage-photo { background-size: auto 320% !important; background-position: center 14% !important; }   /* (the wide stage: stands only) */
   .ag-home .ag-sport { height: 56px !important; }   /* (the sport bar as tall as the phone's, owner 11-25) */
 }
+/* Home's player chip (owner 11-25): no level title tag beside the name, and a shorter XP bar */
+.ag-home .ag-hud .ag-player-title { display: none; }
+.ag-home .ag-hud .ag-xpbar { width: 84px; max-width: 84px; }

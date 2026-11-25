@@ -113,7 +113,7 @@ export function PlayerChip({ user, onClick }) {
           {name && <span className="ag-player-title">{p.lvl.title}</span>}
         </span>
         {name && <span className="ag-xpbar"><span style={{ width: `${Math.max(3, p.lvl.pct * 100)}%` }} /></span>}
-        <span className="ag-player-sub">{name ? `${p.lvl.title} · ${p.lvl.into.toLocaleString()}/${p.lvl.need.toLocaleString()} XP` : 'Sign in to save'}</span>
+        <span className="ag-player-sub">{name ? `${p.lvl.into.toLocaleString()}/${p.lvl.need.toLocaleString()} XP` : 'Sign in to save'}   {/* (no level title: owner 11-25) */}</span>
       </span>
     </button>
   )
