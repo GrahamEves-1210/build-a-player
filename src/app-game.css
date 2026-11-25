@@ -6287,6 +6287,27 @@ html.app-look:not(.is-app) .sc-grid-wrap { flex: 0 0 auto; overflow: visible; }
    screen's padding, and that padding is the rail's height + 20px */
 html.app-look:not(.is-app) .sc-footer { position: sticky; bottom: 0; z-index: 6; margin: 0; padding-top: 10px; padding-bottom: 12px; background: #070b0a; }
 html.app-look:not(.is-app) .dc-screen { padding-bottom: calc(var(--web-rail, 0px) + 24px); }
+/* Website Salary Cap on a phone (owner 11-25: "wonky with the bottom ad rail, zoom out a little"): the whole board,
+   the budget and Back / Lock In fit in the window above the rail, so nothing scrolls under the pinned buttons. The
+   screen stops at the rail (it no longer runs under it), the header and the buttons are a step smaller, and each
+   card's picture takes its height from the room left: (window - rail - everything that isn't a picture) / 5 rows,
+   between 34 px and its usual 65 px. A tall window looks as before; a phone with its browser bars up zooms out. */
+@media (max-width: 767px) {
+  html.app-look:not(.is-app) .sc-screen {
+    --sc-fixed: 238px;
+    height: calc(100dvh - var(--web-rail, 0px)); padding-top: 10px; padding-bottom: 0;
+  }
+  html.app-look:not(.is-app) .sc-screen--soccer { --sc-fixed: 260px; }
+  html.app-look:not(.is-app) .sc-header { margin-bottom: 6px; }
+  html.app-look:not(.is-app) .sc-title { font-size: clamp(24px, 6.2vw, 30px); }
+  html.app-look:not(.is-app) :is(.sc-lb-btn, .sc-date-btn, .sc-power-wrap > button) { width: 38px !important; height: 38px !important; }
+  html.app-look:not(.is-app) .sc-col-header { min-height: 28px; padding-bottom: 5px; }
+  html.app-look:not(.is-app) .sc-grid { gap: 3px; }
+  html.app-look:not(.is-app) .sc-card-visual { flex: none; min-height: 0; height: clamp(34px, calc((100dvh - var(--web-rail, 0px) - var(--sc-fixed)) / 5 - 30px), 65px); }
+  html.app-look:not(.is-app) .sc-footer { bottom: 0; margin-top: auto; padding-top: 8px; padding-bottom: 10px; row-gap: 6px; }
+  html.app-look:not(.is-app) .sc-back-btn { height: 42px; }
+  html.app-look:not(.is-app) .sc-confirm-btn { padding-top: 11px; padding-bottom: 11px; }
+}
 
 /* The build screen's right panel has the left panel's background: its own 18px lines over the page's 80px ones read as a jumble */
 html:is(.is-app, .app-look) .right-panel-wrap::before {
