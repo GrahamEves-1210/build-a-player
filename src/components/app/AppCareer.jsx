@@ -855,14 +855,18 @@ function SpotMove({ c, m, onAnswer }) {
 
 // his country's continental titles in a word: 2 EUROS, 1 COPA AMÉRICA (all the same tournament), else CONTINENTAL TITLES
 const contWord = t => { const l = t.contTitles ?? [], one = l.length && l.every(x => x.short === l[0].short) ? String(l[0].short ?? l[0].name).toUpperCase() : null; return !one ? (l.length === 1 ? 'CONTINENTAL TITLE' : 'CONTINENTAL TITLES') : l.length === 1 || /S$/.test(one) ? one : one === 'COPA AMÉRICA' ? 'COPAS AMÉRICA' : `${one}S` }
+// the league done: the tournament the summer holds, when there is one
+const summerLine = c => { let sum = null; try { sum = sx().summer?.(c) ?? null } catch { sum = null } return sum?.wc ? ` Then the ${sum.wc} World Cup.` : sum?.cont ? ` Then the ${sum.cont.year} ${sum.cont.name}.` : '' }
 // soccer, before a ball is kicked: what the season holds. The second tier (how a club gets out of it), Europe this
 // season, and the tournament the summer ends with (the World Cup, the Euros, the Copa América: S.x.summer)
 const EURO_COMP = { ucl: 'Champions League', uel: 'Europa League', uecl: 'Conference League' }
+// the way up from each country's second tier, after the top two
+const T2_WAY = { 'eng.1': 'the next four play off for the last place', 'esp.1': 'the next four play off for the last place', 'ita.1': 'third to eighth play off for the last place', 'ger.1': 'third plays the side sixteenth in the Bundesliga for the last place', 'fra.1': 'third to fifth play off for a tie with the side sixteenth in Ligue 1' }
 // a continental title, the way it's said (the trophy overlay)
 const CONT_TITLE = { euro: 'EUROPEAN CHAMPIONS', copa: 'COPA AMÉRICA WINNERS', afcon: 'CHAMPIONS OF AFRICA', asian: 'ASIAN CUP WINNERS', gold: 'GOLD CUP WINNERS' }
 function soccerAhead(c) {
   const x = sx(), out = []
-  if (x.isDown?.(c)) out.push(`${c.fit.name} are in ${x.tier2Name(c.team)} this season. The top two go up, and the next four play off for the last place.`)
+  if (x.isDown?.(c)) out.push(`${c.fit.name} are in ${x.tier2Name(c.team)} this season. The top two go up, and ${T2_WAY[sportOf(c).teamOf(c.team)?.league] ?? 'the play-offs settle the last place'}.`)
   if (c.europe && c.europeFor === c.team && EURO_COMP[c.europe]) out.push(`${EURO_COMP[c.europe]} football this season.`)
   let sum = null
   try { sum = x.summer?.(c) ?? null } catch { sum = null }
@@ -1082,7 +1086,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               <div className="ag-card cr-over ag-pop">
                 <span className="ag-eyebrow">{S.isSoccer ? <>THE LEAGUE IS DONE · <span className="cr-nb">{clubRec}</span> · <span className="cr-nb">{clubPts} PTS</span></> : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
                 {S.isSoccer ? <>
-                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.league?.tier === 2 ? (fin.promoted ? (fin.promotedHow === 'playoff' ? ' and go up through the play-offs' : fin.seed === 1 ? ' and go up as champions' : ' and go up') : ': no promotion this year') : fin.champion ? ': champions' : fin.relegated ? ` and go down to ${S.x?.tier2Name?.(c.team) ?? 'the second tier'}` : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}</p>
+                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.league?.tier === 2 ? (fin.promoted ? (fin.promotedHow === 'playoff' ? ' and go up through the play-offs' : fin.seed === 1 ? ' and go up as champions' : ' and go up') : ': no promotion this year') : fin.champion ? ': champions' : fin.relegated ? ` and go down to ${S.x?.tier2Name?.(c.team) ?? 'the second tier'}` : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}{summerLine(c)}</p>
                   <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>{nights && !a.out ? nights.go : 'WRAP THE SEASON'} <IconArrow size={16} /></button>
                 </> : (() => { const pct = teamRec ? teamRec.wins / Math.max(1, teamRec.wins + teamRec.losses) : wins / Math.max(1, wins + losses); const sport = S.ui?.sportWord ?? (S.isBucket ? 'basketball' : 'football'); return <>
                   <p className="cr-note">{teamRec ? `The ${teamNick} finish ${teamRec.wins}–${teamRec.losses}. ` : ''}{pct >= 0.58 ? `Playoff ${sport}. Let's see how far it goes.` : pct >= 0.45 ? (S.ui?.bubble ?? (S.isBucket ? 'On the bubble. The play-in might decide it.' : 'On the bubble. The tiebreakers decide it.')) : 'No postseason this year. Book it and move on.'}</p>
@@ -1296,7 +1300,8 @@ const MOVE_TAG = { sign: 'SIGNED', draft: 'DRAFTED', retire: 'RETIRED', leave: '
 function Offseason({ c, setCareer, last, setTab, user }) {
   const step = c.off?.step ?? 'recap'
   const forced = mustRetire(c)
-  const steps = OFF_STEPS.filter(([id]) => id !== 'contract' || c.off?.contract || Array.isArray(c.offers))
+  // (soccer: a summer when his club turned a bid down has a window to read, even with no offer to answer)
+  const steps = OFF_STEPS.filter(([id]) => id !== 'contract' || c.off?.contract || Array.isArray(c.offers) || (c.sport === 'soccer' && c.off?.rejected?.length > 0 && (c.contract?.left ?? 0) > 0))
   const idx = Math.max(0, steps.findIndex(([id]) => id === step))
   const isLast = idx === steps.length - 1
   // (to the start of the next step, not all the way back up the page)

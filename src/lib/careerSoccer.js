@@ -9,7 +9,7 @@
 // in; national teams that age, qualify and play the continental championships (lib/soccerIntl.js).
 import {
   SPORT, registerSport, depthChart, teamFit, makeRoster, seasonScore, bookSeason, closeChance, playoffPlan,
-  countedHonors, earnLegacy, HOF_LEGACY, CAREER_X,
+  countedHonors, earnLegacy, HOF_LEGACY, CAREER_X, januaryLanding,
 } from './career'
 import { seeded } from './rng'
 import { momentFacts } from './situations'
@@ -1074,12 +1074,22 @@ function soccerMovedLine(c, k, D) {
   const sum = (list, key) => list.reduce((a, g) => a + (g[key] ?? 0), 0)
   return { wk, before: { cupGoals: sum(cup, 'goals'), euroGoals: sum(euro, 'goals'), assists: sum(cup, 'assists') + sum(euro, 'assists'), apps: sum(cup, 'app') + sum(euro, 'app') } }
 }
-// where a club stands in its own league as the January window opens: his league's from the table as it stands, another
-// league's from the season's own run (base.places). → { pos, league } or null
-function placeNow(c, D, k, short) {
+// Where an offer's club stands in its league as the January window opens. → { pos, league } or null
+// The table he would find there: a move plays the rest of the season as the new club's own run of it (lib/career.js
+// januaryLanding, the same run a move then uses), so its place is read off that run, not off the season he is leaving.
+// (Without it, a season from before the run was seeded: his league's table as it stands, another league's from the
+// season's own run, base.places.)
+function placeNow(c, D, k, short, o = null) {
   const a = c.active, club = CLUB_BY.get(short)
   if (!club) return null
   const league = soccerLeagueInfo(club.league)?.name ?? null
+  if (o) {
+    try {
+      const run = januaryLanding(c, o, k)?.run
+      const row = run?.form ? soccerTableAt(run.form, Math.min(k, run.form.rounds))?.find(r => r.short === short) : null
+      if (row) return { pos: row.pos, league: run.league?.name ?? league }
+    } catch { /* the table as it stands, below */ }
+  }
   if (club.league === a.base?.league?.id && a.base?.form) {
     const row = soccerTableAt(a.base.form, k, { short: c.team, games: (D?.games ?? []).slice(0, k) })?.find(r => r.short === short)
     return row ? { pos: row.pos, league } : null
@@ -1096,7 +1106,7 @@ function soccerBeat(c, D, k) {
   }
   if (k === janAt(total) && !a.jan) {
     // (each offer says where its club stands in its league: offer.place)
-    const offers = januaryOffers(c, D, k).map(o => { const place = placeNow(c, D, k, o.team); return place ? { ...o, place } : o })
+    const offers = januaryOffers(c, D, k).map(o => { const place = placeNow(c, D, k, o.team, o); return place ? { ...o, place } : o })
     const bids = offers.filter(o => o.kind === 'bid'), loans = offers.filter(o => o.kind === 'loan')
     const names = list => list.map(o => o.fit.name).join(' and ')
     return { stop: true, set: { jan: { k, offers } }, notes: offers.length ? [{ note: bids.length ? `The January window. ${names(bids)} have made ${bids.length === 1 ? 'a bid' : 'bids'} for ${c.name}.` : `The January window. ${names(loans)} want ${c.name} on loan until the end of the season.`, noteKind: 'JANUARY WINDOW' }] : [] }

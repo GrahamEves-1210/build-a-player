@@ -186,7 +186,11 @@ export function SoccerWindow({ c, setCareer, noCalls }) {
   const S = sportOf(c)
   const down = !!S.x?.isDown?.(c), tier2 = S.x?.tier2Name?.(c.team) ?? 'the second tier'
   if (noCalls) return <div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">OUT OF CONTRACT</span><p className="cr-note">Out of contract at {c.age}, and no club calls. That's a career.</p></div>
-  if (!c.offers?.length) return <><div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">THE WINDOW SHUTS</span><p className="cr-note">{c.decisions[c.decisions.length - 1]?.text ?? `Staying at ${c.fit?.name}.`}</p></div><Rejected c={c} /></>
+  if (!c.offers?.length) {
+    // (what he did this summer; a summer with nothing to answer, only a bid his club turned down, says that)
+    const mine = [...c.decisions].reverse().find(d => d.year === c.year + 1)?.text
+    return <><div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">THE WINDOW SHUTS</span><p className="cr-note">{mine ?? (c.off?.rejected?.length ? `No bid was accepted this summer. ${c.name} stays at ${c.fit?.name}${down ? ` in ${tier2}` : ''}.` : `Staying at ${c.fit?.name}.`)}</p></div><Rejected c={c} /></>
+  }
   const free = c.contract.left <= 0
   return (
     <div className="cr-offers ag-pop">
