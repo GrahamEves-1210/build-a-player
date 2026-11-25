@@ -738,7 +738,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
     }
   }
 
-  const teamColor = team?.color || '#74D8BF'
+  const teamColor = team?.color || '#62F2C8'
   const teamAbbr  = team?.short || 'YOU'
   const teamLogo  = team?.logo  || null
 

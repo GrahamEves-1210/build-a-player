@@ -72,7 +72,7 @@ html[data-spot="holo"] .ag-home.ag-home--classic.ag-home--classic .ag-avatar { b
 .ag-home.ag-home--classic.ag-home--classic .agc-pos-soon { position: absolute; top: -6px; right: -4px; padding: 2px 5px 1px; border-radius: 4px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1px; color: #111; background: #dee2e6; }
 .ag-home.ag-home--classic.ag-home--classic .ag-modes { display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px; padding: 0 14px; }
 .ag-home.ag-home--classic.ag-home--classic .ag-resume--top { margin: 0 14px; width: auto; }
-.ag-home.ag-home--classic.ag-home--classic .ag-mode { --mc: #74D8BF; --mc2: #37BF82; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 112px; padding: 13px 14px 12px; text-align: left; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--mc) 52%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--mc) 28%, transparent) 0%, color-mix(in srgb, var(--mc2) 18%, transparent) 100%), rgba(5,13,13,.72); color: #fff; cursor: pointer; transition: transform var(--press), box-shadow .2s; }
+.ag-home.ag-home--classic.ag-home--classic .ag-mode { --mc: #62F2C8; --mc2: #14DB8C; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 112px; padding: 13px 14px 12px; text-align: left; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--mc) 52%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--mc) 28%, transparent) 0%, color-mix(in srgb, var(--mc2) 18%, transparent) 100%), rgba(5,13,13,.72); color: #fff; cursor: pointer; transition: transform var(--press), box-shadow .2s; }
 .ag-home.ag-home--classic.ag-home--classic .ag-mode:not(:disabled):active { transform: scale(.96); }
 .ag-home.ag-home--classic.ag-home--classic .ag-mode--gold { --mc: #D4AF37; --mc2: #f5c842; }
 .ag-home.ag-home--classic.ag-home--classic .ag-mode--red { --mc: #ef4444; --mc2: #dc2626; }
@@ -88,7 +88,7 @@ html[data-spot="holo"] .ag-home.ag-home--classic.ag-home--classic .ag-avatar { b
 .ag-home.ag-home--classic.ag-home--classic .ag-mini:not(:disabled):active { transform: scale(.96); }
 .ag-home.ag-home--classic.ag-home--classic .ag-mini--orange { --mc: #f97316; }
 .ag-home.ag-home--classic.ag-home--classic .ag-mini--purple { --mc: #a855f7; }
-.ag-home.ag-home--classic.ag-home--classic .ag-mini--mint { --mc: #37BF82; }
+.ag-home.ag-home--classic.ag-home--classic .ag-mini--mint { --mc: #14DB8C; }
 .ag-home.ag-home--classic.ag-home--classic .ag-mini-title { font-family: var(--ag-display); font-size: 20px; letter-spacing: .5px; line-height: 1; text-transform: uppercase; white-space: nowrap; }
 .ag-home.ag-home--classic.ag-home--classic .ag-mini-title em { font-style: normal; color: var(--mc); letter-spacing: -.5px; }
 .ag-home.ag-home--classic.ag-home--classic .ag-mini-title .hoop-u-svg { height: .8em; vertical-align: -.06em; }
@@ -127,7 +127,7 @@ html[data-spot="holo"] .ag-home.ag-home--classic.ag-home--classic .ag-avatar { b
 .ag-home.ag-home--classic.ag-home--classic .agc-sport-thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 10px; background: var(--ag-grad); box-shadow: 0 4px 16px var(--ag-glow), inset 0 1px 0 rgba(255,255,255,.35); transition: transform .32s cubic-bezier(.2,1.25,.3,1); }
 .ag-home.ag-home--classic.ag-home--classic .agc-sport--bucket .agc-sport-thumb { transform: translateX(100%); background: linear-gradient(135deg, #fb923c, #c2410c); box-shadow: 0 4px 16px rgba(249,115,22,.4), inset 0 1px 0 rgba(255,255,255,.35); }
 html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport--nfl .agc-sport-thumb { transform: translateX(100%); background: linear-gradient(135deg, #fb923c, #c2410c); }
-html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport--bucket .agc-sport-thumb { transform: none; background: linear-gradient(135deg, #74D8BF, #37BF82); }
+html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport--bucket .agc-sport-thumb { transform: none; background: linear-gradient(135deg, #62F2C8, #14DB8C); }
 html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-home-inner > *:not(.agc-sport):not(.agc-hud) { opacity: .35; transition: opacity .16s ease; }
 .ag-home.ag-home--classic.ag-home--classic .ag-sport-btn { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; background: none; cursor: pointer; border-radius: 10px; font-family: var(--ag-font); font-size: 17px; letter-spacing: 2.5px; color: var(--ag-muted); transition: color .2s ease; }
 .ag-home.ag-home--classic.ag-home--classic .ag-sport-btn.is-on { color: #07120a; }
@@ -300,13 +300,13 @@ html.ag-scrolling .ag-home.ag-home--classic.ag-home--classic :is(button, a, [rol
 }
 .ag-home.ag-home--classic.ag-home--classic .agc-sport { height: 58px; padding: 5px; border-radius: 16px; background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.35)); }
 .ag-home.ag-home--classic.ag-home--classic .agc-sport-thumb { top: 5px; bottom: 5px; left: 5px; width: calc(50% - 5px); border-radius: 10px; overflow: hidden; background: repeating-linear-gradient(90deg, transparent 0 17px, rgba(255,255,255,.16) 17px 18px),
-    linear-gradient(135deg, #74D8BF, #37BF82); transition: transform .38s cubic-bezier(.2,1.3,.3,1), background .3s ease; }
+    linear-gradient(135deg, #62F2C8, #14DB8C); transition: transform .38s cubic-bezier(.2,1.3,.3,1), background .3s ease; }
 .ag-home.ag-home--classic.ag-home--classic .agc-sport--bucket .agc-sport-thumb { background: radial-gradient(circle at 50% 135%, transparent 0 36%, rgba(255,255,255,.2) 36% calc(36% + 1.5px), transparent calc(36% + 1.5px)),
     linear-gradient(90deg, transparent calc(50% - .75px), rgba(255,255,255,.18) calc(50% - .75px) calc(50% + .75px), transparent calc(50% + .75px)),
     linear-gradient(135deg, #fb923c, #c2410c); }
 .ag-home.ag-home--classic.ag-home--classic .ag-sport-btn { justify-content: center; gap: 9px; padding: 0 8px; }
 .ag-home.ag-home--classic.ag-home--classic .agc-sport-ico { width: 30px; height: 30px; border-radius: 9px; flex: none; display: grid; place-items: center; border: 1px solid currentColor; opacity: .85; transition: background .25s ease, border-color .25s ease, color .25s ease; }
-.ag-home.ag-home--classic.ag-home--classic .ag-sport-btn--nfl { color: color-mix(in srgb, #74D8BF 70%, var(--ag-muted)); }
+.ag-home.ag-home--classic.ag-home--classic .ag-sport-btn--nfl { color: color-mix(in srgb, #62F2C8 70%, var(--ag-muted)); }
 .ag-home.ag-home--classic.ag-home--classic .ag-sport-btn--bucket { color: color-mix(in srgb, #fb923c 70%, var(--ag-muted)); }
 .ag-home.ag-home--classic.ag-home--classic .ag-sport-btn.is-on .agc-sport-ico { background: rgba(0,0,0,.18); border-color: rgba(0,0,0,.25); opacity: 1; }
 .ag-home.ag-home--classic.ag-home--classic .agc-sport-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; gap: 2px; min-width: 0; }
