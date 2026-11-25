@@ -7893,3 +7893,6 @@ html.low-power .sil-wrap .st-fx { display: none; }
 @media (max-width: 520px) { .ag-home .ag-sport.ag-sport--four .ag-sport-btn:not(.is-soon) .ag-sport-ico { display: inline-grid; } }
 /* the splash figures' colour bands carry no words (owner 11-25): every sport, both Home looks */
 .splash-stack-band-label { display: none !important; }
+/* ...and no colours (owner 11-25): ghost blocks, pale and see-through, a hairline between each (every sport) */
+.splash-stack-band { background: rgba(236,240,238,.42) !important; box-shadow: inset 0 -1.5px 0 rgba(0,0,0,.5); }
+.splash-stack-band:nth-child(even) { background: rgba(236,240,238,.32) !important; }
