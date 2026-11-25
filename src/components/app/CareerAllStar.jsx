@@ -308,6 +308,11 @@ function DunkContest({ c, setCareer, face, onNext }) {
   const R = useReveal(P.ev, mine.length || W.cur ? Math.max(1, lastMe || P.ev.length) : 0, DUNK_PACE)
   const [playing, setPlaying] = useState(null)
   const lastCall = useRef(null)   // (the board opens on the dunk he called last)
+  // (the season as it is now: the game books a missed try while it's still up, so its handlers never work off the
+  // one it opened on)
+  const cNow = useRef(c); cNow.current = c
+  const setNow = useRef(setCareer); setNow.current = setCareer
+  const put = n => { cNow.current = n; setNow.current(n) }
   const mode = gamesMode(c), live = mode !== 'off' && !!engineFor('dunk-contest')
   const cheered = useRef(false)
   const e = R.cur
@@ -340,21 +345,30 @@ function DunkContest({ c, setCareer, face, onNext }) {
     setCareer(c1)
     setPlaying({ dunk: null, attempt, round: need.round, n: need.n, used: need.used, toBeat: need.toBeat, c1 })
   }
-  const again = () => { setCareer(markLive(c, 'dunk', { dunk: cur.dunk })); setPlaying({ dunk: cur.dunk, attempt, round: need.round, n: need.n }); sfx('whistle') }
+  const again = () => { setCareer(markLive(c, 'dunk', { dunk: cur.dunk })); setPlaying({ dunk: cur.dunk, attempt, round: need.round, n: need.n, toBeat: need.toBeat }); sfx('whistle') }
+  // a try missed with tries left, in the game: booked at once, and the next try marked live (the game goes on to it:
+  // the call, he walks back, the next try's card)
+  const missed = res => {
+    const id = res?.raw?.dunk
+    if (!id) return
+    lastCall.current = id
+    put(markLive(recordAttempt(cNow.current, id, res.raw), 'dunk', { dunk: id }))
+  }
   const done = res => {
     const p = playing; setPlaying(null)
     const id = res?.raw?.dunk ?? p.dunk
     if (!id) return
     lastCall.current = id
-    const n = recordAttempt(c, id, res?.raw ?? { landed: false, quality: 0.2 })
-    setCareer(n)
+    put(recordAttempt(cNow.current, id, res?.raw ?? { landed: false, quality: 0.2 }))
     sfx(res?.raw?.landed ? 'claim' : 'deny')
   }
   if (playing) {
+    // (every try at the dunk is played in the one game: the card before each, the miss called, the walk back)
+    const needs = playing.toBeat > 30 && playing.toBeat <= 50 ? playing.toBeat : null
     const def = playing.dunk
-      ? { title: 'SLAM DUNK CONTEST', dunk: playing.dunk, lock: true, attempt: playing.attempt, label: c.name }
-      : { title: 'SLAM DUNK CONTEST', dunk: lastCall.current, used: playing.used, attempt: 1, label: c.name, need: playing.toBeat > 30 && playing.toBeat <= 50 ? playing.toBeat : null,
-        onPick: id => setCareer(markLive(playing.c1, 'dunk', { dunk: id })) }
+      ? { title: 'SLAM DUNK CONTEST', dunk: playing.dunk, lock: true, attempt: playing.attempt, tries: DUNK_TRIES, label: c.name, need: needs, onTry: missed }
+      : { title: 'SLAM DUNK CONTEST', dunk: lastCall.current, used: playing.used, attempt: 1, tries: DUNK_TRIES, label: c.name, need: needs, onTry: missed,
+        onPick: id => put(markLive(playing.c1, 'dunk', { dunk: id })) }
     return <Stage c={c} game="dunk-contest" v={dunkV(c)} seed={`${c.seed}-aswd-${c.year}-${playing.round}-${playing.n}-${playing.attempt}`} def={def} onDone={done} />
   }
   if (R.shown === 0) return (

@@ -125,12 +125,13 @@ const SHOOTOFF = [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], ['d', 0], [4, 0], [4, 
 const simShootoff = (v, r) => simThree(v, r, { rack: 4, balls: SHOOTOFF, clock: 30 })
 
 // ── The Dunk Contest: a dunk's attempts and the five judges ──
-// A rival dunks the way an average thumb plays the engine at his grade (scripts/mg/dunks.mjs, measured 11-24 once the
-// dunks were made fairer): a try lands 93% (easy), 77% (medium), 53% (hard) at an A (v 9), 96 / 88 / 64% at an S (11);
-// landed, it's about as clean as that thumb gets it (QUAL, the mean of its steps' timing, give or take 0.11)
-export const LAND = { easy: [0.93, 0.015], medium: [0.77, 0.055], hard: [0.53, 0.055] }
+// A rival dunks the way an average thumb plays the engine at his grade (scripts/mg/dunks.mjs, measured 11-25 once the
+// dunks were made easier): a try lands 97% (easy), 88% (medium), 71% (hard) at an A (v 9), 97 / 94 / 82% at an S (11),
+// 96 / 82 / 60% at 7; landed, it's about as clean as that thumb gets it (QUAL, the mean of its steps' timing, give or
+// take 0.11)
+export const LAND = { easy: [0.97, 0.005], medium: [0.88, 0.03], hard: [0.71, 0.055] }
 export const landRate = (tier, v) => clamp(LAND[tier][0] + (v - 9) * LAND[tier][1], 0.25, 0.97)
-const QUAL = { easy: 0.82, medium: 0.79, hard: 0.75 }
+const QUAL = { easy: 0.86, medium: 0.81, hard: 0.78 }
 // what five judges give a dunk landed on the first try, placed in the range by how clean it was (the dunks' own table,
 // lib/mg/dunkcontest.js: the board on the court shows it)
 export const RANGE = JUDGE_RANGE
@@ -504,7 +505,7 @@ export function finishAllStar(c) {
 }
 
 // ── Balance (scripts/moments/allstar-check.mjs): a dunk's expected total by tier, for a dunker at grade v ──
-// landing rates: the engine's, measured (easy 86%, medium 64%, hard 47% a try at v 9); quality as simDunk draws it
+// landing rates: the engine's, measured (LAND: easy 97%, medium 88%, hard 71% a try at v 9); quality as simDunk draws it
 export function dunkBalance(v = 9, n = 20000, seed = 'bal') {
   const out = {}
   for (const tier of ['easy', 'medium', 'hard']) {

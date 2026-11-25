@@ -6,7 +6,8 @@
 // anything; one that's barely up when it closes he can only react to: he's late by about his reaction time, and his
 // timing on it is looser. (The bot before 11-24 aimed every ring with the same error however late it showed up, which
 // is why the old medium dunks, a finish ring up for 0.2 s, measured far easier than they played.)
-// The in-game dunk menu (g.phase 'pick'): he takes whatever's on the cursor, a beat later.
+// The in-game dunk menu (g.phase 'pick'): he takes whatever's on the cursor, a beat later; the try's card (g.phase
+// 'card') he taps away.
 const gauss = r => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r())
 const PERC = human => 20 + human.timing * 0.5    // pro 26, good 33, avg 41, poor 51
 const READ_MS = 450
@@ -20,6 +21,9 @@ export default function makeBot(g, human, r) {
       if (!picked && (g.pickT ?? 0) >= 400) { picked = true; return [{ kind: 'key', zone: 'S' }] }
       return
     }
+    // (the try's card: he taps it away once he's read it)
+    if (g.phase === 'card') return (g.cardT ?? 0) >= 500 ? [{ kind: 'key', zone: 'S' }] : undefined
+    if (g.phase !== 'run') return
     if (slipK === -2) slipK = r() < human.slip ? Math.floor(r() * g.steps.length) : -1
     if (g.t >= upAt) { upAt = Infinity; out.push(up()) }
     const s = g.steps[g.k]

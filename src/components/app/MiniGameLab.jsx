@@ -214,7 +214,7 @@ export default function MiniGameLab({ onClose }) {
 function DunkLab({ v, go, cast, run, q, back, again, onDone, res }) {
   const last = useRef(DUNKS.some(d => d.id === q.get('dunk')) ? q.get('dunk') : null)
   const label = String(getUsername(getProgress().user) || 'Guest').toUpperCase()
-  const def = { ...DUNK_DEF, dunk: last.current, attempt: Number(q.get('attempt')) || 1, label, onPick: id => { last.current = id } }
+  const def = { ...DUNK_DEF, dunk: last.current, attempt: Number(q.get('attempt')) || 1, tries: Number(q.get('tries')) || 3, label, onPick: id => { last.current = id } }
   return (
     <div className="ag-screen pr-screen">
       <div className="pr-wrap">
