@@ -54,11 +54,17 @@ export const T = {
   speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it; an 80 about 9.7)
   speedBand: 0.06,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
   sizeSlow: 0.03,                    // Size 11 is this much slower than Size 1
-  ballSpeed: 0.94,                   // with the ball at Handles 1 (x top speed)...
-  ballSpeedHnd: 0.04,                // ...plus this at Handles 11 (an 80 keeps 97%: Speed 11 with it outruns a Speed 1 guarding)
+  ballSpeed: 0.92,                   // with the ball at Handles 1 (x top speed)...
+  ballSpeedHnd: 0.05,                // ...plus this at Handles 11 (an 80 keeps 96%: slower with it than without, always)
   defSpeed: 1.02,                    // guarding, at Perimeter D 1 (x top speed)...
   defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (on the plain grade: an 80 about 105%, a step quicker than the ball)
-  accel: 34,                         // ft/s² (about a third of a second to top speed)...
+  accel: 30,                         // ft/s² at a jog (the push he has with half his speed on)...
+  firstStep: 1.55,                   // ...x this from a standstill (the first step is the quickest)...
+  stepFade: 1.15,                    // ...falling by this x (his speed / top): x0.4 on the last bit of it, so top speed takes a run
+  brake: 40,                         // ft/s²: slowing down or stopping (x the same rating factor): quicker than speeding up, not instant
+  backpedal: 0.88,                   // a defender's top speed going backwards (facing his man, giving ground)...
+  slide: 0.95,                       // ...and sliding sideways (forward, at his man: all of it)
+  boost: 0.09, boostTime: 0.45,      // out of a hesitation, a crossover, between the legs, an in-and-out: this much quicker for this long
   accelBase: 0.97, accelSpd: 0.06,   // ...x (0.97 + 0.06 x Speed, the plain grade): a quick first step
   accelSize: 0.06,                   // ...less this at Size 11
   defAccel: 0.92, defAccelPer: 0.24, // a defender's: x (0.92 + this * Perimeter D, the plain grade)
@@ -100,6 +106,8 @@ export const T = {
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
   layFar: 0.045,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 18% less)
   dunkRange: 5.2,                    // a dunk starts inside this
+  dunkFar: 3.6, dunkFarSize: 0.9,    // an open lane: he takes off from farther out, up to this more at Bounce 11 (+ this at Size 11)
+  laneW: 3.6,                        // ...open: no one who can guard within this of the line from him to the rim
   dunkBounce: 0.25,                  // Bounce (the plain grade, 0-1) under this: never dunks (a Bounce 3 or lower never does)
   dunkChance: 0.9,                   // how often an able dunker dunks: (plain Bounce - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
@@ -108,7 +116,8 @@ export const T = {
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
   deepAt: 27.5,                      // past this it's deep...
   deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
-  setFeet: 0.14,                     // a jumper taken at a full run loses this much; still: nothing
+  setFeet: 0.16,                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
+  runFrom: 0.2,                      // ...from this share of his top speed up (a drift is free)
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
   csBoost: 0.25,                     // ...and gains up to this much from the passer's Passing/Playmaking
   csLay: 0.50,                       // a layup or a dunk that soon off the catch: the contest counts this much less at the passer's Passing 11
@@ -120,8 +129,8 @@ export const T = {
   contestNear: 2.5,                  // ...and at this distance he's all the way in it (a straight line between)
   contestRangeL: 6.5, contestNearL: 3.3,   // ...at a layup or a dunk (bodies touch at 3.1: a man on him is all the way in it)
   contestCurve: 1.3,                 // in between it bends (1 = a straight line)
-  contestStand: 0.6,                 // feet on the floor
-  contestJump: 0.82, contestJumpBnc: 0.22,   // a hand up: this + Bounce (an 80 about 1.0)
+  contestStand: 0.52,                // feet on the floor, no hand up
+  contestJump: 0.96, contestJumpBnc: 0.2,    // a hand up (BLOCK: he goes up at it): this + Bounce (an 80 about 1.1)
   contestSet: 0.75,                  // ...set in front of a layup, not moving: walls up, but he can be finished on
   lateShare: 0.6,                    // a man who closes out after the shot went up gets this much less of his contest at most
   lateShareL: 0.25,                  // ...on a layup or a dunk (it goes up slower, and he flies at it)
@@ -133,8 +142,8 @@ export const T = {
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.28,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
-  contestMaxJ: 0.7,                  // a perfect contest takes this share off a jumper
-  jsThrough: 0.42,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
+  contestMaxJ: 0.82,                 // a perfect contest takes this share off a jumper
+  jsThrough: 0.34,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
   contestMaxL: 0.85,                 // ...off a layup
   contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
@@ -148,7 +157,7 @@ export const T = {
   twoValue: 1.45,                    // a two is worth this many ones to a CPU (make it, take it: either make keeps the ball)
   cpuDriveV: 0.55,                   // a jumper never has to be worth more than this (a make = 1, a two 1.45) while there's time to go to the rim...
   cpuBeat: 0.4, cpuBeatR: 0.8,       // ...how often he gets by his man: this, + this x (his Speed and Handles - the man's Speed and Perimeter D) / 2
-  cpuDriveRisk: 0.85,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
+  cpuDriveRisk: 0.74,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
   cpuJumpEdge: 0.08,                 // ...by this much (a miss at the rim comes back more often than a long one)
   cpuSitV: 0.33,                     // an open look over a man sitting back at the rim: worth taking from this
 
@@ -157,13 +166,14 @@ export const T = {
   jumpLand: 0.10,                    // ...then this long to land before he can move again
   blockReach: 3.6,                   // within this of the shooter at the release (plus Bounce and Size)...
   blockReachBnc: 0.9, blockReachSize: 0.7,
-  blockIn: 0.10, blockOut: 0.80,     // ...and between these fractions of his jump: on time. Else a quarter the chance
-  blockBase: 0.17,                   // on-time chance at average everything
+  blockIn: 0.14, blockOut: 0.76,     // ...and between these fractions of his jump: on time. Else a quarter the chance
+  blockBase: 0.24,                   // on-time chance at average everything
   blockInt: 0.9,                     // x (0.55 + this * Interior D)
   blockSize: 0.45,                   // x (1 + this * (his Size n - the shooter's))
   blockBnc: 0.9,                     // x (1 + this * (his Bounce n - 0.75))
-  blockJumper: 0.40, blockDunk: 0.50, // jumpers and dunks are harder to get than layups
-  blockMax: 0.62,
+  blockJumper: 0.42, blockDunk: 0.5, // jumpers and dunks are harder to get than layups
+  blockMax: 0.7,
+  blockLate: 0.2,                    // off time (up too early, too late): this share of the chance
 
   // ── Steals (a swipe with a cooldown; a miss costs a beat) ───────────────────────────────────────
   stealReach: 3.9,                   // the ball has to be this close
@@ -198,6 +208,12 @@ export const T = {
   moveHnd: 0.50,                     // ...plus this * (Handles n - his Perimeter D n)
   moveIq: 0.30,                      // ...minus this * (his IQ n - 0.5): a smart defender reads the move
   moveFreeze: 0.38,                  // frozen this long
+  // the legs for it (the owner, 11-25: "slight stamina when dribbling ... so you can't spam them"): 1 full
+  staMove: 0.2, staChain: 0.12,      // a move costs this, one chained straight off the last this much more...
+  staSpin: 0.1,                      // ...a spin rolled out of a move this
+  staBack: 0.32,                     // back this much a second once he's off his moves (empty to full in about 3 s)
+  staFloor: 0.55,                    // at empty a move has this share of its burst and of its chance to freeze his man
+  staLoose: 0.8,                     // ...and a swipe at the ball in it has up to this much more chance
   ankleBase: 0.02,                   // of the frozen ones, this share (x Handles and the lean) sit down: the ankle-breaker
   ankleDown: 1.25,                   // on the floor this long
 
@@ -231,6 +247,7 @@ export const T = {
                                      // can't take his own blocked shot until he's down (T.follow)
   swatBig: 0.15,                     // ...and of the rest this share are sent flying (swatMax to 8 ft/s more, flat)
   // ── Between plays ───────────────────────────────────────────────────────────────────────────────
+  bench: { x: 54.7, y: 31.5 },       // King of the Hill: where the man sitting out waits (off the right sideline, up top)
   feedSpeed: 24,                     // a dead ball (through the net, out of bounds) goes back to whoever checks it this fast
   spotNear: 0.6,                     // the ball goes live when everyone is this close to his spot...
   checkWait: 0.6,                    // ...or this long past the check, wherever they are
@@ -241,7 +258,7 @@ export const T = {
   remoteStep: 0.35,                  // ...plus this many feet a tick (jitter: two updates landing at once)
 
   // ── Rare moments (what the screen makes something of) ───────────────────────────────────────────
-  posterContest: 0.62,               // a dunk made through this much contest is a poster
+  posterContest: 0.72,               // a dunk made through this much contest is a poster
   deepWord: 29.5,                    // a made three from here is a deep three
   chaseAngle: 0.2,                   // a block from behind the shooter (his back to the blocker) is a chase-down
 }
@@ -257,15 +274,16 @@ export const T = {
 //          gone with it in the same hand
 //   back   straight back (or back toward the ball hand: the side step-back): a hop away, landing with his feet set
 //          (he keeps `set` of the speed): the jumper after it isn't a jumper on the run
+//   boost: out of it he's a beat quicker for T.boostTime (he's by his man, going)
 //   spin   the stick rolled a quarter turn round early in a move: the burst bends round to the new way over `time`
 // n: the number a move goes by in the state and on the wire (player.mv; 0: none)
 export const MOVES = {
-  cross: { n: 1, time: 0.30, speed: 1.75, swap: true },
-  hesi: { n: 2, time: 0.38, speed: 1.9, stall: 0.12, stallSpeed: 0.2 },
+  cross: { n: 1, time: 0.30, speed: 1.75, swap: true, boost: true },
+  hesi: { n: 2, time: 0.38, speed: 1.9, stall: 0.12, stallSpeed: 0.2, boost: true },
   back: { n: 3, time: 0.28, speed: 1.45, set: 0.2 },
   btb: { n: 4, time: 0.32, speed: 1.65, swap: true, steal: 0.6 },
   spin: { n: 5, time: 0.36, speed: 1.65 },
-  inout: { n: 6, time: 0.34, speed: 1.75, stall: 0.11, stallSpeed: 0.4, fake: true },
-  btl: { n: 7, time: 0.26, speed: 1.65, swap: true },
+  inout: { n: 6, time: 0.34, speed: 1.75, stall: 0.11, stallSpeed: 0.4, fake: true, boost: true },
+  btl: { n: 7, time: 0.26, speed: 1.65, swap: true, boost: true },
 }
 export const MOVE_KEYS = [null, 'cross', 'hesi', 'back', 'btb', 'spin', 'inout', 'btl']

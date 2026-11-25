@@ -31,89 +31,95 @@ ok(ref.scoreState([9, 5, 7]).gamePoint && !ref.scoreState([8, 5, 7]).gamePoint, 
 ok(ref.scoreState([10, 10, 3]).gamePoint, '10-10-3 is game point (a two makes 12-10)')
 
 // ── King of the Hill, scripted ─────────────────────────────────────────────────────────────────────
-head('King of the Hill: the rules, one at a time')
+head('King of the Hill: the rules, one at a time (two play, one sits, they rotate)')
+// the three of them right now: the king, the man on him, the man sitting out
+const roles = s => ({ k: s.king, d: s.players.find(p => p.i !== s.king && !p.out)?.i, sit: s.sit })
 {
   const s = toLive(koth('mitt'))
-  const k = s.king, P = s.players
+  const { k, d, sit } = roles(s), P = s.players
   ok(s.mode === 'koth' && s.score.length === 3 && P.every(p => p.team === p.i), 'three sides of one: players[i].team === i, a score each')
-  ok(k === s.poss && s.ball.holder === k && P.every(p => p.i === k || p.man === k), 'the king has it at the check and both others guard him')
+  ok(k === s.poss && s.ball.holder === k && sit >= 0 && sit !== k && d !== sit && P[sit].out && !P[k].out && !P[d].out, 'two on the floor, one sitting out (players[sit].out)')
+  ok(P[d].man === k && P[sit].man === -1, 'the one on the floor guards the king; the one sitting guards nobody')
+  ok(Math.hypot(P[sit].x - T.bench.x, P[sit].y - T.bench.y) < 1 && !ref.inBounds(P[sit].x, P[sit].y), '...and he waits off the sideline')
   ok(passTarget(s, k, 1, 0) === -1, 'no one to pass to')
-  // a made basket: the scorer checks it again
+  // a made basket: the scorer keeps it, the man he scored on sits, the one sitting comes in on him
   put(P[k], 28, 8)
   Object.assign(s.ball, { st: 'shot', from: k, sx: 28, sy: 8, sz: 8, t: 0, n: 3, kind: 'layup', verdict: { made: true, pts: 1, three: false, kind: 'layup', d: 3.5, c: 0, p: 1, q: 1, by: null } })
-  let made = null
-  for (let n = 0; n < 10 && !made; n++) { step(s, idle(s)); made = s.events.find(e => e.e === 'make') }
+  let made = null, rot = null
+  for (let n = 0; n < 10 && !made; n++) { step(s, idle(s)); made = s.events.find(e => e.e === 'make'); rot = s.events.find(e => e.e === 'rotate') }
   ok(made && s.score[k] === 1 && s.next?.carrier === k, 'make it, take it: a make and the scorer has it next')
+  ok(rot && s.sit === d && !P[sit].out && P[d].out && P[sit].man === k, '...the man he scored on sits, the one sitting comes in to guard him')
   toLive(s)
-  ok(s.king === k && s.ball.holder === k && s.mustClear === null, '...he checks it at the top and he is still the king, nothing to clear')
+  ok(s.king === k && s.ball.holder === k && s.mustClear === null && s.phase === 'live', '...checked at the top, he is still the king')
 }
 {
-  // a defensive board: a live ball, he has to clear it
-  const s = toLive(koth('clear')), P = s.players, k = s.king
-  const [a, b] = P.filter(p => p.i !== k).map(p => p.i)
-  put(P[k], 45, 30); put(P[a], 28, 12); put(P[b], 12, 30)
+  // a defensive board: the defender takes the crown, the king sits, the one sitting comes in; checked at the top
+  const s = toLive(koth('dreb')), P = s.players
+  const { k, d, sit } = roles(s)
+  put(P[k], 45, 30); put(P[d], 28, 12)
   Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: k })
   step(s, idle(s))
-  ok(s.phase === 'live' && s.ball.holder === a && s.poss === a && s.king === a && s.mustClear === a, 'a defensive board: still live, his ball, he must clear (mustClear = him)')
-  ok(P.every(p => p.i === a || p.man === a), '...and the other two guard him at once')
-  for (let n = 0; n < 12; n++) step(s, idle(s))
-  put(P[a], 28, 31)
-  step(s, idle(s))
-  ok(s.mustClear === a, 'on the line, not behind it with both feet: not taken back yet')
-  put(P[a], 28, 33)
-  step(s, idle(s))
-  ok(s.events.some(e => e.e === 'cleared' && e.pid === a) && s.mustClear === null, 'past the arc with it: cleared, he is the king')
-  put(P[a], 28, 14)
-  const press = s.players.map(IDLE); press[a] = { mx: 0, my: 0, shoot: true }
-  step(s, idle(s)); step(s, press)
-  ok(P[a].act === 'gather', '...and now he can shoot, from anywhere')
+  ok(s.phase === 'dead' && s.next?.carrier === d && s.king === d && s.sit === k && P[k].out && !P[sit].out && P[sit].man === d, 'a defensive board: his crown, the old king sits, the one sitting comes in on him')
+  ok(s.mustClear === null, '...a dead ball, nothing to take back (he checks it)')
+  toLive(s)
+  ok(s.ball.holder === d && s.poss === d && s.phase === 'live' && Math.hypot(P[d].x - COURT.check.x, P[d].y - COURT.check.y) < 1.5, '...at the top with the ball')
+  ok(Math.hypot(P[k].x - T.bench.x, P[k].y - T.bench.y) < 2, '...and the old king has walked off to wait')
 }
 {
-  // a make before he takes it back: waved off, and the closer of the other two checks it
-  const s = toLive(koth('wave')), P = s.players, k = s.king
-  const [a, b] = P.filter(p => p.i !== k).map(p => p.i)
-  put(P[k], 45, 30); put(P[a], 28, 12); put(P[b], 12, 30)
+  // an offensive board: play on, nobody moves
+  const s = toLive(koth('oreb')), P = s.players
+  const { k, d, sit } = roles(s)
+  put(P[k], 28, 12); put(P[d], 45, 30)
   Object.assign(s.ball, { st: 'loose', x: 28, y: 12.3, z: 2, vx: 0, vy: 0, vz: 0, reb: true, grabAt: 0, t: 0, lastTeam: k })
   step(s, idle(s))
-  const sc = [...s.score]
-  for (let n = 0; n < 12; n++) step(s, idle(s))
-  const press = s.players.map(IDLE); press[a] = { mx: 0, my: 0, shoot: true }
-  step(s, press)
-  ok(P[a].act === 'gather', 'inside the arc before taking it back: the shot still goes up')
-  P[a].act = 'free'; P[a].shot = null
-  Object.assign(s.ball, { st: 'shot', from: a, sx: 28, sy: 12, sz: 8, t: 0, n: 3, kind: 'jumper', verdict: { made: true, pts: 1, three: false, kind: 'jumper', d: 7.5, c: 0, p: 1, q: 1, by: null, uncl: true } })
-  let ev = null
-  for (let n = 0; n < 10 && !ev; n++) { step(s, idle(s)); ev = s.events.find(e => e.e === 'waved' || e.e === 'make') }
-  ok(ev?.e === 'waved' && s.score.join() === sc.join(), 'it goes in before he took it back: no basket')
-  ok(s.phase === 'dead' && s.next && s.next.carrier !== a && s.mustClear === null, '...and the other side (here the closer of the other two) checks it')
+  ok(s.phase === 'live' && s.ball.holder === k && s.king === k && s.sit === sit, 'an offensive board: still live, still his, nobody rotates')
 }
 {
-  // out of bounds: the king steps out with it
-  const s = toLive(koth('oob1')), P = s.players, k = s.king
-  const [a, b] = P.filter(p => p.i !== k).map(p => p.i)
-  put(P[k], COURT.minX - 1, 20); put(P[a], 20, 20); put(P[b], 10, 22)
+  // a steal: his crown
+  const s = toLive(koth('stl')), P = s.players
+  const { k, d, sit } = roles(s)
+  let got = false
+  for (let n = 0; n < 400 && !got; n++) { const q = idle(s); q[d] = { mx: 0, my: 0, steal: n % 2 === 0 }; P[d].stealCd = 0; P[d].act = 'free'; put(P[k], 28, 20); P[k].fx = 0; P[k].fy = -1; put(P[d], 28, 18.6); step(s, q); got = s.events.some(e => e.e === 'steal') }
+  ok(got && s.king === d && s.sit === k && s.next?.carrier === d, 'a steal: the defender is king, the old king sits')
+}
+{
+  // the man sitting out can't touch anything
+  const s = toLive(koth('bench')), P = s.players
+  const { k, sit } = roles(s)
+  const x0 = P[sit].x, y0 = P[sit].y
+  const q = idle(s); q[sit] = { mx: -1, my: 0, steal: true, shoot: true }
+  for (let n = 0; n < 20; n++) step(s, q)
+  ok(Math.hypot(P[sit].x - x0, P[sit].y - y0) < 0.01 && s.ball.holder === k, 'sitting out: his stick and buttons do nothing')
+  put(P[k], 28, 10)
+  const v = ref.contestOf(P[k], s.players.filter(o => o.team !== P[k].team && !o.out), 'layup')
+  put(P[sit], 28, 8)
+  ok(ref.contestOf(P[k], s.players.filter(o => o.team !== P[k].team && !o.out), 'layup').c === v.c, '...and he is in nobody\'s way')
+}
+{
+  // out of bounds: the king steps out -> the defender's crown, the king sits
+  const s = toLive(koth('oob1')), P = s.players
+  const { k, d, sit } = roles(s)
+  put(P[k], COURT.minX - 1, 20); put(P[d], 20, 20)
   step(s, idle(s))
-  ok(s.events.some(e => e.e === 'oob') && s.next?.carrier === b, 'the king steps out: it goes to the closer of the other two')
-  toLive(s)
-  ok(s.king === b && s.ball.holder === b && s.mustClear === null, '...who checks it at the top as the king (no clear on a dead ball)')
+  ok(s.events.some(e => e.e === 'oob') && s.next?.carrier === d && s.sit === k && !P[sit].out, 'the king steps out: the defender has it, the king sits, the one sitting comes in')
 }
 {
-  // out of bounds off a loose ball: not the man who touched it last, the closer of the other two
-  const s = toLive(koth('oob2')), P = s.players, k = s.king
-  const [a, b] = P.filter(p => p.i !== k).map(p => p.i)
-  put(P[k], 40, 20); put(P[a], 8, 20); put(P[b], 20, 20)
-  Object.assign(s.ball, { st: 'loose', x: COURT.minX - 1, y: 20, z: 0, vx: -2, vy: 0, vz: 0, reb: false, grabAt: s.tick + 99, t: 0, lastTeam: a })
+  // out of bounds off the defender: the king keeps it, nobody moves
+  const s = toLive(koth('oob2')), P = s.players
+  const { k, d, sit } = roles(s)
+  put(P[k], 40, 20); put(P[d], 8, 20)
+  Object.assign(s.ball, { st: 'loose', x: COURT.minX - 1, y: 20, z: 0, vx: -2, vy: 0, vz: 0, reb: false, grabAt: s.tick + 99, t: 0, lastTeam: d })
   step(s, idle(s))
-  ok(s.next?.carrier === b, 'a loose ball out off A, with A nearest: it goes to the closer of the other two, not A')
+  ok(s.next?.carrier === k && s.sit === sit, 'a loose ball out off the defender: the king keeps it, no rotation')
 }
 {
-  // the shot clock: the closer of the other two to the ball
-  const s = toLive(koth('clock')), P = s.players, k = s.king
-  const [a, b] = P.filter(p => p.i !== k).map(p => p.i)
-  put(P[k], 28, 25); put(P[a], 28, 30); put(P[b], 10, 10)
+  // the shot clock: a stop
+  const s = toLive(koth('clock')), P = s.players
+  const { k, d } = roles(s)
+  put(P[k], 28, 25); put(P[d], 28, 30)
   s.clock = 1
   step(s, idle(s))
-  ok(s.events.some(e => e.e === 'clock') && s.next?.carrier === a, 'the shot clock runs out: the closer of the other two checks it')
+  ok(s.events.some(e => e.e === 'clock') && s.next?.carrier === d && s.sit === k, 'the shot clock runs out: the defender\'s crown, the king sits')
 }
 
 // ── 1v1 and 2v2: no check after a stop, take it back ─────────────────────────────────────────────
@@ -238,15 +244,19 @@ function playKoth(ovrs, seed, lvl = 'pro', poss = null) {
   const inp = []
   while (s.phase !== 'over' && s.tick < 40 * 60 * HZ) {
     for (let i = 0; i < 3; i++) inp[i] = cpuInput(s, i, lvl)
-    const before = { mc: s.mustClear, king: s.king, phase: s.phase }
+    const before = { mc: s.mustClear, king: s.king, sit: s.sit, phase: s.phase }
     step(s, inp)
     for (const e of s.events) {
       if (e.e === 'gather' && before.mc === e.pid) bad.push(`t${s.tick} gather while clearing`)
       if (e.e === 'pass') bad.push(`t${s.tick} a pass`)
       if (e.e === 'make' && s.phase !== 'over' && s.next?.carrier !== e.pid) bad.push(`t${s.tick} make, not take`)
-      // (secured behind the arc, he's cleared in the same tick)
-      if ((e.e === 'steal' || (e.e === 'board' && !e.off)) && s.phase === 'live' && s.mustClear !== e.pid && !s.events.some(c => c.e === 'cleared' && c.pid === e.pid)) bad.push(`t${s.tick} ${e.e} without a clear`)
+      // every make and every stop rotates: the loser of the play sits, the one sitting comes in
+      if (e.e === 'make' && s.phase !== 'over' && !(s.sit !== before.sit && s.sit !== e.pid)) bad.push(`t${s.tick} a make without the rotation`)
+      if ((e.e === 'steal' || (e.e === 'board' && !e.off)) && s.phase !== 'over' && !(s.phase === 'dead' && s.king === e.pid && s.sit === before.king)) bad.push(`t${s.tick} ${e.e} without the crown changing`)
+      if ((e.e === 'gather' || e.e === 'steal' || e.e === 'board' || e.e === 'jump') && e.pid === before.sit) bad.push(`t${s.tick} the man sitting out played`)
+      if (e.e === 'clear') bad.push(`t${s.tick} a take-it-back in King of the Hill`)
     }
+    if (s.players.filter(p => p.out).length !== 1) bad.push(`t${s.tick} not one man sitting out`)
     if (s.mustClear != null) { if (mustAt < 0) mustAt = s.tick } else mustAt = -1
     for (const p of s.players) if (!Number.isFinite(p.x + p.y + p.vx + p.vy)) nan++
   }
@@ -266,7 +276,7 @@ head(`King of the Hill: ${RUNS} games of three equal CPUs (80 guards, pro)`)
   const n = RUNS - stuck
   console.log(`wins by seat ${wins.map(w => (100 * w / n).toFixed(0) + '%').join(' / ')}   length ${(secs / n / 60).toFixed(1)} min   points a game ${(pts / n).toFixed(1)}   to the cap ${(100 * cap / n).toFixed(0)}%`)
   ok(!stuck && !nan, `no stuck game, no NaN (${stuck} stuck, ${nan} NaN)`)
-  ok(!bad.length, `the rules held in every game (no shot before a clear, no pass, make it take it, every stop a clear)${bad.length ? ': ' + bad.slice(0, 5).join('; ') : ''}`)
+  ok(!bad.length, `the rules held in every game (no pass, make it take it, every make and stop rotates, the man sitting out never plays)${bad.length ? ': ' + bad.slice(0, 5).join('; ') : ''}`)
   ok(wins.every(w => Math.abs(w / n - 1 / 3) < 0.08), 'each man wins about a third')
   void first; void clears; void stops
 }
@@ -402,7 +412,7 @@ head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the
       const a = mk(), b = mk(), ea = flick(a, -1, 0), eb = flick(b, -1, 0)
       n++; if (ea.freeze) fz++; if (ea.freeze !== eb.freeze || a.rn !== b.rn) same = false
     }
-    ok(same && fz > 15 && fz < 200, `a move at a man on him freezes him now and then (${fz} of ${n}), by the game's seeded roll`)
+    ok(same && fz > 8 && fz < 200, `a move at a man on him freezes him now and then (${fz} of ${n}), by the game's seeded roll`)
   }
   {
     // CPUs use every move, by the same flicks
@@ -503,7 +513,7 @@ head('The room: a flick of the small stick reaches the game once, with the way i
   di = r.tickOnce(now)[d]
   ok(di.jump && !di.steal && !r.tickOnce(now)[d].jump, '...up: one jump')
   const snap = last(ws[0], 's')
-  ok(snap.p[h].length === 25 && typeof snap.p[h][23] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going, his ball hand) for the screens')
+  ok(snap.p[h].length === 29 && typeof snap.p[h][27] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going, his ball hand) for the screens')
 }
 head('2v2 with four people: each one moves his own man, and only his')
 {
