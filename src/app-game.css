@@ -8147,3 +8147,5 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
   .ag-home .ag-hud .coin-pill--signin .coin-ico { display: none; }
   .ag-home .ag-hud .ag-icon-btn svg { width: 26px; height: 26px; }
 }
+/* (no SIGN IN button in the phone header at all: the player chip on the left already says "Sign in to save") */
+@media (max-width: 520px) { .ag-home .ag-hud .coin-pill--signin { display: none; } .ag-home .ag-hud .ag-icon-btn { margin-left: auto; } }
