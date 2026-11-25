@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { TEAM, nick, manOf, dateText, ROUND_NAME, seriesText } from '../../../lib/franchise2/nba'
+import { TEAM, nick, manOf, dateText, ROUND_NAME } from '../../../lib/franchise2/nba'
 import { eventsOf, logOf } from '../../../lib/franchise2/nba/game'
 import { cbSafe } from '../../../lib/settings'
 import { manPhoto } from './NbaBuilds'
@@ -75,7 +75,16 @@ export function gameVars(keep, other) {
 // (the sim knows the shot: a three, at the rim, a mid-range jumper, a putback, and who passed; the distance and the
 // kind of look are laid out from the play itself, the same every time it's shown)
 const hashOf = x => { let h = 2166136261; const s = String(x); for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0 }
-const lastOf = p => (p ? splitName(p.n).last || p.n : 'Player')
+// a man's name in the plays: his last name, with a first initial when another man in the game shares it ("J. Williams
+// 26' three-point jumper (J. Williams assists)" is two men: "Jalen" and "Jaylin" both read J.; then the full first name)
+const lastNameOf = p => splitName(p.n).last || p.n
+const lastOf = (p, M = null) => {
+  if (!p) return 'Player'
+  const l = lastNameOf(p), same = M?.same?.get(l)
+  if (!same || same.length < 2) return l
+  const first = splitName(p.n).first || ''
+  return same.some(x => x.i !== p.i && (splitName(x.n).first || '')[0] === first[0]) ? `${first} ${l}` : `${first[0]}. ${l}`
+}
 function shotText(e, p) {
   const r = hashOf(`${e.w}-${e.p}-${e.c}-${e.hs}-${e.as}`)
   const pick = list => list[r % list.length]
@@ -98,8 +107,8 @@ function shotText(e, p) {
   return ast ? pick(["2' cutting layup", "1' layup", "3' layup", 'cutting dunk', "2' layup"]) : pick(["2' driving layup", "3' driving finger roll layup", "1' reverse layup", "5' driving floating layup", 'driving dunk', "2' driving layup"])
 }
 function playText(e, M) {
-  if (e.y === 'ft') return e.of === 1 ? `${lastOf(M(e.w))} makes free throw 1 of 1` : `${lastOf(M(e.w))} makes ${e.n} of ${e.of} free throws`
-  return `${lastOf(M(e.w))} ${shotText(e, M(e.w))}${e.a != null ? ` (${lastOf(M(e.a))} assists)` : ''}`
+  if (e.y === 'ft') return e.of === 1 ? `${lastOf(M(e.w), M)} makes free throw 1 of 1` : `${lastOf(M(e.w), M)} makes ${e.n} of ${e.of} free throws`
+  return `${lastOf(M(e.w), M)} ${shotText(e, M(e.w))}${e.a != null ? ` (${lastOf(M(e.a), M)} assists)` : ''}`
 }
 const ptsOf = e => (e.y === 'f' ? 0 : e.y === 'ft' ? e.n : e.y === 'three' ? 3 : 2)
 
@@ -139,7 +148,14 @@ export default function GameDay({ F, row = null, pend = null, fin = false, owner
   const nPer = row ? 4 + (row.ot || 0) : pend.G?.per ?? 4
   const endT = row ? perStart(nPer + 1) : pend.G?.el ?? 2856
   // the men, looked up once (the two rosters, then anyone: a man traded since)
-  const M = useMemo(() => { const m = new Map(); for (const s of [h, a]) for (const p of F.teams[s]?.r ?? []) m.set(p.i, p); return i => m.get(i) ?? manOf(F, i) }, [h, a]) // eslint-disable-line react-hooks/exhaustive-deps
+  // (M.same: the men in the game by last name, so two who share one are told apart in the plays)
+  const M = useMemo(() => {
+    const m = new Map(), same = new Map()
+    for (const s of [h, a]) for (const p of F.teams[s]?.r ?? []) { m.set(p.i, p); const l = lastNameOf(p); same.set(l, [...(same.get(l) ?? []), p]) }
+    const f = i => m.get(i) ?? manOf(F, i)
+    f.same = same
+    return f
+  }, [h, a]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [T, setT] = useState(fin ? endT : 0)
   const Tr = useRef(fin ? endT : 0)
@@ -303,7 +319,7 @@ function Flow({ V, a, h, shown, M }) {
         {[['a', a], ['h', h]].map(([k, s]) => (
           <div key={s} className="nb-ldr" style={V[s]}>
             <KLogo s={s} size={20} /><b>{s}</b>
-            <span>{top(k).map(i => `${lastOf(M(i))} ${pts[i]}`).join(' · ') || 'No points yet'}</span>
+            <span>{top(k).map(i => `${lastOf(M(i), M)} ${pts[i]}`).join(' · ') || 'No points yet'}</span>
           </div>
         ))}
       </div>
@@ -527,9 +543,20 @@ function Final({ F, row, b, V, owner, moLine, onDone }) {
   )
 }
 // the line under the final: the record it leaves them with, or where the series stands
+// (a series: "The Knicks sweep the Magic", "The Knicks win the series 4-3", "The Knicks win and lead the series 2-1")
 function finalLine(F, row, S, otWord) {
   const t = `The ${nick(F.team)}`
-  if (S) return `${t} ${row.w ? 'win' : 'lose'}${otWord}. ${seriesText(S, F.team)}`
+  if (S) {
+    const w = S.hi === F.team ? S.wh : S.wl, l = S.hi === F.team ? S.wl : S.wh, o = `the ${nick(row.opp)}`
+    if (S.done) {
+      const lw = Math.min(w, l)
+      if (S.done === F.team) return lw === 0 ? (otWord ? `${t} win${otWord} and sweep ${o}` : `${t} sweep ${o}`) : otWord ? `${t} win${otWord} and take the series 4-${lw}` : `${t} win the series 4-${lw}`
+      return `${t} lose${otWord}. The ${nick(row.opp)} ${lw === 0 ? 'sweep the series' : `win the series 4-${lw}`}`
+    }
+    const res = `${t} ${row.w ? 'win' : 'lose'}${otWord}`
+    if (w === l) return row.w ? `${res} and tie the series ${w}-${l}` : `${res}. The series is tied ${w}-${l}`
+    return w > l ? `${res} ${row.w ? 'and' : 'but'} lead the series ${w}-${l}` : `${res} ${row.w ? 'but' : 'and'} trail the series ${l}-${w}`
+  }
   if (row.po) return `${t} ${row.w ? 'win' : 'lose'}${otWord}`
   const k = (F.log ?? []).filter(x => !x.po).findIndex(x => x.d === row.d && x.opp === row.opp)
   const done = (F.log ?? []).filter(x => !x.po).slice(0, k >= 0 ? k + 1 : undefined)

@@ -7,6 +7,7 @@ import { b2bOf, dateText } from './schedule'
 import { addNews, injuryText, signText, roundSetText, champText } from './news'
 import { scoutTick } from './draft'
 import * as X from './seams'
+import { prod } from './awards'
 import { rngOf } from '../rng'
 
 // ── Records ──────────────────────────────────────────────────────────────────
@@ -224,13 +225,16 @@ function logMine(F, g, res, po = null) {
 function endDay(F, { mine = null, news = [] } = {}) {
   for (const s of SHORTS) X.tickInjuries(F, s)
   const was = F.day
-  // (the league's deals that night, before the day turns over: on deadline day the window is still open)
+  // (the league's deals that night, before the day turns over: on deadline day the window is still open, and the wire
+  // dates them the day they were made, the deadline's own day too)
   const dl = X.cpuDeadline(F, was) ?? []
+  for (const x of dl) addNews(F, x)
+  if (was === F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
+  // (the All-Star Game is the Sunday of the break: played, and dated, that day)
+  if (F.asb && (F.asDone ?? 0) < 3 && was >= F.asb[0] + AS_SUNDAY) allStarGame(F)
   F.day++
   scoutTick(F, was, F.day)
-  for (const x of dl) addNews(F, x)
-  // the trade deadline, the All-Star break: the wire says so the night they come
-  if (was <= F.ddl && F.day > F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
+  // the All-Star teams: the wire says so the morning they're named
   allStarTick(F)
   if (dl.length) X.cpuFill(F, { make: (F2, s, o) => makeFiller(F2, thinSpot(F2.teams[s].r), rngOf(`${F2.seed}-fill-${F2.year}-${F2.day}-${s}`), { tw: !!o?.tw }) })
   if (!F.sched.some(g => g.hs == null)) {
@@ -325,6 +329,8 @@ export function finishMoment(F, out) {
 // itself the Sunday of the break (East against West). F.asDone: 1 starters out, 2 reserves out, 3 the game played.
 // F.as = { E: { st: [5 ids], res: [7 ids] }, W: {...}, g?: { E: pts, W: pts, mvp: id, s: winner 'E'|'W' } }
 export const AS_STARTERS = 22, AS_RESERVES = 12   // days before the break begins
+export const AS_SUNDAY = 3                         // the game: the break's fourth day (it runs Thursday to Wednesday)
+export const allStarDay = F => (F.asb ? F.asb[0] + AS_SUNDAY : null)
 export function allStarTick(F) {
   if (!F.asb) return
   const to = F.asb[0] - F.day
@@ -332,8 +338,20 @@ export function allStarTick(F) {
   if (F.asDone === 1 && F.as?.E?.res?.length && to < 0) { F.asDone = 3; return }
   if ((F.asDone ?? 0) < 1 && to <= AS_STARTERS) allStarStarters(F)
   if ((F.asDone ?? 0) < 2 && to <= AS_RESERVES) allStars(F)
-  if ((F.asDone ?? 0) < 3 && to <= 0) allStarGame(F)
+  // (the game itself: endDay, the Sunday; here only a save that got past it without one)
+  if ((F.asDone ?? 0) < 3 && to < -AS_SUNDAY) allStarGame(F)
 }
+// The hub's All-Star stop (FULL): the break is on, or it's the next thing on the calendar (the GM's team has no game
+// left before it), and the game hasn't been played. 'to': the days up to the break are still to sim; 'game': the
+// break is here, the game is next. null: nothing to stop for.
+export function allStarStop(F) {
+  if (F.phase !== 'season' || !F.asb || (F.asDone ?? 0) >= 3 || F.day > F.asb[0] + AS_SUNDAY) return null
+  if (F.day >= F.asb[0]) return 'game'
+  const g = nextMine(F)
+  return !g || g.d > F.asb[0] ? 'to' : null
+}
+// the break's days on the hub: from its first day to the first night back
+export const allStarOn = F => F.phase === 'season' && !!F.asb && !!F.as?.E?.st?.length && F.day >= F.asb[0] && F.day <= F.asb[1] + 1
 function allStarStarters(F) {
   F.asDone = 1
   const A = X.pickAllStars(F)
@@ -348,7 +366,16 @@ export function allStars(F) {
   const A = X.pickAllStars(F)
   const st = { E: F.as?.E?.st ?? A.st.E, W: F.as?.W?.st ?? A.st.W }
   const out = {}
-  for (const c of ['E', 'W']) out[c] = { st: st[c], res: A[c].filter(i => !st[c].includes(i)).slice(0, 7) }
+  // (a starter traded to the other conference since the vote stays on the team he was voted onto: nobody is named
+  // twice; a conference left short of its seven reserves takes the best of its men not yet named)
+  const named = new Set([...st.E, ...st.W])
+  for (const c of ['E', 'W']) { out[c] = { st: st[c], res: A[c].filter(i => !named.has(i)).slice(0, 7) }; for (const i of out[c].res) named.add(i) }
+  const played = Math.max(1, ...Object.values(F.ss ?? {}).map(r => r.gp ?? 0))
+  for (const c of ['E', 'W']) {
+    if (out[c].res.length >= 7) continue
+    const more = Object.entries(F.ss ?? {}).map(([id, r]) => ({ i: +id, r })).filter(x => !named.has(x.i) && CONF_OF[x.r.s] === c && (x.r.gp ?? 0) >= played * 0.6 && manOf(F, x.i)).sort((a, b) => prod(b.r) - prod(a.r))
+    for (const x of more) { if (out[c].res.length >= 7) break; out[c].res.push(x.i); named.add(x.i) }
+  }
   for (const i of ['E', 'W'].flatMap(c => [...out[c].st, ...out[c].res])) { const p = manOf(F, i); if (p && !(p.aw ?? []).some(a => a.y === F.year && a.k === 'AS')) (p.aw ??= []).push({ y: F.year, k: 'AS' }) }
   F.as = out
   F.asDone = 2
@@ -528,9 +555,12 @@ export function simPostseason(F) {
   let n = 0
   while (F.po && F.po.stage !== 'done' && n < 200) { playPoNight(F); n++ }
 }
+// where a series stands, the way it's said: "Knicks sweep the Magic", "Knicks win the series 4-3", "Knicks lead 2-1",
+// "Series tied 1-1"; before Game 1, "Best of seven" (nobody says a series is tied 0-0)
 export const seriesText = (S, s) => {
   const me = s ?? S.hi, w = me === S.hi ? S.wh : S.wl, l = me === S.hi ? S.wl : S.wh
-  if (S.done) return `${nick(S.done)} win ${Math.max(S.wh, S.wl)}-${Math.min(S.wh, S.wl)}`
+  if (S.done) { const lost = S.done === S.hi ? S.lo : S.hi, lw = Math.min(S.wh, S.wl); return lw === 0 ? `${nick(S.done)} sweep the ${nick(lost)}` : `${nick(S.done)} win the series 4-${lw}` }
+  if (w === 0 && l === 0) return 'Best of seven'
   if (w === l) return `Series tied ${w}-${l}`
   return `${nick(w > l ? me : me === S.hi ? S.lo : S.hi)} lead ${Math.max(w, l)}-${Math.min(w, l)}`
 }

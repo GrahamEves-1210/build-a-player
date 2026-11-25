@@ -7,6 +7,8 @@
 // The days: opening night the third Tuesday of October, the last night the second Sunday of April, about 165 nights
 // with games and a week off for the All-Star break in mid-February; the trade deadline the first Thursday of
 // February. Each team plays at most one game a night, never three nights in a row, and about 14 back-to-backs.
+// The last day is the league's: all 30 teams play (15 games, every one but one inside a conference), so nobody's
+// season ends before anyone else's.
 import { SHORTS, DIVS, CONF_DIVS, DIV_OF, CONF_OF } from './league'
 import { rngOf } from '../rng'
 
@@ -67,7 +69,7 @@ export function makeSchedule(F) {
   for (let d = 0; d <= last; d++) if (d < asb[0] || d > asb[1]) nights.push(d)
   let pool = R.shuffle(opponents(F.seed + F.year)).map(([h, a, k]) => ({ h, a, k }))
   let out = null
-  for (let tries = 0; tries < 12 && !out; tries++) out = place(R.shuffle(pool), nights, R, last)
+  for (let tries = 0; tries < 40 && !out; tries++) out = place(R.shuffle(pool), nights, R, last)
   if (!out) throw new Error('NBA schedule: no fit')
   F.sched = out.sort((x, y) => x.d - y.d)
   F.cal0 = C.open.getTime(); F.days = last + 1; F.asb = asb; F.ddl = ddl
@@ -81,8 +83,19 @@ export function makeSchedule(F) {
 // (a night's size by the day of the week, opening night a Tuesday: the league's busy Wednesdays and Fridays, its
 // light Thursdays)
 const DOW = [0.8, 1.45, 0.55, 1.35, 1.0, 0.95, 0.9].map(x => x * 7 / 7.0)
+// the last day's 15 games: each conference's teams paired off (seven games), the two left over meet; each pair's
+// game comes out of the pool (they all meet at least twice)
+function finale(pool, R) {
+  const E = R.shuffle(SHORTS.filter(s => CONF_OF[s] === 'E')), W = R.shuffle(SHORTS.filter(s => CONF_OF[s] === 'W'))
+  const pairs = [[E[14], W[14]]]
+  for (const C of [E, W]) for (let i = 0; i < 14; i += 2) pairs.push([C[i], C[i + 1]])
+  return pairs.map(([a, b]) => pool.find(g => (g.h === a && g.a === b) || (g.h === b && g.a === a)))
+}
 function place(pool, nights, R, last) {
-  const left = pool.slice()
+  const fin = finale(pool, R)
+  if (fin.some(g => !g)) return null
+  const left = pool.filter(g => !fin.includes(g))
+  nights = nights.filter(d => d !== last)
   const played = Object.fromEntries(SHORTS.map(s => [s, []]))
   const out = []
   const lastOf = s => played[s][played[s].length - 1]
@@ -112,17 +125,20 @@ function place(pool, nights, R, last) {
     return gap >= want * 0.5 ? 0 : 3 * (1 - gap / (want * 0.5))
   }
   const meet = (g, d) => { const key = pk(g.h, g.a); if (!met.has(key)) met.set(key, []); met.get(key).push({ d, h: g.h }) }
+  // (the last day's pairs don't meet in the week before it)
+  const finPair = new Set(fin.map(g => pk(g.h, g.a)))
   for (let k = 0; k < nights.length; k++) {
     const d = nights[k]
     const share = (k + 1) / nights.length
-    const behind = s => 82 * share - played[s].length
+    const behind = s => 81 * share - played[s].length
     const want = Math.max(2, Math.min(15, Math.round(left.length / (nights.length - k) * DOW[d % 7] + (R.u() - 0.5) * 3)))
     const yest = s => (lastOf(s) === d - 1 ? 1 : 0)
-    const can = s => !(lastOf(s) === d - 1 && played[s][played[s].length - 2] === d - 2)
+    // (never three nights in a row: the last day's game counts for the night before it)
+    const can = s => !(lastOf(s) === d - 1 && (played[s][played[s].length - 2] === d - 2 || d === last - 1))
     // (a back-to-back costs a little; a team with few so far takes one sooner, one with 15 not at all)
     const pen = t => (yest(t) ? (b2b[t] >= 15 ? 4 : b2b[t] < 12 * share ? -0.25 : 0.05) : 0)
     const score = g => behind(g.h) + behind(g.a) - pen(g.h) - pen(g.a) - soon(g, d) + R.u() * 0.5
-    const cand = left.filter(g => can(g.h) && can(g.a) && meetOk(g, d)).map(g => [score(g), g]).sort((x, y) => y[0] - x[0])
+    const cand = left.filter(g => can(g.h) && can(g.a) && meetOk(g, d) && !(d >= last - 7 && finPair.has(pk(g.h, g.a)))).map(g => [score(g), g]).sort((x, y) => y[0] - x[0])
     const used = new Set()
     let n = 0
     for (const [sc, g] of cand) {
@@ -135,6 +151,8 @@ function place(pool, nights, R, last) {
       left.splice(left.indexOf(g), 1); n++
     }
   }
+  // the last day: everybody plays
+  for (const g of fin) { for (const s of [g.h, g.a]) played[s].push(last); out.push({ d: last, h: g.h, a: g.a, k: g.k }); meet(g, last) }
   // what's left goes on any night both teams are free that keeps them off three nights in a row
   for (const g of left.splice(0)) {
     const free = (s, d) => { const P = played[s]; return !P.includes(d) && !(P.includes(d - 1) && P.includes(d - 2)) && !(P.includes(d + 1) && P.includes(d + 2)) && !(P.includes(d - 1) && P.includes(d + 1)) }
@@ -150,6 +168,8 @@ function place(pool, nights, R, last) {
     meet(g, d); met.get(pk(g.h, g.a)).sort((x, y) => x.d - y.d)
   }
   if (left.length) return null
+  // (every team's back-to-backs in the league's range, 11 to 18: a schedule outside it is drawn again)
+  for (const s of SHORTS) { const D = played[s].slice().sort((x, y) => x - y); let n = 0; for (let i = 1; i < D.length; i++) if (D[i] === D[i - 1] + 1) n++; if (n > 18 || n < 11) return null }
   // (a leftover placed anywhere can still land between two meetings: the whole schedule's straights checked once more)
   return straightsOf(out).bad ? null : out
 }
@@ -188,6 +208,10 @@ export function scheduleProblems(F) {
     if (x.b2b > 18 || x.b2b < 11) bad.push(`${s} has ${x.b2b} back-to-backs`)
   }
   for (const g of F.sched) if (g.d >= F.asb[0] && g.d <= F.asb[1]) bad.push(`game in the All-Star break ${g.h}-${g.a}`)
+  // the last day: all 30 teams play (so every team's 82nd game is on it)
+  const end = Math.max(...F.sched.map(g => g.d)), fin = F.sched.filter(g => g.d === end)
+  if (end !== F.days - 1) bad.push(`the last game is on day ${end}, not the season's last day ${F.days - 1}`)
+  if (fin.length !== 15) bad.push(`${fin.length} games on the last day`)
   bad.push(...straightsOf(F.sched).list)
   return { bad, b2b: Object.fromEntries(SHORTS.map(s => [s, n[s].b2b])) }
 }

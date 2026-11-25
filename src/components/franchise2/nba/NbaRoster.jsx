@@ -11,7 +11,7 @@ import { valToGrade } from '../../../utils/simulation'
 import { manPhoto } from './NbaBuilds'
 import { sfx } from '../../../lib/juice'
 import { fkVars, KLogo, LowerThird, Chyron, BackBar, Tag, TeamSlab, Fact } from '../kit'
-import { rotOrder, swapRot, moveRot } from './rotOrder'
+import { rotOrder, swapRot, moveRot, benchDnp, dnpStarter } from './rotOrder'
 import { NbaBoxSheet } from './NbaGameDay'
 
 // THE ROSTERS: the GM's rotation (the order, the starters, the minutes he wants for a man), any team's roster, a
@@ -56,12 +56,15 @@ export function Rotation({ F, act, owner, onMan }) {
     setPick(null)
   }
   const reset = () => { act(X => { X.teams[X.team].rot = null; X.teams[X.team].min = null }); setPick(null); sfx('back') }
+  // (a save from before the rule, a DNP man in its five: he goes to the bench)
+  const stuck = dnpStarter(F, opts)
+  useEffect(() => { if (stuck != null) act(X => benchDnp(X, { playoff: isPo(X) })) }, [stuck]) // eslint-disable-line react-hooks/exhaustive-deps
   const right = edit ? <button type="button" className="nb-auto" onClick={() => { setEdit(false); setPick(null); sfx('tap') }}>DONE</button>
     : <span className="nb-chy-acts">{custom && <button type="button" className="nb-auto" onClick={reset}>AUTO</button>}<button type="button" className="nb-auto" onClick={() => { setEdit(true); sfx('tap') }}>EDIT</button></span>
   return (
     <>
       <Chyron team={F.team} title="Rotation" sub={`TEAM OVR ${teamOvr(F, F.team)} · ${t.r.filter(p => !p.tw).length} OF 15 STANDARD`} right={right} />
-      {edit && <p className="nb-ed-hint">Tap a player, then another, to swap them. − and + set a player's minutes; the coach splits the rest of the 240.</p>}
+      {edit && <p className="nb-ed-hint">Tap a player, then another, to swap them. − and + set a player's minutes; the coach splits the rest of the 240. A player set to DNP comes out of the starting five.</p>}
       <div className={`nb-rot${edit ? ' is-edit' : ''}`}>
         {order.map((p, k) => (
           <div key={p.i} className="nb-rot-grp">
@@ -106,7 +109,8 @@ function EditRow({ F, act, p, k, min, picked, onTap }) {
 }
 // − / + two minutes at a time, 0 (out of the rotation) to 40
 export function MinStep({ act, id, v, set }) {
-  const put = to => { act(X => { const T = X.teams[X.team]; T.min = { ...(T.min ?? {}), [id]: Math.max(0, Math.min(40, to)) } }); sfx('tap') }
+  // (0 is DNP: a starter set to it goes to the bench, rotOrder.js benchDnp)
+  const put = to => { act(X => { const T = X.teams[X.team]; T.min = { ...(T.min ?? {}), [id]: Math.max(0, Math.min(40, to)) }; if (to <= 0) benchDnp(X, { playoff: isPo(X) }) }); sfx('tap') }
   return (
     <span className="nb-ed-min" role="group" aria-label="Minutes">
       <button type="button" aria-label="Fewer minutes" disabled={v <= 0} onClick={() => put(Math.round(v) - 2)}>−</button>

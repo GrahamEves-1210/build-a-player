@@ -34,7 +34,10 @@ const one = (F, hit) => {
   const key = `${plan.spot}|${plan.game}|m${m > 0 ? '+' : ''}${m}|${mo.hit ? 'LANDED' : 'missed'}`
   const t = (tally[key] ??= { n: 0, w: 0, ot: 0 }); t.n++; if (row.w) t.w++; if (row.ot > per - 4) { t.ot++; ots++ }
   if (mo.sealed) { sealedN++; if (row.w) sealedW++; else flag(`SEALED BUT LOST: ${key} ${row.us}-${row.them} ${N.momentText(F, row)}`) }
-  if (mo.left > 5.5 && plan.spot !== 'ft' && !mo.tov) flag(`left ${mo.left} after a last possession (${key})`)
+  // (down three with time, plan.early: the three goes up early, three seconds or more left; anything else is held)
+  if (mo.left > 5.5 && plan.spot !== 'ft' && !mo.tov && !plan.early) flag(`left ${mo.left} after a last possession (${key})`)
+  if (plan.early && !mo.tov && mo.left < 2.9) flag(`an early three with ${mo.left} left (${key})`)
+  if (plan.early !== (plan.spot === 'off' && m <= -3 && c > 8) && !(plan.early == null && !(plan.spot === 'off' && m <= -3 && c > 8))) flag(`early flag wrong (${key} at ${c})`)
   const txt = N.momentText(F, row)
   if (!txt) flag('no text')
   // the text and the board agree
