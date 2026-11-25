@@ -465,9 +465,9 @@ function keenLine(c, list, teamName) {
   if (!fans.length) return '. No club came away sold, so it comes down to the trials.'
   let offering = null
   try { offering = (sx().offers?.(c)?.draft?.offers ?? []).map(o => o.team) } catch { offering = null }
-  if (!offering) return `. The meetings with ${and(fans.map(teamName))} went well.`
+  if (!offering) return `. The ${fans.length > 1 ? 'meetings' : 'meeting'} with ${and(fans.map(teamName))} went well.`
   const keen = fans.filter(t => offering.includes(t))
-  return keen.length ? `. ${and(keen.map(teamName))} came away the keenest.` : `. The meetings with ${and(fans.map(teamName))} went well, but ${fans.length > 1 ? 'those clubs have' : 'that club has'} gone for other strikers. The offers come from the clubs that watched the trials.`
+  return keen.length ? `. ${and(keen.map(teamName))} came away the keenest.` : `. The ${fans.length > 1 ? 'meetings' : 'meeting'} with ${and(fans.map(teamName))} went well, but ${fans.length === 1 ? 'no offer has followed' : fans.length === 2 ? 'neither has made an offer' : 'none of them has made an offer'}. The offers come from clubs that watched the trials.`
 }
 
 // ── Draft ───────────────────────────────────────────────────────────────────
@@ -1672,7 +1672,7 @@ function Player({ c, setCareer }) {
         </div>
         <Jersey c={c} setCareer={setCareer} />
         {(() => { const s = specialtyNote(c); return s && <div className="cr-contract cr-spec"><span className="ag-eyebrow">SPECIALTY</span><b>{s.label}</b><p className="cr-note">{s.text}</p></div> })()}
-        {c.injuries.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">INJURY HISTORY</span>{c.injuries.map((i, k) => <span key={k} className="cr-goal is-miss">{i.year}: {i.kind}, {i.games} {c.sport === 'soccer' ? (i.games === 1 ? 'match' : 'matches') : i.games === 1 ? 'game' : 'games'}{i.played ? ' (played through)' : ''}</span>)}</div>}
+        {c.injuries.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">INJURY HISTORY</span>{c.injuries.map((i, k) => <span key={k} className="cr-goal is-miss">{c.sport === 'soccer' ? seasonOf(c.season - c.year + i.year - 1) : i.year}: {i.kind}, {i.games} {c.sport === 'soccer' ? (i.games === 1 ? 'match' : 'matches') : i.games === 1 ? 'game' : 'games'}{i.played ? ' (played through)' : ''}</span>)}</div>}
         <p className="cr-note">{sportOf(c).primeNote(c.pos)} {sportOf(c).ui?.devNote ?? `Development points come every season while he’s young (two early on, then one), and one more each for an award, an ${sportOf(c).first} season, meeting ${GOAL_POINT_AT} of the season’s goals and winning the camp drill.`}</p>
       </div>
     </section>
@@ -2205,7 +2205,7 @@ function Talks({ c, setCareer }) {
       <div className="ag-card-head"><span className="ag-eyebrow">AT THE TABLE · {t.fit.name.toUpperCase()}</span><span className="cr-fit-status">{t.fit.status}</span></div>
       <div className="cr-talks-terms">
         {soccer
-          ? <><span className="cr-offer-money"><b>{wageText(t.perYear, t.team).replace(' a week', '')}</b><small>A WEEK</small></span><span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span><span className="cr-offer-money"><b>{feeText(t.perYear * t.years, t.team)}</b><small>TOTAL</small></span></>
+          ? <><span className="cr-offer-money"><b>{wageText(t.perYear, t.team).replace(' a week', '')}</b><small>A WEEK</small></span><span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span><span className="cr-offer-money"><b>{dealTotal(t)}</b><small>TOTAL</small></span></>
           : <><span className="cr-offer-money"><b>{money(t.perYear)}</b><small>A YEAR</small></span><span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span><span className="cr-offer-money"><b>{money(r1(t.perYear * t.years))}</b><small>TOTAL</small></span></>}
       </div>
       <div className="cr-badges">{t.noTrade && <span className="cr-badge is-gold"><IconShield size={12} /> {soccer ? `RELEASE CLAUSE${clauseFee(t) ? ` · ${feeText(clauseFee(t), t.team)}` : ''}` : 'NO-TRADE'}</span>}{t.starter && <span className="cr-badge is-gold"><IconStar size={12} /> {soccer ? 'FIRST-TEAM PROMISE' : 'STARTER'}</span>}</div>
@@ -2236,6 +2236,13 @@ function Talks({ c, setCareer }) {
   )
 }
 const r1 = v => Math.round(v * 10) / 10
+// soccer: a deal's total, from the weekly wage as it's shown (the same currency, the same rounding), so the week
+// times the years is the total on the screen: £400k a week for five years is £104M
+const dealTotal = t => {
+  const wk = wageText(t.perYear, t.team), m = /([\d.]+)(k|M)/.exec(wk)
+  const v = (m ? +m[1] * (m[2] === 'M' ? 1000 : 1) : 0) * 52 * t.years / 1000
+  return `${soccerCur(t.team)}${v >= 10 ? Math.round(v) : r1(v)}M`
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // SOCCER's own screens: the season recap, the transfer window, the season-by-season table

@@ -282,7 +282,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
   return (
     <div className="cr-po">
       <div className="ag-card cr-po-card ag-pop">
-        <span className="ag-eyebrow">{rd.compName.toUpperCase()} · {rd.stage.toUpperCase()}{rd.legs === 2 ? ' · TWO LEGS' : ''}</span>
+        <span className="ag-eyebrow">{rd.compName.toUpperCase()} · <span className="cr-nb">{rd.stage.toUpperCase()}</span>{rd.legs === 2 ? <> · <span className="cr-nb">TWO LEGS</span></> : null}</span>
         <div className="cr-po-match"><ClubLogo S={S} short={c.team} /><b>{c.team}</b><i>vs</i><b>{rd.opp}</b><ClubLogo S={S} short={rd.opp} extra={rd.extra} /></div>
         <small>{rd.oppName} · {rd.legs === 2 ? (rd.home ? 'Second leg at home' : 'Second leg away') : 'A neutral venue'}{rd.final && !simmed ? <> · it comes down to one moment</> : null}</small>
         {simmed && <small className="cr-po-sim">{rd.close === false ? `No key moment for ${c.name} in this one: the tie is simulated.` : 'Key moments are off: the tie is simulated.'}</small>}

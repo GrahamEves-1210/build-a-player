@@ -13,6 +13,9 @@ const accentOf = S => S.card?.accent ?? (S.isSoccer ? '#f4f4f5' : S.isBucket ? '
 const glowOf = S => S.card?.glow ?? (S.isSoccer ? '#a1a1aa' : S.isBucket ? '#fb923c' : '#1fc98a')
 const siteOf = S => S.site ?? (S.isSoccer ? 'build-a-player.com/soccer' : S.isBucket ? 'build-a-player.com/bucket' : 'build-a-player.com')
 
+// soccer's big numbers, spelled out on a card (the tables' G and A are too short for a headline)
+const SOCCER_BIG = { goals: 'GOALS', assists: 'ASSISTS', apps: 'APPS' }
+const bigLabel = (S, k) => (S.isSoccer ? SOCCER_BIG[k] : null) ?? STAT_LABEL[k]
 // a soccer season the way football writes it: 2026-27 (a career: its first season to its last)
 const seasonOf = y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`
 const W = 1080, H = 1920, PAD = 84
@@ -220,7 +223,7 @@ export async function careerShareCanvas(c, { username } = {}) {
 
   // the career's big numbers
   const NY = RY + 96 + 150
-  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, t.stats[k]), STAT_LABEL[k]]), NY)
+  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, t.stats[k]), bigLabel(S, k)]), NY)
   // the hardware: seasons, rings, the award, the honors
   const award = AWARD_NAME[c.pos]
   const TY = NY + 100
@@ -236,7 +239,7 @@ export async function careerShareCanvas(c, { username } = {}) {
   let extra = 0
   if (S.isSoccer) {
     const cells = [[t.caps ?? 0, (t.caps ?? 0) === 1 ? 'CAP' : 'CAPS'], [t.wc ?? 0, t.wc === 1 ? 'WORLD CUP' : 'WORLD CUPS'], [t.ucl ?? 0, t.ucl === 1 ? 'CHAMPIONS LEAGUE' : 'CHAMPIONS LEAGUES']]
-    const cw = (W - PAD * 2) / cells.length, by = TY + TILE_H + 74
+    const cw = (W - PAD * 2) / cells.length, by = TY + TILE_H + 80
     cells.forEach(([v, k], i) => {
       const cx = PAD + cw * i + cw / 2, won = i > 0 && v > 0
       ctx.font = `60px ${ANTON}`; const vw = ctx.measureText(String(v)).width
@@ -247,13 +250,13 @@ export async function careerShareCanvas(c, { username } = {}) {
       text(ctx, k, x0 + vw + 14, by - 4, { font: `${ks}px ${BEBAS}`, color: 'rgba(255,255,255,.62)', spacing: 3 })
       if (i) { ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD + cw * i, by - 50); ctx.lineTo(PAD + cw * i, by + 8); ctx.stroke() }
     })
-    extra = 62
+    extra = 68
   }
   // the teams he played for, and how long with each
   const LY = TY + TILE_H + 64 + extra
   const teams = t.teams.map(s => ({ s, n: c.seasons.filter(x => x.team === s).length })).slice(0, 7)
   text(ctx, teams.length === 1 ? (S.isSoccer ? 'ONE CLUB, START TO FINISH' : 'ONE TEAM, START TO FINISH') : 'PLAYED FOR', W / 2, LY, { font: `30px ${BEBAS}`, color: 'rgba(255,255,255,.6)', align: 'center', spacing: 6 })
-  const sz = S.isSoccer ? (teams.length <= 5 ? 84 : 74) : teams.length <= 4 ? 96 : teams.length <= 5 ? 88 : 74
+  const sz = S.isSoccer ? (teams.length <= 5 ? 78 : 72) : teams.length <= 4 ? 96 : teams.length <= 5 ? 88 : 74
   const tg = teams.length <= 4 ? 60 : 34
   const rowW = teams.length * sz + (teams.length - 1) * tg
   const logos = await Promise.all(teams.map(x => loadImage(S.logo(x.s))))
@@ -304,7 +307,7 @@ export async function seasonShareCanvas(c, s, { username } = {}) {
 
   // the season's numbers
   const NY = PY + PH + 240
-  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, s.stats[k]), STAT_LABEL[k]]), NY)
+  bigRow(ctx, HEADLINE_STATS[c.pos].map(k => [fmtOf(c, k, s.stats[k]), bigLabel(S, k)]), NY)
   // the honors (only the ones won), then the overall, the goals, the role
   const honors = [
     s.award && { v: s.awardName, k: 'WINNER', icon: 'trophy', gold: true },

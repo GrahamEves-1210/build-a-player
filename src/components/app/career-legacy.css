@@ -219,7 +219,7 @@ button.cl-yr { width: 100%; color: inherit; font: inherit; cursor: pointer; }
 .cr-legacy--slim .cr-legacy-top b small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
 .cr-legacy--slim .cr-legacy-bar { height: 5px; }
 /* development points waiting: a count on the PLAYER tab, and the strip that goes there */
-.cr-tab-n { position: absolute; top: 2px; right: 5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #f5dc8a; color: #1d1503; font-family: var(--ag-font); font-style: normal; font-size: 13px; line-height: 18px; letter-spacing: 0; text-align: center; }
+.cr-tab-n { display: inline-block; position: relative; top: -5px; margin-left: 3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #f5dc8a; color: #1d1503; font-family: var(--ag-font); font-style: normal; font-size: 13px; line-height: 18px; letter-spacing: 0; text-align: center; }
 button.cr-devnote--go { width: 100%; min-height: 44px; text-align: left; cursor: pointer; }
 .cr-devnote--go > span { flex: 1; min-width: 0; }
 .cr-devnote--go em { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; white-space: nowrap; }
