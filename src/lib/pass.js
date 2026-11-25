@@ -17,6 +17,14 @@
 export const TIER_XP = 1000
 export const TIERS = 30
 export const PASS_PRICE = '$8.99'
+// A sale on the pass's price in dollars (the coin price doesn't move, and Google Play's price is set in the Play
+// Console): from `start` up to (not including) `end`, days in New York time. The servers charge it by the same days:
+// keep PASS_SALE in step in server/server.js and functions/api/create-pass-checkout.js.
+// Black Friday 2026: half price from Friday Nov 27 through Cyber Monday Nov 30.
+export const PASS_SALE = { label: 'BLACK FRIDAY', off: 50, price: '$4.49', start: '2026-11-27', end: '2026-12-01' }
+export const passSale = day => (day >= PASS_SALE.start && day < PASS_SALE.end ? PASS_SALE : null)
+// (the sale's last day, as a word for the button's note)
+export const saleEnds = sale => new Date(`${sale.end}T12:00:00Z`).getTime() - 86400000
 // The same pass for coins. supabase/pass_coins.sql holds the same number and refuses a
 // purchase sent with any other (node scripts/pass-coins-check.mjs checks they match).
 export const PASS_COINS = 16000

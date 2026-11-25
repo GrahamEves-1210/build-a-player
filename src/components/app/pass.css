@@ -34,6 +34,12 @@
 .bp-buy-txt b { font-family: var(--ag-font); font-weight: 400; font-size: 22px; letter-spacing: 1.4px; color: #fff; line-height: 1.05; }
 .bp-buy-txt small { font-family: var(--ag-body); font-size: 13px; line-height: 1.45; color: var(--ag-muted); text-wrap: pretty; }
 .bp-buy-btn { width: 100%; height: 52px; }
+/* a sale on the pass: its name and how much off, the old price struck through, the new one, the last day */
+.bp-sale { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4px 10px; }
+.bp-sale b { flex-basis: 100%; text-align: center; padding: 5px 8px; border-radius: 4px; background: #f5dc8a; color: #1d1503; font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: 1.4px; }
+.bp-sale s { font-family: var(--ag-display); font-size: 20px; color: var(--ag-muted); }
+.bp-sale em { font-style: normal; font-family: var(--ag-display); font-size: 30px; color: var(--ag-text); }
+.bp-sale small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; color: var(--ag-text-2); }
 .bp-fine { font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); text-align: center; }
 .bp-fine--err { color: #ff8a8a; }
 /* the same pass for coins: the quiet second button under the money one */
@@ -221,6 +227,7 @@
 .ps { display: grid; gap: 8px; margin: 12px 0; padding: 12px 0 10px; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--ag-a1) 30%, transparent); background: var(--ag-panel); overflow: hidden; }
 .ps-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 0 12px; border: 0; background: none; color: var(--ag-text); font: inherit; text-align: left; cursor: pointer; }
 .ps-head-txt { display: grid; gap: 4px; }
+.ps-sale { justify-self: start; padding: 4px 8px; border-radius: 4px; background: #f5dc8a; color: #1d1503; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.3px; }
 .ps-name { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: .95; letter-spacing: .01em; color: var(--ag-text); }
 .ps-season { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; color: var(--ag-a1); }
 .ps-season em { font-style: normal; color: var(--ag-text-2); }

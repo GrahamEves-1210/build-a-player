@@ -45,6 +45,10 @@ const PASS_SEASONS = {
   s1: { name: 'Builder Pass · Season 1', cents: 899, end: '2026-12-29' },
 }
 const nyDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
+// A sale on the pass (src/lib/pass.js PASS_SALE: the same days and price): from `start` up to (not including) `end`,
+// New York days. Black Friday 2026: half price, Nov 27 through Nov 30.
+const PASS_SALE = { name: 'Black Friday, 50% off', cents: 449, start: '2026-11-27', end: '2026-12-01' }
+const passSale = () => { const d = nyDay(); return d >= PASS_SALE.start && d < PASS_SALE.end ? PASS_SALE : null }
 
 // BAP Pro's Discord role: given while Pro is on, taken off when it ends. Needs the bot
 // (DISCORD_BOT_TOKEN, in DISCORD_GUILD_ID, with Manage Roles and its role above the Pro
@@ -262,10 +266,11 @@ app.post('/api/create-pass-checkout', async (req, res) => {
   const { data: owned } = await supabase.from('pass_owners').select('season').eq('user_id', me.id).eq('season', season).maybeSingle()
   if (owned) return res.status(400).json({ error: 'You already have this pass' })
   const origin = returnBase(req, fromApp)
+  const sale = passSale()
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: p.cents, product_data: { name: p.name } } }],
+      line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: sale?.cents ?? p.cents, product_data: { name: sale ? `${p.name} (${sale.name})` : p.name } } }],
       customer_email: me.email || undefined,
       metadata: { userId: me.id, kind: 'pass', season },
       payment_intent_data: { metadata: { userId: me.id, kind: 'pass', season } },

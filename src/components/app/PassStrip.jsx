@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useProgress, claimPass, dayKey } from '../../lib/progress'
-import { TIERS, TIER_XP, daysLeft, daysLeftText } from '../../lib/pass'
+import { TIERS, TIER_XP, daysLeft, daysLeftText, passSale } from '../../lib/pass'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, claimFx } from '../../lib/juice'
 import { RewardArt, rewardLabel, gotLabel } from './AppPass'
@@ -50,6 +50,8 @@ export default function PassStrip() {
         <span className="ps-head-txt">
           <b className="ps-name">BUILDER PASS</b>
           <span className="ps-season">{s.name.toUpperCase()}{s.title ? <em>{s.title.toUpperCase()}</em> : null}</span>
+          {/* the sale, where the pass can still be bought (lib/pass.js PASS_SALE) */}
+          {!bp.owned && !bp.over && passSale(dayKey()) && <span className="ps-sale">{passSale(dayKey()).label} · {passSale(dayKey()).off}% OFF</span>}
         </span>
         <span className="ps-head-side">
           <span className={`ps-days${bp.over ? ' is-over' : left <= 7 ? ' is-soon' : ''}`}>{bp.over ? 'SEASON OVER' : daysLeftText(left)}</span>

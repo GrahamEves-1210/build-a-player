@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress, claimPass, buyPassCoins, dayKey, walletOpen, startRush, rushLeftMs, startBoost, boostLeftMs } from '../../lib/progress'
-import { TIERS, TIER_XP, PASS_PRICE, PASS_COINS, passValue, nextSeason, daysLeft as daysLeftOf, daysLeftText } from '../../lib/pass'
+import { TIERS, TIER_XP, PASS_PRICE, PASS_COINS, passValue, nextSeason, daysLeft as daysLeftOf, daysLeftText, passSale, saleEnds } from '../../lib/pass'
 import { itemById, RARITY } from '../../lib/cosmetics'
 import { openCheckout } from '../../lib/webCheckout'
 import { track } from '../../lib/track'
@@ -126,6 +126,7 @@ export default function AppPass({ onClose }) {
   const s = bp.season
   const value = passValue(s)
   const daysLeft = daysLeftOf(s, dayKey())
+  const sale = passSale(dayKey())
   const maxed = bp.tier >= TIERS
   const signedIn = walletOpen()
   const rushMs = rushLeftMs(), xpMs = boostLeftMs('xp')
@@ -222,7 +223,10 @@ export default function AppPass({ onClose }) {
               <b>{value.items} pass-only items · {value.coins.toLocaleString()} coins</b>
               <small>Plus coins, Coin Rushes and boosts. Everything you've already reached unlocks at once.</small>
             </span>
-            <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy || coinBusy}>{busy ? 'OPENING…' : `UNLOCK · ${store[passProductId(s.id)] ?? PASS_PRICE}`}</button>
+            {/* a sale (lib/pass.js PASS_SALE) on the dollar price: the website's Stripe checkout charges it; Google Play
+                shows its own store price, so the app on Android doesn't claim it */}
+            {sale && !PLAY_BILLING && <span className="bp-sale"><b>{sale.label} · {sale.off}% OFF</b><s>{PASS_PRICE}</s><em>{sale.price}</em><small>THROUGH {new Date(saleEnds(sale)).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}</small></span>}
+            <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy || coinBusy}>{busy ? 'OPENING…' : `UNLOCK · ${store[passProductId(s.id)] ?? (sale && !PLAY_BILLING ? sale.price : PASS_PRICE)}`}</button>
             <span className="bp-fine">{PLAY_BILLING ? 'Paid through Google Play. ' : IS_APP ? 'Secure Stripe checkout on build-a-player.com. ' : ''}One payment for {s.name}, no subscription.</span>
             {err && <span className="bp-fine bp-fine--err">{err}</span>}
             <button className="ag-btn ag-btn--ghost bp-buy-btn bp-buy-coins" onClick={buyCoins} disabled={busy || coinBusy || (signedIn && short > 0)}>
