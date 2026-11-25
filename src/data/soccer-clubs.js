@@ -177,6 +177,38 @@ export const SOCCER_SIM_CLUBS = ALL_CLUBS.filter(c => ALL_LEAGUES.some(l => l.id
 // every club in the data, for lookups (logos, names, colours) by code
 export const SOCCER_ALL_CLUBS = ALL_CLUBS
 
+// ── Career (2026-11-24): all five leagues, and what each club earns ─────────────────────────────────────────────
+// Career signs for and plays in every one of the five leagues (SOCCER_CLUBS above stays Squad Builder's and the
+// practice lab's three). Its clubs are SOCCER_CAREER_CLUBS: the 96, each with `rev`.
+// rev: the club's revenue, € millions a year: the wage and fee tier Career's transfer market runs on
+//   (lib/careerSoccer.js clubPurse: a club's top wage and its record fee come from it, not from how good its team is
+//   this season: before this Brighton paid £400k a week and Elversberg £108k, by Opta rating).
+//   The top 21: Deloitte Football Money League 2025 (2023-24 revenue: Real Madrid 1,046, Manchester City 838,
+//   Paris Saint-Germain 806, Manchester United 771, Bayern Munich 765, Barcelona 760, Arsenal 717, Liverpool 715,
+//   Tottenham 615, Chelsea 546, Borussia Dortmund 514, Atlético Madrid 410, AC Milan 398, Inter 391, Newcastle 372,
+//   Juventus 356, Aston Villa 310, Marseille 287, Lyon 264, Brighton 257). The rest: club accounts where published,
+//   else an estimate by league and size (a Premier League club's TV money alone is about €130M; a promoted
+//   Bundesliga or Ligue 1 club runs on €25-50M). A tier, not an audit.
+const CLUB_REV = {
+  // Premier League
+  MCI: 838, MUN: 771, ARS: 717, LIV: 715, TOT: 615, CHE: 546, NEW: 372, AVL: 310, BHA: 257, EVE: 220, CRY: 220, NFO: 220,
+  FUL: 210, BRE: 195, LEE: 190, BOU: 185, SUN: 165, IPS: 160, COV: 150, HUL: 150,
+  // La Liga
+  RMA: 1046, BAR: 760, ATM: 410, SEV: 180, ATH: 170, BET: 165, RSO: 150, VIL: 150, VAL: 140, CEL: 90, RCD: 80, OSA: 80,
+  GET: 70, RAY: 60, ALA: 60, LEV: 55, ELC: 50, DEP: 45, MAL: 45, RAC: 40,
+  // Serie A
+  MIL: 398, INT: 391, JUV: 356, NAP: 255, ROM: 250, ATA: 200, LAZ: 150, FIO: 140, BOL: 120, COM: 100, TOR: 90, GEN: 80,
+  UDI: 75, SAS: 70, CAG: 65, PRM: 65, LEC: 60, MNZ: 55, VEN: 50, FRO: 45,
+  // Bundesliga
+  FCB: 765, BVB: 514, RBL: 395, B04: 360, SGE: 310, VFB: 290, BMG: 220, SCF: 200, TSG: 180, FCU: 170, SVW: 170, S04: 170,
+  KOE: 160, HSV: 140, M05: 130, FCA: 110, SCP: 45, SVE: 30,
+  // Ligue 1
+  PSG: 806, OLM: 287, LYO: 264, MON: 200, LIL: 150, REN: 130, NIC: 130, RCL: 120, STR: 90, PFC: 80, BST: 70, TOU: 60,
+  LOR: 50, AUX: 45, ANG: 35, HAC: 35, TRO: 30, LMS: 20,
+}
+export const SOCCER_CAREER_LEAGUES = ALL_LEAGUES
+export const SOCCER_CAREER_CLUBS = SOCCER_SIM_CLUBS.map(c => ({ ...c, w: spinWeight(c), rev: CLUB_REV[c.short] ?? 60 }))
+
 // ── The Champions League: the wheel and the cards (the owner, 2026-11-16) ──────────────────────────────────────
 // The 36 clubs of the 2026-27 league phase, as UEFA lists them (uefa.com; SI's ranking of the 36 and ESPN's
 // uefa.champions team list name the same 36). Order: SI's ranking, best first.

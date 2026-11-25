@@ -16,7 +16,7 @@ const store = new Map()
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), key: i => [...store.keys()][i] ?? null, get length() { return store.size } }
 globalThis.window = globalThis; globalThis.addEventListener = () => {}; globalThis.removeEventListener = () => {}; globalThis.document = { addEventListener() {}, removeEventListener() {}, visibilityState: 'visible' }; globalThis.location = { search: '', hostname: 'localhost', href: 'http://localhost/' }
 await build({
-  stdin: { contents: `export * from './src/lib/career.js'\nexport * from './src/lib/careerSoccer.js'\nexport { SOCCER_STRIKERS } from './src/data/soccer-strikers.js'\nexport { SOCCER_CLUBS } from './src/data/soccer-clubs.js'`, resolveDir: ROOT, loader: 'js' },
+  stdin: { contents: `export * from './src/lib/career.js'\nexport * from './src/lib/careerSoccer.js'\nexport { SOCCER_STRIKERS } from './src/data/soccer-strikers.js'\nexport { SOCCER_CAREER_CLUBS as SOCCER_CLUBS } from './src/data/soccer-clubs.js'`, resolveDir: ROOT, loader: 'js' },
   bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'error', loader: { '.jsx': 'jsx', '.json': 'json', '.png': 'empty', '.css': 'empty', '.webp': 'empty' },
   define: { 'import.meta.env': '{"DEV":false,"VITE_SUPABASE_URL":"http://localhost:1","VITE_SUPABASE_ANON_KEY":"x"}' },
 })

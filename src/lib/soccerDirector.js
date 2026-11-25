@@ -4,24 +4,45 @@
 import { createDirector } from './seasonDirector'
 import './soccerFacts'       // the records and milestones (lib/seasonFacts.js RECORDS.soccer)
 import './soccerSeason'      // the season's story cards and the in-match moments (scenarios.js, gameMoments.js)
-import { runSoccerSimulation, soccerAwards, soccerLeagueInfo, soccerUclRebook, isUclResult } from '../utils/soccerSimulation'
+import { runSoccerSimulation, soccerAwards, soccerLeagueInfo, soccerUclRebook, isUclResult, soccerTableAt } from '../utils/soccerSimulation'
 
 const r10 = v => Math.round(v * 10) / 10
 
-// The league table again from the season as played (the moments moved scores), and the awards from his real totals
-export function soccerFinal(f, t, games) {
+// The league table again from the season as played (the moments moved scores), and the awards from his real totals.
+// base (Career): the season's first run. Its `form` (every club's score each matchweek) is the league the season was
+// played in from the first matchweek, so the table shown through the season and the final one are the same league:
+// the other clubs' results from it, his club's from the matches as played (both sides of them). Without it (a one-off
+// season, a season from before the form was kept): the booked run's table with his row replaced, as before.
+// base.moved (a January move): the matches before it were another club's; his new club's come from the form.
+export function soccerFinal(f, t, games, base = null) {
   const gf = games.reduce((s, g) => s + (g.mySc ?? 0), 0), ga = games.reduce((s, g) => s + (g.oppSc ?? 0), 0)
-  const rows = (f.standings ?? []).map(r => (r.isUs ? { ...r, wins: t.wins, draws: t.draws, losses: t.losses, points: t.points, gf, ga, gd: gf - ga } : { ...r }))
-  rows.sort((a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || (a.isUs ? -1 : 1))
-  rows.forEach((r, i) => { r.pos = i + 1 })
-  const info = soccerLeagueInfo(f.league?.id) ?? { ucl: 4, uel: 2, size: 20, down: 3 }
-  const pos = rows.find(r => r.isUs)?.pos ?? f.seed
+  const form = base?.form && base.league?.id === f.league?.id ? base.form : null
+  const us = (f.standings ?? []).find(r => r.isUs)?.short ?? f.team?.short
+  const from = base?.moved?.k ?? 0
+  let rows
+  if (form && us && form.by?.[us]) rows = soccerTableAt(form, form.rounds, { short: us, games: games.map((g, i) => (i < from ? null : g)) })
+  else {
+    rows = (f.standings ?? []).map(r => (r.isUs ? { ...r, wins: t.wins, draws: t.draws, losses: t.losses, points: t.points, gf, ga, gd: gf - ga } : { ...r }))
+    rows.sort((a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || (a.isUs ? -1 : 1))
+    rows.forEach((r, i) => { r.pos = i + 1 })
+  }
+  const tier2 = f.league?.tier === 2
+  const info = tier2 ? { ucl: 0, uel: 0, size: rows.length, down: 0 } : soccerLeagueInfo(f.league?.id) ?? { ucl: 4, uel: 2, size: 20, down: 3 }
+  const row = rows.find(r => r.isUs)
+  const pos = row?.pos ?? f.seed
+  // (the club's record is the table's: after a January move his own matches aren't all its matches)
+  const rec = form && row ? { wins: row.wins, draws: row.draws, losses: row.losses, points: row.points, gf: row.gf, ga: row.ga, gd: row.gd } : { gf, ga, gd: gf - ga }
   const out = {
-    ...f, standings: rows, seed: pos, champion: pos === 1, gf, ga, gd: gf - ga, relegated: pos > info.size - info.down,
-    playoffs: pos <= info.ucl, madePlayoffs: pos <= info.ucl,
+    ...f, standings: rows, seed: pos, champion: pos === 1, ...rec, relegated: !tier2 && pos > info.size - info.down,
+    playoffs: !tier2 && pos <= info.ucl, madePlayoffs: !tier2 && pos <= info.ucl,
     goals: t.seasonGoals, assists: t.seasonAssists, shots: t.seasonShots, sot: t.seasonSOT, xg: r10(t.seasonXG ?? 0), mins: t.seasonMins, apps: t.seasonApps, starts: t.seasonStarts,
   }
-  const aw = soccerAwards(out, { goals: t.seasonGoals, assists: t.seasonAssists, mins: t.seasonMins })
+  // (the second tier: promoted from the table as played: the top two, or the play-offs the run played for third to sixth)
+  if (tier2) { out.promoted = pos <= (f.league.up ?? 2) || (pos <= (f.league.playoffTo ?? 6) && !!f.playoffWon); out.promotedHow = pos <= (f.league.up ?? 2) ? 'auto' : out.promoted ? 'playoff' : null }
+  // (a move from another league in January: the league's awards go by his goals in this league)
+  const mine = base?.moved?.cross ? games.slice(from).filter(g => !g.sat) : null
+  const sum = k => mine.reduce((a, g) => a + (g[k] ?? 0), 0)
+  const aw = soccerAwards(out, mine ? { goals: sum('goals'), assists: sum('assists'), mins: sum('mins') } : { goals: t.seasonGoals, assists: t.seasonAssists, mins: t.seasonMins })
   return aw ? { ...out, ...aw } : out
 }
 
