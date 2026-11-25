@@ -14,6 +14,7 @@
 //          guarantee), then a little for a winner, a starting job and the head coach. A lower offer wins only when
 //          one of those outweighs the money, and the result says which. An offer under what he'll take that day (his
 //          ask, less as the market dries up) he turns down. After the third day the league fills its holes.
+//          The men still unsigned stay on the street (street.js): the GM can sign one any week, on a one-year deal.
 import { SHORTS, POS, MIN, TEAM, lineup, makeGen, fillUp, foOf } from './league'
 import { depthChart, groupOf, GROUP, backupsOf } from './roster'
 import { cutCost, cutMan, askOf, marketValue, signDeal, extendDeal, capRoom, canSign, optionDue, pickUpOption, declineOption, optionPrice, termFor, tagPrice, minimumFor, capComply, makeRoom, roomAhead, marketLines } from './contracts'
@@ -403,7 +404,14 @@ function cpuFill(F) {
     fillUp(F, t.r, R)
   }
   leagueUnderCap(F)
-  F.fa = []
+  // the men nobody signed are still out there: the street, where the GM can sign them all year (street.js)
+  F.fa = streetKeep(F.fa)
+}
+// the street's list, kept short: every man the GM let go at the cut-down (cc), then the best of the rest
+export const STREET_KEEP = 40
+export const streetKeep = list => {
+  const a = (list ?? []).filter(p => !p.fl)
+  return [...a.filter(p => p.cc), ...a.filter(p => !p.cc).sort((x, y) => y.o - x.o).slice(0, STREET_KEEP)]
 }
 // every league team under the cap before the new league year (restructures, then releases; the holes refilled at
 // the minimum). The draft's rookies are signed after this; draft.js calls it again when the draft closes.

@@ -11,7 +11,7 @@ import { rngOf, clamp, r1 } from './rng'
 import { fbCase, honorsOf } from '../teamSeason'
 import { ovrOf, TYPES_OF } from '../squadSeason'
 import { makeClass } from './draft'
-import { leagueUnderCap, restructureMine } from './market'
+import { leagueUnderCap, restructureMine, streetKeep } from './market'
 import { signRookie, cutCost, cutMan, marketValue, termFor, capSheet, cutRoom, restructurable } from './contracts'
 import { addNews } from './news'
 import { sortChartAfterCamp, fixNumbers } from './roster'
@@ -27,7 +27,7 @@ export function newSeason(F) {
   const before = new Set(F.lastStarters ?? [])
   const released = []
   signUDFAs(F, R)
-  F.dc = []; F.dr = null; F.offers = null; F.rs = null; F.fa = (F.fa ?? []).filter(p => p.cc)
+  F.dc = []; F.dr = null; F.offers = null; F.rs = null
   for (const s of SHORTS) {
     const t = F.teams[s]
     // the cuts to the roster: the men at the bottom go. The player's new class is his to cut, never the game's, and so
@@ -52,10 +52,11 @@ export function newSeason(F) {
     if (s !== F.team) t.lk = {}
   }
   // the roster cuts and fill-ins done: every league team under the cap for the new season
-  // (the men the player let go at the cut-down stay on the street for the season's signings)
+  // (the men the player let go at the cut-down stay on the street for the season's signings, and so do the best of
+  // the veterans nobody signed in the spring: market.js streetKeep, street.js)
   // (and the player's, by restructures, once his cut-down's dead money is on: the cut-down screen won't start the
   // season past what they clear)
-  leagueUnderCap(F); restructureMine(F); F.fa = (F.fa ?? []).filter(p => p.cc); for (const p of F.fa) delete p.cc
+  leagueUnderCap(F); restructureMine(F); F.fa = streetKeep(F.fa); for (const p of F.fa) delete p.cc
   for (const p of released) { p.$ = marketValue(p, F.year + 1); p.y = termFor(p); p.g = 0; delete p.rc; delete p.op; delete p.ox; F.fa.push(p) }
   // the schedule follows last season's finish in each division
   const S = standings(F)

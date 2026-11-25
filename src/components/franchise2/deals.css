@@ -125,6 +125,15 @@
 .dl-walk-t b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; letter-spacing: .3px; color: #ff8a8c; }
 .dl-walk-t span { font-family: var(--fk-b); font-size: 14px; line-height: 1.35; color: var(--fk-text); }
 
+/* the free-agent list (Market.jsx): does the money fit, the roster spot, the line under a signing */
+.mk { display: grid; gap: 10px; align-content: start; }
+.mk-can { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .3px; color: var(--fk-w); }
+.mk-can.is-no { color: #ff8a8c; }
+.mk-cut { font-family: var(--fk-b); font-weight: 600; font-size: 13px; letter-spacing: .2px; color: var(--fk-mute); }
+.mk-note { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 14px; line-height: 1.35; color: var(--fk-text); }
+.mk-note.is-no { color: #ff8a8c; }
+.dl-fav { margin-right: 8px; }
+
 /* a man's page: the scouts' line under his facts */
 .dl-page-scout { padding: 6px 10px; background: var(--fk-g1); }
 

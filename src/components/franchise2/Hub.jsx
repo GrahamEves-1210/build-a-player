@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useEffect, useState } from 'react'
 import {
   TEAM, recText, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
   DIV_OF, ROUNDS, FINISH_TEXT, finishOf, REG_WEEKS, CONF_OF, CONFS,
-  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk, rulesOf, setRules, capSheet,
+  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk, rulesOf, setRules, capSheet, tradeWindow, marketWindow,
 } from '../../lib/franchise2'
 import { closeSeason, statLine } from '../../lib/franchise2/awards'
 import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
@@ -28,6 +28,7 @@ import Offseason from './Offseason'
 import DraftBoard from './Draft'
 import { StretchCard, StretchRecap, RoundResult } from './Light'
 import { TradeNotice } from './Trades'
+import { MarketStrip } from './Market'
 import { faceFor } from './dparts'
 import { coachPhoto } from './coachFace'
 import { memoF, peekF, idleRun, standingsOf, recordsOf, useLeagueWarm, warmKey, useStaged } from './perf'
@@ -72,7 +73,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   const [live, setLive] = useState(() => (F.pend && F.pace !== 'light' ? { pend: true } : null))
   const [trophy, setTrophy] = useState(false)
   const [board, setBoard] = useState(false)
-  const [tradeGo, setTradeGo] = useState(false)   // (the trade offer note: the Team tab opens on trades)
+  const [teamGo, setTeamGo] = useState(null)   // (the Team tab opens on: 'trades' the offer note, 'finder' the trade finder, 'market' the free agents)
   const scroll = useRef(null)
   const t = TEAM[F.team]
   const r = recordsOf(F)[F.team]
@@ -102,6 +103,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   }
   const phaseText = F.phase === 'season' ? `Week ${F.wk + 1}` : F.phase === 'post' ? 'Regular season over' : F.phase === 'playoffs' ? 'Playoffs' : off ? 'Offseason' : 'Season over'
   const toTab = id => { if (tab !== id) { setTab(id); sfx('tap'); scroll.current?.scrollTo(0, 0) } }
+  const front = <FrontRows F={F} onGo={k => { setTeamGo(k); toTab('team') }} />
   // LIGHT: a season card always has its stretch; a save from before LIGHT stopped going into games (a moment
   // waiting, a stretch on its big game) is simmed on to where it would be now
   useEffect(() => {
@@ -134,11 +136,11 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
-          {tab === 'season' && <TradeNotice F={F} onOpen={() => { setTradeGo(true); toTab('team') }} />}
+          {tab === 'season' && <TradeNotice F={F} onOpen={() => { setTeamGo('trades'); toTab('team') }} />}
           {tab === 'season' && (off
-            ? <Offseason F={F} act={act} owner={owner} onBuild={onBuild} foot={F.stage !== 'draft' ? <ScoutRow F={F} onBoard={() => { setBoard(true); sfx('tap') }} /> : null} />
-            : <Season F={F} act={act} owner={owner} r={r} play={play} simToEnd={simToEnd} onBoard={() => { setBoard(true); sfx('tap') }} onTrophy={() => setTrophy(true)} />)}
-          {tab === 'team' && <TeamTab F={F} act={act} owner={owner} tradeGo={tradeGo} onTradeGo={() => setTradeGo(false)} />}
+            ? <Offseason F={F} act={act} owner={owner} onBuild={onBuild} foot={F.stage !== 'draft' ? <><ScoutRow F={F} onBoard={() => { setBoard(true); sfx('tap') }} />{front}</> : null} />
+            : <Season F={F} act={act} owner={owner} r={r} play={play} simToEnd={simToEnd} onBoard={() => { setBoard(true); sfx('tap') }} onTrophy={() => setTrophy(true)} front={front} />)}
+          {tab === 'team' && <TeamTab F={F} act={act} owner={owner} go={teamGo} onGo={() => setTeamGo(null)} onSeason={() => toTab('season')} />}
           {tab === 'league' && <LeagueTab F={F} owner={owner} act={act} />}
           {tab === 'history' && <HistoryTab F={F} owner={owner} act={act} onSlots={onSlots} onDelete={onDelete} />}
         </div>
@@ -149,7 +151,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
 
 // ── SEASON ───────────────────────────────────────────────────────────────────
 // The next thing to do first and biggest; on a wide screen the league around it on the right.
-function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
+function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy, front }) {
   const ph = F.phase
   const reg = ph === 'season' || ph === 'post'
   const side = useStaged(2, 1) > 1
@@ -178,6 +180,7 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
             {reg && !recap && <Ladder F={F} />}
             {reg && <Strip F={F} />}
             <ScoutRow F={F} onBoard={onBoard} />
+            {front}
             {/* (LIGHT never goes into a game: no key moments to set) */}
             {!light && <GamesSwitch F={F} act={act} />}
             <LeagueRules value={rulesOf(F)} nick={TEAM[F.team].nick} onChange={r => act(X => { setRules(X, r) })} />
@@ -186,6 +189,24 @@ function Season({ F, act, owner, r, play, simToEnd, onBoard, onTrophy }) {
         )}
       </aside>
     </div>
+  )
+}
+
+// the front office, a tap away from the Season tab: the trade finder (while the window is open) and the free agents
+// (always on the Team tab's own rows, Team.jsx). Both open on the Team tab.
+function FrontRows({ F, onGo }) {
+  // (no row while the market is the Offseason tab itself, or shut until the new league year)
+  const k = marketWindow(F).k, market = k !== 'market' && k !== 'shut'
+  return (
+    <>
+      {tradeWindow(F).open && (
+        <button type="button" className="fh-row" onClick={() => onGo('finder')}>
+          <span><small>Trades</small><b>Trade finder</b></span>
+          <i className="fh-row-go" aria-hidden="true">›</i>
+        </button>
+      )}
+      {market && <MarketStrip F={F} onOpen={() => onGo('market')} />}
+    </>
   )
 }
 
