@@ -2831,7 +2831,8 @@ export function januaryMove(c, D, o) {
   if (!run?.games?.length || run.games.length <= k) return [c, D]
   const cross = (S.teamOf(o.team).league ?? null) !== fromLeague
   const base = { ...run, moved: { k, cross }, games: run.games.map((g, i) => (i < k ? D.games[i] : g)) }
-  const moved = { k, from, fromName, to: o.team, toName: fit.name, loan: o.kind === 'loan', fee: o.fee ?? null, cross }
+  // (what he did for the old club in the cup and in Europe before the move stays his: the sport's own count, S.x.movedLine)
+  const moved = { k, from, fromName, to: o.team, toName: fit.name, loan: o.kind === 'loan', fee: o.fee ?? null, cross, ...(S.x.movedLine ? S.x.movedLine(c, k, D) : {}) }
   const role = dc.starter ? 'He goes straight into the side' : `He joins the squad behind ${benched.behind}`
   const note = o.kind === 'loan' ? `January loan: ${c.name} joins ${fit.name} from ${fromName} until the end of the season. ${role}.` : `January transfer: ${fit.name} sign ${c.name} from ${fromName}. ${role}.`
   // (the matches he played for the old club keep its badge)

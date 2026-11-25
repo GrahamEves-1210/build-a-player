@@ -669,15 +669,18 @@ function soccerSeason(c, f, po) {
   // only the weeks he wasn't out (a cup tie lands in the league's calendar about where its matchweek is)
   const sat = new Set((f.games ?? []).filter(g => g.sat).map(g => g.wk))
   const out = c.active?.out ? Math.min(...(f.games ?? []).filter(g => g.sat).map(g => g.wk), 99) : 99
-  const avail = g => { const wk = Math.max(1, Math.round((g.wk ?? 0) * 38 / 39)); return wk < out && !sat.has(wk) }
+  // (a January move: the new club's cup ties and European nights from before he came aren't his; the old club's
+  // were, and are kept on the move: active.moved.before)
+  const mv = c.active?.moved ?? null, pre = mv?.before ?? null
+  const avail = g => { const wk = Math.max(1, Math.round((g.wk ?? 0) * 38 / 39)); return wk < out && !sat.has(wk) && (!mv || (g.wk ?? 0) > (mv.wk ?? 0)) }
   const cupLegs = (f.cup?.rounds ?? []).filter(t => !(cupPo && t.final)).flatMap(t => t.legs ?? []).filter(avail)
   const euroLegs = (f.europe?.games ?? []).filter(avail)
   const sum = (list, k) => list.reduce((s, g) => s + (g[k] ?? 0), 0)
   const poCup = played.filter(x => x.track === 'cup'), poEuro = played.filter(x => x.track === 'europe')
-  const cupGoals = sum(cupLegs, 'goals') + sum(poCup, 'goals'), euroGoals = sum(euroLegs, 'goals') + sum(poEuro, 'goals')
-  const apps = lg.apps + sum(cupLegs, 'app') + sum(euroLegs, 'app') + sum(played, 'apps')
+  const cupGoals = sum(cupLegs, 'goals') + sum(poCup, 'goals') + (pre?.cupGoals ?? 0), euroGoals = sum(euroLegs, 'goals') + sum(poEuro, 'goals') + (pre?.euroGoals ?? 0)
+  const apps = lg.apps + sum(cupLegs, 'app') + sum(euroLegs, 'app') + sum(played, 'apps') + (pre?.apps ?? 0)
   const goals = lg.goals + cupGoals + euroGoals
-  const assists = lg.assists + sum(cupLegs, 'assists') + sum(euroLegs, 'assists') + sum(played, 'assists')
+  const assists = lg.assists + sum(cupLegs, 'assists') + sum(euroLegs, 'assists') + sum(played, 'assists') + (pre?.assists ?? 0)
   const stats = { ...lg, apps, goals, assists, cupGoals, euroGoals, lgAssists: lg.assists, lgApps: lg.apps }
   // the trophies: the league from the table, the cup final and the European final from the big nights
   // (a season in the second tier: no title in it counts as a league title, no place in it is a European one)
@@ -1057,6 +1060,16 @@ function januaryOffers(c, D, k) {
   }
   return offers
 }
+// a January move: the calendar week it happened in, and his cup and European line for the club he left
+function soccerMovedLine(c, k, D) {
+  const f = c.active?.base, total = D?.total ?? f?.games?.length ?? 38
+  const wk = k * 38 / Math.max(1, total)
+  const sat = new Set((D?.games ?? []).slice(0, k).filter(g => g.sat).map(g => g.wk))
+  const mine = g => (g.wk ?? 0) <= wk && !sat.has(Math.max(1, Math.round((g.wk ?? 0) * 38 / 39)))
+  const cup = (f?.cup?.rounds ?? []).flatMap(t => t.legs ?? []).filter(mine), euro = [...(f?.europe?.games ?? []), ...(f?.europe?.rounds ?? []).flatMap(t => t.legs ?? [])].filter(mine)
+  const sum = (list, key) => list.reduce((a, g) => a + (g[key] ?? 0), 0)
+  return { wk, before: { cupGoals: sum(cup, 'goals'), euroGoals: sum(euro, 'goals'), assists: sum(cup, 'assists') + sum(euro, 'assists'), apps: sum(cup, 'app') + sum(euro, 'app') } }
+}
 function soccerBeat(c, D, k) {
   const a = c.active, total = D.total
   if (total < 20 || a.out) return null
@@ -1164,7 +1177,7 @@ SOCCER.x = {
   newCareer: nation => ({ nation: soccerNationOf(nation), caps: 0, intlGoals: 0, europe: null }),
   onFinal: soccerFinal, finishLeague: soccerFinishLeague, round: soccerRound, season: soccerSeason, afterSeason: soccerAfterSeason,
   news: soccerNews, window: soccerWindow, windowNews: soccerWindowNews, market: soccerMarket, sign: soccerSign, transferRequest: soccerTransferRequest, wageCap: short => clubPurse(short).wage,
-  beat: soccerBeat, january: true,
+  beat: soccerBeat, january: true, movedLine: soccerMovedLine,
   totals: soccerTotals, legacy: soccerLegacy, resume: soccerResume, icon: soccerIcon,
   born: name => SOCCER_BORN.get(name), castIndex: SOCCER_BY_NAME, castMates: short => SOCCER_STRIKERS.filter(p => p.team === short && !isNine(p)).slice(0, 4),
   // (a striker is compared with strikers: before 2026-11-24 the pool was every attacker and midfielder)

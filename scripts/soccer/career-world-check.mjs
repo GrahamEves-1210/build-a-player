@@ -125,6 +125,33 @@ for (const [team, lg, games] of [['JUV', 'Serie A', 38], ['LYO', 'Ligue 1', 34],
   ok(s.europe?.comp === 'uecl' && s.europe.name === 'Conference League', 'the Conference League season')
 }
 
+// ── 4b. A January move: he finishes the season at the new club; a January loan brings him back in the summer ──
+for (const [from, to, kind] of [['BHA', 'FCB', 'bid'], ['SEV', 'BET', 'bid'], ['MCI', 'IPS', 'loan']]) {
+  // (a season he isn't out injured in when January comes: the window doesn't stop for a man on the treatment table)
+  let c = null, before = null, did = null
+  for (let i = 0; i < 6 && !did; i++) {
+  c = fresh(9, from, 'ENG', `world-jan-${to}-${i}`)
+  before = c.contract
+  c = playSeason(c, { onStop: (c, D) => {
+    if (!C.januaryNow(c) || did) return null
+    const o = { kind, ...(kind === 'loan' ? { half: true, perYear: c.contract.perYear, years: 1 } : { years: 4, perYear: 5, fee: 40 }), team: to, fit: C.teamFit(to, 'st', { name: c.name, sport: 'soccer' }) }
+    const k = c.active.k
+    const [n, D2] = C.januaryMove(c, D, o)
+    did = { k, total: D2.total }
+    ok(n.team === to && n.active.moved?.from === from && D2.games.slice(0, k).every((g, i) => g === n.active.snap.games[i] || g.mySc === D.games[i].mySc), `${from}->${to}: the move`)
+    return [n, D2]
+  } })
+  }
+  const s = c.seasons.at(-1), t = X.tableOf(s), row = t?.find(r => r.isUs)
+  const lgGames = CLUB.get(to).league === 'ger.1' || CLUB.get(to).league === 'fra.1' ? 34 : 38
+  ok(did && s.team === to && s.moved?.from === from && did.total === lgGames, `${from}->${to}: finished the season at ${s.team}, ${did?.total} matches`)
+  ok(row && row.short === to && row.played === lgGames && row.pos === s.pos && row.wins === s.wins && row.points === s.points, `${from}->${to}: the new club's row in the table`)
+  ok(t.reduce((a, r) => a + r.wins, 0) === t.reduce((a, r) => a + r.losses, 0), `${from}->${to}: the table adds up`)
+  if (kind === 'loan') ok(c.team === from && !c.loan && c.contract.perYear === before.perYear, `${from}->${to}: back at ${c.team} after the loan`)
+  else ok(c.team === to && c.contract.kind === 'transfer', `${from}->${to}: his club after the season`)
+  say(`January ${kind === 'loan' ? 'loan' : 'move'} ${from} -> ${to} after match ${did?.k}: ${s.stats.lgApps} league apps, ${s.stats.lgGoals} goals; ${s.teamName} finished ${s.pos} of ${s.size}; next season at ${c.team}`)
+}
+
 // ── 5. The window ──
 {
   // a star at a mid-table club, three seasons in: who comes for him, over many summers
