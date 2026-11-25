@@ -189,7 +189,16 @@ const STRUCT = {
   m: { nk: 1.08, br: 0.75, lk: 1.08, ck: 0.15, eo: 1.04, rid: 0.9 },
   l: { nk: 1.02, br: 0.85, lk: 1.02, ck: 0.15, eo: 1.02, rid: 0.95 },
   p: { nk: 1.16, br: 0.7, lk: 1.12, ck: 0.5, eo: 0.98, rid: 0.9 },
+  // (the backgrounds a soccer Career's country adds, faces.js MORE)
+  h: { nk: 1.0, br: 0.8, lk: 1.1, ck: 0.3, eo: 1.04, rid: 0.95 },
+  n: { nk: 1.0, br: 1.0, lk: 1.02, ck: 0.1, eo: 1.0, rid: 1 },
+  s: { nk: 1.04, br: 0.85, lk: 1.06, ck: 0.15, eo: 1.04, rid: 0.95 },
+  a: { nk: 1.0, br: 0.42, lk: 0.96, ck: 0.4, eo: 0.86, rid: 0.8, mono: 1 },
+  e: { nk: 1.08, br: 0.5, lk: 1.04, ck: 0.35, eo: 0.92, rid: 0.85, mono: 0.5 },
+  i: { nk: 1.06, br: 0.72, lk: 1.04, ck: 0.45, eo: 0.92, rid: 0.95 },
 }
+STRUCT.bd = STRUCT.b
+STRUCT.wc = STRUCT.wn = STRUCT.we = STRUCT.ws = STRUCT.w
 const NOSE_W = { straight: 3.3, broad: 3.75, narrow: 2.95, short: 3.3, wide: 4.1, boxer: 3.55 }
 const NOSE_BR = { straight: 0, broad: -0.15, narrow: 0.25, short: -0.1, wide: -0.2, boxer: 0.1 }
 const MOUTH = { neutral: [1, 1, 1, 0, 0], full: [1.22, 1.24, 1.02, 0, 0], thin: [0.72, 0.78, 0.98, 0, 0], smirk: [1, 1, 1, 0, 0.45], wide: [1, 1.05, 1.12, 0.08, 0], stern: [0.86, 0.9, 1, -0.22, 0] }
@@ -317,7 +326,7 @@ function panels(G, y1, w, rnd) {
 }
 // how a cut draws on his hair: tight coils, loose curls or straight hair
 const TIPS = '#b8893c'
-const TEXOF = { b: 'coil', m: 'curl', p: 'curl', l: 'str', w: 'str' }
+const TEXOF = { b: 'coil', m: 'curl', p: 'curl', l: 'str', w: 'str', bd: 'coil', h: 'curl' }
 function hairOf(look, G, T, rnd, lo, hide) {
   // (dyed tips: black hair, the ends of locs and twists in the dye)
   const tip = look.hc === TIPS ? TIPS : null
@@ -713,6 +722,9 @@ function stacheOf(look, G, T, rnd, bc) {
 // ── The features ─────────────────────────────────────────────────────────────
 function eyesOf(look, G, T, S, lo) {
   const K = EYE[look.eyes] ?? EYE.almond, iris = look.iris ?? '#2b1a10', X = G.X
+  // (a single lid, X.mono: an East Asian man's narrow or hooded eye has its fold low over the lashes and no crease line;
+  // a Southeast Asian man's sits halfway)
+  const mono = X.mono && (look.eyes === 'narrow' || look.eyes === 'hooded') ? X.mono : 0
   let wh = '', ir = '', pu = '', lash = '', lid = '', lidLo = '', cl = ''
   for (const s of [-1, 1]) {
     const q = G.E.sq * G.ex(s)
@@ -735,14 +747,14 @@ function eyesOf(look, G, T, S, lo) {
     top.push([O[0] + s * 0.5, O[1] + 0.05, 1])
     lash += sm([...top, ...bot.reverse()])
     // the socket: a half tone from under the brow down to the lid's crease (the lid itself stays lit)
-    const cr = up * 1.34 + 0.75 + (look.eyes === 'deep' ? 0.35 : 0)
+    const cr = up * 1.34 + 0.75 + (look.eyes === 'deep' ? 0.35 : 0) - mono * 0.5
     const crease = [[I[0] + s * 0.2, I[1] - up * 0.9], [cx - s * ew * 0.25, y - cr], [cx + s * ew * 0.45, y - cr + 0.1 + (look.eyes === 'hooded' ? 0.55 : 0)], [O[0] + s * 0.35, O[1] - 0.5 + (look.eyes === 'hooded' ? 0.35 : 0)]]
     const sock = [[50 + s * 1.5, G.by + 1.3], [cx - s * 1.2, G.by + 0.9], [cx + s * (ew + 0.2), G.by + 1.35], [O[0] + s * 1.3, O[1] - 0.4], ...crease.slice().reverse(), [50 + s * 1.7, y + 0.2]]
     S[s > 0 ? 'S' : 'M'] += sm(sock)
     if (s > 0) S.M += sm([[50 + s * 1.4, G.by + 0.9], [cx + s * (ew + 1), G.by + 0.9], [O[0] + s * 2, O[1] + 0.6], [O[0] + s * 1, O[1] + 0.4], [cx, G.by + 1.6]])
     if (!lo) {
       // the crease's own shadow, and under the eye the lower lid turning into the cheek
-      lid += sm([crease[0], crease[1], crease[2], crease[3], [crease[2][0], crease[2][1] + 0.38], [crease[1][0], crease[1][1] + 0.34]])
+      if (mono < 1) lid += sm([crease[0], crease[1], crease[2], crease[3], [crease[2][0], crease[2][1] + 0.38], [crease[1][0], crease[1][1] + 0.34]])
       // (a young man's lower lid is a fine line, not a bag; a coach's has its years)
       // (a smile's cheek pushing up under the eye: a soft fold below the lower lid)
       if (q > 0.25 && !G.young) S.M += sm([[L2[0], y + dn * 1.2 + 0.75], [L1[0], y + dn * 1.2 + 0.65], [O[0] - s * 0.1, O[1] + 1], [L1[0], y + dn * 1.2 + 1.15 + q * 0.4], [L2[0], y + dn * 1.2 + 1.2 + q * 0.4]])
@@ -1079,6 +1091,40 @@ function tankOf(G, K, P, lo) {
   const bind = line(neckD + armD, c2, lo ? 3.6 : 3.2, ' stroke-linejoin="round"') + (lo ? '' : line(neckD + armD, c3, 0.7, ' stroke-linejoin="round" transform="translate(0 0.9)"'))
   return clothOf(G, loop, c1, P, lo, false) + `<g clip-path="url(#${P}Jc)">${shade}${bind}</g>`
 }
+// a soccer shirt (owner 11-25: "fix the jersey they are wearing in soccer for created faces looks weird": it was the
+// football jersey's padded shoulders with a crew neck): no pads, a footballer's own shoulders sloping down to his arms
+// inside the frame; a ribbed crew collar round the foot of his neck in the second colour; raglan seams from the collar
+// to the underarm; the shirt's light fabric (the far side in shade, a fold under each arm); a plain crest on his left
+// chest in the second colour (no club's or maker's mark: the drawing is his, the logo sits on the card's corner)
+const SOC_SHOULDER = [[2.4, 63.8], [8.6, 65.8], [15.4, 68.2], [21.6, 71.6], [26.4, 76.6], [29.2, 83.4], [30.6, 92], [31.2, 104]]
+function soccerOf(G, K, P, lo) {
+  const { nw } = G, c1 = K.c1
+  const c2 = K.c2 && Math.abs(lum(K.c2) - lum(c1)) > 40 ? K.c2 : lum(c1) > 170 ? '#1d2230' : '#ffffff'
+  // the neckline: from the side of his neck round the front, a shallow curve at the foot of the neck
+  const y0 = 63.2, vb = 69.6
+  const half = [[nw + 0.4, y0, 1], [nw - 0.2, 65.6], [nw * 0.62, 68.6], [0, vb]]
+  const neck = half.slice().reverse()
+  const loop = sym([...neck, ...SOC_SHOULDER.map(p => [nw + p[0], p[1]]), [0, 104]])
+  const collar = sm([...half.map(LX), ...half.slice(0, -1).reverse().map(RX)], false)
+  // (the collar's back, behind his neck: its inside in shade above the band)
+  const back = `M${f(50 - nw - 0.6)} ${f(y0 + 0.8)}Q50 ${f(y0 - 3)} ${f(50 + nw + 0.6)} ${f(y0 + 0.8)}`
+  G.collarBack = line(back, dark(c2, 0.3), 2.4) + line(back, dark(c1, 0.45), 1, ' transform="translate(0 1.1)"')
+  const rag = [[nw + 1.6, 64.4], [nw + 6.4, 69.6], [nw + 11.6, 77.4], [nw + 15.4, 88], [nw + 16.8, 104]]
+  const ragD = sm(rag.map(RX), false) + sm(rag.map(LX), false)
+  let g = ''
+  // the raglan seams; the shade under each arm
+  if (!lo) g += line(ragD, dark(c1, 0.22), 0.35) + fill(sm([[50 + nw + 17, 80], [50 + nw + 20.4, 92], [50 + nw + 21.6, 104], [50 + nw + 16.6, 104], [50 + nw + 16.4, 90]]), dark(c1, 0.1))
+  // the collar: the ribbed band in the second colour, a fine line of the body colour inside it, its shadow on the chest
+  g += line(collar, '#000000', 2.6, ' stroke-opacity=".16" transform="translate(0 0.9)"') + line(collar, c2, 2.3)
+    + (lo ? '' : line(collar, mixC(c2, c1, 0.5), 0.35, ' transform="translate(0 0.35)"'))
+  // the crest on his left chest (the viewer's right): a shield in the second colour, the body colour inside, a band
+  if (!lo) {
+    const x = 50 + nw * 0.5 + 6.4, y = 79.6, w = 2.3, h = 2.7
+    const shield = (k, dy = 0) => `M${f(x - w * k)} ${f(y - h * k + dy)}H${f(x + w * k)}V${f(y + 0.3 * k + dy)}Q${f(x + w * k)} ${f(y + 2.1 * k + dy)} ${f(x)} ${f(y + h * k + dy)}Q${f(x - w * k)} ${f(y + 2.1 * k + dy)} ${f(x - w * k)} ${f(y + 0.3 * k + dy)}Z`
+    g += fill(shield(1), c2) + fill(shield(0.68, 0.1), c1) + fill(`M${f(x - w * 0.68)} ${f(y - 0.5)}H${f(x + w * 0.68)}V${f(y + 0.5)}H${f(x - w * 0.68)}Z`, c2)
+  }
+  return clothOf(G, loop, c1, P, lo) + `<g clip-path="url(#${P}Jc)">${g}</g>`
+}
 // a coach's top, the way NFL sideline coaches dress (owner 11-16: the old dark top with a coloured collar band "looks
 // like some kind of religious robe"): a team quarter-zip pullover or a team polo, the body in the team's colour, on a
 // man's shoulders (no pads: they come down to his arms inside the frame, not out to its edges)
@@ -1192,7 +1238,7 @@ export function faceSvg(look, { color = '#d2aa4f', view = 'full', mark = null } 
     + fill(poly([[50 - nw + 0.4, 62.6], [50, 75.2], [50 + nw - 0.4, 62.6], [50 + nw, 62.6], [50, 80], [50 - nw, 62.6]]), T.S)
     + (lo || G.young ? '' : fill(sm([[50 - nw + 2.6, 55], [50 - 1.8, 65.4], [50 - 2.4, 66], [50 - nw + 2, 57.4]]), T.M))
     + `</g>`
-  const shirt = look.top ? topOf(look, G, K, P, lo, mark) : look.kit === 'hoops' ? tankOf(G, K, P, lo) : jerseyOf(G, K, P, lo, look.kit === 'crew')
+  const shirt = look.top ? topOf(look, G, K, P, lo, mark) : look.kit === 'hoops' ? tankOf(G, K, P, lo) : look.kit === 'soccer' ? soccerOf(G, K, P, lo) : jerseyOf(G, K, P, lo, look.kit === 'crew')
   const headD = sm(sym(G.R))
   const vb = VIEWS[view] ?? VIEWS.full
   const close = view === 'eyes' || view === 'nose' || view === 'mouth'
