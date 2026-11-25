@@ -148,7 +148,7 @@ const archOf = (ovr, b, types) => (SoccerSim.getSoccerArchetype ?? soccerArchety
 // (the owner, 2026-11-25). The middle face is the big one.
 const FACE_PICKS = {
   current: [['Lamine Yamal', 'soccer/fm-1467236'], ['Erling Haaland', 'soccer/fm-737066'], ['Kylian Mbappé', 'soccer/fm-701154']],
-  alltime: [['Cristiano Ronaldo', 'soccer/fm-30893'], ['Lionel Messi', 'soccer/fm-30981'], ['David Beckham', 'soccer/fm-30612']],
+  alltime: [['Cristiano Ronaldo', 'soccer/fm-30893'], ['Zinedine Zidane', 'soccer/fm-38422'], ['Lionel Messi', 'soccer/fm-30981']],
 }
 const HOME_FACES = Object.fromEntries(['current', 'alltime'].map(k => [k, FACE_PICKS[k].map(([n, id]) => {
   const p = POOL_PLAYERS[k].find(p => p.name === n)
