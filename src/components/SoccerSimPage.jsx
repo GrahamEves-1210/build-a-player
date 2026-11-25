@@ -169,8 +169,8 @@ export function SoccerTeamSpin({ pool = 'current', isCustomMode, onTeamSelected,
         <div className="tpm-eyebrow">{eyebrow ?? (pool === 'alltime' ? 'The World Cup' : 'Simulate Season')}</div>
         <div className="tpm-heading">{mode === 'pick' ? `Pick a ${word}` : `Spin a ${word}`}</div>
         <div className="tpm-mode-tabs">
-          <button className={`tpm-tab${mode === 'spin' ? ' tpm-tab-active' : ''}`} onClick={() => { setMode('spin'); setResult(null); setSearch(''); setPhase('idle') }}>Spin</button>
-          <button className={`tpm-tab${mode === 'pick' ? ' tpm-tab-active' : ''}`} onClick={() => { setMode('pick'); setResult(null); setPhase('idle') }}>Pick</button>
+          <button className={`tpm-tab${mode === 'spin' ? ' tpm-tab-active' : ''}`} onClick={() => { if (phase !== 'idle') return; setMode('spin'); setResult(null); setSearch(''); setPhase('idle') }}>Spin</button>
+          <button className={`tpm-tab${mode === 'pick' ? ' tpm-tab-active' : ''}`} onClick={() => { if (phase !== 'idle') return; setMode('pick'); setResult(null); setPhase('idle') }} disabled={phase !== 'idle'}>Pick</button>
         </div>
         {mode === 'spin' ? (
           <>

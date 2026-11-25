@@ -3,6 +3,7 @@ import { useFigureFace, usesDrawnHead } from '../lib/useFigureFace'
 import { NameTag } from './app/NameTag'
 import { createPortal } from 'react-dom'
 import { useTapGuard } from '../lib/tapGuard'
+import { teamSpinSig, readTeamSpin, dealTeamSpin } from '../lib/teamSpin'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
@@ -213,7 +214,8 @@ const ITEM_H       = 44
 const CENTER       = 2
 const IDLE_MS_REEL = 1200
 
-function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop }) {
+// target: the team the spin was dealt when it started (lib/teamSpin.js): the wheel comes to rest on it
+function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, target = null }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
@@ -239,7 +241,38 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     const loopH = items.length * ITEM_H
     const wrap  = () => { if (posRef.current >= initOffset + loopH) posRef.current -= loopH }
 
-    if (spinning) {
+    if (spinning && target) {
+      // the same speed curve as before, run by distance so it always stops on `target`
+      const duration = 1900
+      const KICK = 0.45
+      const area = KICK + (1 - KICK) * 0.5
+      const len = items.length
+      const start = posRef.current
+      let end = Math.ceil((start + (ITEM_H / 36) * duration * area) / ITEM_H)
+      for (let n = 0; n < len && items[((end % len) + len) % len]?.short !== target.short; n++) end++
+      const dist = end * ITEM_H - start
+      const ease = t => {
+        if (t < KICK) return t / area
+        const u = (t - KICK) / (1 - KICK)
+        return (KICK + (1 - KICK) * (u - u * u * u + (u * u * u * u) / 2)) / area
+      }
+      const startTime = performance.now()
+      if (trackRef.current) trackRef.current.style.transition = 'none'
+      const frame = now => {
+        const t = Math.min((now - startTime) / duration, 1)
+        let pos = start + dist * ease(t)
+        const over = pos - initOffset - loopH
+        if (over >= 0) pos -= Math.ceil((over + 1) / loopH) * loopH
+        posRef.current = pos
+        if (trackRef.current) trackRef.current.style.transform = `translate3d(0,${-(pos - CENTER * ITEM_H)}px,0)`
+        if (t < 1) { rafRef.current = requestAnimationFrame(frame); return }
+        stopRef.current = setTimeout(() => {
+          const idx = Math.round(posRef.current / ITEM_H)
+          onStopRef.current?.(items[((idx % len) + len) % len])
+        }, 150)
+      }
+      rafRef.current = requestAnimationFrame(frame)
+    } else if (spinning) {
       const duration  = 1600 + Math.random() * 600
       const startTime = performance.now()
       const MAX_VEL   = (ITEM_H / 36) * (0.93 + Math.random() * 0.10)
@@ -505,9 +538,18 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTea
 
   const items = useMemo(() => [...NBA_TEAMS].sort(() => Math.random() - 0.5), [spinCount])
 
+  // The spin counts the moment it starts (lib/teamSpin.js): its team is dealt and kept with the build, so
+  // Pick, Cancel or a reload mid-spin can't throw it away. Once a build has spun, it's the spin's team
+  const sig = useMemo(() => (NBA_TEAMS.some(t => !pickPool.includes(t)) ? teamSpinSig(eyebrow, build, NBA_TEAMS) : null), [pickPool]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [spun, setSpun] = useState(() => !!readTeamSpin(sig, NBA_TEAMS))
+  const [target, setTarget] = useState(null)
+  const locked = spun || phase !== 'idle'
+
   const handleSpin = () => {
     if (phase === 'spinning' || phase === 'done') return
     setResult(null)
+    setTarget(dealTeamSpin(sig, NBA_TEAMS))
+    setSpun(true)
     setSpinCount(c => c + 1)
     setPhase('spinning')
   }
@@ -544,11 +586,12 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTea
         <div className="tpm-mode-tabs">
           <button
             className={`tpm-tab${mode === 'spin' ? ' tpm-tab-active' : ''}`}
-            onClick={() => { setMode('spin'); setResult(null); setSearch(''); setPhase('idle') }}
+            onClick={() => { if (locked) return; setMode('spin'); setResult(null); setSearch(''); setPhase('idle') }}
           >Spin</button>
           <button
             className={`tpm-tab${mode === 'pick' ? ' tpm-tab-active' : ''}`}
-            onClick={() => { setMode('pick'); setResult(null); setPhase('idle') }}
+            onClick={() => { if (locked) return; setMode('pick'); setResult(null); setPhase('idle') }}
+            disabled={locked}
           >Pick</button>
         </div>
 
@@ -565,6 +608,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTea
                   locked={phase === 'done'}
                   getDisplay={t => t.short}
                   getSub={t => t.name.split(' ').slice(-1)[0]}
+                  target={target}
                   onStop={handleStop}
                 />
               </div>

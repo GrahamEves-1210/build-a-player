@@ -1,13 +1,15 @@
 import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
 import { NFL_TEAMS } from '../data/nfl-teams'
 import { useTapGuard } from '../lib/tapGuard'
+import { teamSpinSig, readTeamSpin, dealTeamSpin } from '../lib/teamSpin'
 
 const ITEM_H  = 44
 const CENTER  = 2
 const IDLE_MS = 1200
 const FAST_MS = 36
 
-function SlotReel({ items, spinning, idle, onStop }) {
+// target: the team the spin was dealt when it started (lib/teamSpin.js): the wheel comes to rest on it
+function SlotReel({ items, spinning, idle, onStop, target = null }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
@@ -49,7 +51,39 @@ function SlotReel({ items, spinning, idle, onStop }) {
     const loopH = items.length * ITEM_H
     const wrap  = () => { if (posRef.current >= initOffset + loopH) posRef.current -= loopH }
 
-    if (spinning) {
+    if (spinning && target) {
+      // the same speed curve as before, run by distance so it always stops on `target`
+      const duration = 2100
+      const KICK = 0.45
+      const area = KICK + (1 - KICK) * 0.5
+      const len = items.length
+      const start = posRef.current
+      let end = Math.ceil((start + (ITEM_H / FAST_MS) * duration * area) / ITEM_H)
+      for (let n = 0; n < len && items[((end % len) + len) % len]?.short !== target.short; n++) end++
+      const dist = end * ITEM_H - start
+      const ease = t => {
+        if (t < KICK) return t / area
+        const u = (t - KICK) / (1 - KICK)
+        return (KICK + (1 - KICK) * (u - u * u * u + (u * u * u * u) / 2)) / area
+      }
+      const startTime = performance.now()
+      if (trackRef.current) trackRef.current.style.transition = 'none'
+      const frame = now => {
+        const t = Math.min((now - startTime) / duration, 1)
+        let pos = start + dist * ease(t)
+        const over = pos - initOffset - loopH
+        if (over >= 0) pos -= Math.ceil((over + 1) / loopH) * loopH
+        posRef.current = pos
+        if (trackRef.current) trackRef.current.style.transform = `translate3d(0,${-(pos - CENTER * ITEM_H)}px,0)`
+        if (t < 1) { rafRef.current = requestAnimationFrame(frame); return }
+        stopRef.current = setTimeout(() => {
+          const idx = Math.round(posRef.current / ITEM_H)
+          if (onStopRef.current) onStopRef.current(items[((idx % len) + len) % len])
+        }, 150)
+      }
+      rafRef.current = requestAnimationFrame(frame)
+
+    } else if (spinning) {
       const duration  = 1900 + Math.random() * 400
       const startTime = performance.now()
       const MAX_VEL   = ITEM_H / FAST_MS
@@ -147,9 +181,26 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, 
 
   const items = useMemo(() => [...teams].sort(() => Math.random() - 0.5), [spinCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sandbox: any of the 32 teams. Normal mode: only the teams actually
+  // represented in the player's build (the 9-10 drafted attribute sources).
+  const draftedTeamsPool = useMemo(() => {
+    const shorts = [...new Set(Object.values(build).filter(Boolean).map(teamOf))]
+    return shorts.map(s => teams.find(t => t.short === s)).filter(Boolean)
+  }, [build]) // eslint-disable-line react-hooks/exhaustive-deps
+  const pickPool = isPlus || anyTeam ? teams : draftedTeamsPool
+
+  // The spin counts the moment it starts (lib/teamSpin.js): its team is dealt and kept with the build, so
+  // Pick, Cancel or a reload mid-spin can't throw it away. Once a build has spun, it's the spin's team
+  const sig = useMemo(() => (teams.some(t => !pickPool.includes(t)) ? teamSpinSig(eyebrow, build, teams) : null), [pickPool]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [spun, setSpun] = useState(() => !!readTeamSpin(sig, teams))
+  const [target, setTarget] = useState(null)
+  const locked = spun || phase !== 'idle'
+
   const handleSpin = () => {
     if (phase === 'spinning' || phase === 'done') return
     setResult(null)
+    setTarget(dealTeamSpin(sig, teams))
+    setSpun(true)
     setSpinCount(c => c + 1)
     setPhase('spinning')
   }
@@ -164,14 +215,6 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, 
     setResult(team)
     setTimeout(() => onSelect(team), 800)
   }
-
-  // Sandbox: any of the 32 teams. Normal mode: only the teams actually
-  // represented in the player's build (the 9-10 drafted attribute sources).
-  const draftedTeamsPool = useMemo(() => {
-    const shorts = [...new Set(Object.values(build).filter(Boolean).map(teamOf))]
-    return shorts.map(s => teams.find(t => t.short === s)).filter(Boolean)
-  }, [build]) // eslint-disable-line react-hooks/exhaustive-deps
-  const pickPool = isPlus || anyTeam ? teams : draftedTeamsPool
 
   const filteredTeams = useMemo(() => {
     if (!search) return pickPool
@@ -194,11 +237,12 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, 
         <div className="tpm-mode-tabs">
           <button
             className={`tpm-tab${mode === 'spin' ? ' tpm-tab-active' : ''}`}
-            onClick={() => { setMode('spin'); setResult(null); setSearch('') }}
+            onClick={() => { if (locked) return; setMode('spin'); setResult(null); setSearch('') }}
           >Spin</button>
           <button
             className={`tpm-tab${mode === 'pick' ? ' tpm-tab-active' : ''}`}
-            onClick={() => { setMode('pick'); setResult(null); setPhase('idle') }}
+            onClick={() => { if (locked) return; setMode('pick'); setResult(null); setPhase('idle') }}
+            disabled={locked}
           >Pick</button>
         </div>
 
@@ -211,6 +255,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, 
                   items={items}
                   spinning={phase === 'spinning'}
                   idle={phase === 'idle'}
+                  target={target}
                   onStop={handleStop}
                 />
               </div>
