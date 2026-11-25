@@ -546,6 +546,7 @@ function ballNow(g) {
     const f = clamp(after / 600, 0, 1)
     return { x: s.to.x + Math.sign(s.to.x) * f * 1.5, y: Math.max(0.11, s.to.y + f * (s.over ? 1.2 : 0)), z: f * 5, spin: 10 }
   }
+  if (b.owner === 'gk' && g.res) { const a = g.t - g.resAt; return { x: g.gk.x, y: lerp(0.2, 1.28, easeOut(prog(a, 450, 1020))), z: g.gk.z - 0.25, spin: 0, held: true } }
   return { x: b.x, y: 0.11, z: b.z, spin: b.spin, held: b.owner === 'gk' }
 }
 function strikerPose(g) {
@@ -573,9 +574,11 @@ function keeperPose(g) {
     if (g.res === 'goal' && g.cel) return null
     if (g.res === 'saved' || g.res === 'claimed' || g.res === 'smothered') {
       const sv = g.shot?.save
-      const base = { ...POSE.smother, rot: (K.side || 1) * 1.2 }   // (he'd gone to ground: a keeper on his feet is keeperShot's)
+      // (he'd gone to ground: a keeper on his feet is keeperShot's.) Down on it, then on to his knees with it and up,
+      // the ball held to his chest
+      const base = { ...POSE.smother, rot: (K.side || 1) * 1.2 }
       void sv
-      return a < 500 ? base : keeperRoar(a - 500, base)
+      return a < 450 ? base : a < 760 ? mix(base, POSE.kneel, easeOut(prog(a, 450, 760))) : mix(POSE.kneel, POSE.clutch, easeOut(prog(a, 760, 1020)))
     }
     if (g.res === 'wide' || g.res === 'over') return mix(POSE.set, POSE.hips, easeOut(prog(a, 300, 700)))
     return mix(POSE.set, POSE.stand, easeOut(prog(a, 200, 600)))

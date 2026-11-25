@@ -1087,6 +1087,8 @@ export function defenderBeaten(i, age, base = POSE.stand) {
 const ARM_M = (121 - 53) * RIG_M, HIP_M = 53 * RIG_M
 export const KEEPER_DOWN = -(HIP_M - 0.17)
 const KNEEL = { ...POSE.knees, hy: 27, ly: 2, ry: 2, lk: -1, rk: -1, face: 2 }
+// (for a game's own keeper: on his knees with it, and up with it held to his chest)
+POSE.kneel = { ...KNEEL, face: 0, tilt: 0.2, hlx: -6, hrx: 6, hly: -46, hry: -46 }
 const smoothS = f => f * f * (3 - 2 * f)
 export function keeperDive(ms, K, o = {}) {
   const at = clamp(o.at ?? 520, 260, 780), reach = Math.max(0.2, Math.abs(o.hx ?? 2.6)), hy = clamp(o.hy ?? 1, 0.2, 2.6)
@@ -1117,6 +1119,7 @@ export function keeperLanded(K, o = {}) { const d = keeperDive(1e6, K, o); retur
 // where his dive left him (on his feet: straight to the roar). age: ms since the save. → { pose, lift }
 // (held: the ball's in his arms: he clutches it to his chest and roars over it, no fist)
 const CLUTCH = { ...POSE.stand, hlx: -6, hly: -77, hrx: 6, hry: -77, elbow: 0.7, face: 1, tilt: 0.4 }
+POSE.clutch = CLUTCH
 export function keeperUp(age, from = {}, roar = true, held = false) {
   const r0 = from.rot ?? 0, l0 = from.lift ?? 0
   if (held) roar = false
