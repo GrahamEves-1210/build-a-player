@@ -71,7 +71,7 @@ const browOf = (tone, curl) => {
 // art's hair.
 const CURL_BASE = '#17110e', CURL_HI = '#33271f'
 // the ball's white panels up to white, its black panels left black (the grey ramp, as SHADE)
-const BALL = [2.6, 0.04]
+const BALL = [4.2, 0.08]
 
 const lightHex = hex => {
   if (!/^#[0-9a-f]{6}$/i.test(hex ?? '')) return false
@@ -100,10 +100,10 @@ const ART = '/st-silhouette.webp'
 const SOCKETS = [[716, 239, 20, 8.5, 8], [753, 242, 8, 5, -12]]   // [cx, cy, rx, ry, rotate]: the shadow round each eye
 const LASHES = [
   // [the lowered upper lid's lash line, as a tapered fill; its opacity]
-  ['M703 240.6 Q716 244.4 731 243.2 Q716 246.6 703.4 241.8 Z', 0.72],
-  ['M746.2 245.4 Q751 246.4 755.6 244.4 Q751 247.6 746.4 246.2 Z', 0.5],
+  ['M702.4 240 Q716 243.2 731.6 242.2 L732 244 Q716 248.6 702.8 242.6 Z', 0.92],
+  ['M745.6 244.8 Q751 245.8 756.2 243.6 L756.2 245.2 Q751 248.4 745.8 246.6 Z', 0.78],
 ]
-const IRISES = [[719.5, 245.6, 3.4, 1.1], [751.5, 246.9, 1.6, 0.7]]   // the sliver of iris under each lid
+const IRISES = [[719.5, 246.4, 3.9, 1.7], [751.5, 247.3, 1.9, 0.95]]   // the sliver of iris under each lid
 const BROWS = [
   // [d, opacity]: each brow twice, a wider soft one under a narrower core, so its edges fade into the skin.
   // The near brow's head is by the nose (thicker), its tail thins out toward the temple
@@ -240,14 +240,14 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           {head && (
             <g clipPath={url('c-face')}>
               <radialGradient id={id('sock')}>
-                <stop offset="0" stopColor={featureOf(face)} stopOpacity="0.42" />
+                <stop offset="0" stopColor={featureOf(face)} stopOpacity="0.55" />
                 <stop offset="0.6" stopColor={featureOf(face)} stopOpacity="0.18" />
                 <stop offset="1" stopColor={featureOf(face)} stopOpacity="0" />
               </radialGradient>
               {SOCKETS.map(([cx, cy, rx, ry, rot]) => (
                 <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} transform={`rotate(${rot} ${cx} ${cy})`} fill={url('sock')} />
               ))}
-              {IRISES.map(([cx, cy, rx, ry]) => <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} fill={IRIS} opacity="0.4" />)}
+              {IRISES.map(([cx, cy, rx, ry]) => <ellipse key={cx} cx={cx} cy={cy} rx={rx} ry={ry} fill={IRIS} opacity="0.72" />)}
               {LASHES.map(([d, o]) => <path key={d} d={d} fill={LASH} opacity={o} />)}
               <filter id={id('soft')} x="-0.1" y="-0.5" width="1.2" height="2"><feGaussianBlur stdDeviation="0.6" /></filter>
               <g filter={url('soft')}>{BROWS.map(([d, o]) => <path key={d} d={d} fill={browOf(face, curl)} opacity={o} />)}</g>
