@@ -23,6 +23,7 @@
 //         { dev: { id: ovr } } a young first-round pick's development minutes (setOf fills it: devBonus)
 //         { bst: [ids] }       the GM's builds, auto starters with no order of his (setOf fills it): each takes the
 //                              place of the coach's starter at his spot, the rest of the five the coach's
+//         { bnm: [ids] }       the men the builds were named to replace (setOf): off the bench while healthy
 //   spotFive(players)          the coach's five by spot, [PG..C] (the setup's REPLACES line: who a build's spot is)
 //   startersOf(players)        the coach's best five: the best men who fit the five spots
 //   dressed(T, { po, year })   tonight's men: healthy (the playoffs: a short injury is played through), not resting; a two-way man only in the regular season, 50 games
@@ -66,9 +67,24 @@ export function dressed(T, { po = false, year = null } = {}) {
 // (dev: the team's young first-round picks and what each is worth in the bench's minutes, devBonus below; the game
 // plays stripped copies of the men, so it rides on the set)
 // (bst: the GM's builds, auto starters while the order is the coach's: each replaces the starter at his spot)
+// (bnm: the men the builds replace: the setup's named man (p.rp), else the coach's five of the whole roster, hurt men
+// included, at each build's spot)
 export const setOf = T => {
   const dev = devOf(T), bst = T.rot?.length ? null : (T.r ?? []).filter(p => p.b != null && !p.tw).map(p => p.i)
-  return { st: T.rot ?? [], order: T.rot ?? null, min: T.min ?? null, ...(dev && { dev }), ...(bst?.length && { bst }) }
+  const bnm = bst?.length ? namedOf(T, bst) : null
+  return { st: T.rot ?? [], order: T.rot ?? null, min: T.min ?? null, ...(dev && { dev }), ...(bst?.length && { bst }), ...(bnm?.length && { bnm }) }
+}
+// (the man the setup named, p.rp (builds.js placeBuilds), while he's on the roster; else the coach's five of the whole
+// roster at the build's spot)
+function namedOf(T, bst) {
+  let five = null
+  const out = []
+  for (const p of T.r) if (bst.includes(p.i)) {
+    let m = p.rp != null ? T.r.find(x => x.i === p.rp && !x.tw && x.b == null) : null
+    if (!m) m = (five ??= spotFive(T.r.filter(x => !x.tw && x.b == null)))[spotOf(p)]
+    if (m && !out.includes(m.i)) out.push(m.i)
+  }
+  return out
 }
 export function rotationOf(F, short, { playoff = false } = {}) {
   const T = F.teams[short], L = planRotation(dressed(T, { po: playoff, year: F.year }), { ...setOf(T), po: playoff })
@@ -86,7 +102,7 @@ const SLOT_PO = [38, 37, 35.5, 34, 32]
 export const MIN_CAP_PO = 40
 
 // the best men for the five spots (forced: men who must be in it, the user's starters); returns [[man, spot]]
-function fitFive(men, forced = []) {
+function fitFive(men, forced = [], pin = false) {
   const rest = men.filter(p => !forced.includes(p)).sort((a, b) => ovr(b) - ovr(a)).slice(0, 11)
   const cands = [...forced, ...rest]
   const n = cands.length
@@ -100,7 +116,7 @@ function fitFive(men, forced = []) {
     for (let m = 0; m < 32; m++) {
       if (cur[m] <= NEG) continue
       if (k >= forced.length && cur[m] > nx[m]) { nx[m] = cur[m]; fr[m] = -1 }
-      for (let j = 0; j < 5; j++) if (!(m & (1 << j))) { const v = cur[m] + o - FIT[Math.abs(sp - j)], m2 = m | (1 << j); if (v > nx[m2]) { nx[m2] = v; fr[m2] = j } }
+      for (let j = 0; j < 5; j++) if (!(m & (1 << j)) && !(pin && k < forced.length && j !== sp)) { const v = cur[m] + o - FIT[Math.abs(sp - j)], m2 = m | (1 << j); if (v > nx[m2]) { nx[m2] = v; fr[m2] = j } }
     }
     from.push(fr); cur = nx
   }
@@ -118,13 +134,15 @@ export function spotFive(players) {
   for (const [p, j] of fitFive(players)) out[j] = p
   return out
 }
-// The five with the GM's builds in it (set.bst): the coach's five of everyone else, then each build in the place of
-// the man at his own spot (the starter he replaces goes to the bench); two builds at one spot, the better one starts.
-function buildFive(pool, bs) {
-  const at = new Map(fitFive(pool.filter(p => !bs.includes(p))).map(([p, j]) => [j, p]))
-  const done = new Set()
-  for (const b of [...bs].sort((x, y) => ovr(y) - ovr(x))) { const j = spotOf(b); if (done.has(j)) continue; done.add(j); at.set(j, b) }
-  return [...at.entries()].map(([j, p]) => [p, j])
+// The five with the GM's builds in it (set.bst): each build starts at his own spot (two at one spot: the better one;
+// the other is one more man for the coach), the man he was named to replace (set.bnm: the coach's five at that spot
+// with everyone healthy, setOf) comes off the bench while he's healthy, and the rest of the five is the coach's best
+// healthy men around them. When the named man is out, the build doesn't push anyone else to the bench: the coach
+// fills the five around the injury the way he would with no build at all (a better man slides to the open spot).
+function buildFive(pool, bs, named) {
+  const pinned = [], used = new Set()
+  for (const b of [...bs].sort((x, y) => ovr(y) - ovr(x))) { const j = spotOf(b); if (used.has(j)) continue; used.add(j); pinned.push(b) }
+  return fitFive(pool.filter(p => pinned.includes(p) || !named.has(p.i)), pinned, true)
 }
 
 // a five that doesn't look like a lineup: swap in the men who fix it, giving up as little as possible (val: what a
@@ -169,7 +187,7 @@ export function planRotation(players, set = {}) {
   const want = (set.st ?? []).filter(id => ids.has(id) && !sat.some(p => p.i === id)).slice(0, 5).map(id => byId.get(id))
   const pool = sat.length ? up : players
   const bs = !want.length && set.bst?.length ? pool.filter(p => set.bst.includes(p.i)) : []
-  const fit = bs.length ? buildFive(pool, bs) : fitFive(pool, want)
+  const fit = bs.length ? buildFive(pool, bs, new Set(set.bnm ?? [])) : fitFive(pool, want)
   const spot = new Map(fit.map(([p, j]) => [p, j]))
   const five = fit.map(([p]) => p).sort((a, b) => ovr(b) - ovr(a))
   for (const p of players) spot.has(p) || spot.set(p, spotOf(p))
