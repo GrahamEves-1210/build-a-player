@@ -44,7 +44,7 @@ import KFigureOverlay from './KFigureOverlay'
 import { useFigureFace, usesDrawnHead } from '../lib/useFigureFace'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { SOCCER_SILHOUETTE, SOCCER_AS_BUCKET, soccerAsBucketBuild } from '../lib/soccerUi'
-import StrikerFigureOverlay, { ST_FIG_W, ST_FIG_H } from './StrikerFigureOverlay'
+import StrikerFigureOverlay, { ST_FIG_W, ST_FIG_H, strikerArtMask } from './StrikerFigureOverlay'
 import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
 
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
@@ -998,7 +998,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
           className={`sil-img${(isRB || isWR || isTE) ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
           draggable={false}
           style={
-            isStriker  ? (stFit ? { position: 'absolute', ...stBox, objectFit: 'fill' } : { visibility: 'hidden' })
+            isStriker  ? (stFit ? { position: 'absolute', ...stBox, objectFit: 'fill', ...strikerArtMask(build) } : { visibility: 'hidden' })
             : isBucket ? { transform: `scale(${bucketScale})`, transformOrigin: 'center center' }
             : (isWR || isTE) ? { transform: wrTransform, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
             : isRB     ? { transform: `scale(${rbScale})`, transformOrigin: 'center center' }
