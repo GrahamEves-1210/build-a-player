@@ -8,7 +8,7 @@
 
 import { dashTarget, dashTypical, benchTypical, coneShift } from './mg/combineNorms.js'
 import { seeded } from './rng'
-import { traitValue, pickMomentGame, pickPlayoffGame, GAMES, momentsOf } from './minigames'
+import { traitValue, pickMomentGame, pickPlayoffGame, GAMES, momentsOf, simRate } from './minigames'
 import { momentSituation, finalScore, momentFacts } from './situations'
 import { planMoment, playMoment } from './inGame.js'
 import { SIMPLE_GAMES } from './minigamesSimple'
@@ -3177,8 +3177,9 @@ function watchBracket(c, po) {
 const LAST_PLAY = { 'game-winner': 'both', onside: 'onside', 'clutch-shot': 'both', 'two-minute': 'both', 'goal-line': 'both', 'free-throws': 'hit', lockdown: 'hit', 'rim-protect': 'hit', penalty: 'hit', 'one-on-one': 'hit', header: 'hit', volley: 'hit', 'free-kick': 'hit', 'two-on-one': 'hit' }
 const logit = x => Math.log(x / (1 - x)), sigmoid = x => 1 / (1 + Math.exp(-x))
 const MOMENT_SWING = 1.3
-// how often the moment's game goes in: the rate the Career sim lands it at for his grade (MiniGame's sim, 45% at a 1, 92% at an 11)
-export const momentHitRate = (c, game) => game === 'onside' ? onsideP(kValsOf(c?.build)) * 1.1 : clamp(0.45 + 0.47 * (traitValue(game, c?.build) - 1) / 10, 0.45, 0.92)
+// how often the moment's game goes in: the rate the Career sim lands it at for his grade (MiniGame's sim, 45% at a 1, 92% at
+// an 11; a striker's chances at their real conversion rates: lib/minigames.js simRate)
+export const momentHitRate = (c, game) => game === 'onside' ? onsideP(kValsOf(c?.build)) * 1.1 : simRate(game, traitValue(game, c?.build))
 export const momentOdds = (p, hit, score = 0.75, round = 0, h = 0.7) => {
   const q = clamp(p, 0.02, 0.98), L = logit(q)
   let lo = -8, hi = 8

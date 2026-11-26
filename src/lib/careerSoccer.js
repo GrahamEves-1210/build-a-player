@@ -14,6 +14,7 @@ import {
 import { seeded } from './rng'
 import { momentFacts } from './situations'
 import { playMoment } from './inGame.js'
+import { chanceXg } from './minigames'
 import { RECORDS } from './seasonFacts'
 import { seasonRaw } from './careerStats'
 import { HEADSHOT_BASE } from '../utils/simulation'
@@ -743,18 +744,43 @@ export function soccerRound(c, score, game = null, hit = score >= 0.5, pts = nul
   }
   const mySc = legs.reduce((s, l) => s + l[0], 0), oppSc = legs.reduce((s, l) => s + l[1], 0)
   if (mySc === oppSc && !pens) pens = won ? 'won' : 'lost'
-  // his line: the moment's goal when he scored it, and his usual share of the rest
+  // His line, read off the board (2026-11-26, the owner: "if you get a goal of course that should be reflected in stats
+  // and score"). The moment's leg: the goal he scored in it is his (the 2-on-1 squared for the tap-in: a teammate's,
+  // and the assist his); a chance he missed is a shot that didn't go in (saved: on target), never a goal. Every other
+  // goal on the board, in that leg and the other, is his at his league share of his side's goals, the assists the same
+  // way, and the rest of his shots at his league rate. (Before, his goals in a tie were a draw on his rate, the moment's
+  // goal folded into it, and a missed moment left no trace: no shot, an xG read off his goals.)
   const lg = soccerStats(f)
-  const rate = lg.apps ? lg.goals / lg.apps : 0.3, arate = lg.apps ? lg.assists / lg.apps : 0.1
-  let goals = 0, assists = 0
+  const mine = (f.games ?? []).filter(g => !g.sat && g.app), apps0 = Math.max(1, mine.length)
+  const gf = Math.max(1, mine.reduce((s2, g) => s2 + (g.mySc ?? 0), 0))
+  const share = lg.apps ? clamp(lg.goals / gf, 0.12, 0.6) : 0.3, aShare = lg.apps ? clamp(lg.assists / gf, 0.04, 0.3) : 0.1
+  const missPer = lg.apps ? Math.max(0.4, (lg.shots - lg.goals) / apps0) : 1.6, onT = lg.shots > lg.goals ? clamp((lg.sot - lg.goals) / (lg.shots - lg.goals), 0.2, 0.5) : 0.33
+  const xgPer = lg.apps ? clamp(lg.xg / apps0, 0.15, 1.2) : 0.45
+  const binom = (n, p) => { let k = 0; for (let j = 0; j < n; j++) if (r() < p) k++; return k }
+  const poisN = lam => { const L = Math.exp(-lam); let k = 0, x = r(); while (x > L && k < 12) { k++; x *= r() } return k }
+  const res = !auto && pts && typeof pts === 'object' ? pts.res ?? null : null
+  // (the moment as a shot: a pass that was cut out, a cross cleared or a header he never got to is no shot at all)
+  const pen = game === 'penalty'
+  const noShot = auto || (setUp && hit) || ['cut', 'late', 'tackled', 'cleared'].includes(res) || (game === 'header' && res === 'missed')
+  const onTarget = hit || res === 'saved'
+  const mGoal = !auto && hit && !setUp ? 1 : 0
+  let goals = 0, assists = 0, shots = 0, sot = 0, xg = 0, pensN = 0, pensTaken = 0
   legs.forEach((l, i) => {
     const moment = i === at
-    let g = Math.min(l[0], Math.floor(rate * (0.8 + score * 0.4) + r()))
-    if (moment) g = setUp && hit ? Math.min(g, Math.max(0, l[0] - 1)) : Math.min(l[0], Math.max(hit ? 1 : 0, hit ? g : Math.min(g, Math.max(0, l[0] - 1))))
+    const others = Math.max(0, l[0] - (moment && hit ? 1 : 0))
+    const g = binom(others, share) + (moment ? mGoal : 0)
     goals += g
-    assists += Math.min(l[0] - g, Math.max(moment && setUp && hit ? 1 : 0, Math.floor(arate + r() * 0.8)))
+    assists += Math.min(others - (g - (moment ? mGoal : 0)), binom(others - (g - (moment ? mGoal : 0)), aShare / Math.max(0.2, 1 - share))) + (moment && setUp && hit ? 1 : 0)
+    const near = poisN(missPer)
+    shots += (g - (moment ? mGoal : 0)) + near; sot += (g - (moment ? mGoal : 0)) + binom(near, onT); xg += xgPer
+    if (moment && !noShot) {
+      const cx = chanceXg(game)
+      if (pen) { pensTaken++; pensN += mGoal } else { shots++; if (onTarget) sot++ }
+      xg += cx
+    }
   })
-  const entry = { ...rd, played: true, won, legs, mySc, oppSc, pens, score, hit, auto, swing: note, game: auto ? null : game, goals, assists, apps: legs.length, xg: r10(goals * 0.75 + legs.length * 0.25) }
+  goals = Math.min(goals, mySc); assists = Math.min(assists, mySc - goals)
+  const entry = { ...rd, played: true, won, legs, mySc, oppSc, pens, score, hit, auto, swing: note, game: auto ? null : game, goals, assists, apps: legs.length, shots, sot, xg: r10(xg), pensScored: pensN, pensTaken, ...(auto ? {} : { mGoal: !!mGoal, setUp: setUp && hit, chance: res }) }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : !won && i > po.idx && x.track === rd.track ? { ...x, skip: true } : x))
   const nextIdx = rounds.findIndex((x, i) => i > po.idx && !x.played && !x.skip)
   const done = nextIdx < 0

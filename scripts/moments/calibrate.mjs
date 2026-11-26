@@ -3,10 +3,12 @@
 //   sim   the moment played at the build's usual rate (MiniGame's sim: lib/career.js momentHitRate)
 //   hit   every moment landed      miss  every moment missed
 // The moment is planned and played by lib/inGame.js, the way a playoff round plays it. sim should sit on off; hit and
-// miss show how much one play is worth. Builds are spread over the grades (a rate of 0.5, 0.68 and 0.86 at the play).
+// miss show how much one play is worth. Builds are spread over the grades (a rate of 0.5, 0.68 and 0.86 at the play;
+// a striker's chances at their own real rates at a grade of 3, 6 and 9: lib/minigames.js simRate).
 // Run from the repo root:  node scripts/moments/calibrate.mjs [rounds] [sport: nfl | hoops | soccer | baseball]
 import { planMoment, playMoment, expectAt } from '../../src/lib/inGame.js'
 import { seeded } from '../../src/lib/rng.js'
+import { simRate } from '../../src/lib/minigames.js'
 
 const N = Number(process.argv[2] ?? 20000)
 const POOLS = {
@@ -26,7 +28,7 @@ const SPORTS = [
   { name: 'Soccer (a tie: two legs or a final)', sport: 'soccer', pos: ['st'], bands: [0.25, 0.4, 0.5, 0.6, 0.75] },
   { name: 'Baseball (one game of a series)', sport: 'baseball', pos: ['bat', 'pit'], bands: [0.38, 0.45, 0.5, 0.55, 0.62] },
 ]
-const RATES = [0.5, 0.68, 0.86]
+const RATES = [0.5, 0.68, 0.86], GRADES = [3, 6, 9]
 const pct = x => `${(x * 100).toFixed(1)}`.padStart(5)
 const t0 = Date.now()
 const rows = []
@@ -38,9 +40,10 @@ for (const S of SPORTS.filter(x => !process.argv[3] || x.sport === process.argv[
     const w = { off: 0, sim: 0, hit: 0, miss: 0 }
     let card = 0
     for (let i = 0; i < N; i++) {
-      const pos = S.pos[i % S.pos.length], hr = RATES[Math.floor(i / S.pos.length) % RATES.length]
+      const pos = S.pos[i % S.pos.length], j = Math.floor(i / S.pos.length) % RATES.length, hr = RATES[j]
+      const hOf = S.sport === 'soccer' ? g => simRate(g, GRADES[j]) : () => hr
       const extra = S.sport === 'soccer' ? { legs: i % 3 === 0 ? 1 : 2, home: i % 3 === 0 ? null : i % 2 === 0 } : S.sport === 'baseball' ? { home: i % 2 === 0, gameNo: 1 + (i % 4) } : {}
-      const ctx = { sport: S.sport, seed: `cal-${S.sport}-${p}-${i}`, pGame: p, pool: POOLS[pos], used: [], hOf: () => hr, us: 'AAA', them: 'BBB', ...extra }
+      const ctx = { sport: S.sport, seed: `cal-${S.sport}-${p}-${i}`, pGame: p, pool: POOLS[pos], used: [], hOf, us: 'AAA', them: 'BBB', ...extra }
       const plan = planMoment(ctx)
       card += plan.all
       if (r() < p) w.off++

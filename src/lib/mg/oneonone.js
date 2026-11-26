@@ -504,7 +504,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     let q = 0.15
     if (goal) q = clamp(0.62 + (s?.timed === 'green' ? 0.16 : 0) + (s?.type === 'chip' || s?.type === 'finesse' ? 0.08 : 0) + (Math.abs(s?.to.x ?? 0) > POST - 1 ? 0.08 : 0) + (g.take && g.gk.beatenAt ? 0.1 : 0) + (s?.mate ? -0.12 : 0), 0, 1)
     else q = clamp(0.08 + (g.res === 'saved' ? 0.17 : g.res === 'wide' || g.res === 'over' ? 0.1 : 0.04), 0, 0.4)
-    g.done = outcome(q, goal, g.why); g.doneAt = g.t
+    g.done = outcome(q, goal, g.why, { res: g.res }); g.doneAt = g.t   // (raw.res: how it ended, for his match line)
     g.outro = goal ? celebMs() + 300 : lightMode() ? 1100 : 2200
     const word = { goal: 'GOAL', saved: 'SAVED', wide: 'WIDE', over: 'OVER THE BAR', tackled: 'TACKLED', claimed: 'CLAIMED', smothered: 'SMOTHERED', blocked: 'BLOCKED', out: 'OUT OF PLAY' }[g.res]
     g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 38 : 50, sub: g.why }

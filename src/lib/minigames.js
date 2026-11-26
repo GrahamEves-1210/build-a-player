@@ -154,6 +154,18 @@ export function traitValue(game, build, traits = null) {
   const own = has(traits ?? GAMES[game]?.traits ?? []), list = own.length || traits ? own : has(BORROWED_TRAITS[game] ?? [])
   return list.length ? list.reduce((s, t) => s + (build[t].val ?? 5), 0) / list.length : 5
 }
+// How often a key moment's play goes in at a trait value v (1–11), the rate Career's sim lands it at (MiniGame's sim,
+// lib/career.js momentHitRate, and the calibration in lib/inGame.js: the round is won as often with the moment as
+// without it at this rate). 45% at a 1, 92% at an 11 for football and basketball. A striker's chances are what they
+// are in the real game (the owner, 2026-11-26: "remember this is soccer"): a penalty goes in about three times in
+// four, a one-on-one less than half the time, a header or a volley one in four or five, a free kick one in ten, a
+// little more for a great finisher. Most chances are missed, so missing one costs a match little (the small value of
+// a chance not taken) and scoring one is worth about a goal in that game state.
+const SIM_RANGE = { penalty: [0.7, 0.86], 'one-on-one': [0.28, 0.5], 'two-on-one': [0.34, 0.56], header: [0.14, 0.32], volley: [0.12, 0.28], 'free-kick': [0.06, 0.16] }
+export const simRange = game => SIM_RANGE[game] ?? [0.45, 0.92]
+export const simRate = (game, v) => { const [lo, hi] = simRange(game); return lo + (hi - lo) * Math.max(0, Math.min(1, (v - 1) / 10)) }
+// the chance's own expected goals (a penalty's 0.76; the rest the middle of the range above), for his match line
+export const chanceXg = game => (game === 'penalty' ? 0.76 : SIM_RANGE[game] ? Math.round((SIM_RANGE[game][0] + SIM_RANGE[game][1]) * 50) / 100 : 0)
 // forgiveness from the trait (1–11): a window, in % of the bar, or a time in ms
 export const zoneWidth = v => 8 + v * 1.8                  // 10–28% of the bar
 export const powerZone = v => 7 + v * 2.4                  // the top 9–33% of the meter

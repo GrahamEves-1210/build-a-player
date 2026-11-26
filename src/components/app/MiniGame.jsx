@@ -1,8 +1,7 @@
 import { minigameOpen } from '../../lib/ads'
 import { useEffect, useRef, useState } from 'react'
-import { GAMES, traitValue } from '../../lib/minigames'
+import { GAMES, traitValue, simRate } from '../../lib/minigames'
 import { engineFor, BUCKET_GAMES, SOCCER_GAMES, BASEBALL_GAMES } from '../../lib/mg'
-import { byV } from '../../lib/mg/kit'
 import { seeded } from '../../lib/rng'
 import { momentSituation } from '../../lib/situations'
 import { valToGrade } from '../../utils/simulation'
@@ -73,7 +72,7 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
   useEffect(() => {
     if (!sim) return
     unlock()
-    const hit = seeded(`mg-sim-${seed}`)() < byV(v, 0.45, 0.92)
+    const hit = seeded(`mg-sim-${seed}`)() < simRate(game, v)   // (lib/minigames.js: a striker's chances at their real rates)
     onDone?.({ score: hit ? 0.7 : 0.3, hit, note: null, raw: null, out: false })
   }, [sim]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {

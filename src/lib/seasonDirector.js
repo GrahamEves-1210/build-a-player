@@ -373,7 +373,9 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       const g = D.games[at]
       if (g && o.game) {
         const ng = { ...g }
-        for (const [k2, v] of Object.entries(o.game.add || {})) if (v) ng[k2] = Math.max(0, (ng[k2] ?? 0) + v)
+        for (const [k2, v] of Object.entries(o.game.add || {})) if (v) ng[k2] = Math.round(Math.max(0, (ng[k2] ?? 0) + v) * 100) / 100
+        // (a striker's match rating stays a rating, and the man of the match follows it: utils/soccerSimulation.js lineFor)
+        if (isSoccer && o.game.add?.rating && ng.rating != null) { ng.rating = Math.round(Math.min(10, Math.max(4.5, ng.rating)) * 10) / 10; ng.motm = ng.rating >= 8.3 || (ng.goals ?? 0) >= 3 }
         // (a kicker's moment is a kick: it goes on the game's list, so the ranges and his longest follow it)
         if (o.game.kicks) { ng.kicks = [...(g.kicks ?? []), ...o.game.kicks]; ng.long = Math.max(ng.long ?? 0, ...o.game.kicks.filter(x => x.good).map(x => x.d)) }
         if (o.game.my != null) ng.mySc = o.game.my
