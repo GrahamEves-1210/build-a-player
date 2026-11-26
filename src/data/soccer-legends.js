@@ -113,7 +113,7 @@ export const WC_LEGENDS = [
   { name: "Romário", short: "Romário", team: 'BRA', nation: 'BRA', number: 11, height: 66, weight: 154, age: 28, foot: 'right', skin: '#946c58', espn: null, starter: false, position: 'ST', role: 'ST', years: '1987–2005', peak: 1994,
     attrs: { pace: 9, finishing: 11, shotPower: 7, dribbling: 10, passing: 6, positioning: 11, heading: 3, size: 2, composure: 10 } },
   { name: "Rivaldo", short: "Rivaldo", team: 'BRA', nation: 'BRA', number: 10, height: 74, weight: 165, age: 27, foot: 'left', skin: '#a2735e', espn: null, starter: false, position: 'ST', role: 'LW', years: '1993–2003', peak: 1999,
-    attrs: { pace: 7, finishing: 10, shotPower: 11, dribbling: 10, passing: 9, positioning: 9, heading: 6, size: 7, composure: 10 } },
+    attrs: { pace: 7, finishing: 10, shotPower: 11, dribbling: 11, passing: 9, positioning: 9, heading: 6, size: 7, composure: 10 } },
   { name: "Neymar", short: "Neymar", team: 'BRA', nation: 'BRA', number: 10, height: 69, weight: 150, age: 23, foot: 'right', skin: '#a67f6b', espn: null, starter: false, position: 'ST', role: 'LW', years: '2010–2023', peak: 2015,
     attrs: { pace: 10, finishing: 9, shotPower: 8, dribbling: 11, passing: 10, positioning: 9, heading: 3, size: 3, composure: 10 } },
 
@@ -129,11 +129,11 @@ export const WC_LEGENDS = [
   { name: "Jürgen Klinsmann", short: "Klinsmann", team: 'GER', nation: 'GER', number: 18, height: 71, weight: 170, age: 26, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'ST', years: '1987–1998', peak: 1990,
     attrs: { pace: 9, finishing: 9, shotPower: 7, dribbling: 6, passing: 6, positioning: 9, heading: 9, size: 6, composure: 8 } },
   { name: "Toni Kroos", short: "Kroos", team: 'GER', nation: 'GER', number: 8, height: 72, weight: 168, age: 24, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'CM', years: '2010–2024', peak: 2014,
-    attrs: { pace: 3, finishing: 6, shotPower: 9, dribbling: 7, passing: 10, positioning: 5, heading: 4, size: 6, composure: 10 } },
+    attrs: { pace: 3, finishing: 6, shotPower: 9, dribbling: 7, passing: 11, positioning: 5, heading: 4, size: 6, composure: 10 } },
 
   // ─── ARG ────────────────────────────────────────────────────────────────────
   { name: "Lionel Messi", short: "Messi", team: 'ARG', nation: 'ARG', number: 10, height: 67, weight: 148, age: 25, foot: 'left', skin: '#bb866f', espn: 45843, starter: false, position: 'ST', role: 'SS', years: '2005–2026', peak: 2012,
-    attrs: { pace: 10, finishing: 11, shotPower: 10, dribbling: 11, passing: 11, positioning: 10, heading: 3, size: 2, composure: 11 } },
+    attrs: { pace: 10, finishing: 11, shotPower: 10, dribbling: 11, passing: 11, positioning: 10, heading: 2, size: 2, composure: 11 } },
   { name: "Diego Maradona", short: "Maradona", team: 'ARG', nation: 'ARG', number: 10, height: 65, weight: 154, age: 26, foot: 'left', skin: '#a2735e', espn: null, starter: false, position: 'ST', role: 'AM', years: '1977–1994', peak: 1986,
     attrs: { pace: 9, finishing: 10, shotPower: 10, dribbling: 11, passing: 11, positioning: 9, heading: 3, size: 2, composure: 11 } },
   { name: "Gabriel Batistuta", short: "Batistuta", team: 'ARG', nation: 'ARG', number: 9, height: 73, weight: 183, age: 29, foot: 'right', skin: '#c58f83', espn: null, starter: true, position: 'ST', role: 'ST', years: '1991–2002', peak: 1998,
@@ -155,19 +155,19 @@ export const WC_LEGENDS = [
   { name: "Alessandro Del Piero", short: "Del Piero", team: 'ITA', nation: 'ITA', number: 10, height: 69, weight: 161, age: 24, foot: 'right', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'SS', years: '1995–2008', peak: 1998,
     attrs: { pace: 7, finishing: 9, shotPower: 10, dribbling: 9, passing: 9, positioning: 9, heading: 4, size: 4, composure: 10 } },
   { name: "Andrea Pirlo", short: "Pirlo", team: 'ITA', nation: 'ITA', number: 21, height: 70, weight: 150, age: 27, foot: 'right', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'CM', years: '2002–2015', peak: 2006,
-    attrs: { pace: 3, finishing: 6, shotPower: 10, dribbling: 8, passing: 11, positioning: 5, heading: 3, size: 3, composure: 10 } },
+    attrs: { pace: 3, finishing: 6, shotPower: 10, dribbling: 9, passing: 11, positioning: 5, heading: 3, size: 3, composure: 10 } },
   { name: "Christian Vieri", short: "Vieri", team: 'ITA', nation: 'ITA', number: 32, height: 73, weight: 181, age: 26, foot: 'left', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'ST', years: '1997–2005', peak: 1999,
     attrs: { pace: 8, finishing: 10, shotPower: 10, dribbling: 6, passing: 5, positioning: 10, heading: 10, size: 8, composure: 9 } },
 
   // ─── FRA ────────────────────────────────────────────────────────────────────
   { name: "Zinedine Zidane", short: "Zidane", team: 'FRA', nation: 'FRA', number: 10, height: 73, weight: 176, age: 26, foot: 'right', skin: '#ae8071', espn: null, starter: false, position: 'ST', role: 'AM', years: '1994–2006', peak: 1998,
-    attrs: { pace: 6, finishing: 8, shotPower: 9, dribbling: 11, passing: 10, positioning: 8, heading: 9, size: 8, composure: 11 } },
+    attrs: { pace: 6, finishing: 9, shotPower: 11, dribbling: 11, passing: 10, positioning: 8, heading: 9, size: 8, composure: 11 } },
   { name: "Kylian Mbappé", short: "Mbappé", team: 'FRA', nation: 'FRA', number: 10, height: 70, weight: 163, age: 28, foot: 'right', skin: '#9a6142', espn: 231388, starter: true, position: 'ST', role: 'ST', years: '2017–2026', peak: 2026,
     attrs: { pace: 11, finishing: 11, shotPower: 10, dribbling: 11, passing: 9, positioning: 11, heading: 4, size: 5, composure: 11 } },
   { name: "Thierry Henry", short: "Henry", team: 'FRA', nation: 'FRA', number: 12, height: 74, weight: 183, age: 27, foot: 'right', skin: '#765144', espn: null, starter: false, position: 'ST', role: 'ST', years: '1997–2010', peak: 2004,
     attrs: { pace: 11, finishing: 10, shotPower: 9, dribbling: 10, passing: 9, positioning: 10, heading: 6, size: 9, composure: 10 } },
   { name: "Michel Platini", short: "Platini", team: 'FRA', nation: 'FRA', number: 10, height: 70, weight: 161, age: 29, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'AM', years: '1976–1987', peak: 1984,
-    attrs: { pace: 5, finishing: 10, shotPower: 10, dribbling: 9, passing: 10, positioning: 9, heading: 6, size: 5, composure: 10 } },
+    attrs: { pace: 5, finishing: 10, shotPower: 10, dribbling: 10, passing: 11, positioning: 9, heading: 6, size: 5, composure: 10 } },
   { name: "Antoine Griezmann", short: "Griezmann", team: 'FRA', nation: 'FRA', number: 7, height: 69, weight: 161, age: 27, foot: 'left', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'SS', years: '2014–2024', peak: 2018,
     attrs: { pace: 7, finishing: 9, shotPower: 8, dribbling: 9, passing: 9, positioning: 9, heading: 6, size: 4, composure: 10 } },
   { name: "Olivier Giroud", short: "Giroud", team: 'FRA', nation: 'FRA', number: 9, height: 76, weight: 201, age: 32, foot: 'left', skin: '#b87d69', espn: 88965, starter: false, position: 'ST', role: 'ST', years: '2011–2024', peak: 2018,
@@ -177,7 +177,7 @@ export const WC_LEGENDS = [
   { name: "Harry Kane", short: "Kane", team: 'ENG', nation: 'ENG', number: 9, height: 74, weight: 190, age: 30, foot: 'right', skin: '#ae8071', espn: 142200, starter: true, position: 'ST', role: 'ST', years: '2015–2026', peak: 2023,
     attrs: { pace: 4, finishing: 11, shotPower: 10, dribbling: 7, passing: 10, positioning: 11, heading: 9, size: 10, composure: 11 } },
   { name: "David Beckham", short: "Beckham", team: 'ENG', nation: 'ENG', number: 7, height: 72, weight: 165, age: 24, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'RW', years: '1996–2009', peak: 1999,
-    attrs: { pace: 6, finishing: 7, shotPower: 10, dribbling: 6, passing: 10, positioning: 6, heading: 5, size: 6, composure: 9 } },
+    attrs: { pace: 6, finishing: 7, shotPower: 10, dribbling: 6, passing: 11, positioning: 6, heading: 5, size: 6, composure: 9 } },
   { name: "Wayne Rooney", short: "Rooney", team: 'ENG', nation: 'ENG', number: 10, height: 69, weight: 183, age: 25, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'ST', years: '2003–2018', peak: 2010,
     attrs: { pace: 7, finishing: 9, shotPower: 10, dribbling: 8, passing: 9, positioning: 9, heading: 7, size: 7, composure: 9 } },
   { name: "Gary Lineker", short: "Lineker", team: 'ENG', nation: 'ENG', number: 10, height: 70, weight: 154, age: 26, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'ST', years: '1984–1992', peak: 1986,
@@ -205,7 +205,7 @@ export const WC_LEGENDS = [
   { name: "Johan Cruyff", short: "Cruyff", team: 'NED', nation: 'NED', number: 14, height: 70, weight: 150, age: 27, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'SS', years: '1966–1977', peak: 1974,
     attrs: { pace: 9, finishing: 10, shotPower: 8, dribbling: 11, passing: 10, positioning: 10, heading: 6, size: 3, composure: 11 } },
   { name: "Marco van Basten", short: "Van Basten", team: 'NED', nation: 'NED', number: 9, height: 74, weight: 176, age: 24, foot: 'right', skin: '#dfac9c', espn: null, starter: true, position: 'ST', role: 'ST', years: '1983–1992', peak: 1988,
-    attrs: { pace: 7, finishing: 10, shotPower: 10, dribbling: 9, passing: 7, positioning: 10, heading: 10, size: 8, composure: 10 } },
+    attrs: { pace: 7, finishing: 11, shotPower: 10, dribbling: 9, passing: 7, positioning: 10, heading: 10, size: 8, composure: 10 } },
   { name: "Dennis Bergkamp", short: "Bergkamp", team: 'NED', nation: 'NED', number: 10, height: 72, weight: 172, age: 29, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'SS', years: '1990–2000', peak: 1998,
     attrs: { pace: 6, finishing: 10, shotPower: 8, dribbling: 10, passing: 10, positioning: 9, heading: 6, size: 7, composure: 10 } },
   { name: "Arjen Robben", short: "Robben", team: 'NED', nation: 'NED', number: 11, height: 71, weight: 176, age: 30, foot: 'left', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'RW', years: '2003–2017', peak: 2014,
@@ -217,31 +217,31 @@ export const WC_LEGENDS = [
 
   // ─── URU ────────────────────────────────────────────────────────────────────
   { name: "Luis Suárez", short: "Suárez", team: 'URU', nation: 'URU', number: 9, height: 72, weight: 190, age: 29, foot: 'right', skin: '#c58f83', espn: null, starter: true, position: 'ST', role: 'ST', years: '2007–2024', peak: 2016,
-    attrs: { pace: 8, finishing: 10, shotPower: 9, dribbling: 9, passing: 9, positioning: 10, heading: 8, size: 9, composure: 10 } },
+    attrs: { pace: 8, finishing: 11, shotPower: 9, dribbling: 9, passing: 9, positioning: 10, heading: 8, size: 9, composure: 10 } },
   { name: "Edinson Cavani", short: "Cavani", team: 'URU', nation: 'URU', number: 21, height: 73, weight: 170, age: 30, foot: 'right', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'ST', years: '2008–2022', peak: 2017,
-    attrs: { pace: 8, finishing: 9, shotPower: 8, dribbling: 6, passing: 6, positioning: 10, heading: 9, size: 7, composure: 9 } },
+    attrs: { pace: 8, finishing: 9, shotPower: 8, dribbling: 6, passing: 6, positioning: 11, heading: 9, size: 7, composure: 9 } },
   { name: "Diego Forlán", short: "Forlán", team: 'URU', nation: 'URU', number: 10, height: 71, weight: 165, age: 31, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'SS', years: '2002–2015', peak: 2010,
-    attrs: { pace: 7, finishing: 9, shotPower: 11, dribbling: 7, passing: 8, positioning: 8, heading: 6, size: 6, composure: 10 } },
+    attrs: { pace: 7, finishing: 10, shotPower: 11, dribbling: 7, passing: 8, positioning: 8, heading: 6, size: 6, composure: 10 } },
   { name: "Enzo Francescoli", short: "Francescoli", team: 'URU', nation: 'URU', number: 10, height: 71, weight: 154, age: 25, foot: 'right', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'AM', years: '1982–1997', peak: 1986,
     attrs: { pace: 6, finishing: 8, shotPower: 8, dribbling: 10, passing: 10, positioning: 8, heading: 6, size: 4, composure: 10 } },
   { name: "Federico Valverde", short: "Valverde", team: 'URU', nation: 'URU', number: 15, height: 72, weight: 172, age: 27, foot: 'right', skin: '#a67f6b', espn: 235818, starter: false, position: 'ST', role: 'CM', years: '2017–2026', peak: 2025,
-    attrs: { pace: 9, finishing: 7, shotPower: 9, dribbling: 8, passing: 8, positioning: 6, heading: 6, size: 7, composure: 8 } },
+    attrs: { pace: 9, finishing: 7, shotPower: 11, dribbling: 8, passing: 8, positioning: 6, heading: 6, size: 7, composure: 8 } },
 
   // ─── SWE ────────────────────────────────────────────────────────────────────
   { name: "Zlatan Ibrahimović", short: "Ibrahimović", team: 'SWE', nation: 'SWE', number: 10, height: 77, weight: 209, age: 32, foot: 'right', skin: '#ae8071', espn: null, starter: true, position: 'ST', role: 'ST', years: '2001–2023', peak: 2013,
-    attrs: { pace: 6, finishing: 10, shotPower: 11, dribbling: 9, passing: 9, positioning: 9, heading: 9, size: 11, composure: 9 } },
+    attrs: { pace: 6, finishing: 11, shotPower: 11, dribbling: 9, passing: 7, positioning: 9, heading: 9, size: 11, composure: 9 } },
   { name: "Henrik Larsson", short: "Larsson", team: 'SWE', nation: 'SWE', number: 7, height: 70, weight: 161, age: 30, foot: 'right', skin: '#a2735e', espn: null, starter: false, position: 'ST', role: 'ST', years: '1993–2009', peak: 2001,
     attrs: { pace: 7, finishing: 10, shotPower: 7, dribbling: 7, passing: 8, positioning: 10, heading: 8, size: 5, composure: 10 } },
   { name: "Tomas Brolin", short: "Brolin", team: 'SWE', nation: 'SWE', number: 11, height: 70, weight: 168, age: 25, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'SS', years: '1990–1995', peak: 1994,
     attrs: { pace: 7, finishing: 8, shotPower: 8, dribbling: 8, passing: 8, positioning: 8, heading: 5, size: 6, composure: 8 } },
   { name: "Alexander Isak", short: "Isak", team: 'SWE', nation: 'SWE', number: 9, height: 75, weight: 161, age: 26, foot: 'right', skin: '#94604e', espn: 235662, starter: false, position: 'ST', role: 'ST', years: '2017–2026', peak: 2025,
-    attrs: { pace: 9, finishing: 10, shotPower: 7, dribbling: 9, passing: 6, positioning: 9, heading: 7, size: 7, composure: 9 } },
+    attrs: { pace: 9, finishing: 10, shotPower: 8, dribbling: 9, passing: 6, positioning: 9, heading: 7, size: 7, composure: 9 } },
   { name: "Viktor Gyökeres", short: "Gyökeres", team: 'SWE', nation: 'SWE', number: 17, height: 74, weight: 196, age: 27, foot: 'right', skin: '#bd8a78', espn: 258906, starter: false, position: 'ST', role: 'ST', years: '2019–2026', peak: 2025,
     attrs: { pace: 9, finishing: 9, shotPower: 9, dribbling: 6, passing: 5, positioning: 9, heading: 8, size: 10, composure: 9 } },
 
   // ─── BEL ────────────────────────────────────────────────────────────────────
   { name: "Eden Hazard", short: "Hazard", team: 'BEL', nation: 'BEL', number: 10, height: 69, weight: 163, age: 24, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'LW', years: '2008–2022', peak: 2015,
-    attrs: { pace: 9, finishing: 8, shotPower: 7, dribbling: 10, passing: 10, positioning: 8, heading: 3, size: 5, composure: 10 } },
+    attrs: { pace: 9, finishing: 8, shotPower: 7, dribbling: 11, passing: 10, positioning: 8, heading: 3, size: 5, composure: 10 } },
   { name: "Kevin De Bruyne", short: "De Bruyne", team: 'BEL', nation: 'BEL', number: 7, height: 71, weight: 172, age: 29, foot: 'right', skin: '#b0887e', espn: 134947, starter: false, position: 'ST', role: 'AM', years: '2010–2026', peak: 2020,
     attrs: { pace: 7, finishing: 8, shotPower: 10, dribbling: 8, passing: 11, positioning: 7, heading: 5, size: 7, composure: 10 } },
   { name: "Romelu Lukaku", short: "Lukaku", team: 'BEL', nation: 'BEL', number: 9, height: 75, weight: 225, age: 28, foot: 'left', skin: '#765144', espn: 139437, starter: true, position: 'ST', role: 'ST', years: '2010–2026', peak: 2021,
@@ -285,19 +285,19 @@ export const WC_LEGENDS = [
   { name: "Xherdan Shaqiri", short: "Shaqiri", team: 'SUI', nation: 'SUI', number: 23, height: 67, weight: 159, age: 23, foot: 'left', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'RW', years: '2010–2024', peak: 2014,
     attrs: { pace: 8, finishing: 8, shotPower: 10, dribbling: 8, passing: 9, positioning: 7, heading: 4, size: 3, composure: 9 } },
   { name: "Granit Xhaka", short: "Xhaka", team: 'SUI', nation: 'SUI', number: 10, height: 73, weight: 174, age: 32, foot: 'left', skin: '#c89477', espn: 149981, starter: false, position: 'ST', role: 'CM', years: '2011–2026', peak: 2024,
-    attrs: { pace: 4, finishing: 6, shotPower: 9, dribbling: 7, passing: 9, positioning: 5, heading: 6, size: 8, composure: 9 } },
+    attrs: { pace: 4, finishing: 6, shotPower: 10, dribbling: 7, passing: 9, positioning: 5, heading: 6, size: 8, composure: 9 } },
   { name: "Breel Embolo", short: "Embolo", team: 'SUI', nation: 'SUI', number: 7, height: 74, weight: 183, age: 25, foot: 'right', skin: '#7e5b54', espn: 202099, starter: true, position: 'ST', role: 'ST', years: '2015–2026', peak: 2022,
     attrs: { pace: 9, finishing: 7, shotPower: 7, dribbling: 6, passing: 5, positioning: 8, heading: 8, size: 9, composure: 7 } },
 
   // ─── HUN ────────────────────────────────────────────────────────────────────
   { name: "Ferenc Puskás", short: "Puskás", team: 'HUN', nation: 'HUN', number: 10, height: 68, weight: 168, age: 27, foot: 'left', skin: '#c58f83', espn: null, starter: true, position: 'ST', role: 'SS', years: '1945–1956', peak: 1954,
-    attrs: { pace: 7, finishing: 10, shotPower: 11, dribbling: 9, passing: 9, positioning: 10, heading: 6, size: 5, composure: 10 } },
+    attrs: { pace: 7, finishing: 10, shotPower: 9, dribbling: 9, passing: 9, positioning: 10, heading: 6, size: 5, composure: 10 } },
   { name: "Dominik Szoboszlai", short: "Szoboszlai", team: 'HUN', nation: 'HUN', number: 10, height: 73, weight: 161, age: 25, foot: 'right', skin: '#af7d67', espn: 257206, starter: false, position: 'ST', role: 'AM', years: '2019–2026', peak: 2025,
-    attrs: { pace: 8, finishing: 8, shotPower: 10, dribbling: 8, passing: 10, positioning: 7, heading: 6, size: 6, composure: 9 } },
+    attrs: { pace: 8, finishing: 8, shotPower: 11, dribbling: 8, passing: 10, positioning: 7, heading: 6, size: 6, composure: 9 } },
 
   // ─── CRO ────────────────────────────────────────────────────────────────────
   { name: "Luka Modrić", short: "Modrić", team: 'CRO', nation: 'CRO', number: 10, height: 68, weight: 146, age: 33, foot: 'right', skin: '#a07465', espn: 76762, starter: false, position: 'ST', role: 'CM', years: '2006–2026', peak: 2018,
-    attrs: { pace: 6, finishing: 7, shotPower: 9, dribbling: 10, passing: 11, positioning: 6, heading: 4, size: 2, composure: 10 } },
+    attrs: { pace: 6, finishing: 7, shotPower: 9, dribbling: 10, passing: 11, positioning: 7, heading: 4, size: 2, composure: 10 } },
   { name: "Davor Šuker", short: "Šuker", team: 'CRO', nation: 'CRO', number: 9, height: 72, weight: 168, age: 30, foot: 'left', skin: '#dfac9c', espn: null, starter: true, position: 'ST', role: 'ST', years: '1990–2002', peak: 1998,
     attrs: { pace: 7, finishing: 10, shotPower: 9, dribbling: 8, passing: 6, positioning: 10, heading: 6, size: 6, composure: 10 } },
   { name: "Mario Mandžukić", short: "Mandžukić", team: 'CRO', nation: 'CRO', number: 17, height: 75, weight: 187, age: 27, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'ST', years: '2007–2018', peak: 2013,
@@ -319,7 +319,7 @@ export const WC_LEGENDS = [
   { name: "Cristiano Ronaldo", short: "Ronaldo", team: 'POR', nation: 'POR', number: 7, height: 74, weight: 174, age: 28, foot: 'right', skin: '#b07a65', espn: 22774, starter: true, position: 'ST', role: 'ST', years: '2003–2026', peak: 2013,
     attrs: { pace: 10, finishing: 11, shotPower: 11, dribbling: 10, passing: 8, positioning: 11, heading: 11, size: 8, composure: 11 } },
   { name: "Eusébio", short: "Eusébio", team: 'POR', nation: 'POR', number: 13, height: 69, weight: 161, age: 24, foot: 'right', skin: '#644536', espn: null, starter: false, position: 'ST', role: 'ST', years: '1961–1973', peak: 1966,
-    attrs: { pace: 10, finishing: 10, shotPower: 11, dribbling: 9, passing: 7, positioning: 10, heading: 7, size: 4, composure: 10 } },
+    attrs: { pace: 10, finishing: 10, shotPower: 11, dribbling: 10, passing: 7, positioning: 10, heading: 7, size: 4, composure: 10 } },
   { name: "Luís Figo", short: "Figo", team: 'POR', nation: 'POR', number: 7, height: 71, weight: 165, age: 28, foot: 'right', skin: '#c58f83', espn: null, starter: false, position: 'ST', role: 'RW', years: '1991–2006', peak: 2000,
     attrs: { pace: 8, finishing: 8, shotPower: 8, dribbling: 10, passing: 10, positioning: 7, heading: 5, size: 6, composure: 10 } },
   { name: "Bruno Fernandes", short: "B. Fernandes", team: 'POR', nation: 'POR', number: 8, height: 72, weight: null, age: 27, foot: 'right', skin: '#a67f6b', espn: 124091, starter: false, position: 'ST', role: 'AM', years: '2017–2026', peak: 2021,
@@ -393,7 +393,7 @@ export const WC_LEGENDS = [
 
   // ─── JPN ────────────────────────────────────────────────────────────────────
   { name: "Keisuke Honda", short: "Honda", team: 'JPN', nation: 'JPN', number: 4, height: 72, weight: 163, age: 24, foot: 'left', skin: '#c89477', espn: null, starter: true, position: 'ST', role: 'AM', years: '2008–2018', peak: 2010,
-    attrs: { pace: 6, finishing: 8, shotPower: 9, dribbling: 7, passing: 8, positioning: 7, heading: 6, size: 6, composure: 9 } },
+    attrs: { pace: 6, finishing: 8, shotPower: 10, dribbling: 7, passing: 8, positioning: 7, heading: 6, size: 6, composure: 9 } },
   { name: "Hidetoshi Nakata", short: "Nakata", team: 'JPN', nation: 'JPN', number: 7, height: 69, weight: 159, age: 24, foot: 'right', skin: '#c89477', espn: null, starter: false, position: 'ST', role: 'CM', years: '1997–2006', peak: 2001,
     attrs: { pace: 6, finishing: 7, shotPower: 8, dribbling: 8, passing: 9, positioning: 6, heading: 5, size: 4, composure: 9 } },
   { name: "Kaoru Mitoma", short: "Mitoma", team: 'JPN', nation: 'JPN', number: 9, height: 70, weight: 157, age: 26, foot: 'right', skin: '#c89477', espn: null, starter: false, position: 'ST', role: 'LW', years: '2021–2026', peak: 2023,
@@ -415,7 +415,7 @@ export const WC_LEGENDS = [
 
   // ─── CMR ────────────────────────────────────────────────────────────────────
   { name: "Samuel Eto'o", short: "Eto'o", team: 'CMR', nation: 'CMR', number: 9, height: 71, weight: 165, age: 28, foot: 'right', skin: '#644536', espn: null, starter: true, position: 'ST', role: 'ST', years: '1997–2014', peak: 2009,
-    attrs: { pace: 10, finishing: 10, shotPower: 8, dribbling: 9, passing: 7, positioning: 10, heading: 7, size: 6, composure: 9 } },
+    attrs: { pace: 10, finishing: 10, shotPower: 8, dribbling: 9, passing: 7, positioning: 10, heading: 7, size: 6, composure: 10 } },
   { name: "Roger Milla", short: "Milla", team: 'CMR', nation: 'CMR', number: 9, height: 69, weight: 161, age: 38, foot: 'right', skin: '#644536', espn: null, starter: false, position: 'ST', role: 'ST', years: '1973–1994', peak: 1990,
     attrs: { pace: 7, finishing: 9, shotPower: 7, dribbling: 8, passing: 6, positioning: 9, heading: 7, size: 4, composure: 10 } },
   { name: "Vincent Aboubakar", short: "Aboubakar", team: 'CMR', nation: 'CMR', number: 10, height: 72, weight: 172, age: 30, foot: 'right', skin: '#644536', espn: null, starter: false, position: 'ST', role: 'ST', years: '2010–2026', peak: 2022,
@@ -463,7 +463,7 @@ export const WC_LEGENDS = [
 
   // ─── NGA ────────────────────────────────────────────────────────────────────
   { name: "Jay-Jay Okocha", short: "Okocha", team: 'NGA', nation: 'NGA', number: 10, height: 69, weight: 154, age: 25, foot: 'right', skin: '#644536', espn: null, starter: false, position: 'ST', role: 'AM', years: '1993–2006', peak: 1998,
-    attrs: { pace: 7, finishing: 7, shotPower: 9, dribbling: 10, passing: 9, positioning: 6, heading: 3, size: 3, composure: 9 } },
+    attrs: { pace: 7, finishing: 7, shotPower: 9, dribbling: 11, passing: 9, positioning: 6, heading: 3, size: 3, composure: 9 } },
   { name: "Nwankwo Kanu", short: "Kanu", team: 'NGA', nation: 'NGA', number: 4, height: 78, weight: 176, age: 23, foot: 'right', skin: '#644536', espn: null, starter: false, position: 'ST', role: 'ST', years: '1994–2010', peak: 1999,
     attrs: { pace: 6, finishing: 8, shotPower: 7, dribbling: 9, passing: 8, positioning: 8, heading: 7, size: 9, composure: 8 } },
   { name: "Victor Osimhen", short: "Osimhen", team: 'NGA', nation: 'NGA', number: 9, height: 73, weight: 172, age: 25, foot: 'right', skin: '#945e44', espn: 228296, starter: true, position: 'ST', role: 'ST', years: '2017–2026', peak: 2023,
@@ -505,7 +505,7 @@ export const WC_LEGENDS = [
 
   // ─── NOR ────────────────────────────────────────────────────────────────────
   { name: "Erling Haaland", short: "Haaland", team: 'NOR', nation: 'NOR', number: 9, height: 77, weight: 205, age: 23, foot: 'left', skin: '#c7927c', espn: 253989, starter: true, position: 'ST', role: 'ST', years: '2019–2026', peak: 2023,
-    attrs: { pace: 11, finishing: 11, shotPower: 10, dribbling: 7, passing: 6, positioning: 11, heading: 10, size: 11, composure: 11 } },
+    attrs: { pace: 10, finishing: 11, shotPower: 11, dribbling: 5, passing: 6, positioning: 11, heading: 10, size: 11, composure: 11 } },
   { name: "Martin Ødegaard", short: "Ødegaard", team: 'NOR', nation: 'NOR', number: 10, height: 70, weight: 150, age: 25, foot: 'left', skin: '#b88a7a', espn: 203669, starter: false, position: 'ST', role: 'AM', years: '2014–2026', peak: 2023,
     attrs: { pace: 6, finishing: 8, shotPower: 8, dribbling: 9, passing: 10, positioning: 7, heading: 3, size: 3, composure: 9 } },
   { name: "Ole Gunnar Solskjær", short: "Solskjær", team: 'NOR', nation: 'NOR', number: 11, height: 70, weight: 154, age: 26, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'ST', years: '1995–2007', peak: 1999,
@@ -527,7 +527,7 @@ export const WC_LEGENDS = [
 
   // ─── CIV ────────────────────────────────────────────────────────────────────
   { name: "Didier Drogba", short: "Drogba", team: 'CIV', nation: 'CIV', number: 11, height: 74, weight: 201, age: 29, foot: 'right', skin: '#644536', espn: null, starter: true, position: 'ST', role: 'ST', years: '2002–2014', peak: 2007,
-    attrs: { pace: 9, finishing: 9, shotPower: 10, dribbling: 7, passing: 7, positioning: 9, heading: 10, size: 10, composure: 10 } },
+    attrs: { pace: 9, finishing: 9, shotPower: 10, dribbling: 7, passing: 7, positioning: 10, heading: 11, size: 10, composure: 10 } },
   { name: "Yaya Touré", short: "Y. Touré", team: 'CIV', nation: 'CIV', number: 19, height: 74, weight: 198, age: 31, foot: 'right', skin: '#644536', espn: null, starter: false, position: 'ST', role: 'CM', years: '2004–2015', peak: 2014,
     attrs: { pace: 7, finishing: 8, shotPower: 10, dribbling: 9, passing: 9, positioning: 7, heading: 7, size: 10, composure: 9 } },
   { name: "Gervinho", short: "Gervinho", team: 'CIV', nation: 'CIV', number: 10, height: 70, weight: 148, age: 27, foot: 'right', skin: '#644536', espn: null, starter: false, position: 'ST', role: 'LW', years: '2007–2019', peak: 2014,
@@ -537,5 +537,5 @@ export const WC_LEGENDS = [
   { name: "Mohamed Salah", short: "Salah", team: 'EGY', nation: 'EGY', number: 10, height: 69, weight: 172, age: 26, foot: 'left', skin: '#b08371', espn: 173896, starter: false, position: 'ST', role: 'RW', years: '2011–2026', peak: 2018,
     attrs: { pace: 10, finishing: 10, shotPower: 8, dribbling: 9, passing: 9, positioning: 10, heading: 4, size: 6, composure: 10 } },
   { name: "Omar Marmoush", short: "Marmoush", team: 'EGY', nation: 'EGY', number: 22, height: 71, weight: 174, age: 26, foot: 'right', skin: '#ae8071', espn: 303745, starter: true, position: 'ST', role: 'ST', years: '2021–2026', peak: 2025,
-    attrs: { pace: 9, finishing: 8, shotPower: 8, dribbling: 8, passing: 7, positioning: 8, heading: 4, size: 7, composure: 7 } },
+    attrs: { pace: 9, finishing: 8, shotPower: 8, dribbling: 7, passing: 5, positioning: 7, heading: 4, size: 7, composure: 7 } },
 ]
