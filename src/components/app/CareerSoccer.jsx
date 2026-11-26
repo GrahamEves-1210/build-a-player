@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { sportOf, openTalks, acceptTalks, closeTalks, roundOdds, playoffRound, combinePos, gameCast, gamesMode, POS_ATTR, breakDrill, breakTrain, breakRest, januaryOffers, januaryStay, januaryMove, byeTraits, byeTarget, byeHurt, stepCost, bodyMaxed, BYE_REST } from '../../lib/career'
 import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
-import { wageText, feeText, nationName, theNation, nationFlag, stayPut } from '../../lib/careerSoccer'
+import { wageText, feeText, nationName, theNation, nationFlag, nationColors, stayPut } from '../../lib/careerSoccer'
 import { sfx, haptic } from '../../lib/juice'
 import { IconArrow, IconTrophy, IconStar, IconCrown, IconMedal, IconFlame, IconCheck, IconCaret } from './icons'
 import { Analytics, CareerGame, Talks, gameTitle, honorsOf, fmt, ClubLogo, tieText, seasonOf, ordinalOf, inLeague } from './AppCareer'
@@ -156,7 +156,7 @@ function Tournament({ t }) {
   )
 }
 // The summer window: bids from other clubs, a new deal, a loan; out of contract, the clubs that want him on a free
-const OFFER_TAG = { bid: 'BID', loan: 'LOAN', renew: 'NEW DEAL', stay: 'STAY', contender: 'CONTENDER', payer: 'TOP WAGES', late: 'LATE OFFER' }
+const OFFER_TAG = { bid: 'BID', loan: 'LOAN', renew: 'NEW DEAL', stay: 'STAY', contender: 'CONTENDER', payer: 'TOP WAGES', late: 'LATE OFFER', drop: 'A DIVISION DOWN' }
 // One offer: the club, its pitch, then the facts in a line: what it is and the fee (a bid at his release clause, or
 // his relegation clause, says so: his club can't refuse it), his place there, the club's league and, in January, where
 // it stands in it (offer.place)
@@ -167,7 +167,7 @@ function OfferRow({ c, o, onPick }) {
   return (
     <button className={`cr-offer${o.kind === 'contender' ? ' is-contender' : ''}`} onClick={onPick}>
       <ClubLogo S={S} short={o.team} />
-      <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small><i>{what} · {stand} · {o.place?.league ?? o.fit.conf}{o.place ? ` · ${ordinalOf(o.place.pos)}` : ''}</i></span>
+      <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small><i>{what} · {stand} · {o.place?.league ?? (o.tier2 ? o.tier2.replace(/^the /, '').replace(/^./, x => x.toUpperCase()) : o.fit.conf)}{o.place ? ` · ${ordinalOf(o.place.pos)}` : ''}</i></span>
       <span className="cr-offer-money"><b>{wageText(o.perYear, o.team).replace(' a week', '')}</b><small>A WEEK · {o.kind === 'loan' && o.half ? 'LOAN' : `${o.years} ${o.years === 1 ? 'YR' : 'YRS'}`}</small></span>
     </button>
   )
@@ -187,6 +187,8 @@ function Rejected({ c }) {
 export function SoccerWindow({ c, setCareer, noCalls }) {
   const S = sportOf(c)
   const down = !!S.x?.isDown?.(c), tier2 = S.x?.tier2Name?.(c.team) ?? 'the second tier'
+  // (just relegated: the club went down this summer; a season or more down there, or a move a division down, isn't news)
+  const wentDown = down && !c.down?.signed && c.down?.year === c.seasons?.[c.seasons.length - 1]?.year
   if (noCalls) return <div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">OUT OF CONTRACT</span><p className="cr-note">Out of contract at {c.age}, and no club calls. That's a career.</p></div>
   if (!c.offers?.length) {
     // (what he did this summer; a summer with nothing to answer, only a bid his club turned down, says that)
@@ -196,8 +198,8 @@ export function SoccerWindow({ c, setCareer, noCalls }) {
   const free = c.contract.left <= 0
   return (
     <div className="cr-offers ag-pop">
-      <span className="ag-eyebrow">{free ? 'OUT OF CONTRACT' : down ? 'RELEGATED · THE TRANSFER WINDOW' : 'THE TRANSFER WINDOW'} · {c.offers.length} {c.offers.length === 1 ? 'OFFER' : 'OFFERS'} · TAP ONE TO TALK</span>
-      {down && !free && <p className="cr-note">{c.down?.clause ? `${c.fit?.name} are down, and the relegation clause in his contract is live: a top-flight club can sign him for ${feeText(c.down.fee, c.team)}.` : `${c.fit?.name} are down. With no relegation clause in his contract, the club decides who it sells to.`}</p>}
+      <span className="ag-eyebrow">{free ? 'OUT OF CONTRACT' : wentDown ? 'RELEGATED · THE TRANSFER WINDOW' : 'THE TRANSFER WINDOW'} · {c.offers.length} {c.offers.length === 1 ? 'OFFER' : 'OFFERS'} · TAP ONE TO TALK</span>
+      {wentDown && !free && <p className="cr-note">{c.down?.clause ? `${c.fit?.name} are down, and the relegation clause in his contract is live: a top-flight club can sign him for ${feeText(c.down.fee, c.team)}.` : `${c.fit?.name} are down. With no relegation clause in his contract, the club decides who it sells to.`}</p>}
       {c.offers.map(o => <OfferRow key={`${o.kind}-${o.team}`} c={c} o={o} onPick={() => { setCareer(o.kind === 'loan' ? signOfferNow(c, o) : openTalks(c, o)); sfx('tap') }} />)}
       {!free && <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(stayPut(c)); sfx('tap') }}>STAY PUT · {c.contract.left} {c.contract.left === 1 ? 'YEAR' : 'YEARS'} LEFT AT {String(c.fit?.name ?? '').toUpperCase()}{down ? ` IN ${tier2.toUpperCase()}` : ''}</button>}
       <Rejected c={c} />
@@ -359,7 +361,11 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
   const po = c.active.po
   const rd = po.rounds[po.idx]
   const last = po.line[po.line.length - 1]
-  const oppOf = r => (r.extra ? { short: r.opp, name: r.oppName, color: '#3f3f46', color2: '#e4e4e7' } : S.teamOf(r.opp))
+  // (his country's knockouts, r.intl: the nations, their flags and their shirts)
+  const natTeam = short => { const k = nationColors(short); return { short, name: nationName(short), color: k?.[0] ?? '#26302c', color2: k?.[1] ?? '#e4e4e7' } }
+  const oppOf = r => (r.intl ? natTeam(r.opp) : r.extra ? { short: r.opp, name: r.oppName, color: '#3f3f46', color2: '#e4e4e7' } : S.teamOf(r.opp))
+  const usOf = r => (r?.intl ? c.nation : c.team)
+  const Crest = ({ r, short, ex }) => (r?.intl ? <img src={nationFlag(short)} alt="" className="cr-po-flag" /> : <ClubLogo S={S} short={short} extra={ex} />)
   // (from the state his chance comes up in: lib/inGame.js)
   const odds = rd && game && rd.close !== false ? roundOdds(c, rd, game) : null
   const pct = x => Math.min(99, Math.max(1, Math.round(x * 100)))
@@ -382,15 +388,15 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
           <div className={`ag-card cr-po-result ag-pop${x.won ? ' is-w' : ' is-l'}`}>
             <span className="ag-eyebrow">{x.legs?.length > 1 ? 'AGGREGATE' : 'FULL TIME'} · {x.name.toUpperCase()}</span>
             <div className="cr-po-board">
-              {[[c.team, x.mySc, x.won, false], [x.opp, x.oppSc, !x.won, x.extra]].map(([t, sc, up, ex]) => (
-                <div key={t} className={`cr-po-side${up ? ' is-up' : ''}`} style={{ '--tc': ex ? '#3f3f46' : S.teamOf(t)?.color ?? '#26302c' }}>
-                  <ClubLogo S={S} short={t} extra={ex} />
+              {[[usOf(x), x.mySc, x.won, false], [x.opp, x.oppSc, !x.won, x.extra]].map(([t, sc, up, ex]) => (
+                <div key={t} className={`cr-po-side${up ? ' is-up' : ''}`} style={{ '--tc': ex ? '#3f3f46' : x.intl ? natTeam(t).color : S.teamOf(t)?.color ?? '#26302c' }}>
+                  <Crest r={x} short={t} ex={ex} />
                   <small>{t}</small>
                   <b>{sc}</b>
                 </div>
               ))}
             </div>
-            <b>{x.won ? (x.final ? `${x.compName} winners.` : `Through to the ${nextOf(x)?.stage?.toLowerCase() ?? 'next round'}.`) : x.final ? `Beaten in the ${x.compName} final.` : `Out of the ${x.compName} in the ${String(x.stage).toLowerCase()}.`}</b>
+            <b>{x.won ? (x.final ? (x.intl ? `${nationName(c.nation)} win the ${x.compName}.` : `${x.compName} winners.`) : `Through to the ${nextOf(x)?.stage?.toLowerCase() ?? 'next round'}.`) : x.final ? `Beaten in the ${x.compName} final.` : x.intl && x.key === 'sf' && x.track === 'wc' ? `Beaten in the semi-final. ${nationName(c.nation)} play for third place.` : `Out of the ${x.compName} in the ${String(x.stage).toLowerCase()}.`}</b>
             <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''} · ${x.auto ? autoLine(x) : x.hit ? (x.won ? 'he scored when it mattered' : 'his goal wasn\'t enough') : 'the chance went begging'}`}{x.swing ? <> · {x.swing}</> : null}</small>
           </div>
         )}
@@ -403,14 +409,15 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · {rd.legs === 2 ? (sit.leg === 1 ? 'FIRST LEG · ' : 'SECOND LEG · ') : ''}VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''}{odds ? ` Score: about ${pct(odds.hit)}% to ${rd.final ? 'lift the trophy' : 'go through'}. Miss it: about ${pct(odds.miss)}%.` : ''}</small></div>
-      <CareerGame home={rd.home === false ? 'opp' : 'team'} c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={oppOf(rd)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
+      <CareerGame home={rd.home === false ? 'opp' : 'team'} c={c} setCareer={setCareer} team={rd.intl ? natTeam(c.nation) : c.fit} pos={combinePos(c)} opp={oppOf(rd)} cast={gameCast(c, rd.opp, !!rd.intl)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
     </div>
   )
   return (
     <div className="cr-po">
       <div className="ag-card cr-po-card ag-pop">
         <span className="ag-eyebrow">{rd.compName.toUpperCase()} · <span className="cr-nb">{rd.stage.toUpperCase()}</span>{rd.legs === 2 ? <> · <span className="cr-nb">TWO LEGS</span></> : null}</span>
-        <div className="cr-po-match"><ClubLogo S={S} short={c.team} /><b>{c.team}</b><i>vs</i><b>{rd.opp}</b><ClubLogo S={S} short={rd.opp} extra={rd.extra} /></div>
+        {rd.group && <p className="cr-note">{rd.year} {rd.compName}: {nationName(c.nation)} come through the group, {rd.group.w}–{rd.group.d}–{rd.group.l} with {rd.group.pts} {rd.group.pts === 1 ? 'point' : 'points'}. The knockouts start here.</p>}
+        <div className="cr-po-match"><Crest r={rd} short={usOf(rd)} /><b>{usOf(rd)}</b><i>vs</i><b>{rd.opp}</b><Crest r={rd} short={rd.opp} ex={rd.extra} /></div>
         <small>{rd.oppName} · {rd.legs === 2 ? (rd.home ? 'Second leg at home' : 'Second leg away') : 'A neutral venue'}{rd.final && !simmed ? <> · it comes down to one moment</> : null}</small>
         {simmed && <small className="cr-po-sim">{rd.close === false ? `No key moment for ${c.name} in this one: the tie is simulated.` : 'Key moments are off: the tie is simulated.'}</small>}
         <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { sfx('whistle'); if (rd.close === false) { setCareer(playoffRound(c, 0.5)); setStep('result') } else setStep('game') }}>{simmed ? (rd.final ? 'SIMULATE THE FINAL' : 'SIMULATE THE TIE') : rd.final ? 'PLAY THE FINAL' : 'PLAY THE TIE'} <IconArrow size={16} /></button>

@@ -3859,6 +3859,9 @@ html.bap-reduce-motion .cr-tabs-pill { transition: none; }
 .cr-hof.is-in { color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); border: 0; }
 .cr-card-preview { width: 100%; border-radius: 14px; border: 1px solid var(--ag-line-hi); }
 @media (min-width: 1024px) { .cr .ag-screen-body { max-width: 860px; margin-inline: auto; } }
+/* (the header on the content column: its face and name over the cards' left edge, the close button over their right; every
+   Career mode. Before 2026-11-25 it ran 150-1130px against the cards' 224-1056 at 1280) */
+@media (min-width: 1024px) { .cr > .ag-screen-head { box-sizing: border-box; width: 100%; max-width: 864px; margin-inline: auto; } }
 
 /* ═══ Polish: website app look ══════════════════════════════════════════════ */
 /* the phone's SPIN / BUILD switch sits above the bottom ad rail, not under it */

@@ -93,9 +93,10 @@ const UCL_INFO = { ucl: 8, uel: 16, down: 12 }
 const fxTag = m => (m.comp === 'ucl' ? (m.stage === 'md' ? `MD${m.md ?? ''}` : UCL_TAG[m.stage] ?? 'UCL') : null)
 
 // A crest: the club's or the nation's (a club without art gets its code)
-// (a side outside the data, Europe's other clubs or a cup's lower-league one, has no art: `extra`)
+// (a side outside the data, Europe's other clubs or a cup's lower-league one, `extra`: its ESPN crest since 2026-11-25,
+// the initials if it has none)
 function Crest({ short, pool, size = 22, className = '', extra = false }) {
-  const [bad, setBad] = useState(extra)
+  const [bad, setBad] = useState(false)
   if (!short) return null
   if (bad) return <span className={`ssp-crest ssp-crest--txt ${className}`} style={{ width: size, height: size }}>{String(short).slice(0, 3)}</span>
   return <img className={`ssp-crest ${className}`} src={`${LOGO[pool]}${short}.png`} alt="" width={size} height={size} loading="lazy" decoding="async" onError={() => setBad(true)} />

@@ -776,9 +776,10 @@ function strikerSide({ build, prof, team, mates, lamAvg, base, script }) {
   return {
     prof, ovr, sb: L.sb, Fb: prof.F, den,
     M: script ? 1 : L.M, Mbk: script ? 1 : LB.M,
-    startP: benchRole ? 0.16 : weaker ? 0.55 : 0.93,
+    // (Career: a teenager's starts and full matches are rationed, team.startK / team.fullK)
+    startP: (benchRole ? 0.16 : weaker ? 0.55 : 0.93) * (team.career ? team.startK ?? 1 : 1),
     subP: benchRole ? 0.78 : 0.7,
-    p90: clamp(0.40 + 0.03 * ((prof.size ?? 6) - 6) + (ovr - 85) * 0.01, 0.2, 0.72),
+    p90: clamp(0.40 + 0.03 * ((prof.size ?? 6) - 6) + (ovr - 85) * 0.01, 0.2, 0.72) * (team.career ? team.fullK ?? 1 : 1),
     spells: spellsOf(stream(base, 'injury'), prof),
     wcSpells: wcSpellsOf(stream(base, 'injury:wc'), prof),
     // a hot or a cold year
