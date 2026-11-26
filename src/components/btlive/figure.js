@@ -231,19 +231,22 @@ function hand(ctx, side, hnd, L, ink, all = false, fore = false) {
 // bare shin to the ankle, the shoe toe the way it points. From overhead little of a leg shows: under the shorts and his
 // chest it's hidden, and only a foot out in front or behind him (and the shin over it) peeks out. A foot off the floor
 // (foot[2], 0-1) rises toward the camera: the shoe tips up (shorter from above) and the knee comes through over it
+const LEG_LEN = 0.92
 function leg(ctx, side, foot, toe, L, ink) {
   const lw = Math.sqrt(AW), hc = Math.cos(HIP), hs = Math.sin(HIP)
   const hx0 = -0.035, hy0 = side * 0.085 * BW
   const hx = hx0 * hc - hy0 * hs, hy = hx0 * hs + hy0 * hc
-  const fx = foot[0], fy = foot[1], lift = clamp(foot[2] || 0, 0, 1)
+  // (the owner, 11-26: legs a touch shorter and slimmer, shoes smaller: the foot drawn a little nearer the hip)
+  const fx = hx + (foot[0] - hx) * LEG_LEN, fy = hy + (foot[1] - hy) * LEG_LEN, lift = clamp(foot[2] || 0, 0, 1)
   // the knee: halfway down, pushed forward with a raised foot (the knee drives through) and never behind his hip
   const kx = Math.max(hx + 0.01, (hx + fx) * 0.5 + 0.06 * lift), ky = (hy + fy) * 0.5
   const tx = Math.cos(toe), ty = Math.sin(toe)
   // the shoe: heel and toe, shorter as it tips up off the floor (behind him, the sole turned up to the sky)
-  const behind = fx < hx - 0.04 ? 1 : 0.3, sl = 1 - 0.4 * lift * behind, big = 1 + 0.06 * lift
+  // (the owner, 11-26: shoes too big: about a sixth smaller)
+  const behind = fx < hx - 0.04 ? 1 : 0.3, sl = (1 - 0.4 * lift * behind) * 0.76, big = (1 + 0.06 * lift) * 0.8
   const ax = fx - tx * 0.045 * sl, ay = fy - ty * 0.045 * sl
-  seg(ctx, hx, hy, 0.062 * lw, kx, ky, 0.056 * lw, L.colD, null, ink)                        // the shorts' leg
-  seg(ctx, kx, ky, 0.042 * lw, ax, ay, 0.032 * lw, L.skin, L.skinD, ink)                     // the shin
+  seg(ctx, hx, hy, 0.057 * lw, kx, ky, 0.05 * lw, L.colD, null, ink)                         // the shorts' leg
+  seg(ctx, kx, ky, 0.037 * lw, ax, ay, 0.028 * lw, L.skin, L.skinD, ink)                     // the shin
   const x0 = fx - tx * 0.06 * sl, y0 = fy - ty * 0.06 * sl, x1 = fx + tx * 0.085 * sl, y1 = fy + ty * 0.085 * sl
   const rh = 0.036 * lw * big, rt = 0.043 * lw * big
   seg(ctx, x0, y0, rh, x1, y1, rt, L.shoe, null, ink)

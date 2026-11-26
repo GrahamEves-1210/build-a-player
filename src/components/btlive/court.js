@@ -399,17 +399,19 @@ export function paintCourt(img) {
 
 // The hoop, on the game's canvas (k: px a foot), drawn from above: the stanchion's arm out over the baseline, the
 // backboard 4 ft in, the rim 15 in out from it, the net hanging under it. sway: the rim's offset (a dunk), [x, y] px
+// the backboard drawn this much wider than its 6 ft (the owner, 11-26: "slightly bigger"), and a touch thicker
+const BOARD_DRAW = 1.13
 export function drawHoop(ctx, k, sway = null, part = 'all') {
   const up = HOOP_LIFT * k
-  const rx = RIM.x * k + (sway?.[0] || 0), ry = RIM.y * k - up + (sway?.[1] || 0), r = C.rimR * k * RIM_DRAW, by = C.board.y * k - up, bw = C.board.w * k
+  const rx = RIM.x * k + (sway?.[0] || 0), ry = RIM.y * k - up + (sway?.[1] || 0), r = C.rimR * k * RIM_DRAW, by = C.board.y * k - up, bw = C.board.w * k * BOARD_DRAW
   const INK = 'rgba(8,10,12,.9)'
   if (part !== 'front') {
     // the arm, from the pole behind the baseline to the board
     ctx.fillStyle = '#3a3f44'; ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1, k * 0.08)
     ctx.beginPath(); ctx.rect(RIM.x * k - k * 0.22, (C.minY - 2.1) * k - up, k * 0.44, by - (C.minY - 2.1) * k + up - k * 0.3); ctx.fill(); ctx.stroke()
     // the board, seen edge on from above (glass, a steel frame)
-    ctx.fillStyle = 'rgba(232,240,246,.95)'; ctx.beginPath(); ctx.rect(RIM.x * k - bw / 2, by - k * 0.36, bw, k * 0.36); ctx.fill(); ctx.stroke()
-    ctx.fillStyle = 'rgba(160,170,178,.9)'; ctx.fillRect(RIM.x * k - bw / 2, by - k * 0.36, bw, k * 0.1)
+    ctx.fillStyle = 'rgba(232,240,246,.95)'; ctx.beginPath(); ctx.rect(RIM.x * k - bw / 2, by - k * 0.41, bw, k * 0.41); ctx.fill(); ctx.stroke()
+    ctx.fillStyle = 'rgba(160,170,178,.9)'; ctx.fillRect(RIM.x * k - bw / 2, by - k * 0.41, bw, k * 0.11)
     // the bracket to the rim
     ctx.fillStyle = '#d0581f'; ctx.fillRect(rx - k * 0.14, by, k * 0.28, ry - r - by + k * 0.05)
     // the net: from the rim down to its narrower mouth (lower on the screen: it hangs toward the camera's foot)
@@ -437,7 +439,7 @@ export function drawHoopShadow(ctx, k, sway = null) {
   const sx = 0.055, sy = 0.085                     // ft of shadow offset per ft of height
   const off = h => [h * sx * k, h * sy * k]
   const [ax, ay] = off(10.5), [bx, by] = off(12), [rx0, ry0] = off(10)
-  const by0 = C.board.y * k, bw = C.board.w * k
+  const by0 = C.board.y * k, bw = C.board.w * k * BOARD_DRAW
   ctx.save()
   ctx.fillStyle = 'rgba(0,0,0,.24)'
   ctx.beginPath()

@@ -797,13 +797,18 @@ function move(s, p, inp) {
         if (od < 14 && od > 0.1) {
           const dot = (mx * (o.x - p.x) + my * (o.y - p.y)) / (od * m)
           const sl = T.slide + T.slidePer * (p.R.perRaw ?? 0.5), bp = T.backpedal + T.backpedalPer * (p.R.perRaw ?? 0.5)
-          top *= dot >= 0 ? sl + (1 - sl) * dot : sl + (bp - sl) * -dot
+          // (going with a man on the move, the way he's going: cutting off his line, all of it; the owner, 11-26: "too
+          // easy to blow past a CPU defender")
+          const ov = Math.hypot(o.vx, o.vy), mirror = ov > 3 ? clamp(((mx * o.vx + my * o.vy) / (m * ov) - 0.2) / 0.5, 0, 1) : 0
+          const k = dot >= 0 ? sl + (1 - sl) * dot : sl + (bp - sl) * -dot
+          top *= k + (1 - k) * mirror * T.mirror
         }
       }
       // with the ball, the way he's going against the basket (the owner, 11-26: "backing up with the ball should be
       // slower than driving to the basket"): at it all of it, across a step slower, backing out clearly slower (a good
       // handler less so). (The post is its own thing: postFeet)
-      if (has && p.act === 'free' && m > 0 && !p.post) top *= ballWay(p, mx / m, my / m)
+      // (taking it back past the arc after a stop he turns and runs it out: no backing-out penalty)
+      if (has && p.act === 'free' && m > 0 && !p.post && s.mustClear !== p.team) top *= ballWay(p, mx / m, my / m)
       if (p.boost > 0 && p.act === 'free') top *= 1 + T.boost
       // a beaten defender (his man between him and the rim) running to get back: a burst, on his legs
       // (running back toward the rim, off the lines)
@@ -816,7 +821,7 @@ function move(s, p, inp) {
         // a sprint: built going one way, not in a defensive stance
         const stance = def && !has && p.man >= 0 && Math.hypot(s.players[p.man].x - p.x, s.players[p.man].y - p.y) < 9 && !beatenBy(p, s.players[p.man])
         // (with the ball the sprint is a drive: it builds going at the rim, not backing out or going across)
-        const drive = !has || ((mx * (RIM.x - p.x) + my * (RIM.y - p.y)) / ((m || 1) * (ref.rimDist(p) || 1))) > 0.3
+        const drive = !has || s.mustClear === p.team || ((mx * (RIM.x - p.x) + my * (RIM.y - p.y)) / ((m || 1) * (ref.rimDist(p) || 1))) > 0.3
         if (!stance && p.act === 'free' && drive) top *= 1 + T.sprint * clamp((p.runT ?? 0) / T.sprintTime, 0, 1)
         move2(p, mx * top, my * top, top, (def ? p.R.accelDef : p.R.accel) / T.accel, p.R.spdRaw ?? 0.5)
       }
