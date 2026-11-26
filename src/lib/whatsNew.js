@@ -37,11 +37,12 @@ const NOV_26 = {
       ],
     },
     {
-      name: 'Blacktop',
+      name: 'NEW: Blacktop Overhaul',
       items: [
-        'New Practice: real-time games against the CPU on the stick, 1v1, 2v2 or King of the Hill, at four levels',
-        'Dribble moves on a flick of the stick, a shot meter where green goes in, blocks and steals on their own buttons',
-        'Real half-court lines on every court, and players move by their ratings: quick guards are quicker, bigs block more',
+        'You control your player now: move, dribble, shoot, block and steal yourself, in real time on the stick',
+        'Play 1v1, 2v2 or King of the Hill against the CPU in Practice, at four levels, as any of 37 stars',
+        'Flick the stick for crossovers, step-backs and spins; time the shot meter, where green goes in',
+        'Real half-court lines on every court, and every rating counts: quick guards are quicker, bigs block shots',
       ],
     },
     {
