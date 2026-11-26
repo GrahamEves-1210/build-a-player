@@ -13,7 +13,7 @@
 // screen. Everyone else on the picture is a body with a target and a top speed, stepped in draw()
 // (bodies below): they run out of room and bump into each other, they can't teleport or pass through.
 import { reactMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, onBoard, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, xiOf, paceOf, keyCap, THREE_KEYS, particles, nudge, reduceMotion } from './kit.js'
+import { clamp, lerp, prog, outcome, onBoard, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, xiOf, paceOf, keyCap, THREE_KEYS, particles, nudge, reduceMotion, faceHair } from './kit.js'
 import { crowdRows, goalPosts, tilt, ground, stands, floodlight, vignette, athlete, paintGrass, skinOf, dirOf, airBall as artBall, ballShadow, nameTag, breakupPose, crowdPop } from './art.js'
 import { paintFieldFlat, qbPose, snapBall, SNAP_MS, looseBall } from './throw.js'
 import { arenaCam, dolly, arenaStage, manAt, POSE, RUN as RUN_F, liftPose, tapGap, chestOf, tagAt, tagsDown, flyTo, dropThrough, shotApex, hoopWith, AB } from './arena.js'
@@ -1470,7 +1470,7 @@ export function castMen(g, view) {
     // (two men in one uniform can't wear one number: if a real teammate has his, he takes the next free one)
     const me = g.castMen.us[0], taken = new Set(g.castMen.us.slice(1).filter(Boolean).map(m => m.number))
     if (me && taken.has(me.number)) { let n = (me.number ?? 0) + 1; while (taken.has(n % 100)) n++; g.castMen.us[0] = { ...me, number: n % 100 } }
-    g.castMen.key = [...g.castMen.us, ...g.castMen.them].map(m => (m ? `${m.name}${m.number}${m.skin}` : "-")).join('')   // (for what's baked in)
+    g.castMen.key = [...g.castMen.us, ...g.castMen.them].map(m => (m ? `${m.name}${m.number}${m.skin}${m.face ? `${m.face.hair}${m.face.hc}${m.face.beard}` : ''}` : "-")).join('')   // (for what's baked in)
   }
   return g.castMen
 }
@@ -1583,7 +1583,7 @@ const putMan = (x, y, h, P2, team, back, who, extra) => { FLOOR.push({ x: xFt(x)
 function floorDown(ctx, view, G, M) {
   FLOOR.sort((a, b) => b.z - a.z)
   for (const m of FLOOR) {
-    if (!manAt(ctx, view, G.cam, m.x, m.z, m.P, { jersey: m.team.color, trim: m.team.trim, skin: m.who.skin, num: m.who.number, back: m.back, ball: m.ball, spin: m.spin, live: m.live })) continue
+    if (!manAt(ctx, view, G.cam, m.x, m.z, m.P, { jersey: m.team.color, trim: m.team.trim, skin: m.who.skin, ...faceHair(m.who), num: m.who.number, back: m.back, ball: m.ball, spin: m.spin, live: m.live })) continue
     // (a man off the side of the picture keeps his name to himself; a man in the air takes his up with him)
     if (M && PT.x > 6 && PT.x < view.w - 6) tagAt(PT.x, PT.y - (m.lift ?? 0) * (PT.k / FIG_FT), m.who.name, PT.k / FIG_FT)
   }

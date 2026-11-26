@@ -31,7 +31,7 @@
 //
 // Real sizes: the goal 7.32 by 2.44, the box 16.5 deep and 40.32 wide, the six-yard box 5.5 by 18.32, the spot at 11,
 // the arc 9.15 from it. A man is 1.8 m. The mower's stripes are 5.5 m, so the six, the spot and the box all sit on one.
-import { clamp, lerp, prog, text, layer, warmSkin, lightMode, DISPLAY, LABEL, rr, keyCap as keyCapS } from './kit.js'
+import { clamp, lerp, prog, text, layer, warmSkin, lightMode, faceLook, DISPLAY, LABEL, rr, keyCap as keyCapS } from './kit.js'
 import { inkOn, nameTag } from './art.js'
 import { tone, INK } from './rig.js'
 
@@ -541,18 +541,18 @@ export const mix = (a, b, f) => {
 export const POSE = {
   // stood: his weight on his right leg (that hip up, the shoulders the other way), the left knee easy, the arms
   // hanging loose with a little bend at the elbow and the hands turned in at his thighs
-  stand: pz({ hx: 1.0, hip: 0.15, lean: -0.03, lx: -10, ly: -0.6, lk: 0.34, rx: 5.6, hlx: -15.0, hly: -45.8, hrx: 13.8, hry: -45.4, el: 0, er: 0, fore: 0.95, head: 0.15 }),
+  stand: pz({ hx: 0.6, hip: 0.08, lean: -0.02, lx: -10, ly: -0.6, lk: 0.34, rx: 5.6, hlx: -15.0, hly: -45.8, hrx: 13.8, hry: -45.4, el: 0, er: 0, fore: 0.95, head: 0.15 }),
   // a penalty taker waiting on the whistle: loose, the shoulders down, his weight on his right leg, the arms hanging
   // easy a touch in front of him, his eyes on the keeper
-  wait: pz({ hx: 1.3, hip: 0.18, lean: -0.03, lx: -11.5, ly: -0.3, lk: 0.42, rx: 4.6, hlx: -15.6, hly: -45.6, hrx: 13.9, hry: -45.2, el: 0, er: 0, fore: 0.95, tilt: 0.12, head: 0.35 }),
-  // on his toes, knees soft, arms loose and a little out from his sides
-  ready: pz({ hy: 50, bow: 0.1, lx: -11, rx: 11, lk: 0.2, rk: 0.2, hlx: -15.8, hly: -51, hrx: 15.8, hry: -51, el: 0.08, er: 0.08, fore: 0.75 }),
+  wait: pz({ hx: 0.8, hip: 0.1, lean: -0.02, lx: -11.5, ly: -0.3, lk: 0.42, rx: 4.6, hlx: -15.6, hly: -45.6, hrx: 13.9, hry: -45.2, el: 0, er: 0, fore: 0.95, tilt: 0.12, head: 0.35 }),
+  // on his toes, knees soft, arms hanging loose just off his sides
+  ready: pz({ hy: 50, bow: 0.1, lx: -11, rx: 11, lk: 0.2, rk: 0.2, hlx: -16.2, hly: -48, hrx: 16.2, hry: -48, el: 0, er: 0, fore: 0.95 }),
   // a keeper set: feet a bit wider than his shoulders, knees bent, his weight forward on the balls of his feet, the
   // hands out in front of him at his hips, palms to the ball, elbows in and soft
   set: pz({ hy: 45, bow: 0.2, lx: -14, rx: 14, lk: 0.42, rk: 0.42, hlx: -15.5, hly: -53, hrx: 15.5, hry: -53, elbow: 0, fore: 0.9, tilt: 0.12, palm: 1 }),
-  hips: pz({ lx: -9, rx: 9, hlx: -11, hly: -57, hrx: 11, hry: -57, elbow: 1 }),
-  knees: pz({ hy: 41, bow: 0.5, lx: -11, rx: 11, lk: 0.5, rk: 0.5, hlx: -10, hly: -32, hrx: 10, hry: -32, elbow: 0.4, tilt: -0.6 }),
-  headHands: pz({ lx: -8, rx: 8, hlx: -5, hly: -103, hrx: 5, hry: -103, elbow: 1, tilt: 0.3 }),
+  hips: pz({ lx: -9, rx: 9, hlx: -13, hly: -56, hrx: 13, hry: -56, elbow: 0.3, fore: 0.75 }),
+  knees: pz({ hy: 41, bow: 0.5, lx: -11, rx: 11, lk: 0.5, rk: 0.5, hlx: -10, hly: -32, hrx: 10, hry: -32, elbow: 0.1, tilt: -0.6, fore: 0.6 }),
+  headHands: pz({ lx: -8, rx: 8, hlx: -5, hly: -103, hrx: 5, hry: -103, elbow: 0.45, tilt: 0.3, fore: 0.55 }),
   armsOut: pz({ hlx: -42, hly: -94, hrx: 42, hry: -94, face: 1 }),
   plane: pz({ hlx: -46, hly: -86, hrx: 46, hry: -86, face: 1 }),
   roar: pz({ hy: 51, lx: -14, rx: 14, hlx: -22, hly: -116, hrx: 22, hry: -116, elbow: 0.3, face: 1, tilt: 0.5 }),
@@ -563,33 +563,34 @@ export const POSE = {
   slide: pz({ hy: 25, bow: 0.22, lx: -14, ly: 3, rx: 14, ry: 3, lk: -1, rk: -1, hlx: -40, hly: -70, hrx: 40, hry: -70, face: 1, tilt: 1 }),
   // landed from the jump and the turn: feet wide, chest out, arms out and down
   landed: pz({ hy: 45, lx: -19, rx: 19, lk: 0.2, rk: 0.2, hlx: -40, hly: -58, hrx: 40, hry: -58, face: 1, tilt: 0.6 }),
-  badge: pz({ hlx: 3, hly: -89, hrx: 16.5, hry: -48, elbow: 0.7, tilt: -0.4 }),
+  badge: pz({ hlx: 3, hly: -89, hrx: 16.5, hry: -48, elbow: 0.4, tilt: -0.4, fore: 0.6 }),
   shush: pz({ hlx: -19, hly: -52, hrx: 3, hry: -84, fr: 1, er: 0.9, face: 3 }),
-  // up for a header, or off the ground in a celebration: one knee driven up, the other leg hanging, the elbows out
-  jump: pz({ hy: 52, bow: 0.06, lx: -6, ly: -3, lk: 0.1, rx: 5, ry: -17, rk: 1, hlx: -29, hly: -82, hrx: 28, hry: -86, elbow: 0.6, fore: 0.2, tilt: 0.3 }),
-  tuck: pz({ hy: 50, lx: -8, ly: -36, rx: 8, ry: -36, lk: 1, rk: 1, hlx: -12, hly: -52, hrx: 12, hry: -52, elbow: 0.3 }),
+  // up for a header, or off the ground in a celebration: one knee driven up, the other leg hanging, the arms out and
+  // down for balance (no elbows winged out)
+  jump: pz({ hy: 52, bow: 0.06, lx: -6, ly: -3, lk: 0.1, rx: 5, ry: -17, rk: 1, hlx: -27, hly: -51, hrx: 26, hry: -54, elbow: 0, fore: 0.2, tilt: 0.3 }),
+  tuck: pz({ hy: 50, lx: -8, ly: -36, rx: 8, ry: -36, lk: 1, rk: 1, hlx: -12, hly: -52, hrx: 12, hry: -52, elbow: 0, fore: 0.6 }),
   dive: pz({ lx: -6, rx: 6, ry: -4, hlx: -7, hly: -126, hrx: 7, hry: -126 }),
   down: pz({ lx: -7, rx: 7, hlx: -10, hly: -112, hrx: 10, hry: -112 }),
   smother: pz({ hy: 22, bow: 0.3, lx: -22, ly: -2, rx: 22, ry: -2, lk: 1, rk: 1, hlx: -34, hly: -30, hrx: 34, hry: -30 }),
   // sat down on the grass, knees up, hands on his knees
-  sit: pz({ hy: 11, lx: -13, ly: 5, rx: 13, ry: 5, lk: 1, rk: 1, hlx: -12, hly: -22, hrx: 12, hry: -22, elbow: 0.6, tilt: -0.7, face: 2 }),
+  sit: pz({ hy: 11, lx: -13, ly: 5, rx: 13, ry: 5, lk: 1, rk: 1, hlx: -12, hly: -22, hrx: 12, hry: -22, elbow: 0.2, tilt: -0.7, face: 2, fore: 0.6 }),
   // bent into the net for the ball
   pick: pz({ hy: 48, bow: 0.62, lx: -10, rx: 10, lk: 0.3, rk: 0.3, hlx: -5, hly: -26, hrx: 5, hry: -26 }),
   argue: pz({ lx: -10, rx: 10, hlx: -26, hly: -60, hrx: 26, hry: -60, elbow: 0.1, fore: 0.75, head: -0.8, face: 2 }),
-  drop: pz({ bow: 0.12, hlx: -11, hly: -57, hrx: 11, hry: -57, elbow: 1, tilt: -1, face: 2 }),
+  drop: pz({ bow: 0.12, hlx: -13, hly: -56, hrx: 13, hry: -56, elbow: 0.3, tilt: -1, face: 2, fore: 0.75 }),
   // up on a teammate's back: legs round his waist, arms round his shoulders
-  piggy: pz({ hy: 40, lx: -17, ly: -12, rx: 17, ry: -12, lk: 1, rk: 1, hlx: -13, hly: -60, hrx: 18, hry: -114, elbow: 0.7, face: 1 }),
+  piggy: pz({ hy: 40, lx: -17, ly: -12, rx: 17, ry: -12, lk: 1, rk: 1, hlx: -13, hly: -60, hrx: 18, hry: -114, elbow: 0.4, face: 1, fore: 0.5 }),
   ruffle: pz({ hrx: 22, hry: -101, elbow: 0.2, face: 1 }),
   pointAt: pz({ hrx: 40, hry: -86, fr: 1, face: 1 }),
   appeal: pz({ lx: -10, rx: 10, hlx: -29, hly: -64, hrx: 29, hry: -64, elbow: 0.1, fore: 0.75, face: 2, tilt: 0.2 }),
-  clip: pz({ hlx: -6, hly: -66, hrx: 7, hry: -68, elbow: 0.8 }),   // a coach with his clipboard
+  clip: pz({ hlx: -6, hly: -66, hrx: 7, hry: -68, elbow: 0.3, fore: 0.7}),   // a coach with his clipboard
   // the end of a knee slide: still on his knees, leaning back, both fists up by his head, roaring at the sky
-  slideRoar: pz({ hy: 26, bow: 0.18, lx: -14, ly: 3, rx: 14, ry: 3, lk: -1, rk: -1, hlx: -23, hly: -92, hrx: 23, hry: -92, elbow: 0.7, fore: 0.2, face: 1, tilt: 1 }),
+  slideRoar: pz({ hy: 26, bow: 0.18, lx: -14, ly: 3, rx: 14, ry: 3, lk: -1, rk: -1, hlx: -23, hly: -92, hrx: 23, hry: -92, elbow: 0.35, fore: 0.4, face: 1, tilt: 1 }),
   // the badge: both hands take the shirt by the crest and pull it out, then up to his lips
-  grab: pz({ hlx: 2.5, hly: -77, hrx: 9, hry: -75, elbow: 0.9, fore: 0.55, tilt: -0.25, face: 1 }),
-  kiss: pz({ hlx: 1, hly: -84.5, hrx: 5.5, hry: -83, elbow: 1, fore: 0.6, tilt: -0.55, head: 0.15, face: 3 }),
+  grab: pz({ hlx: 2.5, hly: -77, hrx: 9, hry: -75, elbow: 0.45, fore: 0.75, tilt: -0.25, face: 1 }),
+  kiss: pz({ hlx: 1, hly: -84.5, hrx: 5.5, hry: -83, elbow: 0.5, fore: 0.75, tilt: -0.55, head: 0.15, face: 3 }),
   // feet set wide, a little crouch, both fists dragged down to his chest, elbows out: "come on!"
-  flex: pz({ hy: 48, bow: 0.12, lx: -14, rx: 14, lk: 0.35, rk: 0.35, hlx: -11, hly: -68, hrx: 11, hry: -68, elbow: 1, fore: 0.15, face: 1, tilt: 0.45 }),
+  flex: pz({ hy: 48, bow: 0.12, lx: -14, rx: 14, lk: 0.35, rk: 0.35, hlx: -11, hly: -68, hrx: 11, hry: -68, elbow: 0.35, fore: 0.7, face: 1, tilt: 0.45 }),
   // a hand cupped to his ear for the away end
   ear: pz({ lx: -9, rx: 9, hlx: -36, hly: -78, hrx: 10.5, hry: -95, elbow: 0.2, er: 0.8, face: 1, tilt: 0.3, head: -0.3 }),
 }
@@ -654,12 +655,12 @@ export function dribblePose(phase, k = 1, o = null) {
 // him, his weight up on the toes of the standing foot. o: { high (a chip, a volley: the leg finishes higher) }
 const KICK = [
   // [f, pose for the right foot]
-  [0, { hy: 52, bow: 0.1, lx: -5, ly: -9, lk: 0.6, rx: 5.5, ry: 0, rk: 0.2, hlx: -13, hly: -70, hrx: 15, hry: -52, el: 0, er: 0.4, fore: 0.7, lean: 0.02, tilt: -0.2 }],
-  [0.2, { hy: 49, bow: 0.12, lx: -10, ly: -2, lk: 0.35, rx: 6, ry: -14, rk: -0.9, hlx: -26, hly: -72, hrx: 17, hry: -54, el: 0.1, er: 0.45, fore: 0.5, lean: -0.08, tilt: -0.35 }],
-  [0.4, { hy: 48, bow: 0.13, lx: -10, ly: 0, lk: 0.3, rx: 10, ry: -40, rk: -1, hlx: -41, hly: -83, hrx: 21, hry: -55, el: 0, er: 0.35, fore: 0.3, lean: -0.17, tilt: -0.55 }],
-  [0.47, { hy: 50, bow: 0.14, lx: -10, ly: 0, lk: 0.25, rx: 3, ry: -5, rk: 0.15, hlx: -43, hly: -80, hrx: 15, hry: -60, el: 0, er: 0.25, fore: 0.3, lean: -0.11, tilt: -0.65, zr: 0.3 }],
-  [0.7, { hy: 53, bow: 0.18, lx: -9, ly: -2, lk: 0.1, rx: -1, ry: -34, rk: 1, hlx: -37, hly: -77, hrx: 2, hry: -68, el: 0, er: 0, fore: 0.6, lean: 0.04, tilt: -0.25, zr: 0.92 }],
-  [1, { hy: 53.5, bow: 0.16, lx: -8.5, ly: -3, lk: 0.15, rx: -2, ry: -26, rk: 0.85, hlx: -31, hly: -71, hrx: 5, hry: -64, el: 0.1, er: 0, fore: 0.6, lean: 0.08, tilt: 0, zr: 0.75 }],
+  [0, { hy: 52, bow: 0.1, lx: -5, ly: -9, lk: 0.6, rx: 5.5, ry: 0, rk: 0.2, hlx: -17, hly: -56, hrx: 15, hry: -52, el: 0, er: 0.4, fore: 0.7, lean: 0.02, tilt: -0.2 }],
+  [0.2, { hy: 49, bow: 0.12, lx: -10, ly: -2, lk: 0.35, rx: 6, ry: -14, rk: -0.9, hlx: -27, hly: -60, hrx: 16, hry: -50, el: 0.1, er: 0, fore: 0.5, lean: -0.08, tilt: -0.35 }],
+  [0.4, { hy: 48, bow: 0.13, lx: -10, ly: 0, lk: 0.3, rx: 10, ry: -40, rk: -1, hlx: -43, hly: -68, hrx: 17, hry: -50, el: 0, er: 0, fore: 0.3, lean: -0.17, tilt: -0.55 }],
+  [0.47, { hy: 50, bow: 0.14, lx: -10, ly: 0, lk: 0.25, rx: 3, ry: -5, rk: 0.15, hlx: -44, hly: -66, hrx: 15, hry: -52, el: 0, er: 0, fore: 0.3, lean: -0.11, tilt: -0.65, zr: 0.3 }],
+  [0.7, { hy: 53, bow: 0.18, lx: -9, ly: -2, lk: 0.1, rx: -1, ry: -34, rk: 1, hlx: -41, hly: -63, hrx: 8, hry: -57, el: 0, er: 0, fore: 0.6, lean: 0.04, tilt: -0.25, zr: 0.92 }],
+  [1, { hy: 53.5, bow: 0.16, lx: -8.5, ly: -3, lk: 0.15, rx: -2, ry: -26, rk: 0.85, hlx: -37, hly: -60, hrx: 10, hry: -55, el: 0.1, er: 0, fore: 0.6, lean: 0.08, tilt: 0, zr: 0.75 }],
 ]
 const HIGH = { 0.7: { ry: -50, lean: 0.12, bow: 0.1, tilt: 0.1 }, 1: { ry: -42, lean: 0.14, bow: 0.08, tilt: 0.2 } }
 export function kickPose(f, foot = 1, o = null) {
@@ -673,7 +674,7 @@ export function kickPose(f, foot = 1, o = null) {
   return { ...p, lx: -p.rx, ly: p.ry, lk: p.rk, rx: -p.lx, ry: p.ly, rk: p.lk, hlx: -p.hrx, hly: p.hry, hrx: -p.hlx, hry: p.hly, el: p.er, er: p.el, lean: -p.lean, hx: -p.hx, zl: p.zr, zr: p.zl }
 }
 
-const TH = 27, SH = 26, UA = 19, FA = 17.8, TORSO = 33, HR = 7.4, SHW = 10.0, HIPW = 4.4
+const TH = 27, SH = 26, UA = 19, FA = 17.8, TORSO = 33, HR = 7.4, SHW = 11.3, HIPW = 3.9
 const OL = 1.4   // the ink round every part, in rig units
 // a limb: two circles joined by their tangents (a cone with round ends)
 function taper(x, ax, ay, ra, bx, by, rb) {
@@ -843,13 +844,13 @@ const add = (pr, g) => pr.map(([t, r]) => [t, r + g])
 
 // The leg: the thigh full at the top and swelling on its outside, the inside (the teardrop) low by the knee; a real knee;
 // the calf high and fuller on the inside, in to a slim ankle
-const THIGH_O = [[0, 5.5], [0.3, 5.6], [0.6, 5.05], [0.85, 4.3], [1, 3.9]]
-const THIGH_I = [[0, 5.2], [0.2, 5.2], [0.5, 4.7], [0.78, 4.15], [0.9, 4.25], [1, 3.75]]
+const THIGH_O = [[0, 5.2], [0.3, 5.2], [0.6, 4.85], [0.85, 4.3], [1, 3.9]]
+const THIGH_I = [[0, 4.9], [0.2, 4.9], [0.5, 4.55], [0.78, 4.1], [0.9, 4.2], [1, 3.75]]
 const SHIN_O = [[0, 3.8], [0.1, 3.75], [0.27, 4.6], [0.5, 3.75], [0.78, 2.35], [0.93, 2.0], [1, 2.15]]
 const SHIN_I = [[0, 3.7], [0.1, 3.7], [0.31, 5.0], [0.53, 3.95], [0.78, 2.45], [0.93, 2.1], [1, 2.25]]
 const SOCK_O = add(SHIN_O, 0.4), SOCK_I = add(SHIN_I, 0.4), FOLD_O = add(SHIN_O, 0.95), FOLD_I = add(SHIN_I, 0.95)
-const SHORT_O = [[0, 5.4], [0.5, 5.55], [1, 5.6]], SHORT_I = [[0, 5.0], [1, 5.0]]
-const NECK = [[0, 4.4], [0.35, 3.8], [1, 3.4]]
+const SHORT_O = [[0, 5.05], [1, 5.3]], SHORT_I = [[0, 4.8], [1, 4.8]]
+const NECK = [[0, 4.9], [0.35, 4.4], [1, 4.1]]
 const SOCK_T = 0.15, FOLD_T = [0.11, 0.21]
 // boots: [the upper, its flash, the soleplate]
 const BOOTS = [['#15181c', '#f2f2ee', '#e6e8e4'], ['#f2f2ee', '#15181c', '#2a2e33'], ['#f08a24', '#15181c', '#15181c'], ['#2bd4c5', '#10151a', '#f2f2ee'], ['#e84fa1', '#f2f2ee', '#f2f2ee'], ['#15181c', '#c6ec3a', '#c6ec3a'], ['#c6ec3a', '#15181c', '#15181c'], ['#2a64d8', '#f2f2ee', '#f2f2ee'], ['#c9302c', '#f2f2ee', '#15181c']]
@@ -1059,15 +1060,15 @@ export function paintMan(x, o, L) {
   })
   // the seat and the waistband: from the hips across, down to the fork
   const waist = d => {
-    const w0 = 7.4 * bw + d, w1 = HIPW + 5.1 * bw + d, nx = -sl, ny = cl
+    const w0 = 7.9 * bw + d, w1 = HIPW + 4.9 * bw + d, nx = -sl, ny = cl
     // (wound the same way as the legs of them, so the two fill as one)
     x.moveTo(hipX - cl * w0 - nx * (5.6 + d), hipY - sl * w0 - ny * (5.6 + d)); x.lineTo(hipX - cl * w1 + nx * (2 + d), hipY - sl * w1 + ny * (2 + d))
     x.lineTo(hipX + nx * (3.4 + d), hipY + ny * (3.4 + d)); x.lineTo(hipX + cl * w1 + nx * (2 + d), hipY + sl * w1 + ny * (2 + d)); x.lineTo(hipX + cl * w0 - nx * (5.6 + d), hipY + sl * w0 - ny * (5.6 + d)); x.closePath()
   }
   // The shirt, in its own frame (0, 0 the middle of his shoulders, y down to the hem): the neckline, the trapezius
   // sloping down to the shoulders (not a box), round over the deltoid into the sleeve; under the arm the lats, in to a
-  // narrow waist, and out a touch over the hips where it hangs over the shorts
-  const wa = W - 0.6, wl = W + 0.2, ww = 9.2 * bw, wh = 9.6 * bw, T2 = T - 2.6   // (T2: the hem, over the top of the shorts)
+  // waist only a little narrower than the chest (a V from the shoulders, not an hourglass), straight down over the shorts
+  const wa = W - 0.5, wl = W - 0.2, ww = 9.9 * bw, wh = 9.6 * bw, T2 = T - 2.6   // (T2: the hem, over the top of the shorts)
   const shirt = () => {
     x.moveTo(-3.7, -2.6)
     x.quadraticCurveTo(-W * 0.55, -2.0, -W + 1.2, 0.3)
@@ -1200,7 +1201,7 @@ export function paintMan(x, o, L) {
   }
   // the arms across his front, the head, then any hand up at the head
   for (const r of arms) if (r.at === 'front') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
-  paintHead(x, sxx, syy, hx, hy, skin, skinD, hairC, cut, front, o, tilt, turnH)
+  paintHead(x, sxx, syy, hx, hy, skin, skinD, hairC, L.beard && L.beard !== 'none' ? `${cut}|${L.beard}` : cut, front, o, tilt, turnH)
   for (const r of arms) if (r.at === 'late') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
   // a clipboard held in front of him
   if (L.clipboard) {
@@ -1305,8 +1306,10 @@ function skull(x, hx, hy, back = false) {
     x.quadraticCurveTo(hx, hy + 7.0, hx - 4.0, hy + 6.2)
     x.bezierCurveTo(hx - 5.4, hy + 5.2, hx - SK, hy + 3.0, hx - SK, hy - 0.8)
   } else {
-    x.bezierCurveTo(hx + SK, hy + 3.3, hx + 4.3, hy + JAW - 0.5, hx, hy + JAW)
-    x.bezierCurveTo(hx - 4.3, hy + JAW - 0.5, hx - SK, hy + 3.3, hx - SK, hy - 0.8)
+    // (a man's jaw: the corners square under the ears, a flat chin)
+    x.bezierCurveTo(hx + SK + 0.2, hy + 4.2, hx + 5.8, hy + JAW - 0.3, hx + 2.7, hy + JAW + 0.1)
+    x.lineTo(hx - 2.7, hy + JAW + 0.1)
+    x.bezierCurveTo(hx - 5.8, hy + JAW - 0.3, hx - SK - 0.2, hy + 4.2, hx - SK, hy - 0.8)
   }
   x.closePath()
 }
@@ -1354,8 +1357,10 @@ function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, 
   }
   x.drawImage(c, hx + HB[0], hy + HB[1], HB[2], HB[3])
 }
-function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar = null) {
+function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cutIn, front, o, tilt, turnH, collar = null) {
   const up = clamp(tilt, -1, 1)
+  // (cut|beard: a created face's beard rides on the cut; locs hang like long hair, in ropes)
+  const [cut0, beard = 'none'] = String(cutIn).split('|'), locs = cut0 === 'locs', cut = locs ? 'long' : cut0
   collar?.()
   const ex = -turnH * 1.3, ears = sd => [hx + sd * (SK - 0.1) + ex, hy + 0.6]
   // the ink: the skull and jaw, the ears, the hair
@@ -1393,6 +1398,24 @@ function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, tur
     x.lineTo(hx - SK + 1.35, sb - 1.4); x.quadraticCurveTo(hx - SK + 0.7, sb + 0.3, hx - SK - 1, sb); x.closePath(); x.fill()
     x.globalAlpha = 1
     if (cut === 'fade') { x.globalAlpha = 0.4; x.fillRect(hx - SK - 1, sb, 2.6, 3.2); x.fillRect(hx + SK - 1.6, sb, 2.6, 3.2); x.globalAlpha = 1 }
+    if (beard !== 'none') {
+      // the beard: down from the sideburns along the jaw and over the chin, the moustache over the lip
+      const bx = hx + turnH * 1.5, by = hy + up * -1.1
+      x.fillStyle = hair
+      if (beard === 'full' || beard === 'stubble') {
+        x.globalAlpha = beard === 'stubble' ? 0.32 : 1
+        x.beginPath(); x.moveTo(hx - SK - 1, sb - 1); x.lineTo(hx - SK + 1.6, sb - 1); x.quadraticCurveTo(hx - SK + 2.2, by + 3.6, bx - 2.6, by + 3.6)
+        x.quadraticCurveTo(bx, by + 3.0, bx + 2.6, by + 3.6); x.quadraticCurveTo(hx + SK - 2.2, by + 3.6, hx + SK - 1.6, sb - 1); x.lineTo(hx + SK + 1, sb - 1); x.lineTo(hx + SK + 1, hy + 12); x.lineTo(hx - SK - 1, hy + 12); x.closePath(); x.fill()
+        x.globalAlpha = 1
+      } else if (beard === 'goatee') {
+        x.beginPath(); x.ellipse(bx, by + 6.6, 2.5, 2.2, 0, 0, 6.2832); x.fill()
+        x.beginPath(); x.roundRect(bx - 2.3, by + 3.7, 4.6, 1.1, 0.5); x.fill()
+      } else {
+        x.beginPath(); x.ellipse(bx, by + 7.2, 1.6, 1.3, 0, 0, 6.2832); x.fill()
+      }
+      // (the mouth, light on the dark of it)
+      if (beard !== 'stubble') { x.strokeStyle = tone(skin, 0.7); x.lineWidth = 0.6; x.beginPath(); x.moveTo(bx - 1.4, by + 5.0); x.quadraticCurveTo(bx, by + 5.3, bx + 1.4, by + 4.9); x.stroke() }
+    }
   }
   x.restore()
   // the volume over the crown (and long hair down past the jaw)
@@ -1402,6 +1425,12 @@ function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, tur
     x.beginPath()
     if (front) { x.roundRect(hx - SK - 1.2, hy - 2, 2.2, 6.6, 1.1); x.roundRect(hx + SK - 1.0, hy - 2, 2.2, 6.6, 1.1) } else x.roundRect(hx - SK - 0.4, hy - 3, (SK + 0.4) * 2, 8.4, 3.4)
     x.fill()
+    if (locs) {
+      x.strokeStyle = tone(hair, lumOf(hair) < 0.12 ? 1.6 : 0.7); x.lineWidth = 0.4; x.globalAlpha = 0.35; x.beginPath()
+      const xs = front ? [hx - SK - 0.6, hx - SK + 0.4, hx + SK - 0.4, hx + SK + 0.6] : [-5.2, -3.1, -1, 1.1, 3.2, 5.3].map(d => hx + d)
+      for (const lx of xs) { x.moveTo(lx, hy - (front ? 1.4 : 2.6)); x.lineTo(lx + 0.1, hy + (front ? 4.2 : 5.0)) }
+      x.stroke(); x.globalAlpha = 1
+    }
   }
   x.globalAlpha = 1
   // the hair's own shade, down its right side, and a parting's line through a crop
@@ -1472,7 +1501,9 @@ export function man(ctx, C, X, Z, pose, look, o = {}) {
   return p
 }
 // look: a kit and the man in it
-export const dress = (kit, who = null, extra = null) => ({ ...kit, skin: who?.skin ?? '#8d5a3b', number: who?.number ?? null, name: who?.name ?? null, ...extra })
+// (the player's own created face, in a Career: his skin, his cut and its colour, his beard)
+const faceOf = who => { const f = faceLook(who); return f ? { skin: f.skin, hairColor: f.hair, cut: f.cut, beard: f.beard } : null }
+export const dress = (kit, who = null, extra = null) => ({ ...kit, skin: who?.skin ?? '#8d5a3b', number: who?.number ?? null, name: who?.name ?? null, ...faceOf(who), ...extra })
 // a coach or a scout on the touchline with his clipboard (a quick look up at the play now and then)
 export function scout(ctx, C, X, Z, look, t = 0, o = {}) {
   const glance = Math.sin(t / 900 + X) > 0.7

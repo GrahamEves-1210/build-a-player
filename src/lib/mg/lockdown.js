@@ -6,7 +6,7 @@
 // over your hands that clanks off the iron. Beaten twice and he's gone, and it's a layup.
 // It's Iso turned round (cut.js): the same camera behind the ball, the same window off the trait.
 import { lanesMs } from '../minigames.js'
-import { clamp, lerp, prog, easeOut, easeInOut, outcome, onBoard, rngOf, nudge, text, reduceMotion, GOOD, BAD, DISPLAY } from './kit.js'
+import { clamp, lerp, prog, easeOut, easeInOut, outcome, onBoard, rngOf, nudge, text, reduceMotion, GOOD, BAD, DISPLAY, faceHair } from './kit.js'
 import { arenaCam, CRASH_CAM, dolly, arenaStage, manAt, POSE, RUN, tagAt, tagsDown, AB, flyTo, dropThrough, hoopWith, shotApex } from './arena.js'
 import { frontRun, ballIn, easedState, easedPose, newPose, copyPose, mixPose, pose, project, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_R, RIM_Y, R_HEAD, R_HIPS, warmCrowd, crowdUp, camFlashes, boardFlash, lightFx, paintHoop } from './meter.js'
 import { castMen, teamOf } from './read.js'
@@ -510,7 +510,7 @@ export function draw(ctx, g, view) {
   ]
   list.sort((x, y) => y[1] - x[1])
   for (const q of list) {
-    if (manAt(ctx, view, cam, q[0], q[1], q[2], { jersey: q[3].color, trim: q[3].trim, skin: q[4].skin, num: q[4].number, back: q[5], ball: q[6], live: true }) && M) tagAt(PT.x, PT.y - 11, q[4].name, PT.k / FIG_FT)
+    if (manAt(ctx, view, cam, q[0], q[1], q[2], { jersey: q[3].color, trim: q[3].trim, skin: q[4].skin, ...faceHair(q[4]), num: q[4].number, back: q[5], ball: q[6], live: true }) && M) tagAt(PT.x, PT.y - 11, q[4].name, PT.k / FIG_FT)
   }
   if (M) tagsDown(ctx, view)
   if (ball && !atIron) ballIn(ctx, cam, AB.x, AB.y, AB.z, spin)

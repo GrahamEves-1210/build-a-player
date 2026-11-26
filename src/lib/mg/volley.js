@@ -251,12 +251,12 @@ function meAt(g) {
   if (g.touch) { const a = t - g.touch.at; if (a < 200) return { x: me.x, z: me.z, pose: { ...kickPose(0.25), ry: -20, rx: 6, hy: 50 } } }
   const sp = Math.hypot(me.vx, me.vz)
   if (sp > 0.5) return { x: me.x, z: me.z, pose: runPose(me.cycle % 1, clamp(sp / 4, 0.3, 0.8)) }
-  return { x: me.x, z: me.z, pose: { ...POSE.ready, hlx: -26, hly: -64, hrx: 24, hry: -60, tilt: g.phase === 'drop' ? 0.8 : 0.2 } }
+  return { x: me.x, z: me.z, pose: { ...POSE.ready, hlx: -20, hly: -52, hrx: 19, hry: -51, tilt: g.phase === 'drop' ? 0.8 : 0.2 } }
 }
 function defenderAt(g) {
   const d = g.df
   if (g.res === 'goal') return defenderBeaten(0, g.t - g.endAt, POSE.ready)
-  if (d.st === 'slide') return { ...POSE.slide, hy: 22, lk: 0, rk: 0, face: 0, tilt: 0, lx: -22, ly: -6, rx: 20, ry: -10, hlx: -36, hly: -48, hrx: 30, hry: -44, rot: -0.5 }
+  if (d.st === 'slide') return { ...POSE.slide, hy: 22, lk: 0, rk: 0, face: 0, tilt: 0, lx: -22, ly: -6, rx: 20, ry: -10, hlx: -30, hly: -36, hrx: 26, hry: -40, elbow: 0, fore: 0.6, rot: -0.5 }
   if (d.st === 'charge' && g.t > d.go) return runPose(d.cycle % 1, 1)
   return { ...POSE.ready, head: -0.3, tilt: 0.4 }
 }

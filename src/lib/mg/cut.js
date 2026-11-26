@@ -10,7 +10,7 @@
 //   iso                      close up at the top of the key: cross him over when his hand comes for the ball
 //   post-up                  on the low block, back to the basket, a spin for each touch
 import { lanesMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, onBoard, rngOf, easeOut, easeIn, layer, manOf, xiOf, paceOf, stage, particles, nudge, text, DISPLAY } from './kit.js'
+import { clamp, lerp, prog, outcome, onBoard, rngOf, easeOut, easeIn, layer, manOf, xiOf, paceOf, stage, particles, nudge, text, DISPLAY, faceHair } from './kit.js'
 import { HIT_STOP, afterStop, fxSeed, hitFx, plantFx, landFx, pushIn, warmSome } from './contact.js'
 import { tilt, untilt, ground, stands, floodlight, vignette, paintGrass, skinOf, athlete , cleanEdges } from './art.js'
 import { paintFieldFlat, SL, SR, qbPose } from './throw.js'
@@ -876,7 +876,7 @@ function drawIso(ctx, g, view) {
   const list = [[dX, dz + fell * 0.3, easedPose(ISO_HIM, HIS, g, CLK.dt, reaching ? 24 : 55), them, him, stripped, null], [x, z, easedPose(ISO_ME, MINE, g, CLK.dt, 22), us, me, true, carry]]
   list.sort((a2, b2) => b2[1] - a2[1])
   for (const q of list) {
-    if (manAt(ctx, view, cam, q[0], q[1], q[2], { jersey: q[3].color, trim: q[3].trim, skin: q[4].skin, num: q[4].number, back: q[5], ball: q[6], live: true }) && M) tagAt(PT.x, PT.y - 11, q[4].name, PT.k / FIG_FT)
+    if (manAt(ctx, view, cam, q[0], q[1], q[2], { jersey: q[3].color, trim: q[3].trim, skin: q[4].skin, ...faceHair(q[4]), num: q[4].number, back: q[5], ball: q[6], live: true }) && M) tagAt(PT.x, PT.y - 11, q[4].name, PT.k / FIG_FT)
   }
   if (M) tagsDown(ctx, view)
   if (ball && !atIron && !up2) ballIn(ctx, cam, ball.x, ball.y, ball.z, spin)
@@ -956,7 +956,7 @@ function drawPost(ctx, g, view) {
   list.sort((a, b2) => b2[1] - a[1])
   // (the ball's behind him once he's turned to the rim and going up)
   for (const q of list) {
-    if (manAt(ctx, view, cam, q[0], q[1], q[2], { jersey: q[3].color, trim: q[3].trim, skin: q[4].skin, num: q[4].number, back: q[5], live: true }) && M) tagAt(PT.x, PT.y - 11, q[4].name, PT.k / FIG_FT)
+    if (manAt(ctx, view, cam, q[0], q[1], q[2], { jersey: q[3].color, trim: q[3].trim, skin: q[4].skin, ...faceHair(q[4]), num: q[4].number, back: q[5], live: true }) && M) tagAt(PT.x, PT.y - 11, q[4].name, PT.k / FIG_FT)
   }
   if (M) tagsDown(ctx, view)
   if (!atIron) ballIn(ctx, cam, ball.x, ball.y, ball.z, spin)

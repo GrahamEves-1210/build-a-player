@@ -109,9 +109,9 @@ export function manAt(ctx, view, cam, x, z, P, o) {
   const k = PT.k, sx = PT.x, sy = PT.y, s = k / FIG_FT
   if (sx < -70 * s - 10 || sx > view.w + 70 * s + 10) return true
   if (o.live || !P.id || s > LIVE_S || P.j > 0 || o.ball) {
-    athleteFront(ctx, sx, sy, P, { jersey: o.jersey, trim: o.trim, skin: o.skin, s, back: o.back, num: o.num, ball: o.ball ?? null, spin: o.spin ?? 0 })
+    athleteFront(ctx, sx, sy, P, { jersey: o.jersey, trim: o.trim, skin: o.skin, hair: o.hair, cut: o.cut, beard: o.beard, s, back: o.back, num: o.num, ball: o.ball ?? null, spin: o.spin ?? 0 })
   } else {
-    const st = stampOf(view, `${P.id}|${o.jersey}|${o.trim}|${o.num}|${o.skin}|${o.back ? 1 : 0}`, s, (c, res) => athleteFront(c, 0, 0, P, { jersey: o.jersey, trim: o.trim, skin: o.skin, s: res, back: o.back, num: o.num }))
+    const st = stampOf(view, `${P.id}|${o.jersey}|${o.trim}|${o.num}|${o.skin}|${o.hair}|${o.cut}|${o.beard}|${o.back ? 1 : 0}`, s, (c, res) => athleteFront(c, 0, 0, P, { jersey: o.jersey, trim: o.trim, skin: o.skin, hair: o.hair, cut: o.cut, beard: o.beard, s: res, back: o.back, num: o.num }))
     if (st) ctx.drawImage(st, sx - 55 * s, sy - 138 * s, 110 * s, 152 * s)
   }
   PT.x = sx; PT.y = sy; PT.k = k

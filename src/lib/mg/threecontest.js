@@ -9,7 +9,7 @@
 // is time saved. A ball counts if it's off his hand before the clock hits zero.
 // def = { moneyRack 0-4 (default 4), round 'first' | 'final', label (his name on the board), toBeat (the final's score to beat) }
 // done = outcome(points / 40, points >= (toBeat ?? 20), note, { points, made, of: 27, shot, racks, deep, timeLeft })
-import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, layer, text, rr, circle, basketball, particles, nudge, reduceMotion, GOOD, BAD, GOLD, DISPLAY, LABEL } from './kit.js'
+import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, layer, text, rr, circle, basketball, particles, nudge, reduceMotion, GOOD, BAD, GOLD, DISPLAY, LABEL, faceHair } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, paintRoom, paintLines, paintHoop, rimHalf, netOf, ballAt, athleteFront, frontRun, project, aimCam, PT, FIG_FT, RIM_R, RIM_Y, BALL_R, SKINS, HANDS, crowdUp, camFlashes, boardFlash, warmCrowd, lightFx, R_UP, R_HEAD, R_HIPS } from './meter.js'
 
 export const how = {
@@ -637,7 +637,7 @@ export function draw(ctx, g, view) {
       const shown = easedPose(EASE, SP, g, CLK.dt, g.move && t >= g.move.at ? 40 : 30)
       if (held) HELD.kind = held.kind
       const me = view.cast?.me
-      athleteFront(ctx, G.sx, G.floor, shown, { jersey: c.us, trim: c.trim, s: G.s, back: true, num: me?.number ?? 30, skin: me?.skin ?? SKINS[0], ball: held ? HELD : null, spin: 0 })
+      athleteFront(ctx, G.sx, G.floor, shown, { jersey: c.us, trim: c.trim, s: G.s, back: true, num: me?.number ?? 30, skin: me?.skin ?? SKINS[0], ...faceHair(me), ball: held ? HELD : null, spin: 0 })
       if (held) g.handsAt = t
     }
   }
