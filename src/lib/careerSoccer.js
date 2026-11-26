@@ -48,7 +48,7 @@ const WC_NATIONS = CAREER_NATIONS
 // of the chances while the senior men take the penalties). Real wonderkids: Mbappé 15 league goals at 18, Yamal 7 at
 // 17, Haaland's breakout at 19-20; the 30-goal seasons come from 20 on, the 40s in his prime. (Before 2026-11-25 only
 // his share was cut, 0.86 to 19: a 99 build scored 35 league goals at 17)
-const YOUTH = { 16: [0.6, 0.55, 0.4], 17: [0.64, 0.62, 0.45], 18: [0.74, 0.74, 0.55], 19: [0.84, 0.86, 0.72], 20: [0.9, 0.95, 0.88], 21: [0.95, 1, 1], 22: [0.98, 1, 1] }
+const YOUTH = { 16: [0.6, 0.55, 0.4], 17: [0.64, 0.62, 0.45], 18: [0.74, 0.74, 0.55], 19: [0.84, 0.86, 0.72], 20: [0.86, 0.92, 0.85], 21: [0.92, 1, 1], 22: [0.97, 1, 1] }
 const youthOf = age => { const v = YOUTH[Math.max(16, Math.min(23, age))] ?? [1, 1, 1]; return { usage: v[0], start: v[1], full: v[2] } }
 // The season's targets: what a No. 9 of his level scores in a full league season as a starter (the engine's own line,
 // a teenager's rationed year taken off), raised toward what he did the last two seasons, then a touch past it: a
@@ -1142,7 +1142,7 @@ function dropOffer(c, r, years) {
   if (!pick) return null
   const t = pick.t, fit = fitAtFor(c)(t)
   return { team: t, fit, perYear: wageAt(c, t, r, { k: 0.7 }), years: Math.max(1, Math.min(3, years - 1)), kind: 'drop', tier2: TIER2_NAME[lgOf(t)], stand: pick.st,
-    pitch: justDown.includes(t) ? `Just relegated. Regular football in ${TIER2_NAME[lgOf(t)]}, and a club that wants to go straight back up.` : `A division down: regular football in ${TIER2_NAME[lgOf(t)]}.` }
+    pitch: `${justDown.includes(t) ? 'Just relegated, and a club that wants to go straight back up. ' : 'A division down. '}${pick.st.role === 'Bench' ? `A squad place in ${TIER2_NAME[lgOf(t)]}: he has to fight his way into the side.` : `Regular football in ${TIER2_NAME[lgOf(t)]}.`}` }
 }
 // turn them all down: he stays on the deal he has
 export function stayPut(c) {
