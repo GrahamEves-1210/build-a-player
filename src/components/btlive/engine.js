@@ -5,7 +5,7 @@
 import { paintCourt, drawHoop, drawHoopShadow, VIEW_LIFT, HOOP_LIFT, RIM_DRAW } from './court.js'
 import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, shotWindow, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
-import { drawFigure, drawShadow, pointAt, lookOf } from './figure.js'
+import { drawFigure, drawShadow, pointAt, lookOf, ballHz } from './figure.js'
 import { createPoser } from './pose.js'
 import { sfx, haptic } from '../../lib/juice'
 
@@ -107,6 +107,8 @@ export function createEngine({ setup, els, on, net = null }) {
     const y = v => `translate3d(0, ${(v * amt).toFixed(1)}px, 0)`
     els.court.animate([{ transform: 'none' }, { transform: `${y(6)} scale(${1 + 0.012 * amt})`, offset: 0.12 }, { transform: y(-3.5), offset: 0.3 }, { transform: y(2), offset: 0.5 }, { transform: y(-1), offset: 0.72 }, { transform: 'none' }], { duration: 380, easing: 'linear' })
   }
+  // the few people watching by the fence: they get up for a big play (arms up; the biggest, a hop too)
+  const cheer = (amt = 1) => { CROWD.t0 = clockNow; CROWD.amt = amt }
   function onEvents() {
     const P = s.players
     for (const e of s.events) {
@@ -123,14 +125,19 @@ export function createEngine({ setup, els, on, net = null }) {
           fx.push({ rim: 'dunk', t0: clockNow, dur: 640, ux, uy, big: e.poster })
           slam(e.poster ? 1.5 : 1)
         } else fx.push({ rim: 'make', t0: clockNow, dur: 300 })
-      } else if (e.e === 'miss') { sfx('rimmiss'); fx.push({ rim: 'miss', t0: clockNow, dur: 260 }) }
-      else if (e.e === 'block') { sfx('btblock'); haptic('heavy'); say(e.chase ? 'CHASE-DOWN' : 'BLOCKED', p.x, wordY(p.y), colOf(e.pid), true); kick(1) }
+        if (e.kind === 'dunk' || e.poster || e.deep || e.three) cheer(e.poster || e.kind === 'dunk' ? 2 : 1)
+      } else if (e.e === 'miss') {
+        sfx('rimmiss'); fx.push({ rim: 'miss', t0: clockNow, dur: 260 })
+        // how it comes off: round the rim and out (in and out), or up off the back iron; then where the game sends it
+        ROLL.t0 = clockNow; ROLL.a0 = Math.atan2(p.y - COURT.rim.y, p.x - COURT.rim.x); ROLL.how = s.tick % 3 === 0 ? 'back' : 'round'; ROLL.dir = s.tick % 2 ? 1 : -1
+      }
+      else if (e.e === 'block') { sfx('btblock'); haptic('heavy'); say(e.chase ? 'CHASE-DOWN' : 'BLOCKED', p.x, wordY(p.y), colOf(e.pid), true); kick(1); cheer(e.chase ? 2 : 1) }
       else if (e.e === 'steal') { sfx('btsteal'); haptic('medium'); say('STEAL', p.x, wordY(p.y), colOf(e.pid)) }
       else if (e.e === 'pick') { sfx('btsteal'); haptic('medium'); say('PICKED OFF', p.x, wordY(p.y), colOf(e.pid)) }
       else if (e.e === 'catch') sfx('catchball')
       else if (e.e === 'board') { sfx('catchball'); if (e.pid === me) haptic('light') }
       else if (e.e === 'move') {
-        if (e.ankles) { haptic('heavy'); say('ANKLES', P[e.def].x, wordY(P[e.def].y), FLOOD, true, 1400) } else if (e.pid === me) haptic('light')
+        if (e.ankles) { haptic('heavy'); say('ANKLES', P[e.def].x, wordY(P[e.def].y), FLOOD, true, 1400); cheer(2) } else if (e.pid === me) haptic('light')
         // his own move, named as he makes it (how the small stick is learned)
         if (e.pid === me && !levels[me] && !e.ankles && MOVE_WORD[e.kind]) { for (const f of fx) if (f.mv) f.dur = 0; fx.push({ text: MOVE_WORD[e.kind], x: p.x, y: p.y < 9 ? p.y + 4.6 : p.y - 4.6, t0: clockNow, dur: 750, color: 'rgba(255,255,255,.92)', big: false, small: true, mv: true }) }
       }
@@ -622,13 +629,27 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   // ── the men ──
   // Each man is a figure seen from above (figure.js) in the pose the game has him in (pose.js): his side's colour on
-  // his back with his number, his skin tone, his arms and legs doing what he's doing. A figure is about as wide across
-  // the shoulders as the body the game collides, so two men in contact stand shoulder to shoulder.
-  const LOOKS = setup.looks.map((l, i) => lookOf({ name: l.who || l.label || `p${i}`, skin: l.skin, num: l.num, col: colOf(i) }))
+  // his jersey, his skin tone, his build (a guard leaner than a big, broader the bigger his Size), his arms and legs
+  // doing what he's doing. No number on the court. A figure is about as wide across the shoulders as the body the
+  // game collides, so two men in contact stand shoulder to shoulder.
+  const LOOKS = setup.looks.map((l, i) => lookOf({ name: l.who || l.label || `p${i}`, skin: l.skin, col: colOf(i), size: s.players[i]?.R?.sizeRaw ?? 0.5, big: !!s.players[i]?.R?.big }))
   const FIG = LOOKS.map(look => ({ x: 0, y: 0, s: 30, ang: 0, scale: 1, air: 0, lean: 0, down: 0, lh: null, rh: null, lf: null, rf: null, toeL: 0, toeR: 0, look, hs: 20, cy: 0, ball: false, bounce: false, bl: null }))
   // (a man is drawn a little bigger than the body the game collides: from above, his arms reach past it)
   const FIGK = T.radius * 2 * 1.16
   const ENV = { x: 0, y: 0, a: 0, dt: 0, held: 0, sFt: 3 }, BQ = [0, 0, 0], BQ2 = [0, 0, 0]
+  // ── the court around them ──
+  // scuffs: a hard cut or a hard stop leaves a scrape under his feet that fades (and a puff of grit, not with Reduce Motion)
+  const SCUFF = []
+  // a missed shot off the rim, as drawn: round the rim and out, or up off the back iron, for its first moments
+  const ROLL = { t0: -1e9, a0: 0, how: 'round', dir: 1 }, ROLL_MS = 300
+  // the people watching: a few by the fence just off each sideline (feet), facing the court, in street clothes. They
+  // follow the ball with their heads and get up for a big play (cheer)
+  const CROWD = { t0: -1e9, amt: 1 }
+  const FANS = [[1.55, 13.2, 0], [1.6, 15.4, 1], [54.45, 17.6, 2], [54.5, 19.9, 3]].map(([x, y, j]) => ({
+    x, y, base: x < 28 ? 0 : Math.PI,
+    f: { x: 0, y: 0, s: 30, ang: 0, scale: 0.92, air: 0, lean: 0, down: 0, lh: [0.12, -0.3, 0.3], rh: [0.12, 0.3, 0.3], lf: [0.03, -0.14], rf: [0.03, 0.14], toeL: 0, toeR: 0,
+      look: lookOf({ name: `fan${j}${setup.seed || ''}`, col: ['#5d6673', '#7a5f47', '#3f5b4c', '#6c6f72'][j], size: 0.4 }) },
+  }))
   function figures(now, dt, a, tk) {
     const sF = FIGK * k
     for (let i = 0; i < N; i++) {
@@ -641,8 +662,49 @@ export function createEngine({ setup, els, on, net = null }) {
       f.lh = z.lh; f.rh = z.rh; f.lf = z.lf; f.rf = z.rf; f.toeL = z.toeL; f.toeR = z.toeR; f.ball = z.ball; f.bounce = z.bounce; f.bl = z.bl; f.under = z.under; f.bside = z.bside
       // the ball off the floor: heard on each bounce
       if (z.thud && s.phase === 'live') sfx('dribble', i === me ? 1 : 0.7)
+      if (z.cut && s.phase === 'live' && !z.air) { if (SCUFF.length > 10) SCUFF.shift(); SCUFF.push({ x: f.x, y: f.y, a: z.ang, t0: now, sd: (i + s.tick) % 2 ? 1 : -1 }) }
       // (the square the names, the meters and the words keep off: where he's drawn, a man in the air a touch up the screen)
       f.hs = sF * 0.5 * (1 + 0.16 * z.air); f.cy = f.y - z.air * sF * 0.2
+    }
+  }
+  // the scrapes of hard cuts and stops, fading over a second and a half; a little grit kicked up for the first moment
+  function drawScuffs(now) {
+    for (let j = SCUFF.length - 1; j >= 0; j--) {
+      const m = SCUFF[j], u = (now - m.t0) / 1500
+      if (u > 1 || u < 0) { SCUFF.splice(j, 1); continue }
+      const ca = Math.cos(m.a), sa = Math.sin(m.a), r = k * 0.75
+      // (on worn asphalt a sole's scrape shows pale: the grit rubbed off the top)
+      ctx.strokeStyle = `rgba(205,200,190,${(0.3 * (1 - u)).toFixed(3)})`; ctx.lineWidth = Math.max(1, k * 0.13); ctx.lineCap = 'round'
+      for (const o of [-0.35, 0.35]) {
+        const cx = m.x - sa * o * k, cy = m.y + ca * o * k
+        ctx.beginPath(); ctx.arc(cx, cy, r, m.a + m.sd * 0.6, m.a + m.sd * 1.5, m.sd < 0); ctx.stroke()
+      }
+      if (u < 0.2 && !reduced()) {
+        const g = u / 0.2
+        ctx.fillStyle = `rgba(200,196,186,${(0.35 * (1 - g)).toFixed(3)})`
+        for (let q = 0; q < 4; q++) { const an = m.a + Math.PI + (q - 1.5) * 0.5, d = k * (0.4 + 0.9 * g); ctx.beginPath(); ctx.arc(m.x + Math.cos(an) * d, m.y + Math.sin(an) * d, Math.max(0.8, k * 0.07), 0, 6.283); ctx.fill() }
+      }
+    }
+  }
+  // the people by the fence: heads on the ball, up on their feet for a big play (each a beat after the last)
+  function drawFans(now) {
+    const b = s.ball, bx = b.st === 'held' && b.holder >= 0 ? s.players[b.holder].x : b.x, by = b.st === 'held' && b.holder >= 0 ? s.players[b.holder].y : b.y
+    const still = reduced()
+    for (let j = 0; j < FANS.length; j++) {
+      const F = FANS[j], f = F.f
+      f.x = F.x * k; f.y = F.y * k; f.s = FIGK * k
+      if (f.x < camPx - f.s || f.x > camPx + w + f.s) continue
+      let da = Math.atan2(by - F.y, bx - F.x) - F.base
+      while (da > Math.PI) da -= 2 * Math.PI
+      while (da < -Math.PI) da += 2 * Math.PI
+      const want = F.base + clamp(da, -0.75, 0.75)
+      f.ang += (want - f.ang) * 0.06
+      if (!F.seen) { f.ang = want; F.seen = true }
+      const t = now - CROWD.t0 - j * 90, up = t > 0 && t < 1100 ? Math.sin(Math.PI * clamp(t / 1100, 0, 1)) : 0
+      const hz = 0.3 + 0.75 * Math.min(1, up * 1.6)
+      f.lh[0] = 0.12; f.lh[1] = -0.3; f.lh[2] = hz; f.rh[0] = 0.12; f.rh[1] = 0.3; f.rh[2] = CROWD.amt > 1 || j % 2 ? hz : 0.3 + 0.2 * up
+      f.air = !still && CROWD.amt > 1 && up > 0 ? 0.12 * Math.abs(Math.sin(t / 150)) * up : 0
+      drawShadow(ctx, f); drawFigure(ctx, f)
     }
   }
   // a crown over the king (King of the Hill)
@@ -768,11 +830,19 @@ export function createEngine({ setup, els, on, net = null }) {
     const inWin = Math.abs(held - spec.ideal) <= spec.win, past = held > hi
     const col = rel ? GRADE_COL[meter.grade] ?? '#fff' : inWin ? GREEN : past ? RED : '#f3f6f8'
     const fy = by + bh * (1 - f)
-    ctx.fillStyle = col; ctx.fillRect(bx, fy, bw, by + bh - fy)
-    // the green window, inside the bar, with a white tick each side of it (never thinner than 5px)
-    const wy0 = yAt(hi), wy1 = yAt(lo), wc = (wy0 + wy1) / 2, wh = Math.max(5, wy1 - wy0)
-    ctx.fillStyle = inWin && !rel ? 'rgba(255,255,255,.35)' : GREEN; ctx.fillRect(bx, wc - wh / 2, bw, wh)
-    ctx.fillStyle = '#f3f6f8'; ctx.fillRect(bx - 5, wc - wh / 2 - 1, 4, wh + 2); ctx.fillRect(bx + bw + 1, wc - wh / 2 - 1, 4, wh + 2)
+    // the green window first, inside the bar (never thinner than 5px), so the fill rising through it is drawn over
+    // it and seen passing through the green (the owner, 11-26: on a layup the white was behind the green)
+    const wy0 = yAt(hi), wy1 = yAt(lo), wc = (wy0 + wy1) / 2, wh = Math.max(5, wy1 - wy0), wt = wc - wh / 2
+    ctx.fillStyle = GREEN; ctx.fillRect(bx, wt, bw, wh)
+    // the fill over it: white on the way up, a pale green where it is inside the window (the window still reads under
+    // it), red past it; the grade's colour once he let go
+    ctx.fillStyle = col === GREEN ? '#c8f7dc' : col; ctx.fillRect(bx, fy, bw, by + bh - fy)
+    if (!rel && !past && fy < wt + wh) { ctx.fillStyle = '#c8f7dc'; ctx.fillRect(bx, Math.max(fy, wt), bw, wt + wh - Math.max(fy, wt)) }
+    // the window's edges over everything (a dark line across the bar each end) and a white tick each side of it
+    ctx.fillStyle = 'rgba(5,7,10,.85)'; ctx.fillRect(bx, wt - 1, bw, 1.5); ctx.fillRect(bx, wt + wh - 0.5, bw, 1.5)
+    ctx.fillStyle = '#f3f6f8'; ctx.fillRect(bx - 5, wt - 1, 4, wh + 2); ctx.fillRect(bx + bw + 1, wt - 1, 4, wh + 2)
+    // the needle: the head of the fill, a bright line just past the bar's edges, on top of the window
+    if (!rel) { ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 2, fy - 2, bw + 4, 4); ctx.fillStyle = inWin ? GREEN : '#fff'; ctx.fillRect(bx - 1, fy - 1, bw + 2, 2) }
     if (clutch) {                                                     // (dark dashes inside a wider window, light ones round a narrower)
       ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'
       ctx.strokeRect(bx + 0.5, yAt(base.ideal + base.win), bw - 1, Math.max(4, yAt(base.ideal - base.win) - yAt(base.ideal + base.win))); ctx.setLineDash([])
@@ -899,8 +969,10 @@ export function createEngine({ setup, els, on, net = null }) {
     if (CLR.team >= 0) drawArc(TEAM[CLR.team] ?? '#fff', now - CLR.t0)
     // the hoop's shadow on the floor, always there (it moves with the rim on a dunk)
     drawHoopShadow(ctx, k, rimSway(now))
+    drawScuffs(now)
     // every man's shadow first (no shadow lies on a man)
     for (let i = 0; i < N; i++) if (!cut(i)) drawShadow(ctx, FIG[i])
+    drawFans(now)
     // under the player this device controls: a white ring on the floor (his jersey is his side's colour, so the ring
     // isn't), a faint fill of his colour inside it; under the teammate the stick points at, a dashed one
     const ringR = FIGK * k * 0.62
@@ -941,20 +1013,30 @@ export function createEngine({ setup, els, on, net = null }) {
     if (carry >= 0) {
       const f = FIG[carry]
       if (f.ball) {
-        const q = pointAt(f, f.bl[0], f.bl[1], BQ)
+        const q = pointAt(f, f.bl[0], f.bl[1], BQ, f.bounce ? null : ballHz(f.bl[2]))
         bz = f.bl[2]; gx = q[0]; gy = q[2]; bx = q[0]; by = q[1]
         bsc = f.bounce ? 0.84 + bz * 0.05 : 0.9 + Math.min(bz, 9) * 0.022
         if (f.bounce) {
           // a dribble, seen from above: straight down under the dribbling hand and back up into it (the hand on top
           // of it at the top of the bounce), never off to the side of him
-          const hd = f.bside > 0 ? f.rh : f.lh, hq = pointAt(f, hd[0], hd[1], BQ2), u = clamp((bz - 0.35) / 2.0, 0, 1)
+          const hd = f.bside > 0 ? f.rh : f.lh, hq = pointAt(f, hd[0], hd[1], BQ2, hd[2]), u = clamp((bz - 0.35) / 2.0, 0, 1)
           bx = q[0] + (hq[0] - q[0]) * u; by = q[1] + (hq[1] - q[1]) * u; gx = bx; gy = q[2] + (hq[2] - q[2]) * u
         }
       } else { bx = gx = f.x; by = f.cy; gy = f.y; bz = 3; bsc = 1 }
       key = 'h' + carry
     } else {
-      const q = ballAt(DB[0], DB[1], DB[2])
-      bx = q[0]; by = q[1]; bsc = q[2]; gx = DB[0] * k; gy = q[3] ? by : DB[1] * k; bz = DB[2]
+      let qx = DB[0], qy = DB[1], qz = DB[2]
+      const ru = (now - ROLL.t0) / ROLL_MS
+      if (b.st === 'loose' && b.reb && ru >= 0 && ru < 1) {
+        // off the rim: round it and out, or up off the back iron, easing into where the game has it
+        const R = COURT.rimR * 0.9, wgt = 1 - ru * ru * (3 - 2 * ru)
+        let rx, ry, rz
+        if (ROLL.how === 'round') { const an = ROLL.a0 + ROLL.dir * 2.4 * ru; rx = RIM.x + Math.cos(an) * R; ry = RIM.y + Math.sin(an) * R; rz = 10.2 }
+        else { const back = Math.sin(Math.PI * Math.min(1, ru * 1.4)); rx = RIM.x; ry = RIM.y - R * back; rz = 10.2 + 1.6 * Math.sin(Math.PI * ru) }
+        qx += (rx - qx) * wgt; qy += (ry - qy) * wgt; qz += (rz - qz) * wgt
+      }
+      const q = ballAt(qx, qy, qz)
+      bx = q[0]; by = q[1]; bsc = q[2]; gx = qx * k; gy = q[3] ? by : qy * k; bz = qz
       key = b.st
     }
     if (key !== BL.key) {
@@ -1461,6 +1543,8 @@ export function createEngine({ setup, els, on, net = null }) {
     flick, dstick: dribbleAt, tap, right: rightFlick, get stickMode() { return ONE ? 'one' : 'two' }, get glog() { return GLOG },
     // DEV: each man's pose on the last frame (figure.js), and his animation's notes (pose.js)
     get figs() { return FIG }, get anim() { return poser.anim },
+    // DEV: the game's clock (ms) as the poses read it, and the people watching
+    get clock() { return clockNow }, get fans() { return FANS },
     // DEV: where a man is on the page (px)
     screenOf(i) { const r = els.court.getBoundingClientRect(); return [r.left + FIG[i].x - camPx, r.top + FIG[i].y] },
     // DEV: let time pass with the game stopped (the meter runs on this device's clock)
