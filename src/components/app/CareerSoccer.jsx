@@ -117,9 +117,10 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
         {last.europe && <p><b>{last.europe.name}</b> {last.europe.result === 'Winners' ? 'Winners' : last.europe.result === 'Runners-up' ? 'Beaten in the final' : `Out in the ${String(last.europe.result ?? 'league phase').toLowerCase()}`}</p>}
         {last.rounds?.length > 0 && <p><b>The big nights</b> {last.rounds.map(r => `${r.won ? 'W' : 'L'} ${tieText(r)} ${r.opponent}`).join(' · ')}</p>}
         {bdo && !last.award && bdo.winner && bdo.rank <= 10 && <p><b>Ballon d'Or</b> {ordinalOf(bdo.rank)}. Won by {bdo.winner.name}.</p>}
+        {last.playoff?.stay && last.playoff.won && <p><b>{last.playoff.name}</b> Won: {last.teamName} stay up.</p>}
         {last.relegated && <p><b>Relegated</b> {last.teamName} go down to {S.x?.tier2Name?.(last.team) ?? 'the second tier'}.</p>}
-        {last.tier === 2 && <p><b>{last.promoted ? 'Promoted' : 'Not promoted'}</b> {last.promoted ? `${last.teamName} go up${last.promotedHow === 'playoff' ? ' through the play-offs' : last.pos === 1 ? ' as champions' : ' in second place'}.` : `${last.teamName} stay in ${inLeague(last.league)} for another season.`}</p>}
-        {last.qualified && <p><b>Next season</b> {last.qualified === 'ucl' ? 'The Champions League' : last.qualified === 'uel' ? 'The Europa League' : 'The Conference League'}</p>}
+        {last.tier === 2 && <p><b>{last.promoted ? 'Promoted' : 'Not promoted'}</b> {last.promoted ? `${last.teamName} go up${last.promotedHow === 'playoff' ? ' through the play-offs' : last.pos === 1 ? ' as champions' : ` in ${ordinalOf(last.pos)} place`}.` : `${last.teamName} stay in ${inLeague(last.league)} for another season.`}</p>}
+        {last.qualified && <p><b>Next season</b> {last.qualified === 'ucl' ? (last.uclq ? 'The Champions League, through the qualifiers' : 'The Champions League') : last.uclq === false ? 'The Europa League, after going out in the Champions League qualifiers' : last.qualified === 'uel' ? 'The Europa League' : 'The Conference League'}</p>}
         <p><b>{nationName(c.nation)}</b> {last.caps ? `${last.caps} ${last.caps === 1 ? 'cap' : 'caps'}, ${last.intlGoals} ${last.intlGoals === 1 ? 'goal' : 'goals'}${last.intlRole && last.intlRole !== 'Starter' ? ` (${last.intlRole.toLowerCase()})` : ''}` : `Not called up${last.intlRank ? `: ${ordinalOf(last.intlRank)} in the manager's order of strikers` : ''}`}</p>
         {last.missed > 0 && <p><b>Missed</b> {last.missed} {last.missed === 1 ? 'match' : 'matches'}</p>}
       </div>
@@ -355,6 +356,8 @@ export function AwardBanners({ c }) {
     </div>
   )
 }
+// a play-off's last tie, told: up or down
+const promoLine = (x, club) => (x.up ? (x.won ? `${club} are promoted.` : `Beaten in the ${x.stage === 'Relegation play-off' ? x.name : `${x.compName} ${x.stage.toLowerCase()}`}. ${club} stay down.`) : x.won ? `${club} stay up.` : `${club} are relegated.`)
 // The big nights: the European knockouts and the cup final, one tie at a time (a close one turns on a key moment)
 export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit }) {
   const S = sportOf(c)
@@ -396,7 +399,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
                 </div>
               ))}
             </div>
-            <b>{x.won ? (x.final ? (x.intl ? `${nationName(c.nation)} win the ${x.compName}.` : `${x.compName} winners.`) : `Through to the ${nextOf(x)?.stage?.toLowerCase() ?? 'next round'}.`) : x.final ? `Beaten in the ${x.compName} final.` : x.intl && x.key === 'sf' && x.track === 'wc' ? `Beaten in the semi-final. ${nationName(c.nation)} play for third place.` : `Out of the ${x.compName} in the ${String(x.stage).toLowerCase()}.`}</b>
+            <b>{x.track === 'promo' && (x.up || x.stay) ? promoLine(x, c.fit.name) : x.won ? (x.final ? (x.intl ? `${nationName(c.nation)} win the ${x.compName}.` : `${x.compName} winners.`) : `Through to the ${nextOf(x)?.stage?.toLowerCase() ?? 'next round'}.`) : x.final ? `Beaten in the ${x.compName} final.` : x.intl && x.key === 'sf' && x.track === 'wc' ? `Beaten in the semi-final. ${nationName(c.nation)} play for third place.` : `Out of the ${x.compName} in the ${String(x.stage).toLowerCase()}.`}</b>
             <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''} · ${x.auto ? autoLine(x) : x.hit ? (x.won ? 'he scored when it mattered' : 'his goal wasn\'t enough') : 'the chance went begging'}`}{x.swing ? <> · {x.swing}</> : null}</small>
           </div>
         )}
@@ -418,7 +421,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
         <span className="ag-eyebrow">{rd.compName.toUpperCase()} · <span className="cr-nb">{rd.stage.toUpperCase()}</span>{rd.legs === 2 ? <> · <span className="cr-nb">TWO LEGS</span></> : null}</span>
         {rd.group && <p className="cr-note">{rd.year} {rd.compName}: {nationName(c.nation)} come through the group, {rd.group.w}–{rd.group.d}–{rd.group.l} with {rd.group.pts} {rd.group.pts === 1 ? 'point' : 'points'}. The knockouts start here.</p>}
         <div className="cr-po-match"><Crest r={rd} short={usOf(rd)} /><b>{usOf(rd)}</b><i>vs</i><b>{rd.opp}</b><Crest r={rd} short={rd.opp} ex={rd.extra} /></div>
-        <small>{rd.oppName} · {rd.legs === 2 ? (rd.home ? 'Second leg at home' : 'Second leg away') : 'A neutral venue'}{rd.final && !simmed ? <> · it comes down to one moment</> : null}</small>
+        <small>{rd.oppName} · {rd.legs === 2 ? (rd.home ? 'Second leg at home' : 'Second leg away') : rd.home == null ? (rd.venue ? `At ${rd.venue}` : 'A neutral venue') : rd.home ? 'At home' : 'Away'}{rd.track === 'promo' ? (rd.up ? ' · the winner goes up' : rd.stay ? ' · the loser goes down' : '') : null}{rd.final && !simmed ? <> · it comes down to one moment</> : null}</small>
         {simmed && <small className="cr-po-sim">{rd.close === false ? `No key moment for ${c.name} in this one: the tie is simulated.` : 'Key moments are off: the tie is simulated.'}</small>}
         <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { sfx('whistle'); if (rd.close === false) { setCareer(playoffRound(c, 0.5)); setStep('result') } else setStep('game') }}>{simmed ? (rd.final ? 'SIMULATE THE FINAL' : 'SIMULATE THE TIE') : rd.final ? 'PLAY THE FINAL' : 'PLAY THE TIE'} <IconArrow size={16} /></button>
       </div>
