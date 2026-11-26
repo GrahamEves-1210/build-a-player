@@ -29,7 +29,8 @@ export function planStroke(t0, from, to, want, human, r, id = 7) {
   let len = 0
   const cum = [0]
   for (let i = 1; i <= N; i++) { len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); cum.push(len) }
-  const p = Math.max(0, (want.power ?? 0.6) * (1 + gauss(r) * e.pace))
+  // (FLICK=1: a kid who just flicks it, whatever pace it wants: anywhere from a firm stroke to a quick swipe)
+  const p = process.env.FLICK ? 0.55 + r() * 0.65 : Math.max(0, (want.power ?? 0.6) * (1 + gauss(r) * e.pace))
   const speed = DRAW.s0 + p * (DRAW.s1 - DRAW.s0), dur = len / speed
   const at = s => { let i = 1; while (i < N && cum[i] < s) i++; const f = (s - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]); return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * f, y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * f } }
   const out = [{ t: t0, kind: 'down', x: from.x + gauss(r) * 6, y: from.y + gauss(r) * 6, id }]

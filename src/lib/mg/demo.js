@@ -8,6 +8,7 @@
 //   firstRep(game, g) → true | false | null   how the demo's one rep went (null: not decided yet)
 //   CAPTION[engine]                    a short line over the demo, only where the game's own prompt needs help
 import { steer } from './kickret.js'
+import { P, POST } from './soccer.js'
 const REACT = 250          // ms: a sharp player seeing it and moving
 const RATE = 12            // taps a second, flat out
 
@@ -510,15 +511,21 @@ function finishingPilot(g) {
     return K.flush()
   }
 }
-// free kick: the curler, stick to the top corner on the wall's side, a good weight on it, the tap on the strike
+// free kick: drawn (it's only drawn): a bowed line off the ball, over the wall into the top corner on its side
 function freekickPilot(g) {
-  let st = 'aim', relAt = Infinity, tapped = false
+  let q = null
   return () => {
     if (g.done) return
-    const stick = { kind: 'stick', x: g.sgn * 0.93, y: 0.8 }
-    if (st === 'aim') { if (g.phase !== 'aim' || g.t < 1300 + REACT + 200) return [stick]; st = 'hold'; relAt = g.t + 0.62 * 900; return [stick, { kind: 'key', zone: 'P' }] }
-    if (st === 'hold' && g.t >= relAt) { st = 'tap'; return [{ kind: 'keyup', zone: 'P' }] }
-    if (st === 'tap' && !tapped && g.k.phase === 'strike' && g.t >= g.k.strikeAt) { tapped = true; return [{ kind: 'key', zone: 'P' }, { kind: 'keyup', zone: 'P' }] }
+    if (!q) {
+      if (g.phase !== 'aim' || g.t < 1300 + REACT + 400 || !g.lastView) return
+      const { C, ball } = g.aimView(), e = P(C, g.sgn * (POST - 0.6), 1.75, 0)
+      const dx = e.x - ball.x, dy = e.y - ball.y, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L, bend = g.foot * 0.19, n = 30
+      q = []
+      for (let i = 0; i <= n; i++) { const u = i / n, b = ((u - u ** 4) / 0.4725) * bend * L; q.push({ t: g.t + i * 12, kind: i === 0 ? 'down' : i === n ? 'up' : 'move', x: ball.x + dx * u + nx * b, y: ball.y + dy * u + ny * b, id: 3 }) }
+    }
+    const out = []
+    while (q.length && q[0].t <= g.t) { const e = q.shift(); out.push({ kind: e.kind, x: e.x, y: e.y, id: e.id, zone: null }) }
+    return out.length ? out : undefined
   }
 }
 // 2-on-1: wait for the last man; he steps up, square it; he drops off, shoot low away from the keeper
@@ -710,7 +717,7 @@ export const CAPTION = {
   volley: { wait: 'GET IN LINE AND HIT IT FIRST TIME' },
   slalom: { wait: 'WATCH THE RING', press: '{T} THE WAY IT POINTS' },
   finishing: { wait: 'FIND THE TARGET AND STRIKE IT' },
-  freekick: { wait: 'AIM FOR THE CORNER OVER THE WALL', press: 'HOLD CURL…', up: 'LET GO' },
+  freekick: { wait: 'PICK YOUR SPOT OVER THE WALL', press: 'DRAW IT · BEND IT TO CURL IT' },
   counter: { wait: 'WATCH THE LAST MAN', press: 'HE STEPS UP: PASS · HE DROPS OFF: SHOOT' },
   firsttouch: { wait: 'WATCH IT DROP', press: '{T} THE FOOT IT DROPS TO' },
   atbat: { wait: 'PICK UP THE SPIN', press: 'SWING AS IT GETS THERE' },

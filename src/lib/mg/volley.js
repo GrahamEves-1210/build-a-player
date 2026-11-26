@@ -15,10 +15,10 @@ import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose,
 import { promptY } from './soccerPads.js'
 
 export const how = {
-  volley: 'It drops on the edge of the box. Get in line with the stick, then hold SHOOT and let go as it arrives to volley it first time. Or TOUCH it as it arrives, the stick pointing at the target, and shoot before the defender closes in.',
+  volley: 'It drops on the edge of the box. Get in line with the stick, hold SHOOT as it comes down and let go as it arrives to hit it first time. Or TOUCH it as it arrives, the stick at the target, and shoot before the defender closes in.',
 }
 
-const ME = { x: -1.5, z: -15.4 }, KEEP_Z = -0.7, RING = 620, HOLD = 700
+const ME = { x: -1.5, z: -15.4 }, KEEP_Z = -0.7, RING = 620, HOLD = 900
 const DROPS = {
   loop: { apex: 5.4, ms: 1550, y: 0.55, from: { x: 0.8, y: 2.6, z: -6.4 } },
   driven: { apex: 2.2, ms: 1050, y: 0.75, from: { x: 1.6, y: 2.4, z: -7.2 } },
@@ -30,7 +30,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   const kind = ['loop', 'driven', 'half'][Math.floor(r() * 3)], D = DROPS[kind]
   const land = { x: ME.x + (r() - 0.5) * 2.6, z: ME.z + (r() - 0.5) * 1.2 }
   const startAt = 1300 + r() * 500, arriveAt = startAt + D.ms
-  const Wv = byV(v, 55, 110), Wt = byV(v, 75, 150)
+  const Wv = byV(v, 85, 140), Wt = byV(v, 100, 170)
   const k = shooter(v, { fill: HOLD, windup: 170, pressure: situation ? 0.4 : 0.2 })
   const g = {
     t: 0, game: 'volley', zones: 'none', stick: true, pads: null, fx: [], done: null, outro: 2800, stamp: null,
@@ -39,7 +39,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     touch: null, bl: null, shot: null, res: null, why: '', endAt: null, popAt: null, doneAt: null, ctl: padCtl(), vh: 640,
     who: { me: manOf(cast, 'us', 'st', 0), gk: manOf(cast, 'them', 'gk', 0), def: manOf(cast, 'them', 'cb', 0) },
     dirt: particles(24, 4), nudge: nudge(),
-    hud: { prompt: 'WATCH IT DROP' },
+    hud: { prompt: 'GET UNDER IT · LET GO OF SHOOT AS IT ARRIVES' },
     tick(dt) {
       g.t += dt
       const s = dt / 1000, o = padStick(g.ctl)
@@ -54,7 +54,11 @@ export function make({ v, seed, cast = null, situation = null }) {
           // after a touch he goes on to it
           const dx = g.bl.x - g.me.x, dz = g.bl.z - 0.35 - g.me.z, d = Math.hypot(dx, dz)
           g.me.vx += ((d > 0.15 ? dx / d : 0) * Math.min(sp, d * 6) - g.me.vx) * acc; g.me.vz += ((d > 0.15 ? dz / d : 0) * Math.min(sp, d * 6) - g.me.vz) * acc
-        } else { g.me.vx += (ux * sp - g.me.vx) * acc; g.me.vz += (uz * sp * 0.6 - g.me.vz) * acc }
+        } else {
+          g.me.vx += (ux * sp - g.me.vx) * acc; g.me.vz += (uz * sp * 0.6 - g.me.vz) * acc
+          // (in the last of its flight, near where it's dropping, he adjusts his feet to it: a striker gets in line)
+          if (g.phase === 'drop' && g.t > arriveAt - 700) { const dx = land.x - g.me.x, dz = land.z - g.me.z, d = Math.hypot(dx, dz); if (d < 2.6 && d > 0.05) { const pull = Math.min(d, 2.6 * s); g.me.x += (dx / d) * pull; g.me.z += (dz / d) * pull } }
+        }
         g.me.x = clamp(g.me.x + g.me.vx * s, -7, 5); g.me.z = clamp(g.me.z + g.me.vz * s, -18, -12.5)
         g.me.cycle += Math.hypot(g.me.vx, g.me.vz) * s / 2.2
       }
@@ -102,13 +106,13 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (g.shot) return
     k.power = clamp((t - k.at) / HOLD, 0, 1)
     const e = t - arriveAt, reach = reachOf()
-    if (reach > 1.25) return settle('missed', 'Couldn’t get to it: swung at fresh air', true)
+    if (reach > 1.5) return settle('missed', 'Couldn’t get to it: swung at fresh air', true)
     if (Math.abs(e) > Wv * 1.8) return e < 0 ? miss('over', 'Snatched at it early: leaned back and skied it') : miss('missed', 'Too late: it was past him')
     const q = clamp(1 - Math.abs(e) / Wv, 0, 1)
     k.timed = q > 0.72 ? 'green' : q > 0.3 ? 'ok' : 'red'
     k.aimAt(padStick(g.ctl).x || -(Math.sign(-0.3) || 1) * 0.6, padStick(g.ctl).y)
     const at = g.dropAt(arriveAt)
-    const s = strikeOf(k, { x: at.x, z: at.z }, { v, r, y0: at.y, weak: at.x < g.me.x - 0.3, speed: clamp(reach / 1.2, 0, 1) })
+    const s = strikeOf(k, { x: at.x, z: at.z }, { v, r, y0: at.y, weak: at.x < g.me.x - 0.3, speed: clamp(reach / 1.5, 0, 1), err: 0.75 })
     // early: he's leaned back on it
     if (e < 0) { s.to.y += (-e / Wv) * 1.6; s.over = s.over || s.to.y > BAR; s.onTarget = s.onTarget && !s.over }
     g.shot = { ...s, at: t }
@@ -130,7 +134,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     const e = g.t - arriveAt
     if (e < -Wt * 2.4) return
     const reach = reachOf()
-    if (reach > 1.2 || Math.abs(e) > Wt * 2) return settle('cleared', reach > 1.2 ? 'Couldn’t get to it: they cleared it' : 'Miscontrolled it: they cleared it', true)
+    if (reach > 1.45 || Math.abs(e) > Wt * 2) return settle('cleared', reach > 1.45 ? 'Couldn’t get to it: they cleared it' : 'Miscontrolled it: they cleared it', true)
     const heavy = Math.abs(e) > Wt
     const o = padStick(g.ctl), d = Math.hypot(o.x, o.y) > 0.3 ? { x: o.x, z: Math.max(-0.3, o.y) } : { x: 0.2, z: 0.6 }
     const dl = Math.hypot(d.x, d.z) || 1, dist = heavy ? 2.1 : 0.75
@@ -138,7 +142,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.touch = { at: g.t, heavy }
     g.bl = { x: at.x, z: at.z, tx: at.x + (d.x / dl) * dist, tz: at.z + (d.z / dl) * dist, y: at.y }
     g.phase = 'touched'
-    g.df.st = 'charge'; g.df.go = g.t + 260
+    g.df.st = 'charge'; g.df.go = g.t + 420
     g.hud.prompt = heavy ? 'HEAVY TOUCH' : null
     g.fx.push('dribble', 'h:light')
   }
@@ -152,7 +156,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     const b = g.bl
     const far = Math.hypot(b.x - g.me.x, b.z - g.me.z)
     const dPress = Math.hypot(g.df.x - b.x, g.df.z - b.z)
-    const s = strikeOf(k, { x: b.x, z: b.z }, { v, r, pressure: clamp((2.6 - dPress) / 2, 0, 1), speed: clamp(far / 1.5, 0, 1) })
+    const s = strikeOf(k, { x: b.x, z: b.z }, { v, r, pressure: clamp((2.2 - dPress) / 2, 0, 1), speed: clamp(far / 1.5, 0, 1), err: 0.8 })
     g.shot = { ...s, at: g.t }
     g.phase = 'shot'; g.choice = 'touch'
     // the defender in the line of it blocks
@@ -163,16 +167,16 @@ export function make({ v, seed, cast = null, situation = null }) {
   }
   function keeperFor(s) {
     const x0 = -0.3 + clamp(g.me.x * 0.12, -0.8, 0.8)
-    s.save = s.onTarget && s.block == null ? keeperSave(s, { x: x0, z: KEEP_Z, react: 240, reach: 0.8, up: 2.45, dive: 3.0 }, r) : null
+    s.save = s.onTarget && s.block == null ? keeperSave(s, { x: x0, z: KEEP_Z, react: 270, reach: 0.7, up: 2.4, dive: 2.7 }, r) : null
     // he goes for one on target: soccer.js's keeperShot draws it (on to it for a save, short of it when he's beaten)
-    if (s.save) g.kShot = { x0, z: KEEP_Z, go: s.at + 240, cross: s.at + s.save.f * s.T, ball: { x: s.save.x, y: s.save.y }, saved: !!s.save.saved, held: !!s.save.held }
+    if (s.save) g.kShot = { x0, z: KEEP_Z, go: s.at + 270, cross: s.at + s.save.f * s.T, ball: { x: s.save.x, y: s.save.y }, saved: !!s.save.saved, held: !!s.save.held }
   }
   function defender(s) {
     const d = g.df
     if (d.st === 'hold') return
     if (d.st === 'charge' && g.t >= d.go) {
       const tx = (g.bl?.x ?? g.me.x) + 0.2, tz = (g.bl?.z ?? g.me.z) + 0.9
-      const dx = tx - d.x, dz = tz - d.z, dd = Math.hypot(dx, dz) || 1, sp = 5.6
+      const dx = tx - d.x, dz = tz - d.z, dd = Math.hypot(dx, dz) || 1, sp = 5.0
       d.vx = (dx / dd) * sp; d.vz = (dz / dd) * sp
       d.x += d.vx * s; d.z += d.vz * s; d.cycle += sp * s / 2.5
       if (dd < 1.5) { d.st = 'slide'; d.at = g.t }
@@ -180,7 +184,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (d.st === 'slide') {
       const a = g.t - d.at
       if (a < 380) { d.x += d.vx * s * 0.6; d.z += d.vz * s * 0.6 }
-      if (!g.shot && !g.res && g.phase === 'touched' && a > 120) settle('blocked', 'Took too long: the defender closed him down and blocked it', true)
+      if (!g.shot && !g.res && g.phase === 'touched' && a > 200) settle('blocked', 'Took too long: the defender closed him down and blocked it', true)
     }
   }
   function shotTick() {
@@ -207,7 +211,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.done = outcome(q, goal, g.why); g.doneAt = g.t
     g.outro = goal ? celebMs() + 300 : lightMode() ? 1100 : 2200
     const word = { goal: 'GOAL', saved: 'SAVED', over: 'OVER THE BAR', wide: 'WIDE', blocked: 'BLOCKED', cleared: 'CLEARED', missed: 'MISSED IT' }[g.res]
-    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 40 : 50 }
+    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 40 : 50, sub: g.why }
     if (goal) { g.popAt = g.t; g.fx.push('h:success') } else g.fx.push(g.res === 'saved' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g

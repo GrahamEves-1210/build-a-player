@@ -10,7 +10,7 @@
 // a bow in it the curl. The moment the finger goes down is the moment he's chosen to shoot; drawn back across toward
 // the runner, it's the square ball instead.
 // Link-up play buys the time to read him, finishing and composure the shot.
-import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manOf } from './kit.js'
+import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manOf, text, rr, LABEL } from './kit.js'
 import { placeStamp } from './read.js'
 import {
   camOf, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribblePose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp,
@@ -21,7 +21,7 @@ import {
 import { newCtl, control, stickOf, drawControls, tip, padsOf } from './soccerPads.js'
 
 export const how = {
-  'two-on-one': 'Watch the last man. He steps up: square it to the runner. He drops off to the runner: keep it and shoot.',
+  'two-on-one': 'A break, the runner up the wing, one man back. Watch him: he steps up to you, PASS and square it for the tap-in; he drops off to the runner, draw your shot. Go before he commits and he reads it; leave it too long and he’s back.',
 }
 
 const START_Z = -42
@@ -42,7 +42,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   const commitGap = 7.2 + r() * 2.2                      // he commits when you're this close
   const goes = r() < 0.5 ? 'ball' : 'runner'
   const fake = r() < 0.45
-  const W = byV(v, 670, 950)
+  const W = byV(v, 1000, 1300)
   const k = shooter(v, { fill: FILL, windup: WINDUP, pressure: situation ? 0.5 : 0 })
   const g = {
     t: 0, zones: 'none', stick: true, fx: [], done: null, doneAt: null, outro: celebMs() + 300, stamp: null,
@@ -189,14 +189,14 @@ export function make({ v, seed, cast = null, situation = null }) {
       if (wood) { s.kind = 'wood'; s.why = Math.abs(s.to.y - BAR) < 0.17 ? 'Off the bar' : 'Off the post' }
       else if (!s.onTarget) { s.kind = 'off'; s.why = s.to.y > BAR ? 'Leaned back: over the bar' : 'Dragged it wide' }
       else {
-        const sv = keeperSave(s, { x: g.gk.x, z: g.gk.z, reach: 1.05, dive: 4.2, react: 230, up: 2.4 }, r)
+        const sv = keeperSave(s, { x: g.gk.x, z: g.gk.z, reach: 0.9, dive: 3.6, react: 260, up: 2.4 }, r)
         g.save = sv; s.kind = sv.saved ? 'saved' : 'goal'
         s.why = sv.saved ? (sv.stretch > 0.8 ? 'Good save, down to his side' : 'Too close to the keeper') : Math.abs(s.to.x) > POST - 0.8 ? 'Into the corner, past the keeper' : 'Slotted it past the keeper'
       }
     }
     if (s.block) s.kind = 'blocked'
     // the keeper goes for one on target (and one off the woodwork): soccer.js's keeperShot draws it
-    if (!s.block && (g.save || s.kind === 'wood')) { const sv = s.kind === 'wood' ? null : g.save; g.kShot = { x0: g.gk.x, z: g.gk.z, go: s.at + 230, cross: s.at + (sv?.f ?? 1) * s.T, ball: sv ? { x: sv.x, y: sv.y } : { x: s.to.x, y: s.to.y }, saved: !!sv?.saved, held: !!sv?.held } }
+    if (!s.block && (g.save || s.kind === 'wood')) { const sv = s.kind === 'wood' ? null : g.save; g.kShot = { x0: g.gk.x, z: g.gk.z, go: s.at + 260, cross: s.at + (sv?.f ?? 1) * s.T, ball: sv ? { x: sv.x, y: sv.y } : { x: s.to.x, y: s.to.y }, saved: !!sv?.saved, held: !!sv?.held } }
     g.shot = s
     g.fx.push('stamp', 'h:medium')
   }
@@ -216,7 +216,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.res = kind; g.endAt = g.t; g.doneAt = g.t; g.why = why; g.assist = assist
     const goal = kind === 'goal'
     g.done = outcome(score ?? (kind === 'saved' || kind === 'wood' ? 0.3 : 0.12), goal, why, goal && assist ? { assist: true } : null)   // (squared for the tap-in: the goal is a teammate's, the assist is his)
-    g.stamp = { text: goal ? 'GOAL' : kind === 'saved' ? 'SAVED' : kind === 'blocked' ? 'BLOCKED' : kind === 'late' ? (g.goes === 'ball' ? 'TACKLED' : 'BLOCKED') : kind === 'cut' ? 'CUT OUT' : kind === 'wood' ? 'OFF THE WOODWORK' : 'MISSED', good: goal, at: g.t, size: 50 }
+    g.stamp = { text: goal ? 'GOAL' : kind === 'saved' ? 'SAVED' : kind === 'blocked' ? 'BLOCKED' : kind === 'late' ? (g.goes === 'ball' ? 'TACKLED' : 'BLOCKED') : kind === 'cut' ? 'CUT OUT' : kind === 'wood' ? 'OFF THE WOODWORK' : 'MISSED', good: goal, at: g.t, size: 50, sub: why }
     if (goal) {
       g.popAt = g.t; g.fx.push('h:success'); g.nudge.kick(g.t, 2.5, 0, 1, 180)
       // the scorer peels away, the other one after him
@@ -348,11 +348,24 @@ export function draw(ctx, g, view) {
   shotHud(ctx, view, g.k, { t: g.t, y: view.h - (view.keys ? 64 : 186) })
   // (on a phone the shot's drawn: PASS is the one button)
   drawControls(ctx, view, g.ctl, view.keys ? { stick: 'AIM', a: 'SHOOT', b: 'PASS' } : { stick: false, a: null, b: 'PASS' }, !g.done, g.t)
-  if (!g.act && !g.res && g.t < 1900) tip(ctx, view, 'HE STEPS UP: PASS · HE DROPS OFF: SHOOT', undefined, 13)
+  // his commit, said over him the moment he makes it (the coach on the touchline): stepping up to you, or off to the runner
+  if (g.commitAt != null && !g.act && !g.res) {
+    const p = P(C, g.cb.x, 2.35, g.cb.z)
+    if (p.ok) callout(ctx, g.goes === 'ball' ? 'HE’S STEPPED UP: SQUARE IT' : 'HE’S DROPPED OFF: SHOOT', p.x, p.y - 8)
+  }
+  if (!g.act && !g.res && g.t < 2600) tip(ctx, view, 'HE STEPS UP: PASS · HE DROPS OFF: SHOOT', undefined, 13)
   else if (!g.act && !g.res && !g.k.drawing && g.t < 4600) {
     // the first one: the stroke that's a shot, and the line under it
     if (drawnSoFar() < 2) { const from = view.keys ? P(C, g.me.x + 0.25, 0.11, g.me.z + 0.75) : { x: 250, y: view.h - 170 }; ghostStroke(ctx, from, { x: from.x - g.rs * 30, y: from.y - 120 }, 0.1, g.t - 1900) }
     tip(ctx, view, view.keys ? 'DRAW YOUR SHOT WITH THE MOUSE · E TO PASS' : 'DRAW YOUR SHOT · PASS TO SQUARE IT', undefined, 14)
   }
   placeStamp(g.stamp, view)
+}
+
+function callout(ctx, str, x, y) {
+  ctx.font = `14px ${LABEL}`
+  const w = ctx.measureText(str).width + 16 + str.length * 1.1
+  x = clamp(x, w / 2 + 6, 354 - w / 2)
+  ctx.fillStyle = 'rgba(6,8,10,.86)'; rr(ctx, x - w / 2, y - 12, w, 24, 3); ctx.fill()
+  text(ctx, str, x, y + 0.5, { font: LABEL, size: 14, track: 1, color: '#f7cf55' })
 }

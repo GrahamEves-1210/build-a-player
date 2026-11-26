@@ -496,6 +496,14 @@ export function stamp(ctx, view, g) {
   ctx.fillRect(-tw / 2, -th / 2, tw, th)
   text(ctx, s.text, 0, 2, { font: DISPLAY, size: s.size ?? 46, color: '#07100b' })
   ctx.restore()
+  // (s.sub: what happened, a line under it in plain words)
+  if (s.sub) {
+    const y = (s.y ?? view.h * 0.4) + (s.size ?? 46) / 2 + 26, str = String(s.sub).toUpperCase()
+    ctx.font = `14px ${LABEL}`
+    const w = Math.min(view.w - 16, ctx.measureText(str).width + 22 + str.length * 1.2)
+    ctx.fillStyle = 'rgba(6,8,10,.82)'; ctx.fillRect(view.w / 2 - w / 2, y - 13, w, 26)
+    text(ctx, str, view.w / 2, y + 1, { font: LABEL, size: 14, track: 1, color: '#f2f2ee' })
+  }
 }
 
 // ── Juice: small, cheap, cosmetic. None of it touches the rules or the game's rng ──

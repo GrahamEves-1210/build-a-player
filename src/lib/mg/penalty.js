@@ -22,7 +22,7 @@ import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, keeperReady, 
 import { tip } from './soccerPads.js'
 
 export const how = {
-  penalty: 'Draw it from the ball to your spot: the quicker the stroke, the harder it’s hit (too quick and it’s over the bar), bend it to curl it, a soft one up the middle to chip it. STUTTER in the run-up and a keeper who’s guessing goes early: draw it again the other way. On a keyboard: aim with the arrows, hold SPACE to run up and let go to set the power, then tap it again at the strike.',
+  penalty: 'Draw a line from the ball to your spot: where it ends is where it goes, a quicker line is a harder shot, a bend in it curls it. STUTTER in the run-up and a keeper who’s guessing goes early: draw it again the other way. On a keyboard: arrows to aim, hold SPACE to run up, let go to set the power, tap SPACE again as he strikes it.',
 }
 
 const WHISTLE = 900
@@ -123,7 +123,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
     strokeUp(st, a.x, a.y, g.t, id)
     if (g.struckAt != null) return true
-    const rd = readStroke(st, g.aimView().C, { foot: 1, base: 'pen' })
+    const rd = readStroke(st, g.aimView().C, { foot: 1, base: 'pen', chipP: 0.22 })
     if (rd.tap || rd.back) { if (g.phase === 'wait') { g.say = 'DRAW IT UP TO THE GOAL'; g.sayAt = g.t } return true }
     if (g.phase === 'wait') {
       g.phase = 'run'; g.runAt = g.t; g.run = RUN_D; g.arriveAt = g.t + RUN_D; g.say = null
@@ -202,7 +202,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.done = outcome(q, goal, g.why); g.doneAt = g.t
     g.outro = goal ? celebMs() + 300 : lightMode() ? 1100 : 2300
     const word = { goal: 'GOAL', saved: 'SAVED', wide: 'MISSED', over: 'OVER THE BAR' }[g.res]
-    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 8 ? 40 : 50 }
+    g.stamp = { text: word, good: goal, at: g.t, size: word.length > 8 ? 40 : 50, sub: g.why }
     if (goal) { g.popAt = g.t; g.fx.push('h:success') } else g.fx.push(g.res === 'saved' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g
@@ -332,7 +332,7 @@ export function draw(ctx, g, view) {
     aimMark(ctx, C, a.x * (POST - 0.7), lerp(0.3, BAR - 0.45, (a.y + 1) / 2), { alpha: 0.9 })
   }
   if (g.res === 'goal' && g.done && !g.kicked) { g.kicked = true; g.nudge.kick(g.t, 2.5, 0, 1, 180) }
-  strokeTrail(ctx, g.st, g.t, { C, k: g.k, base: 'pen', foot: 1 })
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, base: 'pen', foot: 1, chipP: 0.22 })
   // (the words: under the taker's feet and over the STUTTER button on a phone, whatever its height; over the keys on a computer)
   const tipY = view.keys ? undefined : Math.min(P(C, START.x, 0, START.z).y + 32, view.h - 106)
   // the first one: how it's done, a stroke drawn off the ball into the top corner, and the line under it

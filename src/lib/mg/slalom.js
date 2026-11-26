@@ -17,7 +17,7 @@ const SIDE = 0.78           // how far round the pole he goes
 
 export function make({ v, seed }) {
   const r = rngOf(seed)
-  const vClean = byV(v, 4.1, 5.3), win = byV(v, 52, 112)
+  const vClean = byV(v, 4.1, 5.3), win = byV(v, 95, 150)
   const first = r() < 0.5 ? -1 : 1
   // the poles: a line down the middle, the gaps not quite even
   const poles = []
@@ -41,7 +41,8 @@ export function make({ v, seed }) {
       g.t += dt
       const s = dt / 1000
       if (g.t - g.litAt > 110) g.padLit = null
-      if (g.phase === 'set') { if (g.t >= LEAD) { g.phase = 'run'; g.goAt = g.t; g.fx.push('whistle'); g.hud.prompt = null; startLeg() } return }
+      if (g.phase === 'set') { if (g.t >= LEAD) { g.phase = 'run'; g.goAt = g.t; g.fx.push('whistle'); g.hud.prompt = 'CUT THE WAY THE ARROW POINTS AS THE RING CLOSES'; startLeg() } return }
+      if (g.k > 0 && g.hud.prompt) g.hud.prompt = null
       if (g.phase === 'done') { g.sp *= Math.exp(-s / 0.4); g.z += g.sp * s; g.cycle += (g.sp * s) / 2.2; return }
       const L = g.leg
       if (L.first) { const tau = (g.t - L.t0) / 1000; L.s = s0(tau); g.sp = vClean * (1 - Math.exp(-tau / A)) }
@@ -109,7 +110,7 @@ export function make({ v, seed }) {
   function finish() {
     const secs = (g.crossed - g.goAt) / 1000
     g.finalSecs = secs
-    const slack = 0.55, range = 1.2
+    const slack = 0.7, range = 1.2
     const score = clamp((clean + slack + range * 0.5 - secs) / range, 0, 1), hit = score >= 0.5
     const made = g.cuts.filter(c => c.res).length
     g.done = outcome(score, hit, `${secs.toFixed(2)}s · ${made} of ${N} clean`, { secs, made, of: N })

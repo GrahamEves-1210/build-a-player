@@ -1712,7 +1712,7 @@ export const aimTo = (sx, sy) => ({ x: (POST - 0.7) * clamp(sx, -1, 1), y: lerp(
 export const DRAW = {
   minLen: 22,                // px: shorter than this is a tap, not a shot
   s0: 0.15, s1: 1.9,         // px/ms: a stroke this quick is no power, this quick full power (quicker balloons)
-  maxP: 1.25,
+  maxP: 1.4, soft: 0.7, softK: 0.4,   // (past soft, the power climbs at softK: maxP is 0.98)
   dead: 0.08, full: 0.32,    // the bend (its bow over its length) that starts to curl it, and the most he can put on it
   chipP: 0.42, chipY: 1.0,   // softer than this, up into the goal: the chip
   lowY: 0.5, yLow: 0.22,     // under this it's driven along the grass; a short stroke goes in at this height
@@ -1755,7 +1755,10 @@ function paceOf(pts, now = null) {
   for (let i = 1; i < n; i++) { len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); if (t0 == null && Math.hypot(pts[i].x - P0.x, pts[i].y - P0.y) > 6) t0 = pts[i - 1].t }
   const t1 = now ?? pts[n - 1].t, dur = Math.max(24, t1 - (t0 ?? P0.t))
   const speed = len / dur
-  return { len, dur, speed, power: clamp((speed - DRAW.s0) / (DRAW.s1 - DRAW.s0), 0, DRAW.maxP) }
+  // (past a firm stroke it climbs slower: a natural quick swipe is a hard shot, and only a real slash of a stroke
+  // balloons over the bar)
+  const raw = clamp((speed - DRAW.s0) / (DRAW.s1 - DRAW.s0), 0, DRAW.maxP)
+  return { len, dur, speed, power: raw > DRAW.soft ? DRAW.soft + (raw - DRAW.soft) * DRAW.softK : raw }
 }
 export function readStroke(st, C, o = {}) {
   const pts = st.pts, n = pts.length, P0 = pts[0]
@@ -1780,12 +1783,14 @@ export function readStroke(st, C, o = {}) {
   let x = G.x, y = G.y, short = false
   if (y < DRAW.yLow) { const den = G.y - B.y; if (den > 0.01) x = B.x + ((DRAW.yLow - B.y) / den) * (G.x - B.x); y = DRAW.yLow; short = true }
   x = clamp(x, -(POST + 3), POST + 3); y = clamp(y, 0.12, BAR + 2.5)
-  const foot = o.foot ?? 1, pen = o.base === 'pen', power = pace.power
+  // (o.power: a game whose power is set, the free kick's: the stroke is only the spot and the shape)
+  const foot = o.foot ?? 1, pen = o.base === 'pen', power = o.power ?? pace.power
   const curl = Math.abs(bend) >= DRAW.dead, outside = curl && Math.sign(bend) === -foot
   // (o.base: the game's plain strike: 'driven', 'pen' for a penalty, 'volley' for one hit first time)
   const base = o.base ?? 'driven'
   let type, label
-  if (power < DRAW.chipP && y > DRAW.chipY) { type = 'chip'; label = pen && Math.abs(x) < 1.1 ? 'PANENKA' : 'CHIP' }
+  // (o.chipP: a game where a careful, slow line shouldn't turn into a dink: only a really soft one is)
+  if (power < (o.chipP ?? DRAW.chipP) && y > DRAW.chipY) { type = 'chip'; label = pen && Math.abs(x) < 1.1 ? 'PANENKA' : 'CHIP' }
   else if (curl) { type = pen ? 'pen' : 'finesse'; label = outside ? 'OUTSIDE OF THE BOOT' : pen ? 'PLACED' : 'CURLER' }
   else if (base === 'driven' && y < DRAW.lowY) { type = 'low'; label = 'LOW DRIVEN' }
   else { type = base; label = { pen: 'PENALTY', volley: 'FIRST TIME' }[base] ?? 'DRIVEN' }
@@ -1819,8 +1824,9 @@ export function strokeTrail(ctx, st, t, o = {}) {
   // (the band for the shot it is so far: o.k, the shooter, and o.base, the game's own strike)
   let lo = (o.over ?? 0.8) - 0.18, hi = o.over ?? 0.8
   if (o.k && o.C) { const rd = readStroke(st, o.C, o); if (rd.type) [lo, hi] = rd.type === 'chip' ? [9, 9] : o.k.band(rd.type) }
-  const col = pace.power > hi ? '#ff5a48' : pace.power >= lo ? '#f7cf55' : '#f2f2ee'
-  const w = 3 + 2.6 * clamp(pace.power, 0, 1)
+  // (o.power: the power's set, so the line's plain chalk at one weight)
+  const col = o.power != null ? '#f2f2ee' : pace.power > hi ? '#ff5a48' : pace.power >= lo ? '#f7cf55' : '#f2f2ee'
+  const w = o.power != null ? 4.5 : 3 + 2.6 * clamp(pace.power, 0, 1)
   ctx.save()
   ctx.globalAlpha = st.on ? 1 : 1 - age / 520
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
@@ -1828,7 +1834,7 @@ export function strokeTrail(ctx, st, t, o = {}) {
   path(); ctx.strokeStyle = 'rgba(6,8,10,.62)'; ctx.lineWidth = w + 4; ctx.stroke()
   path(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke()
   const E = pts[n - 1]
-  if (o.C && st.on && o.origin) {
+  if (o.C && st.on && (o.origin || o.ring)) {
     // drawn away from the ball: the ring on the goal where it's going
     const rd = readStroke(st, o.C, o)
     if (rd.type) { ctx.globalAlpha = 1; aimMark(ctx, o.C, rd.x, rd.y) }

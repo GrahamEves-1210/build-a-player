@@ -30,9 +30,10 @@ const SETUP = {
   forty: { dist: 40, range: 0.9, gun: 'gun', splitAt: 10, slack: 0.34, capOf: CAPOF_FORTY },
   sprint: { dist: 25, range: 0.6, gun: 'whistle', splitAt: 10, slack: 0.28, capOf: CAPOF_SPRINT },
   // soccer's academy trial: 30 metres (in yards: the rules run in yards), the split at 10 metres. Drawn by sprint30.js
-  sprint30: { dist: 32.81, range: 0.62, gun: 'whistle', splitAt: 10.94, slack: 0.36, capOf: CAPOF_30 },
+  sprint30: { dist: 32.81, range: 0.62, gun: 'whistle', splitAt: 10.94, slack: 0.38, capOf: CAPOF_30, gaps: [[150, 1], [185, 0.95], [230, 0.86], [310, 0.68], [460, 0.42], [760, 0.12], [1150, 0]] },
 }
 // How fast he runs, as a share of his top speed, by the time between your presses (ms)
+// (a setup's own gaps: soccer's academy sprint is kinder to a slower pair of thumbs)
 const BY_GAP = [[110, 1], [140, 0.94], [180, 0.84], [250, 0.66], [400, 0.4], [700, 0.12], [1100, 0]]
 const TAU_UP = 0.62       // s: how fast speed climbs to what the presses ask for
 const TAU_DOWN = 0.5      // s: and falls away when they slow or stop
@@ -70,7 +71,7 @@ export function make({ v, seed, game, pos, capOverride }) {
       }
       if (g.done) g.speed *= Math.exp(-s / 0.55)
       else if (g.firstPress != null) {
-        const want = cap * curve(Math.max(g.gapAvg, g.t - g.lastPress), BY_GAP)
+        const want = cap * curve(Math.max(g.gapAvg, g.t - g.lastPress), S.gaps ?? BY_GAP)
         g.speed += (want - g.speed) * (1 - Math.exp(-s / (want > g.speed ? TAU_UP : TAU_DOWN)))
       }
       const was = g.y

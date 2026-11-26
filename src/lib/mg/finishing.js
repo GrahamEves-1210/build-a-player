@@ -17,7 +17,7 @@ import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, kickPose, runP
 import { tip, promptY } from './soccerPads.js'
 
 export const how = {
-  finishing: 'Five balls from five spots. Draw each one from the ball to the lit target: the quicker the stroke the harder it’s hit, bend it to curl it. Three of five in the target. On a keyboard: aim with the arrows, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',
+  finishing: 'Five balls from five spots, a target lit in the goal for each. Draw a line from the ball to the target; bend it to curl it. Three of five in the target. On a keyboard: arrows to aim, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',
 }
 
 const N = 5, NEED = 3, GAP = 900, JOG = 600   // (the gap between balls; its last JOG ms he's jogging to the next one)
@@ -30,7 +30,7 @@ export const TARGETS = [[-(POST - 0.7), 1.9], [POST - 0.7, 1.9], [-(POST - 0.7),
 
 export function make({ v, seed }) {
   const r = rngOf(seed)
-  const R = byV(v, 0.34, 0.6)
+  const R = byV(v, 0.5, 0.7)
   // the order of the spots (the first-time ball always last but one), and a target for each, not the same twice
   const order = [0, 1, 2, 3].sort(() => r() - 0.5); order.splice(3, 0, 4)
   let last = -1
@@ -81,11 +81,11 @@ export function make({ v, seed }) {
     if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
     strokeUp(st, a.x, a.y, g.t, id)
     if (g.phase !== 'aim' || k.phase !== 'idle') return true
-    const rd = readStroke(st, st.C ?? g.aimView().C, { foot: 1, base: shots[g.i].spot.roll ? 'volley' : 'driven' })
+    const rd = readStroke(st, st.C ?? g.aimView().C, { foot: 1, base: shots[g.i].spot.roll ? 'volley' : 'driven', chipP: 0.12 })
     if (rd.tap || rd.back) return true
     // (a stroke that ends by the lit target is drawn onto it, the more so the better the finisher: the stick's
     // corners are the targets, and a finger's never that exact)
-    const [tx, ty] = TARGETS[shots[g.i].k], d = Math.hypot(rd.x - tx, rd.y - ty), pull = lerp(0.25, 0.65, clamp((v - 1) / 10, 0, 1)) * clamp(1 - d / 1.1, 0, 1)
+    const [tx, ty] = TARGETS[shots[g.i].k], d = Math.hypot(rd.x - tx, rd.y - ty), pull = lerp(0.4, 0.7, clamp((v - 1) / 10, 0, 1)) * clamp(1 - d / 1.1, 0, 1)
     if (rd.type !== 'chip') { rd.x = lerp(rd.x, tx, pull); rd.y = lerp(rd.y, ty, pull) }
     drawnShot(k, rd, g.t, 180)
     g.fx.push('h:light')
@@ -206,7 +206,7 @@ export function draw(ctx, g, view) {
   if (g.phase === 'aim' && g.k.drawn && g.k.phase === 'strike') aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
   else if (g.phase === 'aim' && (g.k.phase === 'power' || g.k.phase === 'strike')) { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }
   text(ctx, `BALL ${Math.min(g.i + 1, N)} OF ${N} · ${sh.spot.name}`, 12, 60, { font: LABEL, size: 16, align: 'left', track: 0.6, color: 'rgba(255,255,255,.85)' })
-  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, base: sh.spot.roll ? 'volley' : 'driven' })
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, base: sh.spot.roll ? 'volley' : 'driven', chipP: 0.12 })
   // the first ball: a stroke drawn off the ball to the lit target, and the line under it
   if (g.phase === 'aim' && g.i === 0 && g.k.phase === 'idle' && !g.st.on) {
     const bp = P(C, sh.spot.x, 0.11, sh.spot.z), [tx, ty] = TARGETS[sh.k], to = P(C, tx, ty, 0)
