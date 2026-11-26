@@ -100,15 +100,25 @@ export class BtLiveRoom {
     this.need = M.seats
     this.seats = []
     b.players.slice(0, M.seats).forEach((p, i) => {
+      // a 1v1 / 2v2 lobby's game (index.js Room goLive): each seat's own build, already checked against his seeded
+      // spins there, on the team the lobby put him on. King of the Hill: the real player he picked
+      if (p.build) {
+        const pos = p.pos === 'big' ? 'big' : 'guard', team = M.teams === 2 ? (p.team === 1 ? 1 : 0) : i % M.teams
+        const slot = this.seats.filter(x => x.team === team).length
+        this.seats.push({ vid: str(p.vid, 64), uid: p.uid ?? null, name: str(p.name, 24) || 'Guest', pos, team, slot, build: cleanBuild(p.build, pos), look: p.look ?? null, cpu: null, seat: seatNew(), ws: null, awayT: 0, out: !!p.out })
+        return
+      }
       const r = realBuild(p.pick) ?? realBuild({ name: 'Stephen Curry', pos: 'guard' })
       this.seats.push({ vid: str(p.vid, 64), uid: p.uid ?? null, name: str(p.name, 24) || 'Guest', pos: r.pos, team: i % M.teams, slot: Math.floor(i / M.teams), build: r.build, look: r.look, cpu: null, seat: seatNew(), ws: null, awayT: 0 })
     })
+    // (a seat that's out from the start, a 1v1 / 2v2 build never finished, is the CPU's: nobody waits on it)
+    this.need = this.seats.filter(x => !x.out).length || 1
     // nobody's device shows in time: the game goes on without him
     // (one man alone is no game: he goes back to the queue, and nothing is booked)
     this.showTimer = setTimeout(() => {
       if (this.g) return
       const here = this.seats.filter(x => x.ws)
-      if (here.length >= 2) return this.begin()
+      if (here.length >= Math.min(2, this.need)) return this.begin()
       for (const x of here) send(x.ws, { t: 'requeue' })
     }, Math.max(1000, (b.at ?? Date.now()) + SHOW_MS - Date.now()))
   }
@@ -157,7 +167,7 @@ export class BtLiveRoom {
   }
   setupFor(i) {
     const M = MODES[this.mode]
-    return { t: 'seat', i, size: M.perTeam, mode: this.mode, seed: this.seed, seats: this.seats.map(x => ({ name: x.name, pos: x.pos, team: x.team, cpu: !x.vid, look: x.look, build: x.build })) }
+    return { t: 'seat', i, size: M.perTeam, mode: this.mode, seed: this.seed, seats: this.seats.map(x => ({ name: x.name, pos: x.pos, team: x.team, cpu: !x.vid || !!x.out, look: x.look, build: x.build })) }
   }
   onMessage(ws, data) {
     const m = parse(data); if (!m) return
@@ -176,7 +186,8 @@ export class BtLiveRoom {
     if (m.t === 'spr' && st && Number.isFinite(m.c) && m.c > 0 && m.c <= now) { st.rttOwn = true; this.rtt(st, Math.max(1, now - m.c)); return }
     if (m.t === 'in' && st) { seatMsg(st.seat, m, now); return }
     if (m.t === 'start' && !this.made && !this.g && this.seats.some(x => x.vid)) return this.begin()
-    // a queue's game: he quit (QUIT on his device): out of it at once, the other two play on
+    // a queue's game: he quit (QUIT on his device): out of it at once, the others play on (1v1 / 2v2: the CPU takes his
+    // man; a side with nobody left on it has lost)
     if (m.t === 'quit' && st && this.made && this.g && this.g.phase !== 'over') {
       this.leave(this.seats.indexOf(st))
       if (this.g.phase === 'over') { this.broadcast(); this.stop(); this.later(this.book()) } else this.broadcast()
@@ -282,9 +293,17 @@ export class BtLiveRoom {
   // on). log: put what it did in the snapshots' events now (a quit between ticks; a tick logs its own)
   leave(i, log = true) {
     const g = this.g
-    if (!g || g.mode !== 'koth' || g.gone?.[i]) return
+    if (!g || g.phase === 'over') return
     const n = g.events.length
-    if (!kothLeave(g, i)) return
+    if (g.mode !== 'koth') {
+      // 1v1 / 2v2: he's out for good (a forfeit); the CPU plays his man. A side with no one left on it loses it
+      const x = this.seats[i]
+      if (!x || x.out) return
+      x.out = true
+      if (this.seats.some(o => o.team === x.team && o.vid && !o.out)) return
+      g.phase = 'over'; g.winner = 1 - x.team
+      g.events.push({ e: 'final', winner: g.winner, score: [...g.score] })
+    } else if (g.gone?.[i] || !kothLeave(g, i)) return
     if (!log) return
     // (between ticks: it goes out as a tick of its own. A device takes a snapshot only with a newer tick than the last
     // one it has, so the same tick again, the final most of all, would never reach a screen. The clock moves with it,
@@ -304,16 +323,16 @@ export class BtLiveRoom {
     const g = this.g
     const L = this.lag
     const inputs = this.seats.map((x, i) => {
-      const live = x.vid && now - x.seat.heard < AWAY_MS
+      const live = x.vid && !x.out && now - x.seat.heard < AWAY_MS
       if (L) L.on[i] = live ? 1 : 0
       if (live) return seatInput(x.seat, g, i)
-      if (x.vid) x.awayT = (x.awayT ?? 0) + 1
+      if (x.vid && !x.out) x.awayT = (x.awayT ?? 0) + 1
       return cpuInput(g, i, CPU_LEVEL)
     })
     step(g, inputs)
     if (L) lagRecord(L, g)
     // a queue's game: a man whose line has been gone 20 s in all has left it (the other two play it out)
-    if (this.made) this.seats.forEach((x, i) => { if (x.vid && (x.awayT ?? 0) > AWAY_FORFEIT_TICKS) this.leave(i, false) })
+    if (this.made) this.seats.forEach((x, i) => { if (x.vid && !x.out && (x.awayT ?? 0) > AWAY_FORFEIT_TICKS) this.leave(i, false) })
     for (const e of g.events) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
     this.broadcast(g.tick % SEND_EVERY === 0 || g.phase === 'over')
     return inputs
@@ -342,8 +361,9 @@ export class BtLiveRoom {
     this.booked = this.seed
     const people = this.seats.map((x, i) => ({ x, i })).filter(({ x }) => x.uid)
     // (out: he left it, sim.js s.gone, so he could never win it; or his line was gone at the end)
-    const out = ({ x, i }) => walked || !!g.gone?.[i] || !x.ws
-    const won = ({ i }) => !walked && g.phase === 'over' && g.winner === i
+    const teams = g.mode !== 'koth'
+    const out = ({ x, i }) => walked || !!g.gone?.[i] || !!x.out || !x.ws
+    const won = p => !walked && g.phase === 'over' && !out(p) && (teams ? g.winner === p.x.team : g.winner === p.i)
     const ratings = await bookRatings(this.env, people.map(p => ({ vid: p.x.vid, uid: p.x.uid, delta: blacktopDelta({ won: won(p), forfeit: out(p) }) })))
     await bookVs(this.env, people.map(p => ({ uid: p.x.uid, result: out(p) ? 'forfeit' : won(p) ? 'win' : 'loss', position: p.x.pos, match_type: this.mode })))
     if (Object.keys(ratings).length) for (const [w] of this.conns) send(w, { t: 'rated', ratings })

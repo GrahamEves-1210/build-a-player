@@ -68,6 +68,23 @@ const callsFor = (size, offense) => (offense ? OFF_CALLS : DEF_CALLS).filter(c =
 const EMOTES = ['🔥', '🧊', '💰', '😤', '👏', '😂']
 const MAX_WATCHERS = 50
 
+// A 1v1 / 2v2 played live (Blacktop Live): a seat's checked build (cleanBuild: { jumpShot: { val, qbFull }, ... }) as
+// the grades the live game runs on; a seat with none (he didn't finish: the CPU plays it) gets a real player's own,
+// picked by the room's code
+const poolOf = pos => (pos === 'big' ? NBA_BIG_PLAYERS : NBA_GUARD_PLAYERS)
+const hash = t => { let h = 2166136261; for (const c of t) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0 }
+export function liveGrades(b, pos, seed) {
+  const types = pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
+  if (!b) { const pool = poolOf(pos), p = pool[hash(seed) % pool.length]; b = Object.fromEntries(types.map(t => [t, { val: p.attrs?.[t] ?? 5, qbFull: p.name }])) }
+  return Object.fromEntries(types.map(t => [t, { val: Math.min(11, Math.max(0, +b[t]?.val || 0)) }]))
+}
+// how his man looks: the player his Basketball IQ came from (the face the old game showed), found by the phone by name
+export function liveLook(b, pos) {
+  const name = b?.basketballIQ?.qbFull
+  const p = name && name !== 'Free agent' ? poolOf(pos).find(x => x.name === name) ?? null : null
+  return { photo: null, faceCenter: p?.faceCenter ?? null, skin: p?.skin ?? null, num: p?.number != null ? String(p.number) : null, player: p?.name ?? null }
+}
+
 const ORIGINS = [/^https:\/\/(www\.)?build-a-player\.com$/, /^https:\/\/([a-z0-9-]+\.)?build-a-player\.pages\.dev$/, /^https:\/\/localhost$/, /^https?:\/\/localhost(:\d+)?$/, /^capacitor:\/\/localhost$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
 const originOk = o => !o || ORIGINS.some(re => re.test(o))
 
@@ -124,7 +141,8 @@ export default {
     // (a room the queue made is already where it is; a dev room is made here, by its first player's call, near him)
     if (bl) { if (!env.BTLIVE_ROOM) return new Response('not found', { status: 404 }); const hint = hintFor([geoOf(req, false)]); return env.BTLIVE_ROOM.get(env.BTLIVE_ROOM.idFromName(bl[1]), hint ? { locationHint: hint } : undefined).fetch(req) }
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{6})$/)
-    if (m) return env.ROOM.get(env.ROOM.idFromName(m[1])).fetch(req)
+    // (where each line came in from: a 1v1 / 2v2 played live has its Blacktop Live room made near them, place.js)
+    if (m) return env.ROOM.get(env.ROOM.idFromName(m[1])).fetch(withGeo(req))
     return new Response('not found', { status: 404 })
   },
 }
@@ -325,7 +343,7 @@ export class Room {
   // and watching hands out the code with the seed). Never a practice run.
   watchable() {
     const m = this.m
-    return !!m && !m.practice && m.phase !== 'build' && this.humans().every(p => this.keys?.[p.vid])
+    return !!m && !m.practice && !m.final?.live && m.phase !== 'build' && this.humans().every(p => this.keys?.[p.vid])
   }
   watch(ws) {
     const m = this.m
@@ -384,6 +402,7 @@ export class Room {
     }
     const [client, server] = Object.values(new WebSocketPair())
     server.accept()
+    server.geo = geoOf(req)
     server.addEventListener('message', e => this.onMessage(server, e.data))
     const bye = () => this.onClose(server)
     server.addEventListener('close', bye); server.addEventListener('error', bye)
@@ -423,9 +442,9 @@ export class Room {
     m.startTimer = this.later(() => this.start(), m.ends - Date.now())
   }
   // the game starts: anyone who didn't finish is out and a CPU takes the spot
-  start() {
+  async start() {
     const m = this.m
-    if (!m || m.phase !== 'build') return
+    if (!m || m.phase !== 'build' || m.starting) return
     const here = new Set(this.here())
     // out: didn't finish, or finished but left for good (gone 20s+); a blip with a finished build is fine
     const afk = this.humans().filter(p => !m.builds[p.vid]?.done || (!here.has(p.vid) && Date.now() - (m.goneAt[p.vid] ?? 0) > 20000)).map(p => p.vid)
@@ -436,11 +455,38 @@ export class Room {
       roles: Object.fromEntries(m.players.map(p => [p.vid, m.builds[p.vid]?.role ?? 'balanced'])),
       afk,
     }
+    // 1v1 and 2v2 are played live (Blacktop Live, the real-time game: btlive.js), with the builds just made, when
+    // every phone still in it can (a new app says bl in its hello; an older one plays the old game, as before)
+    m.starting = true
+    if (!m.practice && m.size <= 2 && this.env.BTLIVE_ROOM) {
+      const live = this.humans().filter(p => !afk.includes(p.vid))
+      if (live.length && live.every(p => this.bl?.has(p.vid))) m.final.live = await this.goLive(m.final).catch(() => null)
+      if (!m.final.live) delete m.final.live
+    }
+    m.starting = false
+    if (m.phase !== 'build') return
     m.phase = 'game'
     m.started = Date.now()
     this.broadcast({ t: 'final', final: m.final })
     // tipped off: on the menu's list of games to watch
     this.post()
+  }
+  // The game, live: a Blacktop Live room (btlive.js, the referee) made near them with every seat's own build, the one
+  // the server just checked against his seeded spins (m.final.builds: only what his spins dealt, at real ratings).
+  // A seat that didn't finish is played by the CPU on a real player's build and is out (a forfeit). The live room
+  // books the result (rating, the 1v1 / 2v2 record); this one books nothing for it. Its code: the room's own.
+  async goLive(final) {
+    const m = this.m
+    const geos = [...this.conns.keys()].map(w => w.geo ?? null)
+    const hint = hintFor(geos)
+    const players = m.players.map(p => {
+      const out = !!final.afk?.includes(p.vid) || !!p.bot
+      const b = out ? null : final.builds[p.vid]
+      return { vid: p.vid, uid: p.uid ?? null, name: p.name, team: p.team, pos: p.pos, out, build: liveGrades(b, p.pos, `${m.code}-${p.vid}`), look: liveLook(b, p.pos) }
+    })
+    const ns = this.env.BTLIVE_ROOM
+    const r = await ns.get(ns.idFromName(m.code), hint ? { locationHint: hint } : undefined).fetch('https://btlive/init', { method: 'POST', body: JSON.stringify({ code: m.code, mode: m.size === 1 ? '1v1' : '2v2', players, keys: this.keys, hint }) })
+    return r?.ok ? m.code : null
   }
   maybeStartEarly() {
     const m = this.m
@@ -491,7 +537,7 @@ export class Room {
   // the spot) takes a forfeit. Practice books nothing.
   async settle() {
     const m = this.m
-    if (!m || m.practice || m.settled || !m.final || (m.phase !== 'game' && m.phase !== 'result')) return
+    if (!m || m.practice || m.settled || !m.final || m.final.live || (m.phase !== 'game' && m.phase !== 'result')) return
     const g = playOut({ final: m.final, match: m, locks: m.locks, pools: { guard: NBA_GUARD_PLAYERS, big: NBA_BIG_PLAYERS }, types: { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES } })
     if (!g) return
     const last = Math.max(-1, ...g.plays.filter(p => p.type === 'check').map(p => p.pn))
@@ -519,6 +565,8 @@ export class Room {
       for (const [w, v] of this.conns) if (v === vid && w !== ws) { this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
       this.conns.set(ws, vid)
       delete m.goneAt?.[vid]
+      // (a phone that can play the game live: Blacktop Live)
+      if (msg.bl === 1) (this.bl ??= new Set()).add(vid)
       // back after everyone had left (the clocks were stopped): the build clock runs again
       if (m.phase === 'build' && !this.timers.has(m.startTimer)) m.startTimer = this.later(() => this.start(), Math.max(0, m.ends - Date.now()))
       send(ws, this.snapshot(vid))
