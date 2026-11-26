@@ -18,9 +18,11 @@ export function figureFaceUrl(chip) {
   let u = cache.get(k)
   if (!u) {
     // hair and features that go with his skin: draw him from a room that leans his way, then give him his own tone
+    // (the roster tones were re-read off the photos 11-26, scripts/skin/nba-skin.py: a white player's skin sits about
+    // 150-195, a light-brown one 112-150, brown and dark under that)
     const L0 = lumOf(skin)
-    const room = L0 > 175 ? 'k' : L0 > 120 ? 'any' : 'cb'
-    const L = { ...lookOf(`bap-app|${name}`, room), skin, g: L0 > 175 ? 'w' : L0 > 120 ? 'm' : 'b', kit: 'hoops', eb: 'none', ag: 24 }
+    const room = L0 > 150 ? 'k' : L0 > 112 ? 'any' : 'cb'
+    const L = { ...lookOf(`bap-app|${name}`, room), skin, g: L0 > 150 ? 'w' : L0 > 112 ? 'm' : 'b', kit: 'hoops', eb: 'none', ag: 24 }
     u = toUrl(faceSvg(L, { color, view: 'full' }))
     if (cache.size > 200) cache.clear()
     cache.set(k, u)

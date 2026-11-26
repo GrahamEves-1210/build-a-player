@@ -35,14 +35,14 @@ const hashOf = str => { let h = 2166136261; for (let i = 0; i < str.length; i++)
 const SKINS = ['#8d5a3b', '#6d4229', '#a9744f', '#5a3522', '#c09060']
 const STYLES = ['short', 'short', 'fade', 'fade', 'twists', 'waves', 'braids']
 // bw: how broad he is across the shoulders, by his Size rating (0-1) and his spot: a guard lean, a big broader
-// his skin as the court shows it (owner 11-26: white players looked too dark): the tones are sampled off studio photos,
-// so the light and medium ones read dark and red on the asphalt; they're lifted toward a natural light skin by how
-// light they are (a dark tone barely moves)
+// his skin as the court shows it (owner 11-26: white players looked too dark): the roster tones are now read off the
+// photos with the studio light taken out (scripts/skin/nba-skin.py), so they stand as they are; only a light skin is
+// lifted a little, since a small light figure on dark asphalt reads darker and redder than it is. Brown and dark
+// tones don't move
 const MIXC = (a, b, t) => { const p = x => parseInt(x.slice(1), 16), A = p(a), B = p(b), c = k => Math.round(((A >> k) & 255) * (1 - t) + ((B >> k) & 255) * t); return '#' + ((c(16) << 16) | (c(8) << 8) | c(0)).toString(16).padStart(6, '0') }
 function onCourt(hex) {
-  const l = lum(hex)
-  const t = l >= 0.55 ? 0.5 : l >= 0.45 ? 0.2 + (l - 0.45) * 3 : l >= 0.35 ? (l - 0.35) * 2 : 0
-  return MIXC(hex, '#f3d6c2', Math.min(0.55, t))
+  const t = clamp((lum(hex) - 0.5) / 0.15, 0, 1) * 0.25
+  return t > 0 ? MIXC(hex, '#f3d6c2', t) : hex
 }
 export function lookOf({ name = '', skin = null, col = '#4da3ff', size = 0.5, big = false }) {
   const h = hashOf(name || 'player')
