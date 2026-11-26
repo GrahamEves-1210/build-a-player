@@ -1020,10 +1020,13 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   // (and the summer's tournament: his country through the group, its knockouts to play, S.x.tourNights)
   let tour = null
   if (fin && !a?.out) { try { tour = S.x?.tourNights?.(c, fin) ?? null } catch { tour = null } }
-  const nights = fin && (S.made(fin) || tour) ? (() => {
+  // (the league's play-offs: the relegation play-off, the second tier's promotion play-offs, S.x.promoNights)
+  let promo = null
+  if (fin) { try { promo = S.x?.promoNights?.(c, fin) ?? null } catch { promo = null } }
+  const nights = fin && (S.made(fin) || tour || promo) ? (() => {
     const cup = ['Winners', 'Runners-up'].includes(fin.cup?.result), euro = !!fin.europe && S.made({ europe: fin.europe })
-    const what = [euro ? `the ${fin.europe.name} knockouts` : null, cup ? `the ${fin.cup.name} final` : null, tour?.what].filter(Boolean)
-    return { what: (what.length > 1 ? `${what.slice(0, -1).join(', ')} and ${what[what.length - 1]}` : what[0]).replace(/^t/, 'T'), go: cup && euro ? 'THE CUPS AND EUROPE' : cup ? `THE ${String(fin.cup.name).toUpperCase()} FINAL` : euro ? 'THE EUROPEAN NIGHTS' : tour.go, tour: !!tour }
+    const what = [euro ? `the ${fin.europe.name} knockouts` : null, cup ? `the ${fin.cup.name} final` : null, promo?.what, tour?.what].filter(Boolean)
+    return { what: (what.length > 1 ? `${what.slice(0, -1).join(', ')} and ${what[what.length - 1]}` : what[0]).replace(/^t/, 'T'), go: cup && euro ? 'THE CUPS AND EUROPE' : cup ? `THE ${String(fin.cup.name).toUpperCase()} FINAL` : euro ? 'THE EUROPEAN NIGHTS' : promo ? promo.go : tour.go, tour: !!tour }
   })() : null
   const cb = comebackYear(c)
   // basketball, in camp: the coach's question about a new spot, until it's answered (lib/career.js spotMove)
@@ -1146,7 +1149,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               <div className="ag-card cr-over ag-pop">
                 <span className="ag-eyebrow">{S.isSoccer ? <>THE LEAGUE IS DONE · <span className="cr-nb">{clubRec}</span> · <span className="cr-nb">{clubPts} PTS</span></> : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
                 {S.isSoccer ? <>
-                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.league?.tier === 2 ? (fin.promoted ? (fin.promotedHow === 'playoff' ? ' and go up through the play-offs' : fin.seed === 1 ? ' and go up as champions' : ' and go up') : ': no promotion this year') : fin.champion ? ': champions' : fin.relegated ? ` and go down to ${S.x?.tier2Name?.(c.team) ?? 'the second tier'}` : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}{nights?.tour ? '' : summerLine(c)}</p>
+                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.league?.tier === 2 ? (fin.promoted ? (fin.seed === 1 ? ' and go up as champions' : ' and go up') : promo ? ' and go into the play-offs' : ': no promotion this year') : fin.champion ? ': champions' : fin.relegated ? ` and go down to ${S.x?.tier2Name?.(c.team) ?? 'the second tier'}` : promo && !promo.up ? ': the relegation play-off to come' : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}{nights?.tour ? '' : summerLine(c)}</p>
                   <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>{nights && !a.out ? nights.go : 'WRAP THE SEASON'} <IconArrow size={16} /></button>
                 </> : (() => { const pct = teamRec ? teamRec.wins / Math.max(1, teamRec.wins + teamRec.losses) : wins / Math.max(1, wins + losses); const sport = S.ui?.sportWord ?? (S.isBucket ? 'basketball' : 'football'); return <>
                   <p className="cr-note">{teamRec ? `The ${teamNick} finish ${teamRec.wins}–${teamRec.losses}. ` : ''}{pct >= 0.58 ? `Playoff ${sport}. Let's see how far it goes.` : pct >= 0.45 ? (S.ui?.bubble ?? (S.isBucket ? 'On the bubble. The play-in might decide it.' : 'On the bubble. The tiebreakers decide it.')) : 'No postseason this year. Book it and move on.'}</p>

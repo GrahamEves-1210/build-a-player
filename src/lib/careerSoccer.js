@@ -17,7 +17,7 @@ import { playMoment } from './inGame.js'
 import { RECORDS } from './seasonFacts'
 import { seasonRaw } from './careerStats'
 import { HEADSHOT_BASE } from '../utils/simulation'
-import { runSoccerSimulation, calcSoccerOVR, soccerTeam10, soccerLeagueInfo, soccerEuropePlaces, soccerTableAt } from '../utils/soccerSimulation'
+import { runSoccerSimulation, calcSoccerOVR, soccerTeam10, soccerLeagueInfo, soccerEuropePlaces, soccerTableAt, soccerFirstWorld, soccerClubInfo, soccerTier2 } from '../utils/soccerSimulation'
 // (Career plays all five leagues since 2026-11-24: its clubs are SOCCER_CAREER_CLUBS, the 96, each with its revenue;
 // Squad Builder's SOCCER_CLUBS stays the three)
 import { SOCCER_CAREER_CLUBS as SOCCER_CLUBS } from '../data/soccer-clubs'
@@ -99,9 +99,12 @@ const SOCCER = {
     const o = c.ovr ?? 80, age = c.age ?? 25
     const y = youthOf(age)
     const usage = clamp(0.9 + (Math.min(o, 92) - 85) * 0.01 - Math.max(0, o - 92) * USAGE_TOP, 0.75, 1) * (age >= 31 ? 1 - (age - 30) * 0.03 : y.usage) * (role === 'Starter' ? 1 : role === 'Rotation' ? 0.8 : 0.9)
-    // (a relegated club he stayed with plays the second tier, and nothing in Europe: c.down)
-    const down = c.down?.team === t.short
-    return { short: t.short, name: t.name, league: t.league, career: true, sched: `${c.seed}-y${(c.year ?? 0) + 1}`, yrs: Math.max(0, (c.season ?? FIRST_SEASON) - FIRST_SEASON), world: c.seed, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, startK: y.start, fullK: y.full, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, ...(down ? { tier2: true, europe: null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
+    // (a relegated club he stayed with plays the second tier, and nothing in Europe: c.down; since 2026-11-26 the
+    // world says it too: which division every club is in this season, c.world)
+    const W = c.world ?? null
+    const down = c.down?.team === t.short || inTier2(W, t.short)
+    const pyr = pyramidOf(c)
+    return { short: t.short, name: t.name, league: t.league, career: true, sched: `${c.seed}-y${(c.year ?? 0) + 1}`, yrs: Math.max(0, (c.season ?? FIRST_SEASON) - FIRST_SEASON), world: c.seed, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, startK: y.start, fullK: y.full, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, pyramid: pyr, ...(W?.pos?.[t.short] ? { lastPos: W.pos[t.short] } : {}), ...(down ? { tier2: true, europe: null } : W ? { europe: W.euro?.[t.short] ?? null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
   },
   // the attack around him: the forwards beside him (wingers and a No. 10 count) and the club itself
   // (years on, the real ones age: past 30 they fade, at 35 they're gone)
@@ -234,12 +237,42 @@ const NATION_BY = new Map(WC_NATIONS.map(n => [n.short, n]))
 const clubMemo = new Map()
 function soccerClub(short) {
   if (clubMemo.has(short)) return clubMemo.get(short)
+  // (a club from outside the data: a second-tier side, one of Europe's others. Its own name and rating, no colours;
+  // before 2026-11-26 it read as Bournemouth)
+  const ext = !CLUB_BY.has(short) ? soccerClubInfo(short) : null
+  if (ext) { const r = soccerTeam10(ext, 'current'); const out = { short, name: ext.name, color: '#3f3f46', color2: '#e4e4e7', off: r.off, def: r.def, conf: '', div: null, league: null, extra: true }; clubMemo.set(short, out); return out }
   const t = CLUB_BY.get(short) ?? SOCCER_CLUBS[0]
   const r = soccerTeam10(t, 'current')
   const out = { short: t.short, name: t.name, color: t.color, color2: t.color2, off: r.off, def: r.def, conf: soccerLeagueInfo(t.league)?.name ?? '', div: null, league: t.league }
   clubMemo.set(short, out)
   return out
 }
+// ── The world: who plays where (2026-11-26) ──
+// Promotion and relegation for every club, not just his: c.world is this season's pyramid, carried from one season to
+// the next. divs: each top flight's clubs; t2: each second tier's; pos: last season's top-flight places (the Coppa
+// Italia's seeds, the Copa del Rey's Supercopa clubs); euro: who is in Europe this season ({ [short]: comp }), from
+// last season's tables, cups and European winners; cups: last season's cup winners. A career's first season is 2026-27
+// as it is (lib/soccerSimulation.js soccerFirstWorld). A club from outside the data that comes up plays the top flight
+// at about the weakest side's rating and stays as long as its results keep it there; it signs nobody (no squad in
+// the data), so the window's bidders are the data's clubs in the top flights.
+const TOP_IDS = ['eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1']
+let FIRST_WORLD = null
+function worldOf(c) { return c?.world ?? (FIRST_WORLD ??= soccerFirstWorld()) }
+// a data club in its second tier this season
+function inTier2(W, short) { const lg = CLUB_BY.get(short)?.league; return !!(W && lg && W.t2?.[lg]?.includes(short)) }
+const t2Now = (c, short) => inTier2(c?.world ?? null, short)
+// what the engine plays this season (team.pyramid)
+function pyramidOf(c) { const W = worldOf(c); return { divs: W.divs, t2: W.t2, euro: W.euro, cups: W.cups ?? {} } }
+// a club's strength on Career's scale (the data's, or one from outside it at its rating)
+function clubStr(short, c = null) {
+  if (CLUB_BY.has(short)) { const t = soccerClub(short), d = c?.league?.[short] ?? { off: 0, def: 0 }; return (t.off + d.off + t.def + d.def) / 2 }
+  const x = soccerClubInfo(short)
+  if (!x) return 4
+  const r = soccerTeam10(x, 'current')
+  return (r.off + r.def) / 2
+}
+const clubNameOf = short => CLUB_BY.get(short)?.name ?? soccerClubInfo(short)?.name ?? short
+const isReserve = short => !!soccerClubInfo(short)?.b
 // The clubs, biggest first: half how good the team is (Opta's club rating), half how big the club is (its revenue).
 // Where a prospect's offers and a transfer's bids come from. (Before 2026-11-24 the order was the rating alone, so
 // Brighton and Bournemouth stood above Liverpool and paid like it.)
@@ -467,9 +500,97 @@ function euroOpp(r, comp, stage, used, c) {
     : { 'Knockout play-off': [30, 80], 'Round of 16': [22, 66], 'Quarter-final': [16, 54], 'Semi-final': [12, 44], Final: [8, 34] }
   const [lo, hi] = span[stage] ?? [0, 20]
   const mine = CLUB_BY.get(c.team)?.league
-  const list = CLUB_RANK.slice(lo, hi).filter(t => !used.has(t) && (KO_DEPTH[stage] >= 1 || CLUB_BY.get(t)?.league !== mine))
+  const list = CLUB_RANK.slice(lo, hi).filter(t => !used.has(t) && !t2Now(c, t) && (KO_DEPTH[stage] >= 1 || CLUB_BY.get(t)?.league !== mine))
   const t = list[Math.floor(r() * list.length)] ?? CLUB_RANK.find(x => !used.has(x))
   return { short: t, name: CLUB_BY.get(t)?.name ?? t }
+}
+// ── The play-offs at the end of a league season (2026-11-26) ──
+// Played like the big nights, one tie at a time (before this the Bundesliga's and Ligue 1's 16th always stayed up, and a
+// second-tier club's play-offs were a roll). His club's, by its league's real format:
+//   the Bundesliga's or Ligue 1's 16th: the relegation play-off, two legs against the 2. Bundesliga's third (the
+//     Bundesliga side at home first) or Ligue 2's play-off winner (the Ligue 1 side at home second). Lose it: relegated.
+//   Championship 3rd-6th: two-legged semi-finals (3 v 6, 4 v 5, the better-placed side at home second), the final at
+//     Wembley. Segunda División: the same, the final over two legs too. Serie B 3rd-8th: a one-match preliminary round
+//     at the better-placed side (5 v 8, 6 v 7), two-legged semi-finals against 3rd and 4th, a two-legged final (third
+//     goes straight up ten points clear of fourth). 2. Bundesliga 3rd: the Bundesliga's 16th over two legs (away
+//     first). Ligue 2 3rd-5th: 4 v 5 at fourth, the winner at third, then Ligue 1's 16th over two legs.
+// → the rounds (track 'promo'); the last one carries what winning and losing it mean (up: promoted, stay: stays up)
+const T2_OF = { 'eng.1': 'ENG', 'esp.1': 'ESP', 'ita.1': 'ITA', 'ger.1': 'GER', 'fra.1': 'FRA' }
+function promoRounds(c, f, r, pOf) {
+  const out = []
+  const W = worldOf(c), lid = CLUB_BY.get(c.team)?.league, key = T2_OF[lid]
+  if (!key) return out
+  const T = soccerTier2(lid), info = soccerLeagueInfo(lid)
+  const mk = (compName, stage, opp, legs, home, more = {}) => ({ track: 'promo', comp: 'promo', compName, stage, name: stage === 'Relegation play-off' ? `${compName} relegation play-off` : `${compName} ${stage}`, opp, oppName: clubNameOf(opp), extra: !CLUB_BY.has(opp), legs, home, final: false, p: pOf({ short: opp }), played: false, close: true, ...more })
+  // (a side from the other division, picked by strength: the second tier's third, a play-off's winner)
+  const pickT2 = () => { const list = (W.t2?.[lid] ?? []).filter(s => s !== c.team && !isReserve(s)).map(s => ({ s, w: Math.exp(clubStr(s, c) * 0.9) })); const tot = list.reduce((a, x) => a + x.w, 0); let u = r() * tot; for (const x of list) { u -= x.w; if (u <= 0) return x.s } return list[0]?.s ?? null }
+  const tier2 = f.league?.tier === 2
+  const rows = f.standings ?? []
+  if (!tier2) {
+    if (!info?.playoff) return out
+    const size = rows.length, pos = rows.find(x => x.isUs)?.pos ?? f.seed
+    if (pos !== size - info.down) return out
+    const opp = pickT2()
+    if (!opp) return out
+    const ger = key === 'GER'
+    out.push(mk(ger ? 'Bundesliga' : 'Ligue 1', 'Relegation play-off', opp, 2, !ger, { stay: true }))
+    return out
+  }
+  // the second tier: his place among the clubs that can go up (a reserve side can't)
+  const elig = rows.filter(x => x.isUs || !isReserve(x.short))
+  const at = elig.findIndex(x => x.isUs) + 1
+  if (at <= T.up || at > T.playoffTo) return out
+  const by = i => elig[i - 1]?.short
+  const better = (a, b) => (a < b)
+  if (key === 'ITA' && (elig[2]?.points ?? 0) - (elig[3]?.points ?? 0) >= 10) return out   // (third went straight up)
+  const name = `${T.name} play-offs`
+  // the top flight's 16th, the side a 2. Bundesliga or Ligue 2 club has to beat
+  const sixteenth = () => { const tb = f.next?.tables?.[lid] ?? W.divs?.[lid] ?? []; return tb[tb.length - info.down - 1] ?? tb[tb.length - 1] }
+  // (the other half of a bracket: the side that came through it, by strength)
+  const either = (a, b) => (r() < clamp(0.5 + (clubStr(a, c) - clubStr(b, c)) * 0.08 + (better(elig.findIndex(x => x.short === a), elig.findIndex(x => x.short === b)) ? 0.05 : -0.05), 0.2, 0.8) ? a : b)
+  if (key === 'GER') {
+    out.push(mk('Bundesliga', 'Relegation play-off', sixteenth(), 2, true, { up: true }))
+    return out
+  }
+  if (key === 'FRA') {
+    if (at >= 4) out.push(mk(name, 'First round', by(at === 4 ? 5 : 4), 1, at === 4))
+    out.push(mk(name, 'Second round', at === 3 ? either(by(4), by(5)) : by(3), 1, at === 3))
+    out.push(mk('Ligue 1', 'Relegation play-off', sixteenth(), 2, false, { up: true }))
+    return out
+  }
+  if (key === 'ITA') {
+    // 5 v 8, 6 v 7; the semi-finals: 3rd against the 6/7 winner, 4th against the 5/8 winner
+    if (at >= 5) out.push(mk(name, 'Preliminary round', by(13 - at), 1, at <= 6))
+    const semiOpp = at === 3 ? either(by(6), by(7)) : at === 4 ? either(by(5), by(8)) : at === 5 || at === 8 ? by(4) : by(3)
+    const semiHome = at <= 4
+    out.push(mk(name, 'Semi-final', semiOpp, 2, semiHome))
+    const other = at === 3 || at === 6 || at === 7 ? [by(4), either(by(5), by(8))] : [by(3), either(by(6), by(7))]
+    const fin = either(other[0], other[1])
+    out.push(mk(name, 'Final', fin, 2, elig.findIndex(x => x.short === fin) + 1 > at, { final: true, up: true }))
+    return out
+  }
+  // the Championship and the Segunda División: 3 v 6, 4 v 5
+  const semiOpp = by(9 - at)
+  out.push(mk(name, 'Semi-final', semiOpp, 2, at <= 4))
+  const other = at === 3 || at === 6 ? [by(4), by(5)] : [by(3), by(6)]
+  const fin = either(other[0], other[1])
+  out.push(key === 'ENG' ? mk(name, 'Final', fin, 1, null, { final: true, up: true, venue: 'Wembley' }) : mk(name, 'Final', fin, 2, elig.findIndex(x => x.short === fin) + 1 > at, { final: true, up: true }))
+  return out
+}
+// the hub's line for them (AppCareer: the league done): { what, go } when his club has a play-off to play
+export function soccerPromoNights(c, f) {
+  const list = promoRounds(c, f, seeded(`${c.seed}-po-${c.year}`), () => 0.5)
+  if (!list.length) return null
+  const x = list[0], rel = list.length === 1 && x.stage === 'Relegation play-off'
+  return { what: `the ${rel ? x.name : x.compName}`, go: rel ? 'THE RELEGATION PLAY-OFF' : 'THE PLAY-OFFS', up: !!list[list.length - 1].up }
+}
+// how his club's play-offs went: null (none), or { won, up, stay } from the last tie he played in them
+function promoOutcome(line) {
+  const ties = (line ?? []).filter(x => x.track === 'promo')
+  if (!ties.length) return null
+  const last = ties[ties.length - 1]
+  const done = !!(last.up || last.stay)
+  return { won: done && last.won, lost: !last.won, up: !!last.up, stay: !!last.stay, last }
 }
 // The big nights, in order: the European knockouts from where the league phase put him, the cup final when the
 // cup run got there. Each one a round like a playoff game: close ones turn on a key moment, a final always does.
@@ -477,7 +598,7 @@ function soccerBracket(c, f) {
   const r = seeded(`${c.seed}-po-${c.year}`)
   const lgS = short => { const t = soccerClub(short), d = c.league?.[short] ?? { off: 0, def: 0 }; return (t.off + d.off + t.def + d.def) / 2 }
   const myStr = strength(c.simTeam ?? soccerClub(c.team))
-  const oppStr = o => (CLUB_BY.has(o.short) ? lgS(o.short) : 5.4)
+  const oppStr = o => (CLUB_BY.has(o.short) ? lgS(o.short) : soccerClubInfo(o.short) ? clubStr(o.short, c) : 5.4)
   const pOf = o => { const base = 0.5 + (myStr - oppStr(o)) * 0.07 + ((c.ovr - 78) / 100) * 0.3 + Math.max(0, c.ovr - 95) * 0.015; return clamp(Math.round((0.5 + (base - 0.5) * 0.85) * 100) / 100, 0.18, 0.82) }
   const rounds = []
   const E = f.europe
@@ -500,6 +621,8 @@ function soccerBracket(c, f) {
     const at = rounds.findIndex(x => x.final)
     if (at >= 0) rounds.splice(at, 0, rd); else rounds.push(rd)
   }
+  // the league's play-offs: the relegation play-off, the second tier's promotion play-offs
+  for (const x of promoRounds(c, f, r, pOf)) rounds.push(x)
   // the summer's tournament: his country's knockout road, after the club's nights (the group stage is the engine's)
   if (!c.active?.out) for (const x of tourRounds(c, f, r)) rounds.push(x)
   return { idx: 0, rounds, line: [], used: [], stage: 'round', won: false, out: false, trophies: [] }
@@ -801,6 +924,86 @@ const BOOT_TOP = { 'eng.1': 26, 'esp.1': 27, 'ita.1': 26, 'ger.1': 27, 'fra.1': 
 // averages about 25-32 league goals a season, peaking 35-40)
 const USAGE_TOP = 0.012
 const bdoCase = (goals, assists, trophies) => { const own = goals + 0.5 * assists; return own + trophies * clamp((own - 10) / 25, 0.2, 1) }
+// Next season's world, from the one just played: every top flight's final table (his league's as played, the others'
+// the engine's), the drop and the play-offs (his club's as he played them, the others' by strength: the Bundesliga's
+// 16th stays up about three times in five, Ligue 1's about half the time), the second tiers' promoted clubs (his
+// division's from its table; another one's by strength, the clubs just relegated the likeliest), and Europe: each
+// league's places by its table and its cup (the European Performance Spots the season earned), the Champions League's
+// and the Europa League's winners into the Champions League, the Conference League's into the Europa League, France's
+// fourth through the Champions League's qualifiers or into the Europa League.
+// mine: { tier2, relegated, promoted, cupWinner, comp, euroWon, euroLost (the final's winner when he lost it) }
+function nextWorld(c, f, mine) {
+  const W = worldOf(c), r = seeded(`${c.seed}-world-${c.year}`), nx = f.next ?? {}
+  const myLid = CLUB_BY.get(c.team)?.league
+  const divs = {}, t2 = {}, pos = {}, euro = {}, cups = {}, notes = []
+  const eps = nx.eps ?? ['ENG']
+  // (sides drawn by strength: the stronger, the likelier)
+  const draw = (list, n) => { const pool = list.slice(), got = []; while (got.length < n && pool.length) { const w = pool.map(s => Math.exp(clubStr(s, c) * 1.1)), tot = w.reduce((a, b) => a + b, 0); let u = r() * tot, k = 0; for (; k < pool.length - 1; k++) { u -= w[k]; if (u <= 0) break } got.push(pool.splice(k, 1)[0]) } return got }
+  for (const lid of TOP_IDS) {
+    const info = soccerLeagueInfo(lid), T = soccerTier2(lid)
+    const mineTop = lid === myLid && !mine.tier2, mineDown = lid === myLid && mine.tier2
+    const order = mineTop && f.standings?.length ? f.standings.map(x => x.short) : (nx.tables?.[lid] ?? W.divs?.[lid] ?? [])
+    order.forEach((s, i) => { pos[s] = i + 1 })
+    const size = order.length
+    let down = order.slice(size - info.down)
+    // the relegation play-off (the Bundesliga's and Ligue 1's 16th)
+    let poUp = null
+    if (info.playoff) {
+      const sixteenth = order[size - info.down - 1]
+      let stays
+      if (mineTop && sixteenth === c.team) stays = !mine.relegated
+      else if (mineDown && mine.promotedHow === 'playoff') stays = false
+      else if (mineDown && mine.lostTo16) stays = true
+      else stays = r() < (T.key === 'GER' ? 0.62 : 0.5)
+      if (!stays) { down = [...down, sixteenth]; poUp = true }
+    }
+    // the second tier's clubs going up: his division's from the table he played in
+    const t2list = (W.t2?.[lid] ?? []).filter(s => !order.includes(s) && s !== c.team)
+    if (mineDown) t2list.push(c.team)   // (his club is down there, whatever an old world said)
+    let up = []
+    if (mineDown) {
+      const elig = (f.standings ?? []).map(x => x.short).filter(s => s === c.team || !isReserve(s))
+      const auto = elig.slice(0, T.up)
+      up = [...auto]
+      const need = down.length - up.length
+      if (need > 0) {
+        if (mine.promoted && !up.includes(c.team)) up.push(c.team)
+        else if (!mine.promoted) {
+          // (the play-off went to another side: one of the clubs in the places, the higher the likelier)
+          const pool = elig.slice(T.up, T.playoffTo).filter(s => s !== c.team)
+          if (T.key === 'ITA' && pool.length && (f.standings.find(x => x.short === elig[2])?.points ?? 0) - (f.standings.find(x => x.short === elig[3])?.points ?? 0) >= 10) up.push(elig[2])
+          else if (pool.length) up.push(draw(pool, 1)[0])
+        }
+      }
+      if (mine.promoted && !up.includes(c.team)) up = [...up.slice(0, Math.max(0, down.length - 1)), c.team]
+      up = up.slice(0, down.length)
+    } else up = draw(t2list.filter(s => !isReserve(s)), down.length)
+    while (up.length < down.length && t2list.length) { const s = t2list.find(x => !up.includes(x) && !isReserve(x)); if (!s) break; up.push(s) }
+    divs[lid] = [...order.filter(s => !down.includes(s)), ...up]
+    t2[lid] = [...t2list.filter(s => !up.includes(s)), ...down]
+    if (poUp && !mineTop && !mineDown) notes.push({ lid, playoff: true })
+    // Europe: the table and the cup
+    const cupWinner = lid === myLid ? mine.cupWinner : nx.cups?.[lid] ?? null
+    if (cupWinner) cups[lid] = cupWinner
+    const places = soccerEuropePlaces(lid, order.map(s => ({ short: s })), cupWinner, eps)
+    for (const [s, comp] of Object.entries(places)) euro[s] = comp
+    // France's fourth: the Champions League's third qualifying round and play-off round, or the Europa League
+    if (places._q) {
+      const q = places._q, won = r() < clamp(0.4 + (clubStr(q, c) - 5.5) * 0.08, 0.25, 0.7)
+      if (!won) euro[q] = 'uel'
+      if (q === c.team) mine.uclq = won
+    }
+  }
+  // the European winners: the Champions League's and the Europa League's into the Champions League, the Conference
+  // League's into the Europa League (his competition's as he played it)
+  const wins = { ...(f.europeWinners ?? {}) }
+  if (mine.comp) { if (mine.euroWon) wins[mine.comp] = c.team; else if (mine.euroLost) wins[mine.comp] = mine.euroLost; else if (wins[mine.comp] === c.team) wins[mine.comp] = nx.finalists?.[mine.comp] ?? null }
+  for (const [comp, s] of Object.entries(wins)) {
+    if (!s) continue
+    if (comp === 'uecl') { if (euro[s] !== 'ucl') euro[s] = 'uel' } else euro[s] = 'ucl'
+  }
+  return { divs, t2, pos, euro, cups, year: c.year + 1 }
+}
 function soccerSeason(c, f, po) {
   const S = SPORT.soccer
   const lg = soccerStats(f)
@@ -844,10 +1047,22 @@ function soccerSeason(c, f, po) {
   // them: the engine's soccerEuropePlaces), a European title (the Champions League for the Champions League's and
   // the Europa League's winners, the Europa League for the Conference League's)
   const cupWinner = cupRd ? (cupRd.won ? c.team : cupRd.opp) : f.cup?.winner ?? null
-  const places = tier2 ? {} : soccerEuropePlaces(f.league?.id, f.standings ?? [], cupWinner)
-  let qualified = places[c.team] ?? null
-  if (cupWon && qualified !== 'ucl') qualified = 'uel'
-  if (euroWon) qualified = comp === 'uecl' ? (qualified === 'ucl' ? 'ucl' : 'uel') : 'ucl'
+  // the play-offs: the relegation play-off, the second tier's promotion play-offs (as he played them: promoRounds)
+  const pr = promoOutcome(allLine)
+  const relegated = !tier2 && (!!f.relegated || !!(pr?.stay && pr.lost))
+  let promoted = false, promotedHow = null
+  if (tier2) {
+    const T = soccerTier2(CLUB_BY.get(c.team)?.league)
+    const elig = (f.standings ?? []).filter(x => x.isUs || !isReserve(x.short)), at = elig.findIndex(x => x.isUs) + 1
+    const gap3 = T?.key === 'ITA' && at === 3 && (elig[2]?.points ?? 0) - (elig[3]?.points ?? 0) >= 10
+    if (at >= 1 && at <= (T?.up ?? 2)) { promoted = true; promotedHow = 'auto' } else if (gap3) { promoted = true; promotedHow = 'auto' } else if (pr?.up && pr.won) { promoted = true; promotedHow = 'playoff' }
+  }
+  // next season's world: every club's division, who is in Europe (his club's place among them)
+  const euroFinal = euroLine.find(x => x.final)
+  const mineW = { tier2, relegated, promoted, promotedHow, lostTo16: !!(pr?.up && pr.lost && pr.last.stage === 'Relegation play-off'), cupWinner, comp, euroWon, euroLost: euroFinal && !euroFinal.won ? euroFinal.opp : null }
+  const world = nextWorld(c, f, mineW)
+  let qualified = world.euro[c.team] ?? null
+  const uclq = mineW.uclq ?? null
   // international duty: the World Cup in a World Cup summer, the continental championship in its own
   const I = intlFor(c, f)
   const wc = wcSummer(c) ? playedTour(c, I.wc, allLine, 'wc') : null
@@ -883,9 +1098,10 @@ function soccerSeason(c, f, po) {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role,
     league: f.league?.name ?? null, leagueId: f.league?.id ?? null, pos, size,
     // (the second tier: s.tier 2, promoted or not; a January move: where he came from, s.moved)
-    ...(tier2 ? { tier: 2, promoted: !!f.promoted, promotedHow: f.promotedHow ?? null } : {}),
+    ...(tier2 ? { tier: 2, promoted, promotedHow } : {}),
     ...(c.active?.moved ? { moved: c.active.moved } : {}),
     // (the final table, short: [short, W, D, L, GF, GA] in order; tableOf(s) reads it back with the names and the zones)
+    ...(f.next?.eps ? { eps: f.next.eps } : {}),
     table: (f.standings ?? []).map(x => [x.short, x.wins, x.draws, x.losses, x.gf, x.ga, ...(CLUB_BY.has(x.short) ? [] : [x.name])]), cupWinner,
     wins: f.wins, draws: f.draws ?? 0, losses: f.losses, points: f.points ?? (f.wins * 3 + (f.draws ?? 0)),
     // (soccer's "playoffs" for the legacy: a Champions League season)
@@ -895,7 +1111,9 @@ function soccerSeason(c, f, po) {
     sb: null, stats, adv: seasonRaw('st', f, (f.games ?? []).filter(g => !g.sat && g.app)),
     award, awardName: S.awardName.st, bdo,
     proBowl: tots && !tier2, allPro: boot && !tier2, poty: poty && !tier2, shoe: shoe && !tier2, potyName: f.playerOfSeason?.name ?? null, bootName: f.goldenBoot?.name ?? 'Golden Boot',
-    relegated: !!f.relegated && !tier2, qualified,
+    relegated, qualified, ...(uclq != null ? { uclq } : {}), ...(pr ? { playoff: { won: pr.won, up: pr.up, stay: pr.stay, name: pr.last.name } } : {}),
+    // (next season's world: lib/careerSoccer.js nextWorld; soccerAfterSeason moves it onto the career)
+    world,
     // (his country: the World Cup, the continental championship, and where he stood in the pecking order up front)
     wc, cont, caps: intl.caps, intlGoals: intl.intlGoals, intlRole: intl.role, intlRank: intl.rank ?? null, intlOrder: intl.order ?? [], nation: c.nation,
     missed: f.story?.sat ?? 0, benched: c.active?.benched?.weeks ?? 0,
@@ -925,9 +1143,15 @@ const topFlight = short => soccerLeagueInfo(CLUB_BY.get(short)?.league)?.name ??
 const theLeague = n => (/^(Premier League|Bundesliga)$/.test(n ?? '') ? `the ${n}` : n)
 // after the season: next year's Europe, the caps, relegation and promotion, a loan that's over
 function soccerAfterSeason(n, s) {
-  let next = { ...n, europe: s.qualified ?? null, europeFor: s.team, caps: (n.caps ?? 0) + (s.caps ?? 0), intlGoals: (n.intlGoals ?? 0) + (s.intlGoals ?? 0) }
+  // (next season's world goes onto the career, not into the season's record)
+  const world = s.world ?? null
+  const seasons = world ? n.seasons.map(x => (x === s || (x.year === s.year && x.world) ? (({ world: _w, ...rest }) => rest)(x) : x)) : n.seasons
+  let next = { ...n, seasons, ...(world ? { world } : {}), europe: s.qualified ?? null, europeFor: s.team, caps: (n.caps ?? 0) + (s.caps ?? 0), intlGoals: (n.intlGoals ?? 0) + (s.intlGoals ?? 0) }
   next = { ...next, relegated: !!s.relegated }
   const ev = text => { next = { ...next, events: [...next.events, { year: s.year, text }] } }
+  // (the play-offs and France's Champions League qualifiers, told)
+  if (s.playoff?.stay) ev(s.playoff.won ? `${s.teamName} win the ${s.playoff.name} and stay up.` : `${s.teamName} lose the ${s.playoff.name}.`)
+  if (s.uclq != null) ev(s.uclq ? `${s.teamName} come through the Champions League qualifiers in August: the league phase.` : `${s.teamName} go out in the Champions League qualifiers in August and drop into the Europa League.`)
   // Relegated. A relegation release clause in his contract (a star at a small club usually has one) lets a top-flight
   // club take him for a set fee; without one the club decides: it sells to balance the books, loans him out, or he
   // stays and plays the second tier (c.down, until the club is back up or he leaves). (Before 2026-11-24 every
@@ -946,9 +1170,10 @@ function soccerAfterSeason(n, s) {
   if (next.loan && s.year >= next.loan.until) {
     const from = next.loan.from, back = soccerClub(from)
     const pc = next.loan.contract
-    // (his own club went down while he was away: about half come straight back up)
+    // (his own club went down while he was away: back up or not as the world has it, else about half come straight back)
     let down = next.loan.down ?? null
-    if (down && seeded(`${n.seed}-loanup-${s.year}`)() < 0.5) { down = null }
+    if (down && (world ? !inTier2(world, from) : seeded(`${n.seed}-loanup-${s.year}`)() < 0.5)) { down = null }
+    if (!down && world && inTier2(world, from)) down = { team: from, year: s.year, clause: false, fee: null, signed: true }
     next = { ...next, team: from, roster: rosterOf({ ...next, team: from }, from), europe: null, europeFor: null, lastRole: null, loan: null, down, contract: { ...pc, left: Math.max(0, (pc.left ?? 1) - 1) }, events: [...next.events, { year: s.year, text: `Back at ${back.name} after ${next.loan.half ? 'half a season' : 'a season'} on loan at ${s.teamName}${next.loan.down ? (down ? `. ${back.name} are still in ${TIER2_NAME[back.league] ?? 'the second tier'}` : `. ${back.name} came straight back up`) : ''}.` }] }
   }
   return next
@@ -979,6 +1204,7 @@ function suitors(c, { fee = 0, free = false, anyStep = false } = {}) {
   const out = []
   for (const t of CLUB_RANK) {
     if (t === c.team || t === c.loan?.from) continue
+    if (t2Now(c, t)) continue   // (a club in its second tier this season isn't buying a top-flight striker)
     const purse = clubPurse(t)
     if (!free && purse.fee < fee * 0.85) continue
     if (purse.wage < worth * 0.45) continue
@@ -1045,7 +1271,7 @@ function windowState(c) {
   }
   // a young player who barely played: a loan where he'd start, and back after a season
   if (c.lastRole === 'Backup' && c.age <= 23 && !c.loan && r() < 0.8) {
-    const list = CLUB_RANK.filter(t => t !== c.team && strength(soccerClub(t)) < myStr - 0.5).map(t => ({ t, k: r() })).sort((a, b) => a.k - b.k).slice(0, 8).map(x => x.t).find(t => standAt(c, t).starter)
+    const list = CLUB_RANK.filter(t => t !== c.team && !t2Now(c, t) && strength(soccerClub(t)) < myStr - 0.5).map(t => ({ t, k: r() })).sort((a, b) => a.k - b.k).slice(0, 8).map(x => x.t).find(t => standAt(c, t).starter)
     if (list) offers.push({ kind: 'loan', team: list, fit: fitAt(list), stand: standAt(c, list), years: 1, perYear: c.contract.perYear, pitch: 'A season on loan: a starter every week, then back.' })
   }
   // bids
@@ -1135,8 +1361,11 @@ function soccerMarket(c, fresh = false, left = null) {
 function dropOffer(c, r, years) {
   const last = c.seasons[c.seasons.length - 1]
   const lgOf = short => CLUB_BY.get(short)?.league
-  const justDown = last && last.tier !== 2 ? (last.table ?? []).slice(-3).map(x => x[0]).filter(t => CLUB_BY.has(t) && t !== c.team && TIER2_NAME[lgOf(t)]) : []
-  const smallest = CLUB_RANK.slice(-14).filter(t => t !== c.team && t !== c.loan?.from && TIER2_NAME[lgOf(t)])
+  // (the world: the data's clubs in a second tier this season, the ones his league just sent down first)
+  const W = c.world ?? null
+  const downNow = W ? CLUB_RANK.filter(t => t !== c.team && t !== c.loan?.from && inTier2(W, t)) : []
+  const justDown = last && last.tier !== 2 ? (last.table ?? []).slice(-3).map(x => x[0]).filter(t => CLUB_BY.has(t) && t !== c.team && TIER2_NAME[lgOf(t)] && (!W || inTier2(W, t))) : []
+  const smallest = downNow.length ? downNow : CLUB_RANK.slice(-14).filter(t => t !== c.team && t !== c.loan?.from && TIER2_NAME[lgOf(t)])
   const pool = (justDown.length ? justDown : smallest).map(t => ({ t, st: standAt(c, t) }))
   const pick = pickSome(r, pool.map(x => ({ ...x, w: x.st.starter ? 3 : x.st.role === 'Rotation' ? 1.5 : 0.5 })), 1)[0]
   if (!pick) return null
@@ -1216,7 +1445,7 @@ function januaryOffers(c, D, k) {
   // a young player who isn't getting on the pitch: a loan to the end of the season
   if (share < 0.3 && c.age <= 23 && r() < 0.7) {
     const myStr = strength(soccerClub(c.team))
-    const t = CLUB_RANK.filter(x => x !== c.team && strength(soccerClub(x)) < myStr - 0.3).map(x => ({ x, k: r() })).sort((a, b) => a.k - b.k).slice(0, 8).map(y => y.x).find(x => standAt(c, x).starter)
+    const t = CLUB_RANK.filter(x => x !== c.team && !t2Now(c, x) && strength(soccerClub(x)) < myStr - 0.3).map(x => ({ x, k: r() })).sort((a, b) => a.k - b.k).slice(0, 8).map(y => y.x).find(x => standAt(c, x).starter)
     if (t) offers.push({ kind: 'loan', half: true, team: t, fit: fitAt(t), stand: standAt(c, t), years: 1, perYear: c.contract.perYear, pitch: 'A loan until the end of the season: a starter every week, then back.' })
   }
   // bids: January business is rarer and dearer (a club doesn't sell its No. 9 in mid-season without a premium)
@@ -1293,13 +1522,15 @@ function soccerBeat(c, D, k) {
 
 // ── The league table ──
 // zones: where a place leads (the screens colour the table by it)
-function zonesFor(leagueId, rows, cupWinner = null, final = false) {
+// (eps: the season's European Performance Spots, as it stands; a relegated club is shown in the drop zone even when
+// its cup brings it a European place)
+function zonesFor(leagueId, rows, cupWinner = null, final = false, eps = undefined) {
   const info = soccerLeagueInfo(leagueId)
   const tier2 = /\.2$/.test(String(leagueId ?? ''))
   const size = rows.length
   if (tier2) return rows.map(x => ({ ...x, zone: x.pos <= 2 ? 'up' : x.pos <= (info?.playoffTo ?? 6) ? 'playoff' : null }))
-  const places = soccerEuropePlaces(leagueId, rows, final ? cupWinner : null)
-  return rows.map(x => ({ ...x, zone: places[x.short] ?? (x.pos > size - (info?.down ?? 3) ? 'down' : info?.playoff && x.pos === size - (info.down ?? 2) ? 'playoff' : null) }))
+  const places = soccerEuropePlaces(leagueId, rows, final ? cupWinner : null, eps)
+  return rows.map(x => ({ ...x, zone: x.pos > size - (info?.down ?? 3) ? 'down' : info?.playoff && x.pos === size - (info.down ?? 2) ? 'playoff' : places[x.short] ?? null }))
 }
 // The table as it stands, mid-season: every club's W-D-L, goals, points and place after the matches played so far
 // (his own club's from the matches as they were really played). → [{ short, name, played, wins, draws, losses, gf, ga,
@@ -1307,19 +1538,19 @@ function zonesFor(leagueId, rows, cupWinner = null, final = false) {
 export function soccerTable(c, D = null) {
   const a = c?.active
   if (!a) return null
-  if (a.final?.standings) return zonesFor(a.final.league?.id, a.final.standings, null, true)
+  if (a.final?.standings) return zonesFor(a.final.league?.id, a.final.standings, null, true, a.final.next?.eps)
   const form = a.base?.form
   if (!form) return null
   const games = (D?.games ?? a.snap?.games ?? []).slice(0, a.k)
   const from = a.moved?.k ?? 0
   const rows = soccerTableAt(form, a.k, { short: c.team, games: games.map((g, i) => (i < from ? null : g)) })
-  return zonesFor(a.base.league?.id, rows)
+  return zonesFor(a.base.league?.id, rows, null, false, a.base.next?.eps)
 }
 // a booked season's final table, read back from the short form it's kept in (null for a season from before the table)
 export function tableOf(s) {
   if (!Array.isArray(s?.table) || !s.table.length) return null
   const rows = s.table.map(([short, wins, draws, losses, gf, ga, name], i) => ({ short, name: name ?? CLUB_BY.get(short)?.name ?? short, extra: !CLUB_BY.has(short), played: wins + draws + losses, wins, draws, losses, gf, ga, gd: gf - ga, points: wins * 3 + draws, pos: i + 1, isUs: short === s.team }))
-  return zonesFor(s.leagueId, rows, s.cupWinner ?? null, true)
+  return zonesFor(s.leagueId, rows, s.cupWinner ?? null, true, s.eps)
 }
 
 // ── Legacy, in football's terms ──
@@ -1395,7 +1626,7 @@ SOCCER.x = {
   // the table: as it stands (table(c, D)), a booked season's (tableOf(s)); a row's zone: 'ucl' | 'uel' | 'uecl' | 'down' | 'playoff' | 'up' | null
   table: soccerTable, tableOf,
   // his country: the call-up and the pecking order (callUp(c)), the summer's tournaments (summer(c)), every nation's name
-  callUp: soccerCallUp, summer: soccerSummer, tourNights: soccerTourNights, castNation, nationOf: short => intlNation(short),
+  callUp: soccerCallUp, summer: soccerSummer, tourNights: soccerTourNights, promoNights: soccerPromoNights, castNation, nationOf: short => intlNation(short),
   // the second tier's name for a club's league ('the Championship')
   tier2Name: short => TIER2_NAME[CLUB_BY.get(short)?.league] ?? 'the second tier', isDown: c => c?.down?.team === c?.team,
 }

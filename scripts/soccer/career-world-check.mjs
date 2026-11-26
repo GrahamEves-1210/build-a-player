@@ -79,7 +79,8 @@ const next = c => C.nextSeason(c.offers?.length ? SX.stayPut(c) : c)
   f = at('esp.1', 20, 'T9'); ok(f('ucl') === 'T1,T2,T3,T4' && f('uel') === 'T5,T9' && f('uecl') === 'T6', 'Europe: Spain')
   f = at('ger.1', 18, 'T1'); ok(f('ucl') === 'T1,T2,T3,T4' && f('uel') === 'T5,T6' && f('uecl') === 'T7', 'Europe: Germany')
   f = at('ita.1', 20, 'T6'); ok(f('uel') === 'T5,T6' && f('uecl') === 'T7', 'Europe: Italy, the cup won by sixth')
-  f = at('fra.1', 18, null); ok(f('ucl') === 'T1,T2,T3' && f('uel') === 'T4,T5' && f('uecl') === 'T6', 'Europe: France')
+  { const pl = ENG.soccerEuropePlaces('esp.1', tbl(20), null, ['ENG', 'ESP']); ok(Object.entries(pl).filter(([, v]) => v === 'ucl').length === 5, 'Europe: Spain with a European Performance Spot') }
+  f = at('fra.1', 18, null); ok(f('ucl') === 'T1,T2,T3,T4' && f('uel') === 'T5,T6' && f('uecl') === 'T7', 'Europe: France (fourth: the Champions League qualifiers)')
 }
 
 // ── 3. A season: all five leagues, the table through it, the break, January ──
