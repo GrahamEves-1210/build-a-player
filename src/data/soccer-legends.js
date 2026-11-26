@@ -163,7 +163,7 @@ export const WC_LEGENDS = [
   { name: "Zinedine Zidane", short: "Zidane", team: 'FRA', nation: 'FRA', number: 10, height: 73, weight: 176, age: 26, foot: 'right', skin: '#ae8071', espn: null, starter: false, position: 'ST', role: 'AM', years: '1994–2006', peak: 1998,
     attrs: { pace: 6, finishing: 9, shotPower: 11, dribbling: 11, passing: 10, positioning: 8, heading: 9, size: 8, composure: 11 } },
   { name: "Kylian Mbappé", short: "Mbappé", team: 'FRA', nation: 'FRA', number: 10, height: 70, weight: 163, age: 28, foot: 'right', skin: '#9a6142', espn: 231388, starter: true, position: 'ST', role: 'ST', years: '2017–2026', peak: 2026,
-    attrs: { pace: 11, finishing: 11, shotPower: 10, dribbling: 11, passing: 9, positioning: 11, heading: 4, size: 5, composure: 11 } },
+    attrs: { pace: 11, finishing: 11, shotPower: 10, dribbling: 10, passing: 9, positioning: 11, heading: 4, size: 5, composure: 11 } },
   { name: "Thierry Henry", short: "Henry", team: 'FRA', nation: 'FRA', number: 12, height: 74, weight: 183, age: 27, foot: 'right', skin: '#765144', espn: null, starter: false, position: 'ST', role: 'ST', years: '1997–2010', peak: 2004,
     attrs: { pace: 11, finishing: 10, shotPower: 9, dribbling: 10, passing: 9, positioning: 10, heading: 6, size: 9, composure: 10 } },
   { name: "Michel Platini", short: "Platini", team: 'FRA', nation: 'FRA', number: 10, height: 70, weight: 161, age: 29, foot: 'right', skin: '#dfac9c', espn: null, starter: false, position: 'ST', role: 'AM', years: '1976–1987', peak: 1984,
@@ -389,7 +389,7 @@ export const WC_LEGENDS = [
   { name: "Carlos Valderrama", short: "Valderrama", team: 'COL', nation: 'COL', number: 10, height: 69, weight: 159, age: 32, foot: 'right', skin: '#946c58', espn: null, starter: false, position: 'ST', role: 'CM', years: '1985–1998', peak: 1993,
     attrs: { pace: 4, finishing: 6, shotPower: 7, dribbling: 9, passing: 10, positioning: 6, heading: 3, size: 4, composure: 10 } },
   { name: "Luis Díaz", short: "L. Díaz", team: 'COL', nation: 'COL', number: 7, height: 71, weight: 152, age: 28, foot: 'right', skin: '#99736a', espn: 257390, starter: false, position: 'ST', role: 'LW', years: '2019–2026', peak: 2025,
-    attrs: { pace: 10, finishing: 8, shotPower: 7, dribbling: 9, passing: 8, positioning: 8, heading: 5, size: 4, composure: 9 } },
+    attrs: { pace: 8, finishing: 8, shotPower: 7, dribbling: 9, passing: 8, positioning: 8, heading: 5, size: 4, composure: 9 } },
 
   // ─── JPN ────────────────────────────────────────────────────────────────────
   { name: "Keisuke Honda", short: "Honda", team: 'JPN', nation: 'JPN', number: 4, height: 72, weight: 163, age: 24, foot: 'left', skin: '#c89477', espn: null, starter: true, position: 'ST', role: 'AM', years: '2008–2018', peak: 2010,
