@@ -111,7 +111,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     setMatch({ code, seed: code, created: Date.now(), ends: Date.now() + BUILD_SECS * 1000, players, bots: practice })
     setPhase('build'); setBuilds({}); setChat([]); setFinal(null); setLocks({}); setMyCalls({}); setVotes(new Set()); arrived.current = new Set()
     if (mine) markEntered({ kind: 'blacktop', code, team: mine.team ?? 0, size: sz })
-    roomRef.current = liveSocket(`/room/${code}`, () => ({ t: 'hello', vid: meRef.current.vid }), m => {
+    // (bl: this phone plays 1v1 and 2v2 live, Blacktop Live: the room hands the builds to a live room, final.live)
+    roomRef.current = liveSocket(`/room/${code}`, () => ({ t: 'hello', vid: meRef.current.vid, bl: 1 }), m => {
       if (m.t === 'room') {
         skew.current = (m.now ?? Date.now()) - Date.now()
         const loc = ts => ts - skew.current
@@ -214,7 +215,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   }, [phase])
 
   // ── The game: the engine on the server's inputs ───────────────────────────
-  const game = useMemo(() => playOut({ final, match, locks, pools, types }), [final, match, locks, pools, types])
+  // (a game played live, final.live: Blacktop Live's room is the referee, components/btlive/LobbyLive.jsx)
+  const game = useMemo(() => (final?.live ? null : playOut({ final, match, locks, pools, types })), [final, match, locks, pools, types])
   // the build I made against the one the court plays: if the server had to change it, I'm told why (AppBlacktop)
   const changed = useMemo(() => {
     const pos = match?.players.find(p => p.vid === me.vid)?.pos ?? stateRef.current.position

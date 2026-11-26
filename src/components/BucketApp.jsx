@@ -69,6 +69,9 @@ import { BT_LIVE_OPEN } from '../lib/btLive'
 const BtLive = lazy(() => import('./btlive/BtLive'))
 // Blacktop's KING OF THE HILL online (/bucket?btlive=1&koth=1: components/btlive/KothOnline.jsx, live/src/koth.js)
 const KothOnline = lazy(() => import('./btlive/KothOnline'))
+// Blacktop's 1V1 and 2V2 online, played live with the builds the lobby made (components/btlive/LobbyLive.jsx)
+const LobbyLive = lazy(() => import('./btlive/LobbyLive'))
+const livePlayerOf = (() => { let m = null; return n => { if (!m) { m = new Map(); for (const pos of ['guard', 'big']) for (const p of LIVE_POOLS[pos]) m.set(p.name, p) } return m.get(n) ?? null } })()
 const KOTH_OPEN = BT_LIVE_OPEN && /[?&]koth=1\b/.test(window.location.search)
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
 // A 1v1 player's match id starts with their account id when signed in (VersusLobby myId)
@@ -2239,6 +2242,7 @@ export default function BucketApp() {
     return <BlacktopQueue bt={bt} user={user} onBack={() => {}} />
   }
   if (page === 'blacktop-game') {
+    if (bt.final?.live) return <Suspense fallback={null}><LobbyLive key={bt.final.live} bt={bt} photoOf={livePlayerOf} onMenu={() => { bt.exit(); setPage('blacktop') }} /></Suspense>
     return (
       <>
         <BlacktopGame bt={bt} user={user} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} onOpenChat={openBtChat} unread={btUnread} />
