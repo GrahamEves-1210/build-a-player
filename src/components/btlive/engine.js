@@ -3,7 +3,7 @@
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
 import { paintCourt, drawHoop } from './court.js'
-import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
+import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, shotWindow, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
 import { drawFigure, drawShadow, pointAt, lookOf } from './figure.js'
 import { createPoser } from './pose.js'
@@ -192,7 +192,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const p = s.players[me]
     if (p.act === 'gather' && !meter.on && !levels[me]) {
       meter.on = true; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0; meter.dy = 0
-      meter.base = meterSpec(p.shot.spec.kind ?? p.shot.kind, p.R, false)   // the window without game point (the clutch rating moves it)
+      meter.base = null                                          // (the window moves with the shot now: sim.js shotWindow)
       meter.t0 = clockNow - H.aT0 < 220 ? H.aT0 : clockNow - STEP
       if (!H.a && H.aUp >= H.aT0) letGo(H.aUp)                    // pressed and let go inside one tick
     } else if (p.act !== 'gather' && meter.on) {
@@ -246,7 +246,8 @@ export function createEngine({ setup, els, on, net = null }) {
       const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team && !o.out), kind).c
       p.act = 'gather'; p.actT = 0
       const sp = Math.hypot(p.vx, p.vy), run = clamp(sp / p.R.topBall, 0, 1)
-      p.shot = { kind, spec: meterSpec(kind, p.R, s.gamePoint), d, three: kind === 'jumper' && ref.isThree(p.x, p.y), read: c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2, run, mx: run > 0.3 ? p.vx / sp : 0, my: run > 0.3 ? p.vy / sp : 0 }
+      p.shot = { kind, spec: meterSpec(kind, p.R, s.gamePoint, ref.dunkLift(p.R)), d, three: kind === 'jumper' && ref.isThree(p.x, p.y), read: c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2, run, mx: run > 0.3 ? p.vx / sp : 0, my: run > 0.3 ? p.vy / sp : 0 }
+      shotWindow(s, p)
       NB.local = { act: 'gather', shot: p.shot, sn: NB.n[0] }
     }
     // a dribble move starts here too (the step's rules: sim.js doMove); the flick itself went to the referee as it was made
@@ -768,7 +769,7 @@ export function createEngine({ setup, els, on, net = null }) {
       chip(meter.grade, bx + bw / 2, overY, col)
     } else {
       // how open he is (as well as his IQ reads it)
-      const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][meter.read] ?? ''
+      const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][p.shot?.read ?? meter.read] ?? ''
       if (read) chip(read, bx + bw / 2, overY, [GREEN, AMBER, RED][meter.read])
       // pulled up on the move: it costs him a little (referee: setFeet)
       if ((p.shot?.kind === 'jumper') && (p.shot.run ?? 0) > 0.45) chip('ON THE MOVE', bx + bw / 2, overY - fs * 1.45, AMBER)

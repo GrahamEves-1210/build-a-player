@@ -94,7 +94,7 @@ export const T = {
   jTotalMs: 900,                     // a jumper's meter runs this long; held past it, the shot goes up late
   jIdealMs: 500,                     // the middle of the green window
   jWinMs: 11, jWinJs: 31,            // green half-width: 11 + 31 x (plain Jump Shot)²: 42 ms at 11, 11 at a 1 (a green always goes in)
-  jFallMs: 170,                      // past the green, quality runs down to 0 over this long
+  jFallMs: 170,                      // past the green, quality runs down to 0 over this long (the meter's fill: a miss either way)
   lTotalMs: 620, lIdealMs: 300,      // layups and dunks: a quicker meter
   lWinMs: 24, lWinFin: 32,           // green half-width from Finishing: 24 + 32 x (plain Finishing)²: 56 ms at 11, 24 at a 1
   lFallMs: 190,
@@ -107,6 +107,16 @@ export const T = {
   relMinJ: 0.42,                     // a jumper let go at the worst time keeps this much of its chance (a bad one can still drop)
   relMinL: 0.62,                     // ...a layup this much
   slightJ: 0.86,                     // just outside the green: the chance starts from here and falls to relMin
+  // THE GREEN WINDOW IS THE SHOT (the owner, 11-25: "no slightly makes, just make the green window match the shot").
+  // A release in the green goes in, anything else misses; nothing is rolled. How wide the green is comes from how
+  // hard the shot is right now (the make chance below: his rating there, the distance, the hand in his face, on the
+  // move, his legs, game point): wide enough that an average kid's timing (kidSd: the spread of his release, ms)
+  // makes it that often. It changes while he rises (a man closing out shrinks it on the meter)
+  kidSd: 75,                         // ms: the release error of an average kid (the CPU levels: cpu.js LEVELS meterSd)
+  winMin: 4, winMax: 120,            // ms either side of the ideal, at the least and the most
+  checkRush: 0.4,                    // a shot right off the check (before a move, inside checkRushS): the chance x (1 - this), fading out
+  checkRushS: 1.0,                   // ...over this long (real seconds)
+  staShot: 0.12,                     // legs empty: the chance x (1 - this)
 
   // ── Make chance: rating at that spot x release x contest. Open, perfect release: ─────────────────
   layBase: 0.58, layFin: 0.38,       // layup: 87% at Finishing 1, 96% at 11 (an 80: 91%) open at the rim: the best shot there is
@@ -115,14 +125,19 @@ export const T = {
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkFar: 4.5, dunkFarSize: 0.9,    // an open lane: he takes off from farther out, up to this more at Bounce 11 (+ this at Size 11)
   laneW: 3.6,                        // ...open: no one who can guard within this of the line from him to the rim
-  dunkBounce: 0.25,                  // Bounce (the plain grade, 0-1) under this: never dunks (a Bounce 3 or lower never does)
+  dunkBounce: 0.35,                  // Bounce (the plain grade, 0-1) under this: never dunks, lays it up (a Bounce 4 or lower)
+  dunkNear: 2.6,                     // a low leaper only dunks from this close (at dunkBounce)...
+  dunkHop: 0.45,                     // ...and only with nobody on him; under this share of the way up the Bounce scale a man near
+                                     //    him turns it into a layup (above it, he goes up over him: a poster)
+  dunkGuard: 5,                      // ...a man within this of him, between him and the rim or at it, is on him
+  dunkSlow: 0.4,                     // a low leaper's dunk gathers this much slower (the meter's ideal, x 1 + this at the floor)
+  dunkLow: 0.14,                     // ...and goes down this much less often open
   dunkChance: 0.9,                   // how often an able dunker dunks: (plain Bounce - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
   closeBase: -0.58, closeJs: 1.30,   // a jumper from 8 ft: 41% at Jump Shot 1, 72% at 11 (steep: spread is small, a non-shooter still can't shoot)
   arcBase: -0.66, arcJs: 1.20,       // a jumper from the arc (25 ft): 25% at Jump Shot 1, 54% at 11 (an 80: 39%)
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
-  deepAt: 27.5,                      // past this it's deep...
-  deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
+  pastK: 0.16, pastJs: 0.06,         // every foot behind the three-point line: the chance x e^-(0.16 - 0.06 x Jump Shot) (range)
   setFeet: 0.16,                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
   runFrom: 0.2,                      // ...from this share of his top speed up (a drift is free)
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
@@ -149,8 +164,8 @@ export const T = {
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.28,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
-  contestMaxJ: 0.82,                 // a perfect contest takes this share off a jumper
-  jsThrough: 0.34,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
+  contestMaxJ: 0.86,                 // a perfect contest takes this share off a jumper
+  jsThrough: 0.28,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
   contestMaxL: 0.85,                 // ...off a layup
   contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
@@ -173,14 +188,15 @@ export const T = {
   jumpLand: 0.10,                    // ...then this long to land before he can move again
   blockReach: 3.6,                   // within this of the shooter at the release (plus Bounce and Size)...
   blockReachBnc: 0.9, blockReachSize: 0.7,
-  blockIn: 0.2, blockOut: 0.68,       // ...and between these fractions of his jump: on time. Else a quarter the chance
-  blockBase: 0.26,                   // on-time chance at average everything
-  blockInt: 0.9,                     // x (0.55 + this * Interior D)
-  blockSize: 0.45,                   // x (1 + this * (his Size n - the shooter's))
-  blockBnc: 0.9,                     // x (1 + this * (his Bounce n - 0.75))
+  blockIn: 0.0, blockOut: 0.95,      // ...and in the air at the release (any of the jump but the landing): on time. Else blockLate of it
+  blockAfter: 0.16,                  // a man who goes up just after the release can still get it, this long into its flight (s)
+  blockBase: 0.15,                   // on-time chance, x the four below (the plain grades, 0-1)
+  blockInt0: 0.25, blockInt: 1.5,    // x (0.25 + 1.5 x Interior D)
+  blockSize: 1.2, blockSizeMin: 0.12,// x (1 + 1.2 x (his Size - the shooter's)), never under 0.12
+  blockBnc0: 0.6, blockBnc: 0.8,     // x (0.6 + 0.8 x Bounce)
   blockJumper: 0.55, blockDunk: 0.5, // jumpers and dunks are harder to get than layups
   blockMax: 0.7,
-  blockLate: 0.2,                    // off time (up too early, too late): this share of the chance
+  blockLate: 0.3,                    // off time (up too early, too late): this share of the chance
   blockFar: 0.25,                    // at the edge of his reach he gets this much less of it
 
   // ── Steals (a swipe with a cooldown; a miss costs a beat) ───────────────────────────────────────

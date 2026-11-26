@@ -7,14 +7,16 @@ import { T } from './tune.js'
 const clampN = v => Math.min(1, Math.max(0, v))
 
 // kind: 'jumper' | 'layup' | 'dunk'. R: the shooter's ratings (ratings.js). gamePoint: either side a basket from winning.
-export function meterSpec(kind, R, gamePoint = false) {
+export function meterSpec(kind, R, gamePoint = false, bnc = 1) {
   // at game point the green window shrinks for a man who isn't clutch and grows for one who is
   const clutch = gamePoint ? T.clutchLo + (T.clutchHi - T.clutchLo) * (R.clutchRaw ?? clampN((R.clutch - (1 - T.spread)) / T.spread)) : 1
   // (on the plain grades: a green always goes in, so a great shooter's window is earned, a poor one's is a sliver)
   const js = R.jsRaw ?? clampN((R.js - (1 - T.spread)) / T.spread), fin = clampN((R.fin - (1 - T.spread)) / T.spread)
-  if (kind === 'jumper') return { kind, total: T.jTotalMs, ideal: T.jIdealMs, win: (T.jWinMs + T.jWinJs * js * js) * clutch, fall: T.jFallMs }
+  if (kind === 'jumper') return { kind, total: T.jTotalMs, ideal: T.jIdealMs, win: (T.jWinMs + T.jWinJs * js * js) * clutch, fall: T.jFallMs, clutch }
   const w = (T.lWinMs + T.lWinFin * fin * fin) * (kind === 'dunk' ? T.dunkWin : 1) * clutch
-  return { kind, total: T.lTotalMs, ideal: T.lIdealMs, win: w, fall: T.lFallMs }
+  // (a dunk by a man who can only just get up there gathers slower: bnc, how far up the Bounce scale he is, 0-1)
+  const slow = kind === 'dunk' ? 1 + T.dunkSlow * (1 - bnc) : 1
+  return { kind, total: Math.round(T.lTotalMs * slow), ideal: Math.round(T.lIdealMs * slow), win: w, fall: T.lFallMs, clutch }
 }
 
 // How good a release was: 1 inside the green window, then down to 0
@@ -24,13 +26,23 @@ export function meterQuality(spec, heldMs) {
   return Math.max(0, 1 - (err - spec.win) / spec.fall) * 0.98
 }
 
-// What the meter says about it
+// What the meter says about it: green, or early, or late (a miss either way: there are no near misses that go in)
 export function meterGrade(spec, heldMs) {
   const d = Math.max(T.minHoldMs, Math.min(spec.total, heldMs)) - spec.ideal
   if (Math.abs(d) <= spec.win) return 'PERFECT'
-  const far = Math.abs(d) > spec.win + spec.fall * 0.45
-  return d < 0 ? (far ? 'EARLY' : 'SLIGHTLY EARLY') : (far ? 'LATE' : 'SLIGHTLY LATE')
+  return d < 0 ? 'EARLY' : 'LATE'
 }
+
+// The green window for a shot that goes in this often for an average kid (T.kidSd): his release error is about
+// normal, so a window of w ms either side catches it erf(w / (sd √2)) of the time
+const erfinv = x => {
+  const a = 0.147, ln = Math.log(1 - x * x), t = 2 / (Math.PI * a) + ln / 2
+  return Math.sign(x) * Math.sqrt(Math.sqrt(t * t - ln / a) - t)
+}
+const erf = x => { const t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y }
+export function windowFor(p) { return Math.min(T.winMax, Math.max(T.winMin, T.kidSd * Math.SQRT2 * erfinv(Math.min(0.995, Math.max(0.001, p))))) }
+// ...and how often a release with sd ms of error lands in a window of w
+export const greenOdds = (w, sd) => erf(w / (sd * Math.SQRT2))
 
 // The share of the shot's chance a release keeps
 export function releaseMult(kind, q) {

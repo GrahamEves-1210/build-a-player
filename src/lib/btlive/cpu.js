@@ -9,7 +9,7 @@
 // space the floor, cut, and crash the glass.
 import { HZ, GHZ, DT, PACE, COURT, T, MOVES } from './tune.js'
 import { rollAt, gauss } from './rng.js'
-import { meterQuality, meterSpec } from './meter.js'
+import { meterQuality, windowFor, greenOdds } from './meter.js'
 import * as ref from './referee.js'
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
@@ -65,11 +65,10 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
     return { ...o, x: o.x + (p.x - o.x) * k, y: o.y + (p.y - o.y) * k, act: 'jump' }
   })
   const c = ref.lateContest(ref.contestOf(me, closed, kind).c, ref.contestOf(me, defs.map(ref.handUp), kind).c, kind)
-  const win = meterSpec(kind, p.R, s.gamePoint).win
-  const green = clamp(win / (lvl.meterSd * 1.25), 0.05, 0.97)
   const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ * 0.6 ? s.players[p.catchFrom].R.pas : null
-  // a green goes in; otherwise the shot's chance on a release just off it
-  const pMake = green + (1 - green) * ref.makeChance({ R: p.R, kind, d, q: 1, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false }) * (kind === 'jumper' ? 0.72 : 0.84)
+  // the green window that shot would have (sim.js shotWindow), and how often his release lands in it: that's the make
+  const pT = ref.makeChance({ R: p.R, kind, d, past: kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false, sta: p.sta })
+  const pMake = greenOdds(windowFor(pT), lvl.meterSd)
   // make it, take it: a make is worth its points and the ball back, so a two is worth one and a half ones, not two
   return { v: pMake * (three ? T.twoValue : 1), kind, three, c, d }
 }
@@ -90,11 +89,9 @@ function driveValue(s, p, D, dD, lvl) {
     const back = dR - ref.rimDist(D)
     by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (back - 3.5) / 4, 0.2, 1)
   }
-  const win = meterSpec('layup', p.R, s.gamePoint).win
-  const green = clamp(win / (lvl.meterSd * 1.25), 0.05, 0.97)
-  const rel = x => green + (1 - green) * x * 0.84             // got by him: a green goes in
+  const rel = x => greenOdds(windowFor(x), lvl.meterSd)     // the window that layup would have, and his release in it
   if (beaten) return rel(open) * T.cpuDriveRisk
-  return (by * rel(open) + (1 - by) * walled * (green + (1 - green) * 0.84)) * T.cpuDriveRisk
+  return (by * rel(open) + (1 - by) * rel(walled)) * T.cpuDriveRisk
 }
 
 // is the lane from a to b clear of defenders
@@ -173,9 +170,10 @@ function withBall(s, p, m, lvl, out) {
   if (p.act === 'gather') {
     if (!m.rel) {
       const held = clamp(p.shot.spec.ideal + gauss(roll(s), roll(s)) * lvl.meterSd, T.minHoldMs, p.shot.spec.total)
-      m.rel = { n: Math.max(2, Math.round(held / MS)), q: meterQuality(p.shot.spec, held) }
+      m.rel = { n: Math.max(2, Math.round(held / MS)), held }
     }
-    if (p.actT >= m.rel.n) { out.shoot = false; out.q = m.rel.q; m.rel = null } else out.shoot = true
+    // (judged against the window as it is when he lets go: it moves while he rises)
+    if (p.actT >= m.rel.n) { out.shoot = false; out.q = meterQuality(p.shot.spec, m.rel.held); m.rel = null } else out.shoot = true
     if (p.shot && p.shot.kind !== 'jumper') steer(p, RIM.x, RIM.y, out, 1.5)
     return
   }
