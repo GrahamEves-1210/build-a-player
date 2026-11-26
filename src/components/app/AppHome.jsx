@@ -230,13 +230,11 @@ function ModeCard({ gold = false, ucl = false, title, line, faces, on, onClick }
 const LiveLine = ({ n, line }) => (n > 0 ? <small className="ag-mc-live"><i aria-hidden="true" />{fmtCount(n)} playing</small> : line ? <small>{line}</small> : null)
 
 // A mode's card: its colour, its name, where it stands, and its art (public/modes)
-function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children, tag = null, soon = false, online = false }) {
+function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children, tag = null, soon = false }) {
   // (soon: a mode that's on its way to this sport. It shows, locked, with COMING SOON)
-  // (online: a live mode against real players; its ONLINE pill sits in the top-right corner, apart from NEW / POPULAR)
   return (
     <button className={`ag-way ag-mc ag-mc--${tone} ag-way--${kind}${small ? ' is-small' : ''}${color ? ' has-team' : ''}${soon ? ' is-soon' : ''}`} style={color ? { '--team': color } : undefined} onClick={soon ? undefined : onClick} disabled={soon} aria-disabled={soon || undefined}>
       <span className="ag-mc-head"><b>{title}{soon ? <i className="ag-mc-tag ag-mc-tag--soon"><IconLock size={11} /> COMING SOON</i> : tag && <i className="ag-mc-tag">{tag}</i>}</b>{!soon && <LiveLine n={live} line={line} />}</span>
-      {online && !soon && <i className="ag-mc-online"><span aria-hidden="true" />ONLINE</i>}
       {children}
     </button>
   )
@@ -596,7 +594,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   )
   // the Trait Auction (football and basketball; Compete's old place, owner 11-26)
   const auctionCard = (small = false) => onAuction && (
-    <ModeArt small={small} online kind="auction" tone="auction" title="TRAIT AUCTION" line={auLine} live={auHere} onClick={onAuction}>
+    <ModeArt small={small} kind="auction" tone="auction" title="TRAIT AUCTION" line={auLine} live={auHere} onClick={onAuction}>
       <GavelArt />
     </ModeArt>
   )
@@ -641,7 +639,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         {/* Basketball: Blacktop is the online hub, its 1v1 / 2v2 lobbies and King of the Hill from inside it */}
         {isBucket
           ? (onBlacktop && (
-            <ModeArt online kind="blacktop" tone="blacktop" title="BLACKTOP" line={btLine} live={btLive ? 0 : here.blacktop} onClick={onBlacktop}>
+            <ModeArt kind="blacktop" tone="blacktop" title="BLACKTOP" tag="UPDATED" line={btLine} live={btLive ? 0 : here.blacktop} onClick={onBlacktop}>
               <img className="ag-mc-court" src="/courts/thumbs/ct-blacktop.webp" alt="" loading="lazy" decoding="async" draggable={false} />
               <span className="ag-paint" aria-hidden="true"><b>1V1</b><b>2V2</b><b>KOTH</b></span>
             </ModeArt>
