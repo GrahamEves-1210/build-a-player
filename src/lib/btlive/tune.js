@@ -85,7 +85,7 @@ export const T = {
   // the rim all of it (and only a drive builds the sprint), across this share, backing out this share (+ this x Handles)
   ballSide: 0.82, ballSideHnd: 0.06,
   ballBack: 0.52, ballBackHnd: 0.1,
-  boost: 0.09, boostTime: 0.45,      // out of a hesitation, a crossover, between the legs, an in-and-out: this much quicker for this long
+  boost: 0.15, boostTime: 0.45,      // out of a hesitation, a crossover, between the legs, an in-and-out: this much quicker for this long
   accelBase: 0.805, accelSpd: 0.54,   // ...x (0.85 + 0.45 x Speed, the plain grade): a quick first step
   accelSize: 0.3,                    // ...less this at Size 11
   sprint: 0.12, sprintTime: 1.1,     // a sprint: going one way he builds up to this much over top speed, all of it after this long
@@ -225,8 +225,8 @@ export const T = {
   cpuDriveRisk: 0.74,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
   cpuJumpEdge: 0.08,                 // ...by this much (a miss at the rim comes back more often than a long one)
   cpuCrash: 0.08, cpuCrashReb: 0.15,  // a CPU follows his own shot this often (+ this x his Rebounding); else he lands and...
-  cpuHold: 0.8,                      // ...holds this long into the miss before he goes for it (the owner, 11-26)
-  cpuCushion: 0.6,                   // ft a CPU gives a man driving at him (a step of cushion)
+  cpuHold: 0.95,                     // ...holds this long into the miss before he goes for it (the owner, 11-26)
+  cpuCushion: 0.5,                   // ft a CPU gives a man driving at him (a step of cushion)
   cpuSitV: 0.33,                     // an open look over a man sitting back at the rim: worth taking from this
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
@@ -286,11 +286,11 @@ export const T = {
   moveSpeed: 1.95,                   // the fastest any move goes, x top speed (what a device's own position is held to)
   moveCd: 2.8, moveCdHnd: 1.0,       // a move can freeze his man once in this long: 2.8 s at Handles 1, 1.8 s at 11
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
-  moveBase: 0.15,                    // chance to freeze him...
+  moveBase: 0.29,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
   moveHnd: 0.60,                     // ...plus this * (Handles n - his Perimeter D n)
   moveIq: 0.36,                      // ...minus this * (his IQ n - 0.5): a smart defender reads the move
-  moveFreeze: 0.38,                  // frozen this long
+  moveFreeze: 0.5,                   // frozen this long
   // the legs for it (the owner, 11-25: "slight stamina when dribbling ... so you can't spam them"): 1 full. The owner,
   // 11-26: "drains too quick and should recover each possession": a third and more off every cost (3-4 moves strung
   // together before he's low), and every new possession everyone starts full (sim.js endPossession, stop)

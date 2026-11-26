@@ -181,10 +181,10 @@ function pickPlan(s, p, m, only = null) {
 function pickClear(s, p, m, stuck = false) {
   m.plan = 'clear'; m.planT = s.tick + Math.round(1.2 * GHZ)
   if (!m.side) m.side = roll(s) < 0.5 ? -1 : 1
-  const out = 2.6
+  const out = 3.6                                        // (far enough past it that he slows on the spot after he has crossed it)
   let ax = p.x - COURT.arcC.x, ay = Math.max(p.y - COURT.arcC.y, 9), al = Math.hypot(ax, ay) || 1
   const near = { x: COURT.arcC.x + ax / al * (COURT.arcR + out), y: COURT.arcC.y + ay / al * (COURT.arcR + out) }
-  const cands = [near, ...ARC.filter(sp => sp.y > COURT.arcSideY).map(sp => { const bx = sp.x - COURT.arcC.x, by = sp.y - COURT.arcC.y, bl = Math.hypot(bx, by) || 1; return { x: sp.x + bx / bl * 2.5, y: sp.y + by / bl * 2.5 } })]
+  const cands = [near, ...ARC.filter(sp => sp.y > COURT.arcSideY).map(sp => { const bx = sp.x - COURT.arcC.x, by = sp.y - COURT.arcC.y, bl = Math.hypot(bx, by) || 1; return { x: sp.x + bx / bl * 3.5, y: sp.y + by / bl * 3.5 } })]
   let best = -99
   for (const at of cands) {
     if (!ref.inBounds(at.x, at.y, -1.8)) continue
@@ -226,8 +226,9 @@ function withBall(s, p, m, lvl, out) {
   const clearing = s.mustClear === p.team
   if (clearing) {
     if (m.plan !== 'clear' || s.tick >= m.planT) pickClear(s, p, m)
-    // the watchdog: never idle with it to take back. Not nearer the arc in half a second: a new way out, the shortest
-    const left = -ref.arcPast(p.x, p.y)
+    // the watchdog: never idle with it to take back. Not out farther from the rim in half a second: a new way out
+    // (how far still to go: getting out from the rim; arcPast reads the corners' straight lines low down)
+    const left = -ref.rimDist(p)
     if (m.clrT == null || left < m.clrD - 0.3) { m.clrD = left; m.clrT = s.tick }
     else if (s.tick - m.clrT > Math.round(0.5 * GHZ)) { pickClear(s, p, m, true); m.clrD = left; m.clrT = s.tick }
   } else { m.clrT = null; if (m.plan === 'clear') m.plan = null }
@@ -382,7 +383,8 @@ function withBall(s, p, m, lvl, out) {
       const cx = dirx * Math.cos(ang) - diry * Math.sin(ang), cy = dirx * Math.sin(ang) + diry * Math.cos(ang)
       dirx = cx; diry = cy
       // (no dribble move with a line at his feet: the burst would carry him over it)
-      if (dD < 5.0 && p.moveCd <= 0 && p.frzCd <= 0 && m.go < lvl.move * 0.5 && ref.inBounds(p.x, p.y, -4.5) && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { const f = ref.flickFor(p, { x: dirx, y: diry }); out.mx = dirx; out.my = diry; out.dx = f.x; out.dy = f.y; return }
+      // (taking it back, nearly there: no move, just get it out)
+      if (dD < 5.0 && p.moveCd <= 0 && p.frzCd <= 0 && m.go < lvl.move * 0.5 && !(clearing && ref.arcPast(p.x, p.y) > -7) && ref.inBounds(p.x, p.y, -4.5) && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { const f = ref.flickFor(p, { x: dirx, y: diry }); out.mx = dirx; out.my = diry; out.dx = f.x; out.dy = f.y; return }
     }
   }
   // keep it in bounds: a step that would take him over a line loses the part of it going that way (he slides along
@@ -403,7 +405,7 @@ function withBall(s, p, m, lvl, out) {
   else if ((ny < COURT.minY + 1.6 && ky < 0) || (ny > COURT.maxY - 1.6 && ky > 0)) ky = 0
   const kl = Math.hypot(kx, ky)
   // (and he slows into a spot rather than running through it: one by a line he'd carry over it)
-  const arrive = clearing || m.plan === 'three' || m.plan === 'mid' ? clamp(dl / 2.2, 0.35, 1) : 1
+  const arrive = !clearing && (m.plan === 'three' || m.plan === 'mid') ? clamp(dl / 2.2, 0.35, 1) : 1
   if (kl > 0.25) { out.mx = kx / kl * arrive; out.my = ky / kl * arrive; return }
   // (nothing left of it: straight for his spot, which is in bounds)
   steer(p, tx, ty, out, 0.5)
