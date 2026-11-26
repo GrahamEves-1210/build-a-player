@@ -112,6 +112,11 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-bug-clock b { font-family: var(--num); font-weight: 400; font-size: 26px; line-height: 1; min-height: 26px; font-variant-numeric: tabular-nums; }
 .btlv-bug-clock b.is-idle { color: var(--faint); }
 .btlv-bug-clock b.is-low { color: var(--t1); }
+/* online: the line's dot, only when it's bad (engine.js netDot): amber slow or uneven, red nothing coming in */
+.btlv-bug-clock { position: relative; }
+.btlv-net { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; display: none; }
+.btlv-net[data-q='warn'] { display: block; background: #f2b33d; }
+.btlv-net[data-q='bad'] { display: block; background: #ff5a5a; }
 .btlv .btlv-bug-note { grid-row: 2; grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; padding: 0 12px; border-top: 1px solid var(--line); background: none; box-shadow: none; font-size: 13px; letter-spacing: 1.2px; line-height: 1; color: var(--muted); white-space: nowrap; min-width: 0; }
 .btlv-bug-note > span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .btlv-bug-goal { flex: none; color: var(--muted); }

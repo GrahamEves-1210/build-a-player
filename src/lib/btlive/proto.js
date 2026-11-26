@@ -4,10 +4,11 @@
 //
 // Messages are JSON, { t: type, ... }.
 //   device -> referee
-//     hello  { vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
+//     hello  { v (2: wire 2, below; none: wire 1), vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
 //                                                              take a seat (or take it back). The first one in sets the
 //                                                              mode; humans (dev): start before every seat has a person
-//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m, st, jp], d: [[x, y, sp?], ...], rel: { sn, q } | null }
+//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m, st, jp], d: [[x, y, sp?], ...], rel: { sn, q } | null, sk, vk }
+//            (wire 2: d only while the flicks are fresh, rel only while there is one; sk, vk: see wire 2 below)
 //            (sp on a flick: the stick rolled round that way, the spin; q -1: SHOOT tapped, a pump fake)
 //            k: his own count of messages (old ones are dropped). mx/my: the stick. x..vy: where his device has him.
 //            h: the buttons held now (bits: 1 SHOOT, 2 PASS). n: how many times each button has been pressed, ever,
@@ -43,11 +44,14 @@ export const SNAP_ACT = PF.length + PI.length     // where a snapshot's row for 
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────
 
 // A seat's input as it comes in, and the input the step gets from it each tick
-export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0, 0, 0], used: [0, 0, 0, 0, 0], d: [], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0 })
+// (sk: the newest snapshot his device has, wire 2, -1 none; vk: the tick his screen drew the others at, null: an old device)
+export const seatNew = () => ({ k: -1, mx: 0, my: 0, pos: null, h: 0, n: [0, 0, 0, 0, 0], used: [0, 0, 0, 0, 0], d: [], last: 0, rel: null, relDone: 0, gatherSn: null, heard: 0, sk: -1, vk: null })
 const num = (v, lo, hi, d = 0) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d)
 export function seatMsg(seat, m, now) {
   if (!Number.isInteger(m.k) || m.k <= seat.k) return false                 // old or repeated
   seat.k = m.k; seat.heard = now
+  seat.sk = Number.isInteger(m.sk) ? m.sk : -1
+  if (Number.isFinite(+m.vk) && m.vk != null) seat.vk = Math.floor(+m.vk)
   let mx = num(m.mx, -1, 1), my = num(m.my, -1, 1)
   const l = Math.hypot(mx, my); if (l > 1) { mx /= l; my /= l }
   seat.mx = mx; seat.my = my
@@ -144,16 +148,82 @@ export function applySnap(s, m, me) {
 }
 
 // Where everyone else is drawn: a beat behind the latest word, eased between the two snapshots around that moment.
-// buf: [{ k, p: Float32Array(x, y per player), b: [x, y, z] }] oldest first.
-export function lerpAt(buf, k, out, ball) {
+// buf: [{ k, p: Float32Array(x, y per player), b: [x, y, z] }] oldest first. Past the newest one (it's late) he's
+// carried on the way he was going for up to ahead ticks (by default a quarter of the gap between the last two).
+// Returns how far past the newest snapshot k is (ticks; 0 or less: between two), false with none
+export function lerpAt(buf, k, out, ball, ahead = null) {
   if (!buf.length) return false
   let i = buf.length - 1
   while (i > 0 && buf[i - 1].k > k) i--
   const B = buf[i], A = i > 0 ? buf[i - 1] : B
-  const f = B.k === A.k ? 1 : Math.min(1.25, Math.max(0, (k - A.k) / (B.k - A.k)))   // a little past the last: carry on
+  const top = ahead == null ? 1.25 : 1 + ahead / Math.max(1, B.k - A.k)
+  const f = B.k === A.k ? 1 : Math.min(top, Math.max(0, (k - A.k) / (B.k - A.k)))   // a little past the last: carry on
   for (let j = 0; j < out.length; j++) out[j] = A.p[j] + (B.p[j] - A.p[j]) * f
   for (let j = 0; j < 3; j++) ball[j] = A.b[j] + (B.b[j] - A.b[j]) * f
-  return true
+  return k - buf[buf.length - 1].k
+}
+
+// ── wire 2 (2026-11-26): every tick, and small ─────────────────────────────────────────────────────
+// A device that says hello with v: 2 gets a snapshot every tick (SEND_EVERY2), each one written against the latest
+// one his device has said it has (sk, in every input): only what changed in each player's row and in the ball, the
+// events since then, and the plain facts only when they aren't the usual. An old device (no v) gets wire 1 as before.
+//   s (v 2) { v: 2, k, bk?, ph, pT, po, pn, cl, sc, gp?, w?, nx?, call?, kg?, si?, mc?, gn?, p, b, e, a, st? }
+//           bk: the snapshot it's written against (none: p and b are whole). p: per player his row (snapOf's), or with
+//           bk the fields that changed as [field, value, ...]; b: the ball as one row (BALL_F), or what changed in it
+//   in (v 2) also { sk: the newest snapshot he has (-1: send a whole one), vk: the tick his screen draws the others at }
+export const WIRE = 2
+export const SEND_EVERY2 = 1
+export const BALL_F = ['st', 'holder', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'from', 'to', 't', 'n', 'sx', 'sy', 'sz', 'tx', 'ty', 'kind', 'speed', 'lastTeam', 'reb', 'd']
+export const SNAP_KEEP = 3 * HZ                   // the snapshots the referee keeps to write against (the device keeps more)
+const same = (a, b) => a === b || (a !== null && b !== null && typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b))
+const ballRow = b => BALL_F.map(f => b[f])
+const diff = (base, row) => { const d = []; for (let j = 0; j < row.length; j++) if (!same(base[j], row[j])) d.push(j, row[j]); return d }
+const patch = (base, d) => { const r = base.slice(); for (let j = 0; j + 1 < d.length; j += 2) r[d[j]] = d[j + 1]; return r }
+// the referee: one tick's rows, kept to write the next ones against (q: the number of the last event by then)
+export function snapRows(s, q = 0) {
+  const m = snapOf(s, [], null)
+  return { k: m.k, q, m, p: m.p, b: ballRow(m.b) }
+}
+// the referee: this tick for one device. cur: snapRows(s) this tick; base: the rows of the snapshot he has (or null);
+// log: the events kept (each with its tick k); acks: as snapOf
+export function snapOf2(s, cur, base, log, acks) {
+  const m = cur.m, o = { t: 's', v: 2, k: m.k, ph: m.ph, pT: m.pT, po: m.po, pn: m.pn, cl: m.cl, sc: m.sc }
+  if (m.gp) o.gp = 1
+  if (m.w != null) o.w = m.w
+  if (m.nx != null) o.nx = m.nx
+  if (m.call != null) o.call = m.call
+  if (m.kg != null) o.kg = m.kg
+  if (m.si != null && m.si !== -1) o.si = m.si
+  if (m.mc != null) o.mc = m.mc
+  if (m.gn != null) o.gn = m.gn
+  if (base && base.p.length === cur.p.length) {
+    o.bk = base.k
+    o.p = cur.p.map((r, i) => diff(base.p[i], r))
+    o.b = diff(base.b, cur.b)
+    o.e = log.filter(e => e.sq > base.q)
+  } else { o.p = cur.p; o.b = cur.b; o.e = log }
+  o.a = acks
+  if (s.phase === 'over') o.st = s.stats
+  return o
+}
+// the device: a snapshot as it comes (wire 1 or 2) into wire 1's shape (applySnap's), keeping its rows to read the
+// next ones against (hist: a Map by tick). null: it was written against one this device doesn't have (ask for a
+// whole one)
+export function snapIn(m, hist) {
+  let rows, ball
+  if (m.v !== 2) { rows = m.p; ball = ballRow(m.b) }
+  else if (m.bk != null) {
+    const B = hist.get(m.bk)
+    if (!B || B.p.length !== m.p.length) return null
+    rows = B.p.map((r, i) => patch(r, m.p[i])); ball = patch(B.b, m.b)
+  } else { rows = m.p; ball = m.b }
+  hist.set(m.k, { p: rows, b: ball })
+  for (const k of hist.keys()) if (k < m.k - 4 * HZ || k > m.k + 4 * HZ) hist.delete(k)
+  if (m.v !== 2) return m
+  const b = {}
+  BALL_F.forEach((f, j) => { b[f] = ball[j] })
+  return { t: 's', k: m.k, ph: m.ph, pT: m.pT, po: m.po, pn: m.pn, cl: m.cl, sc: m.sc, gp: m.gp ? 1 : 0, w: m.w ?? null, nx: m.nx ?? null, call: m.call ?? null,
+    kg: m.kg ?? null, si: m.si ?? -1, mc: m.mc ?? null, gn: m.gn, p: rows, b, e: m.e || [], a: m.a, st: m.st }
 }
 
 // what a release looks like on the wire: just the quality (the meter ran on the device)

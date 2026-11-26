@@ -1,0 +1,148 @@
+// BLACKTOP LIVE online, measured: two headless phones (390x844) play one on one against a local referee
+// (wrangler dev) through the lag harness (net.js ?btlag), each driven by a small bot on its own device's screen,
+// and this reports what a player feels:
+//   - how long from a press to his own screen showing it (a shot, a dribble move, a steal swipe, a block jump)
+//   - how far behind the other man is drawn (his device's own spot against where this one draws him, the best fit)
+//   - how often the other man jumps on the screen (a snap: farther in one frame than anyone can run)
+//   - steals: of the swipes that looked in reach on his screen, how many the referee had in reach
+//   - blocks: going up the moment he sees the release, how often the referee has him up in time (T.blockAfter)
+//   - bytes a second each way
+// Needs the dev server and the referee running:
+//   npx vite --port 5391 --strictPort      (cd live && npx wrangler dev --port 8791)
+//   node scripts/btlive/net-lag.mjs --lag=150-400 --jit=60 --drop=0.05 --secs=60 [--shots=DIR]
+import { launch, sleep } from '../rail-audit/cdp.mjs'
+import { writeFileSync, mkdirSync } from 'node:fs'
+
+const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d }
+const VITE = arg('vite', 'http://localhost:5391'), WS = arg('ws', 'ws://localhost:8791')
+const LAG = arg('lag', '0-0'), JIT = arg('jit', '0'), DROP = arg('drop', '0'), SECS = +arg('secs', '60'), SHOTS = arg('shots', '')
+const room = 'L' + Math.random().toString(36).slice(2, 7).toUpperCase()
+const url = v => `${VITE}/bucket?btlive=1&btserver=${encodeURIComponent(WS)}&btroom=${room}&btvid=${v}&mode=1v1&stick=one&btlag=${LAG}&btjit=${JIT}&btdrop=${DROP}`
+
+// the bot, on each page: plays (drives at the rim and shoots, flicks moves; on defense stays between his man and the
+// rim, swipes at varied distances, goes up at the release he sees) and writes down what it saw
+const BOT = `(() => {
+  const R = { own: [], drawn: [], snaps: 0, frames: 0, lat: { shot: [], move: [], steal: [], jump: [] }, taps: [], jumps: [], rels: [], b0: null, t0: 0, rk: [] }
+  const reach = 3.9
+  let lastTap = -1e9, lastFlick = -1e9, shootAt = 0, upAt = 0, jumpedFor = new Set(), pend = [], lastDraw = null, lastT = 0, lastSq = 0, wasLive = false
+  const rim = { x: 28, y: 5.25 }
+  function frame() {
+    const eng = window.__btlive
+    if (!eng || !eng.online) return requestAnimationFrame(frame)
+    const s = eng.state, me = eng.me, o = 1 - me, P = s.players, p = P[me], q = P[o], now = performance.now(), wall = performance.timeOrigin + now
+    const net = window.__btnet
+    if (!R.b0 && s.phase === 'live') { R.b0 = { bin: net.stats.bin, bout: net.stats.bout }; R.t0 = now }
+    const dr = eng.drawn, live = s.phase === 'live'
+    R.frames++
+    R.own.push([wall, p.x, p.y]); R.drawn.push([wall, dr[o][0], dr[o][1]])
+    const ni = eng.netInfo
+    if (ni.rk != null && ni.k >= 0) R.rk.push(ni.k - ni.rk)
+    if (lastDraw && live && wasLive) { const d = Math.hypot(dr[o][0] - lastDraw[0], dr[o][1] - lastDraw[1]); if (d > 0.6 + 35 * (now - lastT) / 1000) R.snaps++ }
+    lastDraw = [dr[o][0], dr[o][1]]; lastT = now; wasLive = live
+    // what was pressed, till his own screen shows it
+    for (const x of pend.splice(0)) { if (x.done()) R.lat[x.k].push(now - x.t); else if (now - x.t < 1500) pend.push(x) }
+    // what the referee said happened, as it comes in
+    for (const e of eng.evlog) {
+      if (e.sq <= lastSq) continue
+      lastSq = e.sq
+      if (e.e === 'release' && e.pid === o) R.rels.push({ k: e.k })
+      if ((e.e === 'swipe' || e.e === 'steal') && e.pid === me) {
+        const t = R.taps.find(x => x.srv == null && !x.none)
+        if (t) {
+          const b = eng.nbuf; let row = null
+          for (const x of b) if (x.k <= e.k) row = x
+          if (row) t.srv = Math.hypot(row.p[me * 2] - row.p[o * 2], row.p[me * 2 + 1] - row.p[o * 2 + 1]); else t.none = true
+          t.ev = e.e
+        }
+      }
+      if (e.e === 'jump' && e.pid === me) { const j = R.jumps.find(x => x.srvK == null && e.k >= x.rel && e.k - x.rel < 60); if (j) j.srvK = e.k }
+    }
+    for (const t of R.taps) if (t.srv == null && !t.none && now - t.t > 2000) t.none = true
+    if (live) {
+      const has = s.ball.st === 'held' && s.ball.holder === me
+      const def = p.team !== s.poss
+      if (has) {
+        const dx = rim.x - p.x, dy = rim.y - p.y, d = Math.hypot(dx, dy) || 1
+        const w = Math.sin(now / 500) * 0.7
+        eng.stick(dx / d - dy / d * w, dy / d + dx / d * w)
+        if (now - lastFlick > 1300 && p.act === 'free' && d > 12) { lastFlick = now; const a = Math.random() * 6.283; eng.flick(Math.cos(a), Math.sin(a)); const b0 = p.burst; pend.push({ k: 'move', t: now, done: () => eng.state.players[me].burst > 0 }) }
+        if (!shootAt && p.act === 'free' && d < 16 && now - lastFlick > 500 && Math.random() < 0.02) { shootAt = now; eng.press('a', true); pend.push({ k: 'shot', t: now, done: () => eng.state.players[me].act === 'gather' }) }
+      } else if (def) {
+        const hx = dr[o][0], hy = dr[o][1]
+        const tx = hx + (rim.x - hx) * 0.18, ty = hy + (rim.y - hy) * 0.18
+        const ex = tx - p.x, ey = ty - p.y, ed = Math.hypot(ex, ey)
+        eng.stick(ed > 0.4 ? ex / ed * Math.min(1, ed / 3) : 0, ed > 0.4 ? ey / ed * Math.min(1, ed / 3) : 0)
+        const seen = Math.hypot(p.x - hx, p.y - hy)
+        if (s.ball.st === 'held' && now - lastTap > 2100 && p.act === 'free' && seen < reach * 1.5 && Math.random() < 0.05) {
+          lastTap = now
+          const sw = eng.anim?.[me]?.swipe
+          R.taps.push({ t: now, seen, srv: null })
+          eng.right(0, 1)
+          pend.push({ k: 'steal', t: now, done: () => { const a = eng.anim?.[me]?.swipe; return !!a && a !== sw } })
+        }
+        // up the moment the release shows on his screen (the render reaches the release's tick)
+        for (const r of R.rels) if (!jumpedFor.has(r.k) && ni.rk >= r.k && ni.rk - r.k < 6 && p.act === 'free' && !upAt) {
+          jumpedFor.add(r.k); upAt = now; eng.press('a', true); R.jumps.push({ rel: r.k, srvK: null, seen: Math.hypot(p.x - hx, p.y - hy) })
+          pend.push({ k: 'jump', t: now, done: () => eng.state.players[me].act === 'jump' })
+        }
+      } else eng.stick(0, 0)
+    } else eng.stick(0, 0)
+    if (shootAt && now - shootAt > 420) { eng.press('a', false); shootAt = 0 }
+    if (upAt && now - upAt > 90) { eng.press('a', false); upAt = 0 }
+    requestAnimationFrame(frame)
+  }
+  requestAnimationFrame(frame)
+  window.__botR = R
+  window.__botDone = () => { const n = window.__btnet, secs = (performance.now() - R.t0) / 1000; return { ...R, secs, perf: window.__btlive.perf(), bin: (n.stats.bin - R.b0.bin) / secs, bout: (n.stats.bout - R.b0.bout) / secs, rtt: n.stats.rtt } }
+})()`
+
+const pages = []
+for (const v of ['AA', 'BB']) {
+  const c = await launch({ width: 390, height: 844, mobile: true })
+  pages.push(c)
+  await c.goto(url(`lag${v}${room}`))
+}
+// both in: the game starts
+for (let i = 0; i < 120; i++) { const ok = await Promise.all(pages.map(c => c.evaluate('!!window.__btlive && window.__btlive.online', { soft: true }))); if (ok.every(x => x === true)) break; await sleep(500) }
+for (const c of pages) await c.evaluate(BOT)
+if (SHOTS) mkdirSync(SHOTS, { recursive: true })
+const t0 = Date.now()
+let n = 0
+while (Date.now() - t0 < SECS * 1000) {
+  await sleep(SHOTS ? 2500 : 1000)
+  if (SHOTS) for (let i = 0; i < pages.length; i++) writeFileSync(`${SHOTS}/p${i}-${String(n).padStart(2, '0')}.jpg`, await pages[i].screenshot(null, 'jpeg'))
+  n++
+}
+const res = await Promise.all(pages.map(c => c.evaluate('window.__botDone()')))
+for (const c of pages) await c.close()
+
+// how far behind the other is drawn: page j's drawing of i against i's own spot, shifted by tau (the best fit)
+function behind(own, drawn) {
+  const at = (arr, t) => { let lo = 0, hi = arr.length - 1; if (t <= arr[0][0] || t >= arr[hi][0]) return null; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (arr[m][0] <= t) lo = m; else hi = m } const a = arr[lo], b = arr[hi], f = (t - a[0]) / (b[0] - a[0] || 1); return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f] }
+  let best = null
+  for (let tau = 0; tau <= 900; tau += 5) {
+    let e = 0, c = 0
+    for (let i = 0; i < drawn.length; i += 3) { const d = drawn[i], q = at(own, d[0] - tau); if (!q) continue; e += Math.hypot(q[0] - d[1], q[1] - d[2]); c++ }
+    if (c && (!best || e / c < best.err)) best = { tau, err: e / c }
+  }
+  return best
+}
+const med = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return Math.round(b[Math.floor(b.length / 2)]) }
+const p95 = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return Math.round(b[Math.floor(b.length * 0.95)]) }
+const out = { lag: LAG, jit: JIT, drop: DROP, secs: Math.round(res[0].secs) }
+const lat = {}; for (const k of ['shot', 'move', 'steal', 'jump']) { const all = res.flatMap(r => r.lat[k]); lat[k] = `${med(all)} ms (p95 ${p95(all)}, n ${all.length})` }
+out.latency = lat
+const b0 = behind(res[0].own, res[1].drawn), b1 = behind(res[1].own, res[0].drawn)
+out.behindMs = [b0?.tau, b1?.tau]; out.fitErrFt = [b0?.err?.toFixed(2), b1?.err?.toFixed(2)]
+out.renderLagTicks = res.map(r => med(r.rk.map(x => x * 100)) / 100)
+const frames = res.reduce((a, r) => a + r.frames, 0), snaps = res.reduce((a, r) => a + r.snaps, 0)
+out.snaps = `${snaps} in ${frames} frames (${(snaps / (frames / 60) * 60).toFixed(1)} a minute)`
+const taps = res.flatMap(r => r.taps).filter(t => t.srv != null)
+const seenIn = taps.filter(t => t.seen <= 3.9)
+out.steals = `${seenIn.filter(t => t.srv <= 3.9).length}/${seenIn.length} looked in reach and were; ${taps.filter(t => t.seen > 3.9 && t.srv <= 3.9).length}/${taps.filter(t => t.seen > 3.9).length} looked out and weren't; mean |seen-referee| ${(taps.reduce((a, t) => a + Math.abs(t.seen - t.srv), 0) / (taps.length || 1)).toFixed(2)} ft`
+const jumps = res.flatMap(r => r.jumps).filter(j => j.srvK != null)
+out.blocks = `${jumps.filter(j => j.srvK - j.rel <= 5).length}/${jumps.length} up in time on the referee (median ${med(jumps.map(j => j.srvK - j.rel))} ticks after the release, window 5)`
+out.bytesPerSec = { down: res.map(r => Math.round(r.bin)), up: res.map(r => Math.round(r.bout)) }
+out.rtt = res.map(r => r.rtt)
+out.fps = res.map(r => Math.round(r.frames / r.secs)); out.frameWorkMs = res.map(r => r.perf.workAvg)
+console.log(JSON.stringify(out, null, 1))

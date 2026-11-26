@@ -4,7 +4,7 @@
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
 import { paintCourt, drawHoop, drawHoopShadow, VIEW_LIFT, HOOP_LIFT, RIM_DRAW } from './court.js'
 import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, shotWindow, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
-import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
+import { applySnap, lerpAt, relMsg, snapIn, SEND_EVERY, SNAP_ACT, MOVE_KEEP, WIRE } from '../../lib/btlive/proto.js'
 import { drawFigure, drawHands, drawShadow, pointAt, lookOf, ballHz } from './figure.js'
 import { createPoser } from './pose.js'
 import { sfx, haptic } from '../../lib/juice'
@@ -58,8 +58,19 @@ export function createEngine({ setup, els, on, net = null }) {
   // online: what this device has sent and heard, and what it is doing before the referee knows (local)
   const online = !!net
   // (mv: this device's own dribble move, as its own man is doing it now: the referee's word on it comes a beat later)
-  const NB = { k: 0, n: [0, 0, 0, 0, 0], d: [], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, mv: { burst: 0, mv: 0, bn: 0 }, lt: 0, wasLive: false, aUsed: 0, aOff: false }
-  const DELAY = Math.round(0.2 * HZ)               // others are drawn this many ticks behind the latest word (200 ms)
+  const NB = { k: 0, n: [0, 0, 0, 0, 0], d: [], rel: null, lastK: -1, lastQ: 0, buf: [], off: null, sendT: 0, edge: false, local: null, mv: { burst: 0, mv: 0, bn: 0 }, lt: 0, wasLive: false, aUsed: 0, aOff: false,
+    // (wire 2: hist, the snapshots kept to read the next ones against; ackK, the newest of them, told to the referee)
+    hist: new Map(), ackK: -1, sentT: -99, sent: '', dT: -99,
+    // how far behind the others are drawn: as little as the line allows. os: when each of the latest snapshots came,
+    // against its tick (the lowest is the line at its quickest); late: how much later than that each one came; gap:
+    // the ticks between snapshots. lag: the drawing's delay (ms past that quickest), eased; lagT: where it's going
+    os: new Float64Array(72), late: new Float32Array(72), on: 0, gap: 2, lag: null, lagT: 0, rk: null, starve: 0, heardAt: 0,
+    // the others' drawn spots: a correction after a late snapshot is eased in, not jumped (E: what's left of it, raw:
+    // the last spot read off the snapshots, vel: how it was going)
+    E: new Float32Array(N * 2 + 3), raw: new Float32Array(N * 2 + 3), vel: new Float32Array(N * 2 + 3), over: 0,
+    // this device's own steal swipe and jump, shown at once (the referee's word on them comes a round trip later)
+    swT: -1e9, jmp: null }
+  const DELAY = Math.round(0.2 * HZ)               // (wire 1's fixed beat, the most the drawing waits now)
   const DX = new Float32Array(N), DY = new Float32Array(N), DB = [0, 0, 0], LP = new Float32Array(N * 2)
   const LAY = { dots: [], bars: [], ball: null, words: [], tabs: [] }   // DEV: what was drawn where on the last frame (px, world)
   const EVLOG = [], PFN = SNAP_ACT                 // (PFN: where a snapshot row keeps the act: proto.js snapOf)
@@ -127,7 +138,10 @@ export function createEngine({ setup, els, on, net = null }) {
     const P = s.players
     for (const e of s.events) {
       const p = e.pid != null ? P[e.pid] : null
-      poser.on(e, s, clockNow)
+      // (his own swipe, already shown on this device: a steal only makes it a hit)
+      const shownSw = online && e.pid === me && (e.e === 'swipe' || e.e === 'steal') && clockNow - NB.swT < 1500
+      if (!shownSw) poser.on(e, s, clockNow)
+      else if (e.e === 'steal' && poser.anim[me]?.swipe) poser.anim[me].swipe.miss = false
       if (e.e === 'make') {
         sfx('make'); haptic(e.kind === 'dunk' ? 'heavy' : 'medium')
         const word = e.poster ? 'POSTER' : e.kind === 'dunk' ? 'DUNK' : e.deep ? 'FROM DEEP' : e.pts === 2 ? 'TWO' : 'ONE'
@@ -160,7 +174,7 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'bite') { say('IN THE AIR', p.x, wordY(p.y), FLOOD, false, 900); if (e.on === me || e.pid === me) haptic('medium') }
       else if (e.e === 'post') { if (e.pid === me) haptic('light') }
       else if (e.e === 'bump') { if (e.pid === me || e.on === me) haptic('light') }
-      else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
+      else if (e.e === 'swipe') { if (e.pid === me) { if (!shownSw) haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
       else if (e.e === 'oob') { sfx('whistle'); say('OUT OF BOUNDS', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
       // King of the Hill's check-up: CHECK under the king as the man guarding him bounces it over; the bounce heard
@@ -251,7 +265,7 @@ export function createEngine({ setup, els, on, net = null }) {
     if (held < T.fakeMs) {
       meter.fake = true
       if (online && NB.local?.act === 'gather') {
-        NB.rel = relMsg(NB.local.sn, -1); NB.edge = true
+        NB.rel = relMsg(NB.local.sn, -1); sendNow()
         NB.local = null; meter.on = false; meter.fake = false
         const p = s.players[me]; p.act = 'free'; p.shot = null
       }
@@ -263,9 +277,10 @@ export function createEngine({ setup, els, on, net = null }) {
     if (meter.gradeGood) { sfx('btgreen'); haptic('medium') } else { sfx('btrelease'); haptic('light') }
     if (online && NB.local?.act === 'gather') {
       // only the quality goes to the referee; he comes down here and now
-      NB.rel = relMsg(NB.local.sn, meter.q); NB.edge = true
+      NB.rel = relMsg(NB.local.sn, meter.q)
       NB.local = { act: 'follow', until: NB.lt + gticks(T.follow) }
       const p = s.players[me]; p.act = 'follow'; p.actT = 0; p.shot = null; meter.q = null
+      sendNow()
     }
   }
 
@@ -302,27 +317,62 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     if (NB.local?.act === 'gather') p.actT++
     if (NB.local?.act === 'follow' && NB.lt >= NB.local.until) { NB.local = null; if (p.act === 'follow') p.act = 'free' }
+    jmpApply(p)
     if (live && NB.wasLive) moveLocal(s, me, { mx: H.mx, my: H.my })
     mvSave(p)
     // held past the end of the meter: it goes, late
     if (meter.on && !meter.grade && clockNow - meter.t0 >= meter.spec.total) letGo(meter.t0 + meter.spec.total)
-    if (++NB.sendT >= SEND_EVERY || NB.edge) {
-      NB.sendT = 0; NB.edge = false
-      net.send({ t: 'in', k: ++NB.k, mx: r2(H.mx), my: r2(H.my), x: r2(p.x), y: r2(p.y), vx: r2(p.vx), vy: r2(p.vy), h: (H.a ? 1 : 0) | (H.b ? 2 : 0), n: NB.n, d: NB.d, rel: NB.rel })
+    // the stick and his spot every other tick, only when they've changed (and a word every quarter second regardless);
+    // a press, a flick or a release has gone already, the moment it was made (sendIn)
+    if (NB.edge) sendIn()
+    else if (++NB.sendT >= SEND_EVERY) {
+      NB.sendT = 0
+      const sig = `${r2(H.mx)},${r2(H.my)},${r2(p.x)},${r2(p.y)},${H.a ? 1 : 0}${H.b ? 1 : 0}`
+      if (sig !== NB.sent || NB.rel || NB.lt - NB.sentT >= 9) sendIn(sig)
     }
     meterWatch()
     hud()
+  }
+  // what this device tells the referee: the stick, where it has him, the buttons and every press and flick so far, his
+  // shot's release; and (wire 2) the newest snapshot it has (sk) and the tick it draws the others at (vk)
+  function sendIn(sig = null) {
+    const p = s.players[me]
+    NB.edge = false; NB.sendT = 0; NB.sentT = NB.lt
+    NB.sent = sig ?? `${r2(H.mx)},${r2(H.my)},${r2(p.x)},${r2(p.y)},${H.a ? 1 : 0}${H.b ? 1 : 0}`
+    const m = { t: 'in', k: ++NB.k, mx: r2(H.mx), my: r2(H.my), x: r2(p.x), y: r2(p.y), vx: r2(p.vx), vy: r2(p.vy), h: (H.a ? 1 : 0) | (H.b ? 2 : 0), n: NB.n, sk: NB.ackK }
+    // (his latest flicks only while they can still be a move: a message that carries them may be dropped, the next one has them)
+    if (NB.lt - NB.dT <= HZ) m.d = NB.d
+    if (NB.rel) m.rel = NB.rel
+    if (NB.rk != null) m.vk = Math.floor(NB.rk)
+    net.send(m)
+  }
+  // a press, a flick or a release: to the referee now, not at the next tick (only while a game is on)
+  const sendNow = () => { NB.edge = true; if (online && !dead) sendIn() }
+  // this device's own jump: up at once, down on the step's clock (sim.js timers), then the referee's word again
+  const JT = gticks(T.jumpTime), JL = gticks(T.jumpLand)
+  function jmpApply(p) {
+    const J = NB.jmp
+    if (!J) return
+    const t = NB.lt - J.t
+    if (t < JT) { p.act = 'jump'; p.actT = t } else if (t < JT + JL) { p.act = 'land'; p.actT = t - JT }
+    else { J.end ??= NB.lt; if (p.act === 'jump' || p.act === 'land') { p.act = 'free'; p.actT = 0 } }
   }
   // this device's own move: kept through the referee's snapshots (they carry his word on it, a beat old)
   // (and the hand the ball is in, the chain's clock and the flick waiting in it: all his device's own a beat early)
   const MVF = ['burst', 'mv', 'bn', 'hand', 'moveCd', 'mqT', 'mqx', 'mqy', 'fkx', 'fky', 'bdx', 'bdy', 'bs', 'bk', 'chn']
   function mvSave(p) { for (const f of MVF) NB.mv[f] = p[f] }
   function mvLoad(p) { if (NB.mv.hand == null) return; for (const f of MVF) p[f] = NB.mv[f]; if (!NB.mv.burst) p.bs = 0 }
-  function onSnap(m) {
-    if (m.k <= NB.lastK) return
+  function onSnap(m0) {
+    if (m0.k <= NB.lastK) return
+    const m = snapIn(m0, NB.hist)
+    // (written against a snapshot this device doesn't have: ask for a whole one)
+    if (!m) { NB.ackK = -1; sendNow(); return }
+    if (m0.v === WIRE) NB.ackK = m0.k
+    const gap = NB.lastK >= 0 ? m.k - NB.lastK : 0
     NB.lastK = m.k
     const now = performance.now(), o = now - m.k * STEP
-    NB.off = NB.off == null || o < NB.off ? o : NB.off + (o - NB.off) * 0.02
+    NB.heardAt = now
+    lineIn(o, gap)
     const p = s.players[me]
     // my own position is mine while the ball is live; between plays (and as one starts) it's the referee's
     const mine = m.ph === 'live' && NB.wasLive
@@ -331,7 +381,13 @@ export function createEngine({ setup, els, on, net = null }) {
     const L = NB.local
     if (L?.act === 'gather') { p.act = 'gather'; p.shot = L.shot }
     else if (L?.act === 'follow' && p.act !== 'frozen' && p.act !== 'down') p.act = 'follow'
-    if (!mine) { prev[me * 2] = p.x; prev[me * 2 + 1] = p.y; NB.mv.hand = null; if (L) NB.local = null }
+    if (!mine) { prev[me * 2] = p.x; prev[me * 2 + 1] = p.y; NB.mv.hand = null; if (L) NB.local = null; NB.jmp = null }
+    // his own jump: the device's while it lasts; the referee's again once it's over there too (or he was frozen)
+    else if (NB.jmp) {
+      if (p.act === 'frozen' || p.act === 'down') NB.jmp = null
+      else if (NB.jmp.end != null && ((p.act !== 'jump' && p.act !== 'land') || NB.lt - NB.jmp.end > HZ)) NB.jmp = null
+      else jmpApply(p)
+    }
     // (the hand the ball is in: his device's while he's working moves; once he's been still with it a beat, the referee's)
     else if (NB.mv.hand != null && !NB.mv.burst && NB.mv.mqT < 0 && NB.lt - (NB.lastMv ?? -99) > HZ * 0.6) NB.mv.hand = p.hand
     mvLoad(p)
@@ -339,7 +395,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const pos = new Float32Array(N * 2)
     m.p.forEach((a, i) => { pos[i * 2] = a[0]; pos[i * 2 + 1] = a[1] })
     NB.buf.push({ k: m.k, p: pos, b: [m.b.x, m.b.y, m.b.z] })
-    if (NB.buf.length > 40) NB.buf.shift()
+    if (NB.buf.length > 90) NB.buf.shift()
     const fresh = (m.e || []).filter(e => e.sq > NB.lastQ)
     if (fresh.length) NB.lastQ = fresh[fresh.length - 1].sq
     if (import.meta.env.DEV) for (const e of fresh) { EVLOG.push(e); if (EVLOG.length > 400) EVLOG.shift() }
@@ -349,6 +405,25 @@ export function createEngine({ setup, els, on, net = null }) {
     s.events = fresh
     onEvents()
     hud()
+  }
+  // the line, measured as each snapshot comes: when it came against its tick (o), and the ticks since the last one.
+  // The others are drawn as far behind as it takes for the next snapshot to have come nearly every time (the gap
+  // between snapshots and the 90th of how late they come; a later one he's carried on through, lerpAt), and no farther
+  const q90 = a => { const b = Array.from(a).sort((x, y) => x - y); return b[Math.floor(b.length * 0.9)] }
+  function lineIn(o, gap) {
+    const n = NB.on++ % 72, full = Math.min(NB.on, 72)
+    NB.os[n] = o
+    let lo = Infinity
+    for (let i = 0; i < full; i++) if (NB.os[i] < lo) lo = NB.os[i]
+    NB.off = lo
+    NB.late[n] = o - lo
+    if (gap > 0 && gap < 8) NB.gap += (gap - NB.gap) * 0.1
+    if (NB.on % 6 === 1 || NB.lag == null) {
+      const late = full < 8 ? 120 : q90(NB.late.subarray(0, full))
+      // (never more than wire 1's fixed beat plus the late ones: the most it ever was)
+      NB.lagT = clamp((NB.gap + 0.4) * STEP + late, 1.2 * STEP, DELAY * STEP + late)
+      if (NB.lag == null) NB.lag = NB.lagT
+    }
   }
   // where everything is drawn this frame (feet): practice eases between the last two ticks; online, everyone else is
   // a beat behind the referee and this device's own player is where this device has him
@@ -361,7 +436,25 @@ export function createEngine({ setup, els, on, net = null }) {
   function places(a) {
     const P = s.players, b = s.ball
     if (online && NB.buf.length) {
-      lerpAt(NB.buf, (performance.now() - NB.off) / STEP - DELAY, LP, DB)
+      const now = performance.now(), dt = clamp(now - (NB.pt ?? now), 0, 100); NB.pt = now
+      // the drawing's delay eases to where it should be: never more than a few percent faster or slower than real time
+      // (quicker to give itself room when it has run out of snapshots)
+      const want = NB.lagT, up = NB.starve > 0 ? 0.25 : 0.06
+      NB.lag += clamp(want - NB.lag, -0.04 * dt, up * dt)
+      NB.rk = (now - NB.off - NB.lag) / STEP
+      const over = lerpAt(NB.buf, NB.rk, LP, DB, 3)
+      NB.starve = over > 0 ? over : 0
+      const n2 = N * 2, R = NB.raw, E = NB.E, V = NB.vel
+      for (let j = 0; j < n2 + 3; j++) {
+        const v = j < n2 ? LP[j] : DB[j - n2]
+        // a late snapshot came while he was being carried on past the last one: the difference is eased in, not
+        // jumped (a big one is a real move, a reset between plays: it's shown as it is)
+        if (NB.over > 0 && over < NB.over && dt > 0) { const e = R[j] + V[j] * dt - v; E[j] = Math.abs(E[j] + e) < 2.5 ? E[j] + e : 0 }
+        V[j] = dt > 0 ? (v - R[j]) / dt : V[j]; R[j] = v
+        E[j] *= Math.exp(-dt / 90)
+        if (j < n2) LP[j] = v + E[j]; else DB[j - n2] = v + E[j]
+      }
+      NB.over = over > 0 ? over : 0
       for (let i = 0; i < N; i++) { DX[i] = LP[i * 2]; DY[i] = LP[i * 2 + 1] }
       if (s.phase === 'live' && NB.wasLive) ahead(me, a)
       return
@@ -1335,6 +1428,14 @@ export function createEngine({ setup, els, on, net = null }) {
     }
   }
 
+  // online: a small dot by the shot clock, only when the line is bad (amber: slow or uneven, red: nothing coming in)
+  function netDot(t) {
+    const el = els.net
+    if (!el) return
+    const rtt = net.stats?.rtt || 0, quiet = NB.heardAt ? t - NB.heardAt : 0, behind = NB.lag ?? 0
+    const q = quiet > 700 || rtt > 350 ? 'bad' : rtt > 180 || behind > 180 ? 'warn' : ''
+    if (el.dataset.q !== q) el.dataset.q = q
+  }
   // DEV: how long each frame's work takes and how far apart frames come (a ring, no garbage)
   const PERF = new Float32Array(240), GAP = new Float32Array(240); let pn = 0
   function frame(t) {
@@ -1350,6 +1451,7 @@ export function createEngine({ setup, els, on, net = null }) {
       camera(dt)
     }
     draw(clockNow)
+    if (online && t - (NB.dotT ?? 0) > 500) { NB.dotT = t; netDot(t) }
     PERF[pn++ % 240] = performance.now() - w0
   }
 
@@ -1429,7 +1531,11 @@ export function createEngine({ setup, els, on, net = null }) {
       if (H[key]) return
       H[key] = true; H['t' + key] = true; H['n' + key] = false
       if (key === 'a') H.aT0 = stamp()
-      if (online) { NB.n['abc'.indexOf(key)]++; NB.edge = true; if (key === 'a') NB.aOff = s.players[me].team === s.poss }
+      if (online) {
+        NB.n['abc'.indexOf(key)]++
+        if (key === 'a') { NB.aOff = s.players[me].team === s.poss; jumpNow() }
+        sendNow()
+      }
     } else {
       if (!H[key]) return
       H[key] = false; H['n' + key] = false
@@ -1456,11 +1562,30 @@ export function createEngine({ setup, els, on, net = null }) {
   // (sp: the stick rolled round that way: the spin)
   const flick = (x, y, sp = 0) => {
     H.dq.push([x, y, sp]); if (H.dq.length > MOVE_KEEP) H.dq.shift()
-    if (online) { NB.n[2]++; NB.d.push(sp ? [r2(x), r2(y), sp] : [r2(x), r2(y)]); if (NB.d.length > MOVE_KEEP) NB.d.shift(); NB.edge = true }
+    if (online) { NB.n[2]++; NB.d.push(sp ? [r2(x), r2(y), sp] : [r2(x), r2(y)]); if (NB.d.length > MOVE_KEEP) NB.d.shift(); NB.dT = NB.lt; sendNow() }
   }
   const tap = steal => {
     if (steal) H.ts = true; else H.tj = true
-    if (online) { NB.n[steal ? 3 : 4]++; NB.edge = true }
+    if (online) { NB.n[steal ? 3 : 4]++; if (steal) swipeNow(); else jumpNow(); sendNow() }
+  }
+  // online: his own swipe and his own jump show the moment he makes them, if the referee will take them (the same
+  // rules as the step: sim.js act). Whether the swipe gets it, and what the jump does, is still the referee's
+  function swipeNow() {
+    const p = s.players[me], b = s.ball
+    if (s.phase !== 'live' || !NB.wasLive || p.out || p.act !== 'free' || p.team === s.poss || b.st !== 'held' || p.stealCd > 0) return
+    if (clockNow - NB.swT < gticks(T.stealCd) * STEP) return
+    NB.swT = clockNow
+    poser.on({ e: 'swipe', pid: me }, s, clockNow); haptic('light')
+  }
+  function jumpNow() {
+    const p = s.players[me], b = s.ball
+    if (s.phase !== 'live' || !NB.wasLive || p.out || p.act !== 'free' || NB.jmp || NB.local) return
+    const ballUp = b.st === 'shot' || b.st === 'loose'
+    // (on defense SHOOT is the jump; on offense only with a shot or a loose ball up, never with it in his hands)
+    if (b.st === 'held' && b.holder === me) return
+    if (p.team === s.poss && !ballUp) return
+    NB.jmp = { t: NB.lt, end: null }
+    jmpApply(p)
   }
   function rightFlick(ux, uy) {
     const p = s.players[me], b = s.ball
@@ -1611,10 +1736,12 @@ export function createEngine({ setup, els, on, net = null }) {
     resync() { NB.wasLive = false; NB.local = null; NB.mv.hand = null },
     // DEV: where each player was drawn on the last frame (feet)
     get evlog() { return EVLOG },
+    // DEV: the referee's snapshots as this device keeps them to draw from ({ k, p: x, y per player, b })
+    get nbuf() { return NB.buf },
     // DEV: the last frame's drawing (px in the world: dots [x, y, half], name bars, ball [x, y, r], words)
     get layout() { return LAY },
     get drawn() { return Array.from(DX, (x, i) => [x, DY[i]]) },
-    get netInfo() { return { k: NB.lastK, buf: NB.buf.length, off: NB.off, rel: NB.rel, local: NB.local?.act ?? null, lt: NB.lt, n: NB.n } },
+    get netInfo() { return { k: NB.lastK, rk: NB.rk, buf: NB.buf.length, off: NB.off, rel: NB.rel, local: NB.local?.act ?? null, lt: NB.lt, n: NB.n } },
     pause(on = true) { pausedBy = on; paused = on || document.hidden; last = performance.now() },
     // DEV: the CPU plays the person's player (a level name), or hands him back (null)
     auto(level) { levels[me] = level || null },

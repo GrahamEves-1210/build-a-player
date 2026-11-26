@@ -21,7 +21,7 @@
 //
 //   wss://…/btlive/room/<CODE>   (index.js routes it here)
 import { createGame, step, cpuInput, kothLeave, HZ, GUARD_KEYS, BIG_KEYS, MODES, modeKey } from '../../src/lib/btlive/index.js'
-import { seatNew, seatMsg, seatInput, snapOf, SEND_EVERY, EVENT_KEEP, AWAY_MS } from '../../src/lib/btlive/proto.js'
+import { seatNew, seatMsg, seatInput, snapOf, snapOf2, snapRows, SEND_EVERY, EVENT_KEEP, AWAY_MS, WIRE, SNAP_KEEP } from '../../src/lib/btlive/proto.js'
 import { NBA_GUARD_PLAYERS } from '../../src/data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../../src/data/nba-bigs.js'
 import { blacktopDelta } from '../../src/lib/rating.js'
@@ -165,6 +165,7 @@ export class BtLiveRoom {
   }
   hello(ws, m) {
     const vid = str(m.vid, 64); if (!vid) return
+    ws.wire = m.v === WIRE ? WIRE : 1               // (wire 2: a snapshot every tick, each his own: broadcast)
     if (this.made) {
       // a queue's room: only its three, each with the key he queued with; his build, name and look are already here
       const st = this.seats.find(x => x.vid === vid)
@@ -264,7 +265,7 @@ export class BtLiveRoom {
     // a queue's game: a man whose line has been gone 20 s in all has left it (the other two play it out)
     if (this.made) this.seats.forEach((x, i) => { if (x.vid && (x.awayT ?? 0) > AWAY_FORFEIT_TICKS) this.leave(i, false) })
     for (const e of g.events) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
-    if (g.tick % SEND_EVERY === 0 || g.phase === 'over') this.broadcast()
+    this.broadcast(g.tick % SEND_EVERY === 0 || g.phase === 'over')
     return inputs
   }
   frame() {
@@ -294,8 +295,23 @@ export class BtLiveRoom {
     await bookVs(this.env, people.map(p => ({ uid: p.x.uid, result: out(p) ? 'forfeit' : won(p) ? 'win' : 'loss', position: p.x.pos, match_type: this.mode })))
     if (Object.keys(ratings).length) for (const [w] of this.conns) send(w, { t: 'rated', ratings })
   }
-  broadcast() {
-    const m = JSON.stringify(snapOf(this.g, this.log, this.acks()))
-    for (const [w] of this.conns) { try { w.send(m) } catch {} }
+  // ── the snapshots (proto.js): wire 2 every tick, each device's own (written against the newest one his device has
+  // said it has); wire 1 (an old app) every SEND_EVERY ticks, one for all (old: this tick is one of those)
+  broadcast(old = true) {
+    const g = this.g, acks = this.acks()
+    if (this.histSeed !== this.seed) { this.hist = new Map(); this.histSeed = this.seed }
+    let cur = this.hist.get(g.tick), one = null
+    for (const [w, vid] of this.conns) {
+      if (w.wire === WIRE) {
+        // (a tick's rows are kept as first sent: a device that has that tick has those)
+        if (!cur) {
+          cur = snapRows(g, this.evq); this.hist.set(g.tick, cur)
+          for (const k of this.hist.keys()) if (k < g.tick - SNAP_KEEP || k > g.tick) this.hist.delete(k)
+        }
+        const st = this.seats.find(x => x.vid === vid)
+        const base = st && st.seat.sk >= 0 ? this.hist.get(st.seat.sk) ?? null : null
+        try { w.send(JSON.stringify(snapOf2(g, cur, base, this.log, acks))) } catch {}
+      } else if (old) { one ??= JSON.stringify(snapOf(g, this.log, acks)); try { w.send(one) } catch {} }
+    }
   }
 }
