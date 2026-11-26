@@ -125,7 +125,7 @@ const ART = '/st-silhouette.webp'
 // [lash crescent, iris sliver [cx, cy, rx, ry], opacity, socket [cx, cy, rx, ry], crease, lower lid]
 const EYES = [
   ['M702.4 236.2 Q716 233.2 729.6 242.0 Q716 237.9 702.4 236.2 Z', [716.6, 239.3, 3.1, 0.95], 0.5, [716, 236.6, 15, 6], 'M703.4 232.8 Q716 229.8 728.2 237.6', 'M707 241.2 Q717.4 244.4 727.6 243.4'],
-  ['M743.2 240.0 Q752.0 237.7 759.8 243.5 Q751.7 240.8 743.2 240.0 Z', [751.6, 242.4, 2.9, 1.1], 0.62, [751.4, 240.0, 11.5, 6], 'M744.1 237.4 Q751.6 234.3 758.9 238.3', 'M745.8 244.6 Q752.5 246.8 758.6 245.3'],
+  ['M747.7 240.0 Q756.5 237.7 764.3 243.5 Q756.2 240.8 747.7 240.0 Z', [755.4, 242.6, 2.9, 1.1], 0.62, [751.4, 240.0, 11.5, 6], 'M744.1 237.4 Q751.6 234.3 758.9 238.3', 'M745.8 244.6 Q752.5 246.8 758.6 245.3'],
 ]
 // the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
 // path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
