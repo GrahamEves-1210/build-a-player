@@ -20,7 +20,16 @@
 // when every person still in has asked for it.
 //
 //   wss://…/btlive/room/<CODE>   (index.js routes it here)
-import { createGame, step, cpuInput, kothLeave, HZ, GUARD_KEYS, BIG_KEYS, MODES, modeKey } from '../../src/lib/btlive/index.js'
+//
+// Lag compensation (src/lib/btlive/lagcomp.js has the rule): steals, blocks and contests are judged against the man
+// with the ball where the defender's screen had him, up to 150 ms back, by the defender's round trip. The room learns
+// it two ways, both optional (an older app sends neither and plays as before, no rewind):
+//   referee -> device  sp  { c }      every 2 s: echo it back at once
+//   device -> referee  spr { c }      the echo: the room times the round trip itself (this one wins)
+//                      ping { c, r }  r: the round trip the device last measured (ms), until it answers sp
+// Where the room is made: place.js (the queue's /init names a locationHint near its players).
+import { createGame, step, cpuInput, kothLeave, setLag, HZ, GUARD_KEYS, BIG_KEYS, MODES, modeKey } from '../../src/lib/btlive/index.js'
+import { lagNew, lagRtt, lagRecord } from '../../src/lib/btlive/lagcomp.js'
 import { seatNew, seatMsg, seatInput, snapOf, SEND_EVERY, EVENT_KEEP, AWAY_MS } from '../../src/lib/btlive/proto.js'
 import { NBA_GUARD_PLAYERS } from '../../src/data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../../src/data/nba-bigs.js'
@@ -29,6 +38,12 @@ import { bookRatings, bookVs } from './rating.js'
 import { key, keyOk, reject } from './queue.js'
 
 const STEP_MS = 1000 / HZ
+// THE CLOCK. One tick at a time, each timer set for the next tick's own moment on the room's clock (t0 + tick x
+// STEP_MS: no drift). A timer that comes late runs the one tick it's due and sets the next for at once, so the ticks it
+// owes are caught up one by one, each with the inputs that came in meanwhile read first and its snapshot sent after it.
+// More than CATCH_UP owed (a stall of the isolate) and the rest is let go: the game runs on from now instead of
+// playing the stall out in a burst.
+const CATCH_UP = 3
 const CPU_LEVEL = 'pro'
 // a room the queue made (King of the Hill online, koth.js): how long the room waits for a seat's device to show up
 // before the game starts without him (the CPU plays his seat, and it's a forfeit for him); and how long a man can be
@@ -124,10 +139,22 @@ export class BtLiveRoom {
     if (st && st.ws === ws) st.ws = null
     // nobody left: stop the clock (a room with no one in it costs nothing). A queue's game everyone walked out of
     // is over for all of them: each one left it
-    if (!this.conns.size) { this.stop(); if (this.made && this.g && this.g.phase !== 'over') this.book(true) }
+    if (!this.conns.size) { this.stop(); if (this.made && this.g && this.g.phase !== 'over') this.later(this.book(true)) }
     else this.rematchCheck()
   }
-  stop() { if (this.loop) { clearInterval(this.loop); this.loop = 0 } }
+  stop() { if (this.loop) { clearTimeout(this.loop); this.loop = 0 } }
+  // slow work (Supabase: the ratings, the record) never holds up a tick: it runs on its own, kept alive till it's done
+  later(p) { p = Promise.resolve(p).catch(() => {}); try { this.state?.waitUntil?.(p) } catch {} return p }
+  // a round trip for seat st (ms), smoothed (lagcomp.js lagRtt); kept on the seat for the rematch
+  rtt(st, ms) {
+    const i = this.seats.indexOf(st)
+    if (this.lag) { lagRtt(this.lag, i, ms); st.rtt = this.lag.rtt[i] } else st.rtt = st.rtt ? st.rtt + 0.25 * (ms - st.rtt) : ms
+  }
+  // every 2 s from 2 s in, each person's line is asked for an echo (a new app answers spr { c }; an old one ignores it.
+  // Not at the tip: a device whose screen isn't up yet keeps the first messages in a short queue, for the snapshots)
+  probe(now) {
+    for (const x of this.seats) if (x.ws && x.vid) send(x.ws, { t: 'sp', c: now })
+  }
   setupFor(i) {
     const M = MODES[this.mode]
     return { t: 'seat', i, size: M.perTeam, mode: this.mode, seed: this.seed, seats: this.seats.map(x => ({ name: x.name, pos: x.pos, team: x.team, cpu: !x.vid, look: x.look, build: x.build })) }
@@ -138,13 +165,21 @@ export class BtLiveRoom {
     if (m.t === 'hello') return this.hello(ws, m)
     const vid = this.conns.get(ws); if (!vid) return
     const st = this.seats.find(x => x.vid === vid)
-    if (m.t === 'ping') return send(ws, { t: 'pong', c: m.c, k: this.g?.tick ?? 0 })
+    if (m.t === 'ping') {
+      send(ws, { t: 'pong', c: m.c, k: this.g?.tick ?? 0 })
+      // (r: the round trip his device last measured, ms, for the lag compensation; only until the room times its own)
+      if (st && !st.rttOwn && Number.isFinite(m.r) && m.r > 0) this.rtt(st, m.r)
+      return
+    }
+    // the answer to the room's own probe (sp, below): the round trip as the room times it, what the rewind goes by.
+    // An older app answers neither (no r, no spr): no rewind, the game as it was
+    if (m.t === 'spr' && st && Number.isFinite(m.c) && m.c > 0 && m.c <= now) { st.rttOwn = true; this.rtt(st, Math.max(1, now - m.c)); return }
     if (m.t === 'in' && st) { seatMsg(st.seat, m, now); return }
     if (m.t === 'start' && !this.made && !this.g && this.seats.some(x => x.vid)) return this.begin()
     // a queue's game: he quit (QUIT on his device): out of it at once, the other two play on
     if (m.t === 'quit' && st && this.made && this.g && this.g.phase !== 'over') {
       this.leave(this.seats.indexOf(st))
-      if (this.g.phase === 'over') { this.broadcast(); this.stop(); this.book() } else this.broadcast()
+      if (this.g.phase === 'over') { this.broadcast(); this.stop(); this.later(this.book()) } else this.broadcast()
       return
     }
     if (m.t === 'again' && st && this.g?.phase === 'over') {
@@ -229,6 +264,10 @@ export class BtLiveRoom {
     const M = MODES[this.mode]
     const teams = [...Array(M.teams).keys()].map(t => this.seats.filter(x => x.team === t).map(x => ({ id: `t${t}p${x.slot}`, name: x.name, pos: x.pos, build: x.build })))
     this.g = createGame({ teams, seed: this.seed, mode: this.mode })
+    // the lag compensation (src/lib/btlive/lagcomp.js): each man's round trip carries over from before the tip
+    this.lag = lagNew(this.seats.length)
+    this.seats.forEach((x, i) => { if (x.rtt) this.lag.rtt[i] = x.rtt })
+    setLag(this.g, this.lag)
     this.log = []; this.evq = 0; this.votes.clear()
     for (const x of this.seats) { x.seat = { ...seatNew(), heard: x.seat.heard }; x.awayT = 0 }
     // a queue's game that starts a man short (his device never came): he's out of it from the tip (sim.js kothLeave)
@@ -250,17 +289,23 @@ export class BtLiveRoom {
   run() {
     this.stop()
     this.t0 = Date.now() - (this.g.tick * STEP_MS)
-    this.loop = setInterval(() => this.frame(), STEP_MS)
+    this.next()
   }
+  // the timer for the next tick's moment (at once when one is owed)
+  next() { this.loop = setTimeout(() => this.frame(), Math.max(0, Math.ceil(this.t0 + (this.g.tick + 1) * STEP_MS - Date.now()))) }
   // one tick: every seat's input (a person's own, or the CPU while his line is quiet or the seat has nobody in it)
   tickOnce(now = Date.now()) {
     const g = this.g
+    const L = this.lag
     const inputs = this.seats.map((x, i) => {
-      if (x.vid && now - x.seat.heard < AWAY_MS) return seatInput(x.seat, g, i)
+      const live = x.vid && now - x.seat.heard < AWAY_MS
+      if (L) L.on[i] = live ? 1 : 0
+      if (live) return seatInput(x.seat, g, i)
       if (x.vid) x.awayT = (x.awayT ?? 0) + 1
       return cpuInput(g, i, CPU_LEVEL)
     })
     step(g, inputs)
+    if (L) lagRecord(L, g)
     // a queue's game: a man whose line has been gone 20 s in all has left it (the other two play it out)
     if (this.made) this.seats.forEach((x, i) => { if (x.vid && (x.awayT ?? 0) > AWAY_FORFEIT_TICKS) this.leave(i, false) })
     for (const e of g.events) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
@@ -268,14 +313,17 @@ export class BtLiveRoom {
     return inputs
   }
   frame() {
+    this.loop = 0
     const g = this.g
-    if (!g) return this.stop()
-    // the ticks due by the clock (a late timer catches up, at most a few at once)
-    let due = Math.min(4, Math.floor((Date.now() - this.t0) / STEP_MS) - g.tick)
+    if (!g) return
+    // the ticks owed by the clock: one now (a timer that came early runs none); past CATCH_UP the rest is let go
     const now = Date.now()
-    while (due-- > 0 && g.phase !== 'over') this.tickOnce(now)
+    let owed = Math.floor((now - this.t0) / STEP_MS) - g.tick
+    if (owed > CATCH_UP) { this.t0 += (owed - CATCH_UP) * STEP_MS; owed = CATCH_UP }
+    if (owed > 0 && g.phase !== 'over') { this.tickOnce(now); if (g.tick % (2 * HZ) === 1 && g.tick > 2 * HZ) this.probe(now) }
     while (this.log.length && this.log[0].k < g.tick - EVENT_KEEP) this.log.shift()
-    if (g.phase === 'over') { this.broadcast(); this.stop(); if (this.made) this.book() }
+    if (g.phase === 'over') { this.broadcast(); if (this.made) this.later(this.book()); return }
+    this.next()
   }
   // A queue's game is over (or everyone walked out of it): each man's rating (src/lib/rating.js, as in the lobbies:
   // the winner +20, the other one still in -12, a man who left -20) and the King of the Hill record (vs_results 'koth'),

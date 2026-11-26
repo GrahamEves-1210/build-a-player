@@ -39,6 +39,7 @@ import { handleReset } from './reset.js'
 import { countPoster, ONE_PER_DEVICE } from './queue.js'
 // Blacktop Live (the real-time game): its rooms, the referee (btlive.js), and King of the Hill's queue (koth.js)
 import { BtLiveRoom } from './btlive.js'
+import { geoOf, hintFor, withGeo } from './place.js'
 import { KothQueue } from './koth.js'
 export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom, Games, BtLiveRoom, KothQueue }
 
@@ -117,9 +118,11 @@ export default {
     const au = url.pathname.match(/^\/auction\/room\/([A-Z0-9]{6})$/)
     if (au) return env.AUCTION_ROOM.get(env.AUCTION_ROOM.idFromName(au[1])).fetch(req)
     // King of the Hill (Blacktop Live): the queue, and the rooms the queue makes (a dev link's room: btlive.js)
-    if (url.pathname === '/btlive/koth') return env.KOTH_QUEUE ? env.KOTH_QUEUE.get(env.KOTH_QUEUE.idFromName('koth')).fetch(req) : new Response('not found', { status: 404 })
+    // (the queue is told where each line came in from, so it makes each room near its three: place.js)
+    if (url.pathname === '/btlive/koth') return env.KOTH_QUEUE ? env.KOTH_QUEUE.get(env.KOTH_QUEUE.idFromName('koth')).fetch(withGeo(req)) : new Response('not found', { status: 404 })
     const bl = url.pathname.match(/^\/btlive\/room\/([A-Z0-9]{6})$/)
-    if (bl) return env.BTLIVE_ROOM ? env.BTLIVE_ROOM.get(env.BTLIVE_ROOM.idFromName(bl[1])).fetch(req) : new Response('not found', { status: 404 })
+    // (a room the queue made is already where it is; a dev room is made here, by its first player's call, near him)
+    if (bl) { if (!env.BTLIVE_ROOM) return new Response('not found', { status: 404 }); const hint = hintFor([geoOf(req, false)]); return env.BTLIVE_ROOM.get(env.BTLIVE_ROOM.idFromName(bl[1]), hint ? { locationHint: hint } : undefined).fetch(req) }
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{6})$/)
     if (m) return env.ROOM.get(env.ROOM.idFromName(m[1])).fetch(req)
     return new Response('not found', { status: 404 })

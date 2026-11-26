@@ -9,6 +9,7 @@
 import { BaseQueue, accept, pub, str, send, countPoster, code6, key, reject } from './queue.js'
 import { NBA_GUARD_PLAYERS } from '../../src/data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../../src/data/nba-bigs.js'
+import { geoOf, hintFor } from './place.js'
 
 export const KOTH_SEATS = 3
 // what a man is called in the game: his account's username, or (no account) Guest and his place in the queue, so three
@@ -28,12 +29,15 @@ export class KothQueue extends BaseQueue {
     // (min = size: never fewer than three; fillSecs only matters below the full count, so it never runs)
     super(state, env, { size: KOTH_SEATS, min: KOTH_SEATS, fillSecs: 3600, room: 'BTLIVE_ROOM' })
     this.picks = new Map()      // vid → his pick (set before the hello is taken, so the third man's hello can start it)
+    this.busy = new Set()       // vids being put in a room right now (the room's /init is out): in nobody else's match
   }
-  async fetch() {
+  async fetch(req) {
     // the menu's "2 SEARCHING" (games.js): bt:koth, next to the lobbies' bt:1 and bt:2
     this.count ??= countPoster(this.env, 'bt:koth')
-    return accept(this)
+    // (where his line came in from, index.js withGeo: the room is made near the three of them, place.js)
+    return accept(this, req ? geoOf(req) : null)
   }
+  waiting() { return super.waiting().filter(p => !this.busy.has(p.vid)) }
   // who's waiting, with the player each one picked (everyone sees the picks: nothing is hidden in this game)
   state() {
     const list = this.waiting().map((p, i) => ({ ...named(p, i), pick: this.picks.get(p.vid) ?? null }))
@@ -65,9 +69,21 @@ export class KothQueue extends BaseQueue {
     const code = code6()
     const players = list.map((p, i) => ({ ...named(p, i), pick: this.picks.get(p.vid) }))
     const keys = Object.fromEntries(list.map(p => [p.vid, p.key || null]))
-    const ns = this.env.BTLIVE_ROOM
-    await ns.get(ns.idFromName(code)).fetch('https://btlive/init', { method: 'POST', body: JSON.stringify({ code, mode: 'koth', players, keys }) })
     const vids = new Set(players.map(p => p.vid))
+    // the room, made near them: the hint counts only now, as /init makes it (place.js). While it's out, these three
+    // are in no other match (a fourth man's hello can't start a second room with them) and the queue goes on
+    const geos = players.map(p => [...this.conns].find(([, q]) => q.vid === p.vid)?.[0]?.geo ?? null)
+    const hint = hintFor(geos)
+    const ns = this.env.BTLIVE_ROOM
+    for (const v of vids) this.busy.add(v)
+    let made = false
+    try {
+      const r = await ns.get(ns.idFromName(code), hint ? { locationHint: hint } : undefined).fetch('https://btlive/init', { method: 'POST', body: JSON.stringify({ code, mode: 'koth', players, keys, hint }) })
+      made = !!r?.ok
+    } catch {}
+    for (const v of vids) this.busy.delete(v)
+    // (the room couldn't be made: they wait on, and it tries again in a second)
+    if (!made) { this.retry ??= setTimeout(() => { this.retry = null; this.makeMatch() }, 1000); return this.broadcast() }
     for (const [w, p] of this.conns) if (vids.has(p.vid)) { send(w, { t: 'match', code, players }); this.conns.delete(w); try { w.close(1000, 'matched') } catch {} }
     for (const v of vids) this.picks.delete(v)
     this.broadcast()
