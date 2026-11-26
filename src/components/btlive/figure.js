@@ -77,7 +77,7 @@ function frame(f) {
   BW = f.look?.bw ?? 1; SH = SH0 * BW
   // a big's arms and legs are thicker in the same measure as his shoulders are broader (the owner, 11-26: a big's arms
   // read as thin sticks off broad shoulders)
-  AW = BW
+  AW = 1 + 0.15 * (BW - 1)
   TW = clamp(f.tw || 0, -0.3, 0.3); TWc = Math.cos(TW); TWs = Math.sin(TW); HIP = clamp(f.hip || 0, -0.3, 0.3)
 }
 // a point in his frame on the screen: out = [px, py, the same point on the floor's py] (the ball in his hand, its shadow)
@@ -114,7 +114,7 @@ let SH = SH0, BW = 1, AW = 1
 // half the distance), so an arm at his side hangs by his hip instead of sticking out like a wing, a defender's arms are
 // still out wide, and the ball stays under the hand
 const across = y => { const a = Math.abs(y); return Math.sign(y) * (a <= 0.33 ? a * SH / 0.33 : SH + (a - 0.33) * 0.62) }
-const REACH = 0.5
+const REACH = 0.32
 
 // ── the drawing pieces. A man is drawn in two passes, all of his ink first and then all of his fills on top
 // (PASS), so the parts melt into one shape with a single clean outline round the whole man and no lines inside him
@@ -160,15 +160,17 @@ export function armPts(side, hand) {
   const j = tw(0, side * SH), sx = j[0], sy = j[1]
   fore(hand[0], across(hand[1]), hand[2] || 0)
   let dx = FO[0] - sx, dy = FO[1] - sy
-  const h = Math.hypot(dx, dy) || 0.001
-  if (h > REACH) { dx *= REACH / h; dy *= REACH / h }
+  // (no arm reads long from above: low, it reaches at most a third of a stride out; raised, it's mostly hidden in
+  // its own foreshortening and shows no more than about 0.4 of his width out from the shoulder)
+  const h = Math.hypot(dx, dy) || 0.001, cap = REACH - 0.1 * clamp(((hand[2] || 0) - 0.35) / 0.15, 0, 1)
+  if (h > cap) { dx *= cap / h; dy *= cap / h }
   return [sx, sy, sx, sy, sx + dx, sy + dy]
 }
 // One arm, in one outline: the deltoid's round cap at the shoulder, the arm tapering from it to the wrist, a small
 // neat hand. Every measure goes with his build (AW), so a big's arm is in proportion to his shoulders. An arm hanging
 // at his side shows from above as no more than the deltoid and the top of the arm: one smooth teardrop, no stub
 // (hi: an arm raised over his head and shoulders, drawn after him: its deltoid stays under the jersey)
-const R_DELT = 0.05, R_ARM = 0.037, R_WRIST = 0.026, R_HAND = 0.029
+const R_DELT = 0.047, R_ARM = 0.033, R_WRIST = 0.024, R_HAND = 0.027
 function arm(ctx, side, hand, L, ink, hi = false, deltOnly = false) {
   const [sx, sy, , , hx, hy] = armPts(side, hand)
   const z = clamp(hand[2] || 0, 0, 1.2), len = Math.hypot(hx - sx, hy - sy)
@@ -180,6 +182,14 @@ function arm(ctx, side, hand, L, ink, hi = false, deltOnly = false) {
   // the arm itself: from just out of the deltoid (inside its cap) to the hand, one taper, the hand its rounded end
   const ux = (hx - sx) / (len || 1), uy = (hy - sy) / (len || 1), o = Math.min(len * 0.5, rd * 0.4)
   if (len > 0.01) seg(ctx, sx + ux * o, sy + uy * o, hi ? ra * 1.05 : ra, hx, hy, Math.max(rEnd, rH * 0.92), L.skin, L.skinD, ink)
+}
+
+// a raised hand, over his head and shoulders: small and round, its own outline
+function hand(ctx, side, hnd, L, ink) {
+  const [, , , , hx, hy] = armPts(side, hnd)
+  // (only a hand over his jersey or head: one out past them already shows on the end of its arm)
+  if (!(hx < 0.11 && hx > -0.13 && Math.abs(hy) < 0.23 * BW)) return
+  ovalS(ctx, hx, hy, R_HAND * AW * 0.98, R_HAND * AW * 0.9, L.skin, L.skinD, ink)
 }
 
 // ── the legs: a leg in a stride, from his hip under the shorts to his shoe. The shorts' leg down his thigh, then his
@@ -218,7 +228,9 @@ function shorts(ctx, f, L, ink) {
 // the jersey: a sleeveless top seen from above, turned with his shoulders. Square across the shoulder straps, the
 // chest a little narrower in front, the upper back flat; his deltoids come out of the armholes (arm), the neckline
 // scoops round his neck
-const JPTS = [[0.1, 0], [0.098, 0.11], [0.072, 0.188], [0.012, 0.226], [-0.07, 0.214], [-0.114, 0.152], [-0.124, 0.06], [-0.124, -0.06], [-0.114, -0.152], [-0.07, -0.214], [0.012, -0.226], [0.072, -0.188], [0.098, -0.11]]
+// (squared off at the shoulders: a flat line across the top of each shoulder from the front of the strap to the
+// back, so a big's broader frame reads as a shoulder line, not a wider oval)
+const JPTS = [[0.1, 0], [0.099, 0.1], [0.09, 0.172], [0.06, 0.214], [0.01, 0.23], [-0.06, 0.228], [-0.106, 0.208], [-0.124, 0.15], [-0.128, 0.05], [-0.128, -0.05], [-0.124, -0.15], [-0.106, -0.208], [-0.06, -0.228], [0.01, -0.23], [0.06, -0.214], [0.09, -0.172], [0.099, -0.1]]
 function torso(ctx, f, L, ink) {
   const ln = f.lean || 0
   const P = (lx, ly) => { const t = tw(lx, ly * BW); return [PX(t[0] + ln, t[1]), PY(t[0] + ln, t[1])] }
@@ -307,23 +319,19 @@ export function drawFigure(ctx, f) {
   frame(f)
   const L = f.look, ink = Math.max(1, FR.sc * 0.026)
   const lz = f.lh[2] || 0, rz = f.rh[2] || 0
-  // the man in one piece (ink, then fills), then a raised arm over his head the same way
+  // the man in one piece (ink, then fills). A raised arm is in it too, under his jersey and head: from straight
+  // above a raised arm is foreshortened to almost nothing, so only what reaches out past his shoulders and head shows,
+  // and the hand itself, up over everything (on the ball at his forehead on a jumper, at the rim on a dunk)
   for (PASS = 0; PASS < 2; PASS++) {
     leg(ctx, -1, f.lf, f.toeL || 0, L, ink); leg(ctx, 1, f.rf, f.toeR || 0, L, ink)
     shorts(ctx, f, L, ink)
-    arm(ctx, -1, f.lh, L, ink, false, lz >= 0.6); arm(ctx, 1, f.rh, L, ink, false, rz >= 0.6)
+    arm(ctx, -1, f.lh, L, ink); arm(ctx, 1, f.rh, L, ink)
     torso(ctx, f, L, ink)
     head(ctx, f, L, ink)
   }
-  // (a raised arm goes over his shoulders and under his head: from straight above the top of his head stays the
-  // highest thing on him but his hands and the ball, so it's drawn again over the arms, and his arms read from his
-  // shoulders up instead of crossing his face)
-  if (lz >= 0.6 || rz >= 0.6) {
-    for (PASS = 0; PASS < 2; PASS++) {
-      if (lz >= 0.6) arm(ctx, -1, f.lh, L, ink, true)
-      if (rz >= 0.6) arm(ctx, 1, f.rh, L, ink, true)
-    }
-    for (PASS = 0; PASS < 2; PASS++) head(ctx, f, L, ink)
+  if (lz >= 0.6 || rz >= 0.6) for (PASS = 0; PASS < 2; PASS++) {
+    if (lz >= 0.6) hand(ctx, -1, f.lh, L, ink)
+    if (rz >= 0.6) hand(ctx, 1, f.rh, L, ink)
   }
 }
 export { clamp }

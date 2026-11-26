@@ -192,11 +192,11 @@ export function createPoser(N) {
     }
     // off the ball, on offense: hands ready for a pass on its way; one arm up, held, when he calls for it
     if (live && !has && p.team === s.poss && p.act === 'free') {
-      if (b.st === 'pass' && b.to === i) { set3(TL, 0.23, -0.2, 0.5); set3(TR, 0.23, 0.2, 0.5) }
+      if (b.st === 'pass' && b.to === i) { set3(TL, 0.17, -0.08, 0.45); set3(TR, 0.17, 0.08, 0.45) }
       else if (s.call && s.call.pid === i && s.tick - s.call.tick < 40) set3(TR, 0.1, 0.42, 1)
     }
     // the check coming to him: both hands out for it
-    if (b.st === 'check' && b.to === i) { set3(TL, 0.23, -0.2, 0.5); set3(TR, 0.23, 0.2, 0.5) }
+    if (b.st === 'check' && b.to === i) { set3(TL, 0.17, -0.08, 0.45); set3(TR, 0.17, 0.08, 0.45) }
 
     // ── the ball in his hands ──
     if (has && p.act !== 'gather') {
@@ -225,7 +225,7 @@ export function createPoser(N) {
       if (t < dur) {
         const w = t < 90 ? out3(t / 90) : 1 - ease((t - 90) / (dur - 90))
         const la = wrap(a.swipe.a - a.ang), sd = Math.sin(la) >= 0 ? 1 : -1
-        mix3(sd > 0 ? TR : TL, 0.06 + Math.cos(la) * 0.28, sd * 0.36 + Math.sin(la) * 0.24, 0.4, w)
+        mix3(sd > 0 ? TR : TL, 0.06 + Math.cos(la) * 0.2, sd * 0.38 + Math.sin(la) * 0.16, 0.4, w)
         z.lean = Math.max(z.lean, 0.08 * w)
         fast = true
       } else a.swipe = null
@@ -243,7 +243,7 @@ export function createPoser(N) {
       const board = (b.st === 'shot' || b.st === 'loose') && !guarding
       // (straight up, a touch forward: from above an arm reaching up is short, the hand over the shoulder)
       if (board || p.team === s.poss) { set3(TL, 0.13, -0.24, 1); set3(TR, 0.13, 0.24, 1) }
-      else { set3(TR, 0.2, 0.17, 1); set3(TL, 0.15, -0.23, 0.95) }
+      else { set3(TR, 0.2, 0.17, 1); set3(TL, 0.1, -0.42, 0.4) }
       z.lf[0] = -0.08; z.rf[0] = -0.1; z.lf[1] = -0.13; z.rf[1] = 0.13
       a.land = now; fast = true
     } else if (p.act === 'land' || (a.land && now - a.land < 150)) {
@@ -528,7 +528,7 @@ export function createPoser(N) {
       z.scale = 1 - 0.04 * Math.sin(Math.PI * c01(g / 0.4))
       z.air = 0.7 * ease((g - 0.4) / 0.6) + 0.1 * c01(g - 1)
       set3(z.bl, 0.28 - 0.07 * r, 0.06, 3 + 5.3 * r)
-      set3(TR, 0.26 - 0.08 * r, 0.12, 0.35 + 0.65 * r); set3(TL, 0.28 - 0.06 * r, -0.08, 0.35 + 0.55 * r)
+      set3(TR, 0.26 - 0.06 * r, 0.12 - 0.05 * r, 0.35 + 0.65 * r); set3(TL, 0.28 - 0.06 * r, -0.08 + 0.03 * r, 0.35 + 0.6 * r)
       z.lf[0] = 0.04; z.rf[0] = 0.08; z.lf[1] = -0.15; z.rf[1] = 0.15
       // pulling up on the move: a hard plant (a hop into a wide stance, his weight back to stop himself), then the
       // body carries on a little the way he was going while he's up (the drift); the quicker he was going, the more
@@ -550,7 +550,7 @@ export function createPoser(N) {
       // two steps with it tucked, then up off one foot, the ball out in front on one hand
       const r = ease((g - 0.4) / 0.6)
       z.air = 0.9 * r
-      const hx = 0.26 + 0.28 * r, hy = sd * (0.3 - 0.2 * r)
+      const hx = 0.26 + 0.16 * r, hy = sd * (0.3 - 0.2 * r)
       set3(z.bl, hx + 0.05, hy, 3.2 + 5.2 * r)
       const bh = sd > 0 ? TR : TL, oh = sd > 0 ? TL : TR
       set3(bh, hx, hy, 0.4 + 0.6 * r); set3(oh, 0.2 - 0.1 * r, -sd * (0.3 + 0.2 * r), 0.36)
@@ -579,9 +579,9 @@ export function createPoser(N) {
       z.scale = 1 - 0.07 * Math.sin(Math.PI * c01(g / 0.5)) * (1 - r)
       z.air = 1.15 * r
       const bh = sd > 0 ? TR : TL, oh = sd > 0 ? TL : TR
-      const hx = 0.22 - 0.42 * r, hy = sd * (0.3 - 0.14 * r)
+      const hx = 0.2 - 0.24 * r, hy = sd * (0.3 - 0.12 * r)
       set3(z.bl, hx - 0.03 * r, hy, 2.6 + 8 * r)
-      set3(bh, hx + 0.04, hy, 0.38 + 0.62 * r); set3(oh, 0.22 + 0.12 * r, -sd * (0.14 + 0.08 * r), 0.38 + 0.4 * r)
+      set3(bh, hx + 0.04, hy, 0.38 + 0.62 * r); set3(oh, 0.14 - 0.04 * r, -sd * (0.3 + 0.08 * r), 0.38)
       z.lf[0] = 0.18 * (1 - r) - 0.22 * r; z.rf[0] = -0.04 * (1 - r) - 0.28 * r; z.lf[1] = -0.14; z.rf[1] = 0.14
       z.lean = 0.05 + 0.05 * r
       glide(z, env, toRim, dRim, 0.55 * r * r)
@@ -594,7 +594,7 @@ export function createPoser(N) {
   function glide(z, env, toRim, dRim, w) {
     if (dRim < 0.3 || w <= 0) return
     // (the hand as drawn: a raised arm is foreshortened, figure.js; lift: how far up the screen he's drawn for his height)
-    const reach = 0.34 * env.sFt * (1 + 0.16 * z.air), lift = z.air * env.sFt * 0.2
+    const reach = 0.26 * env.sFt * (1 + 0.16 * z.air), lift = z.air * env.sFt * 0.2
     const cx = RIM.x - Math.cos(z.ang) * reach, cy = RIM.y - HOOP_LIFT - Math.sin(z.ang) * reach + lift
     z.ox = (cx - env.x) * w; z.oy = (cy - env.y) * w
   }
@@ -616,13 +616,13 @@ export function createPoser(N) {
       const w = c01(t / fly), thr = out3(w)
       z.air = Math.max(R.air, 1.15) * up + (slam && since < DUNK.hang ? 0.04 * Math.sin(since / 40) : 0)
       // the arm comes over the top and down through the rim; on the hang his legs swing through under it
-      set3(bh, -0.22 + 0.8 * thr, sd * 0.16 * (1 - thr), 1); set3(oh, 0.34 - 0.1 * thr, -sd * 0.24, 0.75 - 0.3 * thr)
+      set3(bh, -0.04 + 0.5 * thr, sd * 0.18 * (1 - thr), 1); set3(oh, 0.1, -sd * 0.38, 0.4)
       const swing = slam ? Math.sin(Math.PI * c01(since / (DUNK.hang + DUNK.drop * 0.6))) : 0
       z.lf[0] = -0.22 + 0.46 * swing; z.rf[0] = -0.28 + 0.5 * swing; z.lf[1] = -0.14; z.rf[1] = 0.14
       z.lean = 0.08 - 0.14 * swing
       if (up <= 0.02) { const l = c01((since - (total - DUNK.land)) / DUNK.land); z.scale = 0.93 + 0.07 * l; z.lf[0] = 0.06; z.rf[0] = 0.06; z.lf[1] = -0.24 + 0.08 * l; z.rf[1] = 0.24 - 0.08 * l; set3(bh, 0.18, sd * 0.5, 0.3); set3(oh, 0.18, -sd * 0.5, 0.3); z.lean = 0.04 }
       glide(z, env, toRim, dRim, (0.55 + 0.45 * thr) * Math.min(1, up * 1.6))
-      if (!slam && !miss) { z.ball = true; z.two = false; set3(z.bl, -0.22 + 0.8 * thr + 0.05, sd * 0.16 * (1 - thr), 10.6) }
+      if (!slam && !miss) { z.ball = true; z.two = false; set3(z.bl, -0.04 + 0.5 * thr + 0.05, sd * 0.18 * (1 - thr), 10.6) }
       a.gAir = z.air
       return true
     }
@@ -637,7 +637,7 @@ export function createPoser(N) {
       // a drifting jumper lands where the drift took him, and the body settles back over his feet
       if (a.gOx || a.gOy) { const back = 1 - ease(t / 260); z.ox = a.gOx * back; z.oy = a.gOy * back; if (back <= 0) a.gOx = a.gOy = 0 }
     }
-    else { mix3(bh, 0.54 + 0.02 * snap, sd * 0.06, 1 - 0.2 * ease(t / 300), hold); mix3(oh, 0.06, -sd * 0.44, 0.3, hold) }
+    else { mix3(bh, 0.42 + 0.02 * snap, sd * 0.06, 1 - 0.2 * ease(t / 300), hold); mix3(oh, 0.06, -sd * 0.44, 0.3, hold) }
     return t < 200
   }
 
