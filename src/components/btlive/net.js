@@ -49,7 +49,7 @@ export function openNet({ server, room, hello, lag = null, onMsg, onState }) {
   function close() { dead = true; clearTimeout(timer); const old = ws; ws = null; if (old) { old.onclose = null; try { old.close(1000, 'bye') } catch {} } }
   // the round trip, every 2 s (the referee answers at once)
   // ...and a socket that has said nothing for 3 s is taken for dead (a phone's line can die without closing)
-  const ping = setInterval(() => { send({ t: 'ping', c: performance.now() }); if (ws && stats.open && performance.now() - heard > 3000) lost() }, 1000)
+  const ping = setInterval(() => { send({ t: 'ping', c: performance.now(), r: stats.rtt || undefined }); if (ws && stats.open && performance.now() - heard > 3000) lost() }, 1000)
   const stop = net.close
   net.close = () => { clearInterval(ping); stop() }
   net.pong = m => { stats.rtt = Math.round(performance.now() - m.c) }

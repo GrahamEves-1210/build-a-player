@@ -7874,6 +7874,17 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
   .ag-cards--duo > .ag-mc--salary .ag-mc-shot img { margin-top: -16%; }
 }
 @media (min-width: 1024px) { html.app-look .ag-cards.ag-cards--duo { grid-template-columns: 1.45fr 1fr; } }
+/* soccer: Career, Salary Cap and the Trait Auction. Desktop: the three on one row; phones: Career a whole row, the other
+   two side by side under it, like football's (owner 11-26) */
+@media (max-width: 1023px) {
+  .ag-cards.ag-cards--trio { grid-template-columns: 1fr 1fr !important; }
+  .ag-cards.ag-cards--trio > .ag-mc { grid-column: auto !important; }
+  .ag-cards.ag-cards--trio > .ag-mc--career { grid-column: 1 / -1 !important; }
+  .ag-cards--trio > .ag-mc--salary { min-height: 0; }
+  .ag-cards--trio > .ag-mc--salary .ag-mc-shot { top: auto; left: auto; right: auto; }
+  .ag-cards--trio > .ag-mc--salary .ag-mc-shot img { margin-top: 0; }
+}
+@media (min-width: 1024px) { html.app-look .ag-cards.ag-cards--trio { grid-template-columns: 1.3fr 1fr 1fr; } }
 .ag-more:empty { display: none; }
 /* Phone Home: the sport bar and the stage (the figure and the position bar) sit in the same side gaps as the cards
    under them, not edge to edge (owner 11-25) */

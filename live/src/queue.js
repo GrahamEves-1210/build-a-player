@@ -16,9 +16,10 @@ export const keyOk = (keys, vid, k) => !keys?.[vid] || keys[vid] === k
 export const reject = (ws, why = 'seat') => { send(ws, { t: 'taken', why }); try { ws.close(1000, 'seat taken') } catch {} }
 import { whoIs } from './auth.js'
 import { competeMode } from '../../src/lib/competeCore.js'
-export const accept = (self) => {
+export const accept = (self, geo = null) => {
   const [client, server] = Object.values(new WebSocketPair())
   server.accept()
+  server.geo = geo              // (where the line came in from: place.js, for a queue that places its rooms)
   server.addEventListener('message', e => self.onMessage(server, e.data))
   const bye = () => self.onClose(server)
   server.addEventListener('close', bye); server.addEventListener('error', bye)
