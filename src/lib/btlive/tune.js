@@ -222,7 +222,7 @@ export const T = {
   hesiTo: 22.5, crossTo: 67.5, btlTo: 112.5, btbTo: 157.5,
   spinTurn: 60, spinMax: 150,        // a second flick this far round from the first (and no farther), early in the move: a spin
   spinWithin: 0.5,                   // ...inside this share of the first move
-  moveBuffer: 0.32,                  // a flick made while a move is still on goes the moment it can (the chain), this long at most
+  moveBuffer: 0.5,                   // a flick made while a move is still on goes the moment it can (the chain), this long at most
   chainRec: 0.12, chainRecHnd: 0.06, // after a move, this long (less at Handles 11) before the next one starts
   chainSlow: 0.7, chainGap: 0.4,     // a move started this soon after the last one ended goes at this share of its speed
   moveSpeed: 1.95,                   // the fastest any move goes, x top speed (what a device's own position is held to)

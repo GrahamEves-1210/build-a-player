@@ -51,9 +51,10 @@ for (let n = 0; n < 40; n++, n2 += 4) {
   ok(o.length === 0, 'a steady quarter turn (600 ms): no move')
 }
 const K = createTaps()
-ok(K.down('a', 0, [0, 0], [-1, 0]) === false && K.up('a', 120) === true, 'a tap: a move as it comes up')
-ok(K.down('a', 0, [0, 0], [-1, 0]) === false && K.up('a', 400) === false, 'a key held: no move')
-ok(K.down('a', 0, [1, 0], [-1, 0]) === true && K.up('a', 100) === false, 'D held, then A: a move at once (and not again on the way up)')
+ok(K.down('a', 0, [0, 0], [-1, 0]) === false && K.up('a', 120, [-1, 0], [0, 0]) === 'tap', 'a tap: a move as it comes up')
+ok(K.down('a', 0, [0, 0], [-1, 0]) === false && K.up('a', 400, [-1, 0], [0, 0]) === null, 'a key held: no move')
+ok(K.down('d', 0, [0, 0], [1, 0]) === false && K.down('a', 300, [1, 0], [0, 0]) === false && K.up('d', 380, [1, 0], [-1, 0]) === 'turn', 'D held, A pressed too, D let go: a move left (the screen hands it the way he was going)')
+ok(K.down('a', 0, [1, 0], [-1, 0]) === true && K.up('a', 100, [-1, 0], [0, 0]) === null, 'D held, then A: a move at once (and not again on the way up)')
 ok(K.down('d', 0, [0, -1], [Math.SQRT1_2, -Math.SQRT1_2]) === false, 'W held, D added: a drift, no move')
 ok(K.down('s', 0, [0, -1], [0, 0]) === false, 'W held, S pressed (stop): no move')
 console.log(`${n1} quick motions, ${n2} steady ones, 5 key cases: ${fails ? `${fails} FAILED` : 'all ok'}`)

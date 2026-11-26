@@ -35,8 +35,14 @@ export function createGesture(o = GEST) {
     // a quick motion read, waiting for the thumb to land where it's going (still for a sample, or GEST.settleMs on)
     if (pend) {
       const p = H[H.length - 2], r = Math.hypot(x, y)
+      // (no word from the thumb for a while: it stayed where it last was, so that's where the move goes)
+      if (t - pend.t >= o.settleMs && Math.hypot(p.x - x, p.y - y) > o.still) {
+        const ms = p.t - pend.from
+        pend = null; lock = p.t
+        return Math.hypot(p.x, p.y) >= o.out * 0.8 ? { kind: 'flick', dir: unit(p.x, p.y), ms } : null
+      }
       if (r < o.out * 0.8) { pend = null; return null }
-      if (Math.hypot(p.x - x, p.y - y) > o.still && t - pend.t < o.settleMs) return null
+      if (Math.hypot(p.x - x, p.y - y) > o.still) return null
       const ms = t - pend.from
       pend = null; lock = t
       return { kind: 'flick', dir: unit(x, y), ms }
@@ -46,11 +52,12 @@ export function createGesture(o = GEST) {
     if (r < o.out) return null
     // the farthest the stick was from here inside the window
     let far = null, fd = 0
+    // (a sample holds till the next one comes: where the stick was as the window opened counts too)
     for (let i = H.length - 2; i >= 0; i--) {
-      const h = H[i]
-      if (t - h.t > o.winMs) break
+      const h = H[i], old = t - h.t > o.winMs
       const d = Math.hypot(h.x - x, h.y - y)
-      if (d > fd) { fd = d; far = h }
+      if (d > fd) { fd = d; far = old ? { t: t - o.winMs, x: h.x, y: h.y } : h }
+      if (old) break
     }
     if (!far || fd < o.dist) return null
     // (the thumb only just landed and pushed straight out: that's starting to move, not a flick)
@@ -69,19 +76,26 @@ export function createGesture(o = GEST) {
 // keys held at the time (W held and A tapped: up and left); a new key that turns the way he's going hard (a quarter
 // turn or more: D held, then A, or W held and D pressed) is the move the new way at once.
 //   down(k, t, before, after): before/after are the stick's way (unit, or [0, 0]) as the key goes down. Returns true
-//   when that is a move now (the change of direction). up(k, t): true when the key was a tap (a move now)
+//   when that is a move now (the change of direction). up(k, t, before, after): 'turn', 'tap' or null
 export const TAPS = { tapMs: 170, turnDeg: 60 }
 export function createTaps(o = TAPS) {
   const down = new Map()            // key -> { t, fired }
   const turnCos = Math.cos(o.turnDeg * Math.PI / 180)
+  const turned = (a, b) => Math.hypot(a[0], a[1]) > 0.5 && Math.hypot(b[0], b[1]) > 0.5 && a[0] * b[0] + a[1] * b[1] <= turnCos
   return {
+    // a key going down: true when it turns him hard (a move the new way, now)
     down(k, t, before, after) {
-      const moving = Math.hypot(before[0], before[1]) > 0.5, going = Math.hypot(after[0], after[1]) > 0.5
-      const turn = moving && going && before[0] * after[0] + before[1] * after[1] <= turnCos
+      const turn = turned(before, after)
       down.set(k, { t, fired: turn })
       return turn
     },
-    up(k, t) { const d = down.get(k); down.delete(k); return !!d && !d.fired && t - d.t <= o.tapMs },
+    // a key coming up: 'turn' when letting it go turns him hard (D and A both held, D let go: he's going left now),
+    // 'tap' when it was a quick tap (the move the way it pointed), else null
+    up(k, t, before = [0, 0], after = [0, 0]) {
+      const d = down.get(k); down.delete(k)
+      if (turned(before, after)) return 'turn'
+      return d && !d.fired && t - d.t <= o.tapMs ? 'tap' : null
+    },
     reset() { down.clear() },
   }
 }

@@ -137,6 +137,9 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
       else if (e.e === 'oob') { sfx('whistle'); say('OUT OF BOUNDS', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
+      // King of the Hill's check-up: CHECK under the king as the man guarding him bounces it over; the bounce heard
+      else if (e.e === 'checkup') { const q = s.players[e.to]; say('CHECK', q.x, q.y + 5.5, '#fff', false, 700) }
+      else if (e.e === 'checkbounce') sfx('dribble', 0.8)
       else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.dq.length = 0; NB.aUsed = NB.n[0] }
       // a stop: no check, his side takes it back past the arc (the arc pulses for a few seconds, then stays lit till
       // it's done; not if he secured it behind the arc already, the same tick)
@@ -983,7 +986,15 @@ export function createEngine({ setup, els, on, net = null }) {
       if (hoopDone) return
       hoopDone = true
       drawHoop(ctx, k, sway, 'back')
-      if (ballK === 'net' && !ballDone) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
+      if (ballK === 'net' && !ballDone) {
+        drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true
+        // in the net: the front strings over it
+        const rx = RIM.x * k + (sway?.[0] || 0), ry = RIM.y * k + (sway?.[1] || 0), r0 = k * C_RIMR * 1.05, nh = k * 0.95
+        ctx.strokeStyle = 'rgba(245,245,240,.85)'; ctx.lineWidth = Math.max(1, k * 0.07)
+        ctx.beginPath()
+        for (let j = -3; j <= 3; j++) { const t = j / 3; ctx.moveTo(rx + t * r0, ry + r0 * 0.5); ctx.lineTo(rx + t * r0 * 0.55, ry + nh) }
+        ctx.stroke()
+      }
       drawHoop(ctx, k, sway, 'front')
       rimFx(now)
     }
@@ -1006,19 +1017,10 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     hoop()
     if (!ballDone) drawBall(BX, BY, bsc, GX, GY, bz, false)
-    // through the net: a make dropping under the rim has the net's strings over it
-    if (b.st === 'dead' && b.verdict?.made !== false && Math.hypot(DB[0] - RIM.x, DB[1] - RIM.y) < 0.1 && DB[2] > 4 && DB[2] < 9.6) {
-      const rx = RIM.x * k, ry = RIM.y * k, r0 = k * 0.82, nh = k * 1.5
-      ctx.strokeStyle = 'rgba(245,245,240,.85)'; ctx.lineWidth = Math.max(1, k * 0.07)
-      ctx.beginPath()
-      for (let j = -3; j <= 3; j++) { const t = j / 3; ctx.moveTo(rx + t * r0, ry); ctx.lineTo(rx + t * r0 * 0.55, ry + nh) }
-      for (let j = 1; j <= 2; j++) { const u = j / 3, hw = r0 * (1 - 0.45 * u); ctx.moveTo(rx - hw, ry + nh * u); ctx.lineTo(rx + hw, ry + nh * u) }
-      ctx.stroke()
-    }
     // the king's crown, and CLEAR IT over the man who has to take it out past the arc
     const marks = []
     const fsN = Math.max(13, Math.round(tk * 0.4))
-    if (king >= 0 && !cut(king)) {
+    if (king >= 0 && !cut(king) && s.ck !== 2) {
       const cw = tk * 0.5, cy = FIG[king].cy - FIG[king].hs - 2
       drawCrown(X(king), cy, cw)
       marks.push([X(king) - cw / 2 - 2, cy - cw * 0.66 - 2, X(king) + cw / 2 + 2, cy + 2])
@@ -1186,6 +1188,7 @@ export function createEngine({ setup, els, on, net = null }) {
     stick.id = e.pointerId; stick.rect = r; stick.ox = e.clientX - r.left; stick.oy = e.clientY - r.top
     els.pad.setPointerCapture?.(e.pointerId)
     G.reset()
+    if (ONE) feedG(performance.now(), 0, 0)                          // (where the thumb landed: the stick's middle)
     setKnob(stick.ox, stick.oy, 0, 0, true)
   }
   const padMove = e => {
@@ -1315,10 +1318,12 @@ export function createEngine({ setup, els, on, net = null }) {
   const KEY = { ' ': 'a', e: 'b' }
   const ARROW = { arrowup: [0, -1], arrowdown: [0, 1], arrowleft: [-1, 0], arrowright: [1, 0] }
   const arrows = new Set(), tapped = new Set()
+  const KW = { x: 0, y: 0, t: -1e9 }                  // the last way the keys had him going, and when
   const readKeys = () => {
     let x = 0, y = 0
     for (const kk of keys) { const d = DIR[kk]; if (d) { x += d[0]; y += d[1] } }
     const m = Math.hypot(x, y)
+    if (m) { KW.x = x / m; KW.y = y / m; KW.t = performance.now() } else if (H.mx || H.my) KW.t = performance.now()
     if (stick.id == null) { H.mx = m ? x / m : 0; H.my = m ? y / m : 0 }
   }
   const arrowVec = set => { let x = 0, y = 0; for (const kk of set) { x += ARROW[kk][0]; y += ARROW[kk][1] } const m = Math.hypot(x, y); dribbleAt(m ? x / m : 0, m ? y / m : 0) }
@@ -1366,9 +1371,11 @@ export function createEngine({ setup, els, on, net = null }) {
   const keyUp = e => {
     const kk = e.key.toLowerCase()
     if (DIR[kk]) {
-      const v = heldWay(kk)
+      // (the way he was going: D and A both down cancel out, so it's the way before that)
+      const v = heldWay(kk), before = H.mx || H.my ? [H.mx, H.my] : performance.now() - KW.t < 400 ? [KW.x, KW.y] : [0, 0]
       keys.delete(kk); readKeys()
-      if (ONE && TP.up(kk, performance.now()) && hasBall()) flick(v.x, v.y)
+      const up = ONE ? TP.up(kk, performance.now(), before, [H.mx, H.my]) : null
+      if (up && hasBall()) { if (up === 'turn') flick(H.mx, H.my); else flick(v.x, v.y) }
     }
     else if (ARROW[kk]) { if (!arrows.delete(kk)) return; if (!DS.kt) { tapped.clear(); arrowVec(arrows) } }
     else if (KEY[kk]) press(KEY[kk], false)
