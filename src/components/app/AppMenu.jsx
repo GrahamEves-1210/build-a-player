@@ -39,7 +39,7 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 // monthly or yearly. The Builder Pass is its own thing (lib/pass.js)
 const PRO_PERKS = [
   ['No ads', 'Every page on the website'],
-  ['+50% coins from every game', 'Seasons, Compete and Blacktop. It stacks with Coin Rush'],
+  ['+50% coins from every game', 'Seasons, the Trait Auction and Blacktop. It stacks with Coin Rush'],
   ['The Pro Vault, included', 'Four members-only looks, yours while you\'re Pro: Diamond, Pro Aura, Pro Holo and Supernova'],
   ['Double the daily drop', 'The shop\'s free daily coins, doubled'],
   ['Pro badge and Discord role', 'Next to your name on the leaderboards, and a Pro role in the Discord (link Discord on your profile)'],

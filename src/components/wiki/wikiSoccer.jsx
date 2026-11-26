@@ -52,7 +52,7 @@ export function SoccerPage({ go }) {
       <ul>
         <li><b>Career.</b> From the academy to the Ballon d'Or, at a club in Europe's top leagues: league, cup and Europe, transfer windows and the World Cup with the real 2026 nations. See <Link go={go} to="career" hash="soccer">Career § Soccer careers</Link>.</li>
         <li><b>Squad Builder.</b> Build up to {word(CAPS.soccer.st)} forwards for the same club and play a league season together.</li>
-        <li><b>Compete</b> and <b>Salary Cap</b> work as they do in the other sports (see <Link go={go} to="modes">Modes</Link>).</li>
+        <li><b>Salary Cap</b> works as it does in the other sports (see <Link go={go} to="modes">Modes</Link>).</li>
       </ul>
     </>
   )
@@ -63,5 +63,5 @@ export const SOCCER_TOC = [
   ['season', 'The soccer season', 'goals xG match rating'],
   ['ucl', 'Champions League season', 'league phase play-offs knockouts final player of the season'],
   ['wc', 'World Cup season', 'group round of 32 penalties golden boot golden ball'],
-  ['modes', 'Soccer modes', 'career squad builder compete salary cap'],
+  ['modes', 'Soccer modes', 'career squad builder salary cap'],
 ]

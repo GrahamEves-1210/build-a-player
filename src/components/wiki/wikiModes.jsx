@@ -1,10 +1,9 @@
 import { Link, andList, word, Word, n0, usd } from './wikiBits'
-import { POOL_SIZE, BUILD_SECS as COMPETE_SECS, COMPETE_POS } from '../../lib/competeCore'
-import { BUDGET, AUCTION_POS, FILLER_VAL, RESET_SECS } from '../../lib/auctionCore'
+import { BUDGET, AUCTION_POS, AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, FILLER_VAL, RESET_SECS, BID_SECS } from '../../lib/auctionCore'
 import { BUILD_SECS as BT_SECS, ROLES } from '../../lib/blacktopCore'
 import { OFF_CALLS, DEF_CALLS } from '../../lib/hoops'
 import { TIERS as SAL_TIERS, BUDGET_OPTIONS } from '../../lib/salaryCore'
-import { COMPETE_RATING, FORFEIT_RATING, blacktopDelta, START_RATING } from '../../lib/rating'
+import { competeDelta, FORFEIT_RATING, blacktopDelta, START_RATING } from '../../lib/rating'
 import { ONLINE_TIERS, INFINITE_PAID } from '../../lib/progress'
 import { CAPS, POSITIONS } from '../../lib/squad'
 import { ITEMS } from '../../lib/cosmetics'
@@ -14,7 +13,7 @@ import { FRANCHISE_LIVE } from '../../lib/franchiseLive'
 import { CFB_LIVE } from '../../lib/cfbLive'
 import { CBB_LIVE } from '../../lib/cbbLive'
 
-// The modes outside Career, Franchise and college: Compete, the Trait Auction, Blacktop, Salary Cap, Squad Builder,
+// The modes outside Career, Franchise and college: the Trait Auction, Blacktop, Salary Cap, Squad Builder,
 // the Depth Chart, Sandbox. Every number is read from the module the mode runs on.
 const POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL', k: 'K', guard: 'guard', big: 'big', st: 'striker' }
 const mins = s => `${word(Math.round(s / 60))} minute${Math.round(s / 60) === 1 ? '' : 's'}`
@@ -24,17 +23,23 @@ const unlocks = ITEMS.filter(i => i.unlock)
 
 export function ModesPage({ go }) {
   const btWin = blacktopDelta({ won: true }), btLoss = blacktopDelta({ won: false }), btMvp = blacktopDelta({ won: true, mvp: true }) - btWin
-  const competeSports = [['Football', COMPETE_POS.nfl], ['basketball', COMPETE_POS.bucket], ...(SOCCER_LIVE ? [['soccer', COMPETE_POS.soccer]] : [])]
+  // the auction's places, by how many were in the room (lib/rating.js competeDelta)
+  const places = n => Array.from({ length: n }, (_, i) => `${['1st', '2nd', '3rd'][i]} ${signed(competeDelta({ place: i + 1, humans: n }))}`).join(', ')
   return (
     <>
       <h2 id="current-all-time">Current and All-Time</h2>
       <p><b>Current</b> deals today's rosters, starters and backups, at their real ratings. Ratings move through the season as players do; the <Link go={go} to="ratings">Ratings</Link> page lists every one. <b>All-Time</b> deals each franchise's legends and plays against teams at their best eras. Legends rate higher, so All-Time seasons are tuned to come out only a little easier than Current ones: a few more wins and a slightly better shot at a title.</p>
 
-      <h2 id="compete">Compete <span className="wk-tag">ONLINE</span></h2>
-      <p>Up to {word(POOL_SIZE)} real players build at the same time from the <b>same spins</b> (respins are each player's own), with grades hidden. The clock is {mins(COMPETE_SECS)}. The highest overall wins; an earlier submit breaks a tie. Pools: {competeSports.map(([s, list]) => `${s} ${andList(list.map(p => POS[p]))}`).join('; ')}.</p>
-      <p>Places move the online rating ({Object.entries(COMPETE_RATING).map(([p, d]) => `${p === '1' ? '1st' : p === '2' ? '2nd' : p === '3' ? '3rd' : `${p}th`} ${signed(d)}`).join(', ')}, less in a pool of mostly bots) and pay XP and coins. Everyone starts at {n0(START_RATING)}. The tiers: {andList(ONLINE_TIERS.map(([at, n]) => (at ? `${n} (${n0(at)})` : n)))}.</p>
-      <h3 id="auction">Trait Auction</h3>
-      <p>The other half of Compete (the switch at the top). 1v1: two players, {usd(BUDGET)} each. A slot is drawn and a real player is spun for it, his grade face down until the gavel. Bids go up $1 at a time and every bid puts the clock back to {RESET_SECS} seconds. Each player always keeps $1 for every other empty slot, and a slot still empty at the end gets a free agent ({grade(FILLER_VAL)}). The best overall wins; money left over breaks a tie. Positions: football {andList(AUCTION_POS.nfl.map(p => POS[p]))}, basketball {andList(AUCTION_POS.bucket.map(p => POS[p]))}.</p>
+      <h2 id="auction">Trait Auction <span className="wk-tag">ONLINE</span></h2>
+      <p>{Word(AUCTION_MIN)} or {word(AUCTION_SIZE)} real players, {usd(BUDGET)} each and Salary Cap's five rating slots, all empty. Football is a QB, RB or WR; basketball a guard or a big. A room starts as soon as {word(AUCTION_SIZE)} are in, or {word(AUCTION_FILL_SECS)} seconds after the last join with {word(AUCTION_MIN)} (either of them can start it sooner).</p>
+      <ul>
+        <li><b>The lots.</b> A card is pulled for one of the slots and lands on a real player: his numbers for every trait the slot covers. A new card's grade stays face down until the gavel.</li>
+        <li><b>The bidding.</b> {Word(BID_SECS)} seconds to open, then $1 (or $3) at a time, and every bid puts the clock back to {RESET_SECS} seconds: going once, going twice, sold. Each player always keeps $1 for every other empty slot. When nobody left can bid on a lot (their slot is filled, or they can't top the high bid), it's called at once.</li>
+        <li><b>Back in the deck.</b> A card nobody bids on turns over anyway, so everyone sees its grade, and goes back in the deck face up. It can come back up later, grade showing.</li>
+        <li><b>The draw.</b> The first player to fill all five slots ends the auction. Every other player's open slots get a random card off the deck, at no cost. Finishing first is the edge: a tie on overall goes to him.</li>
+        <li><b>The result.</b> The best overall wins; after the player who filled first, money left over breaks a tie. A slot still empty when the lots run out is a free agent ({grade(FILLER_VAL)}).</li>
+      </ul>
+      <p>Places move the online rating (three players: {places(3)}; two: {places(2)}) and pay XP and coins. Everyone starts at {n0(START_RATING)}. The tiers: {andList(ONLINE_TIERS.map(([at, n]) => (at ? `${n} (${n0(at)})` : n)))}.</p>
 
       <h2 id="blacktop">Blacktop <span className="wk-tag">ONLINE · BASKETBALL</span></h2>
       <p>Live streetball against real players: <b>1v1</b>, <b>2v2</b> (a guard and a big a side) and <b>King of the Hill</b> (three players, every man for himself). For a 1v1 or a 2v2, pick a spot in the lobby, then build together in {mins(BT_SECS)} with team chat and a role ({andList(ROLES.map(r => r.name.charAt(0) + r.name.slice(1).toLowerCase()))}). Anyone who walks away mid-build gets an automatic build.</p>
@@ -47,7 +52,7 @@ export function ModesPage({ go }) {
       </ul>
 
       <h2 id="live">Leaving a live game</h2>
-      <p>Compete, the Trait Auction and Blacktop lock the build in while the game is live. Leaving (or closing the app) is a forfeit: last place, no rewards, and {signed(FORFEIT_RATING)} rating. One live game per device at a time.</p>
+      <p>The Trait Auction and Blacktop lock you in while the game is live. Leaving (or closing the app) is a forfeit: last place, no rewards, and {signed(FORFEIT_RATING)} rating. One live game per device at a time.</p>
 
       <h2 id="salary-cap">Salary Cap <span className="wk-tag">DAILY</span></h2>
       <p>A board of five columns and five price tiers ({SAL_TIERS.map(usd).join(', ')}), priced strictly by rating, with the grades hidden. Pick one player per column without going over the day's budget ({usd(BUDGET_OPTIONS[0])} to {usd(BUDGET_OPTIONS[BUDGET_OPTIONS.length - 1])}, set by the date). One <b>Shuffle</b> re-deals a row or a column and one <b>Scout</b> shows a hidden grade. Everyone plays the same board each day, and the day's board ranks by overall, then budget used. Football's board is quarterbacks; basketball's guards and bigs{SOCCER_LIVE ? '; soccer\'s strikers' : ''}. <b>Infinite</b> mode deals new boards for practice; the first {word(INFINITE_PAID)} Infinite plays a day pay XP and coins.</p>
@@ -80,8 +85,7 @@ export function ModesPage({ go }) {
 }
 export const MODES_TOC = [
   ['current-all-time', 'Current and All-Time', 'current all-time legends pool'],
-  ['compete', 'Compete', 'online pool same spins rating tiers'],
-  ['auction', 'Trait Auction', 'bid budget online 1v1'],
+  ['auction', 'Trait Auction', 'bid budget online rating tiers deck draw'],
   ['blacktop', 'Blacktop', '1v1 2v2 king of the hill koth streetball online lobby calls watch'],
   ['live', 'Leaving a live game', 'forfeit leave lock'],
   ['salary-cap', 'Salary Cap', 'daily grid budget board shuffle scout infinite'],

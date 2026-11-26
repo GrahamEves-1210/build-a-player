@@ -41,7 +41,6 @@ import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { restorePro } from '../lib/webCheckout'
 import AppHome from './app/AppHomeSwitch'   // today's Home, or the classic one (Settings → Classic Home)
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
-import { useCompete, botBuild } from '../lib/compete'
 import { saveSeason, saveSalary } from '../lib/submit'
 import { seededTeams, seededPlayer } from '../lib/competeCore'
 import { seatSeed, seatRespinSeed, seatKit } from '../lib/blacktopCore'
@@ -61,8 +60,7 @@ const CBBMode = lazy(() => import('./cbb/CBBMode'))   // College Basketball (a b
 const NbaFranchise = lazy(() => import('./franchise2/nba/NbaFranchise'))   // basketball Franchise (NBA_FRANCHISE_LIVE): the mode and its engine load with it
 import { NBA_FRANCHISE_LIVE } from '../lib/franchiseLive'
 import { CBB_LIVE } from '../lib/cbbLive'
-import CompeteHud from './app/CompeteHud'
-const AppCompete = lazy(() => import('./app/AppCompete'))
+const AppTraitAuction = lazy(() => import('./app/AppTraitAuction'))
 // DEV only: Blacktop's game screens on a made-up game (?btlook=live|final|watch|hud: app/BlacktopLook.jsx)
 const BT_LOOK = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('btlook') : null
 const BlacktopLook = import.meta.env.DEV ? lazy(() => import('./app/BlacktopLook')) : null
@@ -709,7 +707,7 @@ export default function BucketApp() {
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') { window.location.href = '/?about' }
       else if (to === 'wiki') { window.location.href = '/wiki' }
-      else if (to === 'compete') setPage('compete')
+      else if (to === 'auction' || to === 'compete') setPage('auction')   // (Compete is retired: an old link opens the auction)
       else if (to === 'daily-challenge') startDailyRef.current?.()
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
@@ -902,34 +900,10 @@ export default function BucketApp() {
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
 
-  // ── COMPETE: five-player pools on the same spins (lib/compete.js) ──────────
-  const [competePos, setCompetePos] = useState(() => { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; return p === 'big' ? 'big' : 'guard' })
-  const cp = useCompete({
-    enabled: IS_APP || APP_LOOK, user, sport: 'bucket', pos: competePos,
-    botFor: (seed, idx, skill, pos) => {
-      const types = POS_TYPES[pos] ?? GUARD_TYPES
-      return botBuild({ seed, idx, skill, teams: NBA_TEAMS, pool: pos === 'big' ? ENRICHED_BIGS : ENRICHED_GUARDS, types, calcOvr: b => calcBucketOVR(b, types, pos) })
-    },
-  })
-  const competeOn = cp.phase === 'build' && !cp.results[cp.me.vid]
-  const competeKey = useRef(null)
-  useEffect(() => {
-    if (cp.phase !== 'build' || !cp.match || cp.results[cp.me.vid] || competeKey.current === cp.match.code) return
-    competeKey.current = cp.match.code
-    try { localStorage.setItem('bab_custom_mode', '0') } catch {}
-    setIsBucketCustomMode(false)
-    handleStart('classic', cp.match.pos)
-    sandboxTainted.current = false
-  }, [cp.phase, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
-  const lockInCompete = useCallback(() => {
-    cp.submit(Math.round(calcBucketOVR(build, activeTypes, position) ?? 0), build)
-    setGameMode(null); setBuild({}); setSavedSpinResult(null)
-    setPage('compete')
-    window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, position, cp])
-
-  // ── TRAIT AUCTION (lib/auction.js): a Compete mode, locked in like a pool ──
-  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'bucket', pos: competePos })
+  // ── TRAIT AUCTION (lib/auction.js): its own online mode, locked in while it's on ──
+  const [auctionPos, setAuctionPos] = useState(() => { let p = 'guard'; try { p = localStorage.getItem('bap_auction_bpos') || localStorage.getItem('bucketPosition') || 'guard' } catch {}; return p === 'big' ? 'big' : 'guard' })
+  const pickAuctionPos = useCallback(p => { setAuctionPos(p); try { localStorage.setItem('bap_auction_bpos', p) } catch {} }, [])
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'bucket', pos: auctionPos })
   const auctionLive = au.phase === 'auction'
   useEffect(() => {
     if (!auctionLive) return
@@ -943,7 +917,6 @@ export default function BucketApp() {
   // a seeded build picks up after the last spin it placed (a reload never deals spin 0 again)
   const seedBuildRef = useRef(null); seedBuildRef.current = build
   const nextSeedSpin = useCallback(() => 1 + Math.max(-1, ...Object.values(seedBuildRef.current || {}).filter(Boolean).map(c => (Number.isInteger(c.spin?.i) ? c.spin.i : -1))), [])
-  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
   // App: the shop reads Pro from storage; tell it when that changes
@@ -1180,12 +1153,12 @@ export default function BucketApp() {
 
   // ── The build in progress, kept on the device (bab_progress, readProgress above) ──
   // which mode the build on the page is for: a Squad Builder or Career build, a plain one (null), or a live one
-  // (a Compete pool, Blacktop, 1v1: never kept, a reload forfeits those)
+  // (Blacktop, 1v1: never kept, a reload forfeits those)
   const tkRef = useRef(saved?.tk ?? null)
   if (page === 'squad-build') tkRef.current = 'squad'
   else if (page === 'career-build') tkRef.current = 'career'
   else if (page === 'nbafranchise-build') tkRef.current = 'nbafranchise'
-  else if (page === 'game') tkRef.current = competeOn ? 'compete' : null
+  else if (page === 'game') tkRef.current = null
   else if (isVersusMode) tkRef.current = 'live'
   // (only a build this page has had: a page that never loaded the save leaves it alone)
   const progressOwned = useRef(!!saved)
@@ -1193,7 +1166,7 @@ export default function BucketApp() {
   // saved after every placement; gone Home, into Salary Cap or a live game, there's no build left to keep
   useEffect(() => {
     const tk = tkRef.current
-    if (!gameMode || gameMode === 'salarycap' || tk === 'compete' || tk === 'live') { if (progressOwned.current) { try { localStorage.removeItem(PROGRESS_KEY) } catch {} }; return }
+    if (!gameMode || gameMode === 'salarycap' || tk === 'live') { if (progressOwned.current) { try { localStorage.removeItem(PROGRESS_KEY) } catch {} }; return }
     try {
       localStorage.setItem(PROGRESS_KEY, JSON.stringify({
         gameMode, position, build, tk, daily: dailyRun?.key ?? null,
@@ -1206,7 +1179,7 @@ export default function BucketApp() {
     } catch {}
   }, [build, gameMode, position, dailyRun, page, isBucketCustomMode, startersPick, oneTeamPick])
   // this tab is on a build page (a reload comes back to it: lib/buildSave.js)
-  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', page === 'career' ? 'career' : gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build') && !competeOn ? page : null) }, [page, gameMode, competeOn])   // (College Basketball marks its own)
+  useEffect(() => { if (page !== 'cbb') markBuildPage('bucket', page === 'career' ? 'career' : gameMode && gameMode !== 'salarycap' && (page === 'game' || page === 'squad-build' || page === 'career-build' || page === 'nbafranchise-build') ? page : null) }, [page, gameMode])   // (College Basketball marks its own)
   // Home's CONTINUE card: which build it is
   const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'nbafranchise' ? 'Franchise' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : 'Current'
 
@@ -1498,7 +1471,7 @@ export default function BucketApp() {
   }, [isBucketCustomMode])
 
   // Starters Only needs Sandbox on, on a plain build: so it also means the save guard is blocking this build
-  const startersOk = !isVersusMode && !competeOn && !dailyRun && page !== 'career-build' && page !== 'squad-build' && page !== 'nbafranchise-build' && (gameMode === 'classic' || gameMode === 'all-time')
+  const startersOk = !isVersusMode && !dailyRun && page !== 'career-build' && page !== 'squad-build' && page !== 'nbafranchise-build' && (gameMode === 'classic' || gameMode === 'all-time')
   const startersOn = startersPick && isBucketCustomMode && startersOk
   useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
   const oneTeamOn = !!oneTeamPick && isBucketCustomMode && startersOk
@@ -1531,13 +1504,7 @@ export default function BucketApp() {
   const versusLive = !!versusRoom && page === 'versus-game'
   const btGameLive = page === 'blacktop-game' && bt.phase === 'game'
   useEffect(() => {
-    if (competeOn) {
-      setLiveLock({
-        title: 'Leave the pool?',
-        body: `The pool plays on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
-        forfeit: () => { cp.forfeit(); setGameMode(null); setBuild({}); setSavedSpinResult(null) },
-      })
-    } else if ((liveBuild || btGameLive) && bt.match && !bt.match.bots) {
+    if ((liveBuild || btGameLive) && bt.match && !bt.match.bots) {
       // the build and the game itself (a practice run against CPUs isn't locked)
       setLiveLock({
         title: btGameLive ? 'Leave the game?' : 'Leave the run?',
@@ -1556,7 +1523,7 @@ export default function BucketApp() {
       setLiveLock({ ownBack: true, ask: go => setLeaveConfirm({ fn: () => { handleReset(); go?.() } }) })
     } else return
     return () => setLiveLock(null)
-  }, [competeOn, liveBuild && !!bt.match, btGameLive, versusLive]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [liveBuild && !!bt.match, btGameLive, versusLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Intercept browser back while in an active versus game
   useEffect(() => {
@@ -1847,14 +1814,14 @@ export default function BucketApp() {
   // App: the game screen stays mounted while another tab is open (parked,
   // display:none) so a spin in flight keeps spinning, keeps its sound and
   // nothing resets (same shell on both sides of the switch, see App.jsx).
-  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'pvp-leaderboard', 'privacy', 'compete'])
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'pvp-leaderboard', 'privacy', 'auction'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const dailyPlan = dailyRun && dailyLocked && gameIsPlay ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins } : null
   const filledCount = activeTypes.filter(t => build[t]).length
 
   const navbarProps = {
-    gradesToggle: drop && !competeOn && !liveBuild && page !== 'versus-game',   // phones: the grades switch lives in the navbar
-    onReset: competeOn || dailyLocked ? undefined : () => guardedLeave(handleReset),   // the Daily: one run, no reset
+    gradesToggle: drop && !liveBuild && page !== 'versus-game',   // phones: the grades switch lives in the navbar
+    onReset: dailyLocked ? undefined : () => guardedLeave(handleReset),   // the Daily: one run, no reset
     onHome: () => guardedLeave(handleHome),
     onSignIn: () => setShowAuth(true),
     onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
@@ -1913,10 +1880,9 @@ export default function BucketApp() {
     <>
       {!parked && bucketHead}
       {/* live builds have no navbar: the HUD's LEAVE is the only way out */}
-      {!parked && !competeOn && !liveBuild && !((IS_APP || APP_LOOK) && versusLive) && <Navbar {...navbarProps} />}
+      {!parked && !liveBuild && !((IS_APP || APP_LOOK) && versusLive) && <Navbar {...navbarProps} />}
 
       <div className="game-page-scroll">
-      {competeOn && <CompeteHud cp={cp} />}
       {/* Squad Builder: which of the squad's players this is */}
       {page === 'nbafranchise-build' && <div className="cp-hud sq-hud fr-hud" role="status"><span><small>FRANCHISE · {String(position).toUpperCase()}{nbaJob.current?.of ? ` · PLAYER ${nbaJob.current.n} OF ${nbaJob.current.of}` : ''}</small></span><span className="cp-hud-dots">{Array.from({ length: nbaJob.current?.of ?? 0 }, (_, i) => <i key={i} className={i < (nbaJob.current?.n ?? 1) - 1 ? 'is-in' : ''} />)}</span><button className="fr-hud-back" onClick={nbaFranchiseBack}>BACK</button></div>}
       {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {SPOTS[spotsOf(squad)[nextToBuild(squad)?.id]]?.label ?? String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
@@ -1938,7 +1904,6 @@ export default function BucketApp() {
         waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
       <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' && !liveBuild ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
         {(el => (drop ? <DropSheet open={dropOpen} setOpen={setDropOpen}>{el}</DropSheet> : el))(<SpinScreen
-          gradesHidden={competeOn}
           build={build}
           activeDrag={activeDrag}
           onDragStart={setActiveDrag}
@@ -1953,13 +1918,13 @@ export default function BucketApp() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
-          onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
+          onReset={liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
-          seedPlan={competePlan ?? blacktopPlan ?? dailyPlan}
+          seedPlan={blacktopPlan ?? dailyPlan}
           startersOnly={startersOn}
           oneTeam={oneTeamOn ? oneTeamPick : null}
-          key={competePlan ? `cp-${cp.match.code}` : blacktopPlan ? `bt-${bt.match.code}` : dailyPlan ? `dc-${dailyRun.key}` : 'spin'}
+          key={blacktopPlan ? `bt-${bt.match.code}` : dailyPlan ? `dc-${dailyRun.key}` : 'spin'}
           paused={parked}
           isRB={false}
           isBucket={true}
@@ -1982,14 +1947,14 @@ export default function BucketApp() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
+          onReset={liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
           isRB={false}
           isBucket={true}
           kitTeam={page === 'nbafranchise-build' && nbaJob.current?.team ? NBA_TEAMS.find(t => t.short === nbaJob.current.team) ?? null : null}
           isPlus={isSubscribed}
           isCustomMode={isBucketCustomMode}
           onOpenCustomModal={() => setShowBucketCustomModal(true)}
-          onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined}
+          onSandboxToggle={!isVersusMode && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined}
           sandboxStarters={startersProp}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
@@ -1999,9 +1964,9 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'squad-build' ? squadNext : page === 'nbafranchise-build' ? nbaFranchiseBuilt : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
-            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'nbafranchise-build' ? 'ADD TO THE ROSTER' : page === 'career-build' ? (CBB_LIVE && careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : competeOn ? 'LOCK IN' : undefined}
-            onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
+            onSimulate={page === 'squad-build' ? squadNext : page === 'nbafranchise-build' ? nbaFranchiseBuilt : page === 'career-build' ? enterDraft : replayOrSpin}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'nbafranchise-build' ? 'ADD TO THE ROSTER' : page === 'career-build' ? (CBB_LIVE && careerNew.current.start === 'college' ? 'GO TO COLLEGE' : 'ENTER THE DRAFT') : undefined}
+            onReset={liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={false}
             isRB={false}
@@ -2010,7 +1975,7 @@ export default function BucketApp() {
             isPlus={isSubscribed}
             isCustomMode={isBucketCustomMode}
             onOpenCustomModal={() => setShowBucketCustomModal(true)}
-            onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined}
+            onSandboxToggle={!isVersusMode && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined}
             sandboxStarters={startersProp}
             attrMap={BUCKET_ATTR}
             logoDir="/logos/nba/"
@@ -2255,8 +2220,8 @@ export default function BucketApp() {
               career={career}
               onNbaFranchise={NBA_FRANCHISE_LIVE ? () => { setPage('nbafranchise'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'nbafranchise' }) } : undefined}
               onCBB={CBB_LIVE ? () => { setPage('cbb'); window.scrollTo({ top: 0, behavior: 'instant' }); track('mode_selected', { position: null, gameMode: 'cbb' }) } : undefined}
-              onCompete={() => setPage('compete')}
-              resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean) || savedSpinResult?.selectedQB)) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${resumeKind}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+              onAuction={() => setPage('auction')}
+              resume={(gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean) || savedSpinResult?.selectedQB)) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${resumeKind}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" home /></>}
               renderBucketFigure={(pos, ready, fast) => (
                 <>
@@ -2274,12 +2239,11 @@ export default function BucketApp() {
   }
 
 
-  if (page === 'compete') {
+  if (page === 'auction') {
     return withGame(
       <Suspense fallback={null}>
-        <AppCompete cp={cp} au={au} sport="bucket" position={competePos} positions={[{ pos: 'guard', label: 'GUARD' }, { pos: 'big', label: 'BIG' }]}
-          onPosition={setCompetePos} onHome={() => setPage('splash')} onResumeBuild={() => setPage('game')}
-          onPlayAgain={() => cp.join()} />
+        <AppTraitAuction au={au} sport="bucket" position={auctionPos} positions={[{ pos: 'guard', label: 'GUARD' }, { pos: 'big', label: 'BIG' }]}
+          onPosition={pickAuctionPos} onHome={() => setPage('splash')} />
       </Suspense>
     )
   }

@@ -49,7 +49,7 @@ export default function AppCareerCard({ user }) {
         <span className="ag-career-online-ico"><IconPodium size={16} /></span>
         <span className="ag-career-online-txt">
           <span><b>{p.stats?.online?.rating ?? 800}</b> ONLINE RATING <TierChip rating={p.stats?.online?.rating ?? 800} /></span>
-          <small>{(p.stats?.online?.played ?? 0) ? `${p.stats.online.played} online games · best ${p.stats.online.best}` : 'Compete, Blacktop and 1v1 move it'}</small>
+          <small>{(p.stats?.online?.played ?? 0) ? `${p.stats.online.played} online games · best ${p.stats.online.best}` : 'The Trait Auction, Blacktop and 1v1 move it'}</small>
         </span>
         <IconArrow size={14} />
       </button>

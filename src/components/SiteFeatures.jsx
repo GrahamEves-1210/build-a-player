@@ -19,13 +19,13 @@ const FEATURES = {
   nfl: [
     { Icon: IconSpin, title: 'Build a player', text: "Spin a team, land on a real player and take one trait from him. Josh Allen's arm, Saquon's legs, whatever the wheel gives you. Keep going until every slot is full." },
     { Icon: IconTrophy, title: 'Play the season', text: 'He plays 17 games and the playoffs, and you find out if he wins MVP or a Super Bowl. Or start a Career and play him from draft day until he retires.' },
-    { Icon: IconLive, title: 'Beat real people', text: 'Compete puts five people in a pool with the same spins, and the highest overall wins. In the Trait Auction you get $100 to outbid two other people for traits.' },
+    { Icon: IconLive, title: 'Beat real people', text: 'The Trait Auction puts two or three people in a room with $20 each to bid on real players\' traits, slot by slot. The best overall wins.' },
     { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
   ],
   bucket: [
     { Icon: IconSpin, title: 'Build a player', text: "Spin a team, land on a real player and take one trait from him. Steph's jumper, Kyrie's handles, whatever the wheel gives you. Keep going until every slot is full." },
     { Icon: IconTrophy, title: 'Play the season', text: 'He plays 82 games and the playoffs, and you find out if he wins MVP or a ring. Or start a Career and play him from draft day until he retires.' },
-    { Icon: IconLive, title: 'Beat real people', text: 'Blacktop is live 1v1, 2v2 and 3v3, played to 11. Compete puts five people in a pool with the same spins, and the highest overall wins.' },
+    { Icon: IconLive, title: 'Beat real people', text: 'Blacktop is live 1v1, 2v2 and 3v3, played to 11. The Trait Auction puts two or three people in a room with $20 each to bid on real players\' traits.' },
     { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
   ],
   soccer: [

@@ -3,7 +3,7 @@ import { RatingHero, ModeStats, NextGoals, OnlineTierLadder } from './OnlineReco
 import { IconClose, IconArrow } from './icons'
 import EmptyState from './EmptyState'
 
-// Online screen (Compete / Blacktop cards → YOUR RECORD): the rating
+// Online screen (Trait Auction / Blacktop cards → YOUR RECORD): the rating
 // and ladder, each live mode's full numbers, and the next goals to chase.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
@@ -22,7 +22,7 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         <OnlineTierLadder />
         {!p.signedIn && <p className="ol-note">Playing as a guest — <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>sign in</button> and your record follows your account.</p>}
         {o.played === 0 && (
-          <div className="ag-pop"><EmptyState kind="duo" mid="vs" title="No online games yet">Every online game is against real players: Compete pools, Blacktop 1v1, 2v2 and King of the Hill.</EmptyState></div>
+          <div className="ag-pop"><EmptyState kind="duo" mid="vs" title="No online games yet">Every online game is against real players: the Trait Auction, Blacktop 1v1, 2v2 and King of the Hill.</EmptyState></div>
         )}
         <NextGoals limit={3} />
         <ModeStats mode="compete" full />
@@ -37,14 +37,14 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         <div className="ol-how">
           <span className="ag-eyebrow">WHAT MOVES YOUR RATING</span>
           <ul>
-            <li><b>Compete</b> · 1st +24 · 2nd +12 · 3rd +4 · 4th −6 · 5th −12</li>
+            <li><b>Trait Auction</b> · 3 bidders: 1st +18 · 2nd +9 · 3rd +3 · 2 bidders: 1st +15 · 2nd +8</li>
             <li><b>Blacktop 2v2</b> · win +20 · loss −12 · MVP +5</li>
             <li><b>King of the Hill</b> · win +20 · loss −12</li>
             <li><b>Blacktop 1v1</b> · win +25 · loss −15 · forfeit −20</li>
           </ul>
         </div>
         <div className="ol-play">
-          <button className="ag-btn" onClick={() => { onClose?.(); nav('compete') }}>FIND A COMPETE POOL <IconArrow size={14} /></button>
+          <button className="ag-btn" onClick={() => { onClose?.(); nav('auction') }}>FIND AN AUCTION <IconArrow size={14} /></button>
           {sport === 'bucket' && <button className="ag-btn ag-btn--ghost" onClick={() => { onClose?.(); nav('blacktop') }}>BLACKTOP</button>}
         </div>
       </div>

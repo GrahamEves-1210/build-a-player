@@ -34,11 +34,11 @@ import Wordmark from '../Wordmark'
 // Same props and callbacks as AppHome, so every button goes where today's does.
 // Styling: home-classic.css, generated from the old CSS and scoped to .ag-home--classic;
 // the classes only this page uses are agc-*, so today's Home rules never reach it.
-// Since then: DL is a position (with today's NEW tag), Compete's live count includes the
-// Trait Auction, Players of the Day shows its prize per row and a loading state, and coming
+// Since then: DL is a position (with today's NEW tag), the Trait Auction has Compete's
+// place (Compete is retired, 11-26), Players of the Day shows its prize per row and a loading state, and coming
 // back from a mode keeps the scroll spot. The leaderboard button opens today's Ranks page.
 
-// Card art: three players for Squad Builder (the one in front is yours), the pool's podium for Compete
+// Card art: three players for Squad Builder (the one in front is yours), the gavel for the Trait Auction
 function SquadArt() {
   const fig = (x, s) => `M${x - 26 * s} 96 C${x - 26 * s} ${70 - 6 * s} ${x - 14 * s} ${60 - 4 * s} ${x} ${60 - 4 * s} C${x + 14 * s} ${60 - 4 * s} ${x + 26 * s} ${70 - 6 * s} ${x + 26 * s} 96 Z`
   return (
@@ -52,13 +52,13 @@ function SquadArt() {
     </svg>
   )
 }
-function PoolArt() {
-  const bars = [[0, 42], [1, 64], [2, 34], [3, 26], [4, 18]]   // 2nd · 1st · 3rd · 4th · 5th
+// the Trait Auction's gavel (public/fx, the hammer and its block cut from one picture, so they line up)
+function GavelArt() {
   return (
-    <svg className="ag-card-art ag-card-art--pool" viewBox="0 0 150 80" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
-      {bars.map(([i, h]) => <rect key={i} x={8 + i * 28} y={76 - h} width={22} height={h} rx={5} className={`ag-pool-bar${i === 1 ? ' is-first' : ''}`} />)}
-      <path d="M47 6 l2.6 5.3 5.9.9-4.3 4.1 1 5.8L47 19.4 41.8 22l1-5.8-4.3-4.1 5.9-.9z" className="ag-pool-star" />
-    </svg>
+    <span className="ag-card-art ag-card-art--gavel" aria-hidden="true">
+      <img src="/fx/gavel-block.webp" alt="" draggable={false} loading="lazy" decoding="async" />
+      <img src="/fx/gavel-hammer.webp" alt="" draggable={false} loading="lazy" decoding="async" />
+    </span>
   )
 }
 
@@ -294,9 +294,9 @@ function PlayersOfDay() {
   )
 }
 
-export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad: onSquadIn, squad = null, onCompete: onCompeteIn, onCareer: onCareerIn, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, onCFB = null, onCBB = null, onFranchise = null }) {
+export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, onBlacktop, blacktop, onSquad: onSquadIn, squad = null, onAuction: onAuctionIn, onCareer: onCareerIn, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, onCFB = null, onCBB = null, onFranchise = null }) {
   // (soccer: a mode still on its way isn't on the classic Home at all)
-  const onSquad = soon?.squad ? null : onSquadIn, onCompete = soon?.compete ? null : onCompeteIn, onCareer = soon?.career ? null : onCareerIn
+  const onSquad = soon?.squad ? null : onSquadIn, onAuction = onAuctionIn, onCareer = soon?.career ? null : onCareerIn
   const prog = useProgress()
   // Back from a mode, home opens where it was left (as today's Home does), for a moment, until the player moves it
   const homeRef = useRef(null)
@@ -321,7 +321,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
     }
   }, [])
   const here = usePresence()?.areas ?? {}   // how many are in each online mode right now
-  const cpHere = (here.compete ?? 0) + (here.auction ?? 0)   // Compete counts its Trait Auction too
+  const cpHere = here.auction ?? 0
   const cs = prog.stats?.compete
   const ol = prog.stats?.online ?? { rating: 800, played: 0 }
   const h2h = prog.stats?.h2h ?? {}
@@ -495,16 +495,16 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
               </span>
             </button>
           )}
-          {onCompete && (
-            <button className="ag-compete ag-pop" style={{ '--d': '300ms' }} onClick={onCompete}>
-              <PoolArt />
+          {onAuction && (
+            <button className="ag-compete ag-way--auction ag-pop" style={{ '--d': '300ms' }} onClick={onAuction}>
+              <GavelArt />
               <LiveCorner n={cpHere} />
               <span className="ag-card-txt">
-                <span className="ag-eyebrow">{ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
-                <span className="ag-card-title">COMPETE</span>
+                <span className="ag-eyebrow">{ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 2–3 BIDDERS · $20 EACH'}</span>
+                <span className="ag-card-title">TRAIT AUCTION</span>
                 <span className="ag-card-sub">{cs?.played
                   ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
-                  : 'Same spins as 4 other players. Highest OVR takes the pool.'}</span>
+                  : 'Bid on real players\' traits, slot by slot. Best build takes the room.'}</span>
                 {cs?.played > 0 && <span className="ag-rec"><Form items={cs.recent} mode="compete" /></span>}
               </span>
             </button>

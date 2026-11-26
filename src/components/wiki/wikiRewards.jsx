@@ -58,7 +58,7 @@ export function RewardsPage({ go }) {
 
       <h2 id="coins">Coins</h2>
       <ul>
-        <li><b>Games.</b> Seasons (table above), Compete places ({Object.entries(COMPETE_REWARDS).map(([p, [, c]]) => `${place(p - 1)} ${c}`).join(', ')}) and Blacktop.</li>
+        <li><b>Games.</b> Seasons (table above), Trait Auction places ({Object.entries(COMPETE_REWARDS).map(([p, [, c]]) => `${place(p - 1)} ${c}`).join(', ')}) and Blacktop.</li>
         <li><b>The free daily drop</b> in the Shop: {COINS.free} coins ({COINS.freePro} with BAP Pro).</li>
         <li><b>Once only:</b> {n0(DISCORD_COINS)} for joining the Discord, {n0(FEEDBACK_COINS)} for sending feedback.</li>
         {REWARDED_ON && <li><b>Videos</b> in the app: {AD_COINS} coins each, {word(AD_MAX)} a day.</li>}
@@ -133,7 +133,7 @@ export function LeaderboardsPage({ go }) {
     <>
       <p className="wk-lead">The <b>Ranks</b> tab in the bottom bar holds every leaderboard, in three tabs. Signed-in players' saved seasons and games count; guest games and Sandbox seasons don't. Boards can be filtered to friends.</p>
       <h2 id="online">Online</h2>
-      <p>{andList(B.onlineBoards().map(b => b.label))}. Blacktop can be shown in total or by size ({andList(B.blacktopModes().slice(1).map(m => m.label))}). The online rating is explained on <Link go={go} to="modes" hash="compete">Modes § Compete</Link>.</p>
+      <p>{andList(B.onlineBoards().map(b => b.label))}. Blacktop can be shown in total or by size ({andList(B.blacktopModes().slice(1).map(m => m.label))}). The online rating is explained on <Link go={go} to="modes" hash="auction">Modes § Trait Auction</Link>.</p>
       <h2 id="today">Today</h2>
       <p>{andList(B.todayBoards().map(b => b.label + (TODAY_NOTE[b.id] ? ` (${TODAY_NOTE[b.id]})` : '')))}. See <Link go={go} to="rewards" hash="daily">Rewards § The Daily tab</Link> for what the top places pay.</p>
       <h2 id="records">Records</h2>

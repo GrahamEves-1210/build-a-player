@@ -140,7 +140,7 @@ const NC = [
   it('nameColor', 'nc-pro-blackgold', 'Black Gold', 2, 4800),
   it('nameColor', 'nc-pro-platinum',  'Platinum', 3, 15500),
   it('nameColor', 'nc-fivetool', 'Color Block',  3, 0, { ach: 'fivetool' }),
-  it('nameColor', 'nc-compete',  'Pool Shark', 3, 0, { ach: 'cpwin10' }),
+  it('nameColor', 'nc-compete',  'Top Bidder', 3, 0, { ach: 'cpwin10' }),
 ]
 
 // ── Name effects ─────────────────────────────────────────────────────────────
@@ -322,5 +322,5 @@ export const BLURB = {
   winSound: 'The sound of your wins, played with your victory effect.',
   court: 'The court your Blacktop games are played on.',
   reel: 'The look of your spin reels when you build a player.',
-  entrance: 'Plays on your seat when you join a Compete or Blacktop lobby. Everyone in the lobby sees it.',
+  entrance: 'Plays on your seat when you join a Trait Auction or Blacktop lobby. Everyone in the lobby sees it.',
 }

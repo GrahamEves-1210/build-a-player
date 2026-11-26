@@ -1,18 +1,22 @@
-// TRAIT AUCTION — a Compete mode. 1v1: two real players, $20 each, and
-// Salary Cap's five rating slots each (football: QB). A card is pulled from
-// the five-slot deck and the spinner lands on a real player; the grade stays
-// hidden until the gavel. Bidding is +$1 at a time, going once, going twice:
-// every bid puts the clock back up (RESET_SECS), and when it runs out the high
-// bid wins it: that player's numbers for every trait the slot covers.
-// It runs until every slot is filled, then the builds are ranked by OVR
-// (money left breaks a tie).
-//   queue   → wait for players (2+ real players, never bots — like the pools)
-//   auction → lots: spin → bidding → sold
-//   result  → the ranking; your place goes to your Compete record
+// TRAIT AUCTION, its own online mode (Compete is retired, owner 11-26). Two or
+// three real players, $20 each and Salary Cap's five rating slots for the position
+// (football QB, RB or WR; basketball guard or big). A card is pulled for one of the
+// slots and lands on a real player; a new card's grade stays face down until the
+// gavel. Bidding is +$1 (or +$3) at a time, going once, going twice: every bid puts
+// the clock back up (RESET_SECS), and when it runs out the high bid wins that
+// player's numbers for every trait the slot covers. The clock is called at once
+// when nobody left can bid. A card nobody bids on turns over anyway and goes back
+// in the deck face up, so it can come back up with its grade known. The first
+// bidder to fill all five slots ends it: everyone else's open slots go to the draw
+// (a random card each, free). Then the builds are ranked by OVR (a tie goes to the
+// one who filled his build first, then money left).
+//   queue   → wait for players (2 or 3 real players, never bots)
+//   auction → lots: spin → bidding → sold, and the draw at the end
+//   result  → the ranking; the place goes to the online record
 // The live server is the auctioneer (live/src/auction.js): it picks every lot,
-// checks every bid, runs the clock and ranks the builds. This phone sends its
-// bids and passes and shows what the server says. The rules both sides use are
-// lib/auctionCore.js.
+// checks every bid, runs the clock, deals the draw and ranks the builds. This phone
+// sends its bids and passes and shows what the server says. The rules both sides
+// use are lib/auctionCore.js.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { myVid, myDevice, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
