@@ -23,13 +23,15 @@ const LOGO_LEAGUES = { '': ['nfl'], nba: ['nba'], cfb: ['cfb', 'cbb'], cbb: ['cb
 
 const colorsOf = (lg, team) => INDEX.teams[lg]?.[team] ?? null
 
-export function playerArt(key, folderHint, variant = 'auto') {
+export function playerArt(key, folderHint, variant = 'auto', teamAs = null) {
   // a man with no photo (a legend the board shows by his team): x/<league>/<TEAM>/<number>, his team's jersey
   const nm = /^x\/(nfl|nba)\/([A-Za-z0-9]{2,4})\/(\d{0,2})$/.exec(key)
   if (nm) { const [, lg, team, num] = nm; return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team.toUpperCase()), number: numberFor(key, '', num, lg), variant })) }
   const row = INDEX.p[key]
   if (!row) { const lg = folderHint === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl'; return svgUri(jerseySvg({ league: lg, number: numberFor(key, '', '', lg), variant })) }
-  const [lg, team, number, pos, rank] = row.split('|')
+  const [lg, team0, number, pos, rank] = row.split('|')
+  // (a screen showing him under another team: lib/teamHint.js. That team's jersey, if the league knows it)
+  const team = teamAs && colorsOf(lg, teamAs) ? teamAs : team0
   if (pos === 'HC') return svgUri(teamMark({ league: lg, team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
   // (every jersey carries a number: lib/jerseyNumber.js picks one for his position when the index has none)
   return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number: numberFor(key, pos, number, lg), pos, rank: +rank || 0, variant }))
@@ -100,7 +102,7 @@ export function appImage(src) {
     out = playerArt('?', /nba|basketball/i.test(src) ? 'nba' : '')
   } else if ((m = HEADSHOT.exec(src))) {
     const key = m[1].replace(/^.*?public\/headshots\//, '')
-    out = playerArt(key, key.split('/')[0])
+    out = playerArt(key, key.split('/')[0], 'auto', /[?#&]team=([A-Za-z]{2,4})\b/.exec(src)?.[1]?.toUpperCase() ?? null)
   } else if ((m = LOGO.exec(src)) && m[2]) {
     // a conference's mark: its three-letter abbreviation on a plain tag (owner 11-25: three letters, neater)
     const k = m[3].toLowerCase().replace(/[-_ ]/g, '')

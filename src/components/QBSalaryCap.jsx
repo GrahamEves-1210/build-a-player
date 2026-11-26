@@ -5,6 +5,7 @@ import { QBS, ATTR, TYPES } from '../data/qbs'
 import { LEGENDS } from '../data/qb-legends'
 import { TEAMS } from '../data/nfl-teams'
 import HEADSHOTS from '../data/headshots.json'
+import { teamHint } from '../lib/teamHint'
 import { salaryKit } from '../lib/salaryCore'
 import { supabase } from '../lib/supabase'
 import { valToGrade, nflHeadshot } from '../utils/simulation'
@@ -189,7 +190,7 @@ const POWER_SEEN_KEY = 'qbsal_power_seen'
 // Compute the correct salary tier for a legend in a given column by ranking
 // their catScore against the regular player pool (no rand needed — deterministic).
 // the board itself: lib/salaryCore.js (the live server checks plays against the same board)
-const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => ({ teamColor: teamColorOf(p), teamColor2: teamColor2Of(p), photo: photoFor(p.name, p) }) })
+const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => ({ teamColor: teamColorOf(p), teamColor2: teamColor2Of(p), photo: teamHint(photoFor(p.name, p), p.team) }) })
 
 // Pick 2 deterministic legend slots — cycles through all legends before repeating.
 // rand() still used for column and tier nudge so placement varies day-to-day.
@@ -564,7 +565,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
         if (at < TIER_BANDS[ti][0] - 0.2) return null
       }
     }
-    return frozen.map(col => col.map(cell => ({ ...cell, photo: photoFor(cell.name) })))
+    return frozen.map(col => col.map(cell => ({ ...cell, photo: teamHint(photoFor(cell.name), cell.team) })))
   }
 
   // Daily grids are frozen server-side the first time each date is generated

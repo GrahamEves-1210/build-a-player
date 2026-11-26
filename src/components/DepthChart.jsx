@@ -4,6 +4,7 @@ import { getPlayerPhoto, pickThreeFrom, QB_POOL, RB_POOL, WR_POOL } from '../dat
 import { supabase } from '../lib/supabase'
 import { TEAMS } from '../data/nfl-teams'
 import QBAvatar from './QBAvatar'
+import { teamHint } from '../lib/teamHint'
 import { getUsername } from '../lib/discord'
 
 const TEAM_COLOR  = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
@@ -545,7 +546,7 @@ export default function DepthChart({ onBack, user }) {
                     </svg>
                   )}
                 </div>
-                <QBAvatar photo={photo} team={player.team} color={color} size={52} />
+                <QBAvatar photo={teamHint(photo, player.team)} team={player.team} color={color} size={52} />
                 <div className="dc-card-info">
                   <div className="dc-card-name">{player.name}</div>
                   <div className="dc-card-team" style={{ color }}>{player.team}</div>

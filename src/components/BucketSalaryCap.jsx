@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
+import { teamHint } from '../lib/teamHint'
 import { SkRows } from './app/Skeleton'
 import { NameTag } from './app/NameTag'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
@@ -221,7 +222,7 @@ const POWER_SEEN_KEY = 'sal_power_seen'
 // Compute the correct salary tier for a legend in a given column by ranking
 // their catScore against the regular player pool (no rand needed — deterministic).
 // the board itself: lib/salaryCore.js (the live server checks plays against the same board)
-const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => { const hsId = NBA_HEADSHOTS[p.name]; return { teamColor: TEAM_META[p.team]?.color ?? '#444', teamColor2: TEAM_META[p.team]?.color2 ?? '#222', photo: hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null } } })
+const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => { const hsId = NBA_HEADSHOTS[p.name]; return { teamColor: TEAM_META[p.team]?.color ?? '#444', teamColor2: TEAM_META[p.team]?.color2 ?? '#222', photo: hsId ? teamHint(`${HEADSHOT_BASE}/nba/${hsId}.webp`, p.team) : null } } })
 
 // Pick 2 deterministic legend slots — cycles through all legends before repeating.
 // rand() still used for column and tier nudge so placement varies day-to-day.
@@ -544,7 +545,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         if (at < TIER_BANDS[ti][0] - 0.2) return null
       }
     }
-    return frozen.map(col => col.map(cell => { const hs = NBA_HEADSHOTS[cell.name]; return { ...cell, photo: hs ? `${HEADSHOT_BASE}/nba/${hs}.webp` : null } }))
+    return frozen.map(col => col.map(cell => { const hs = NBA_HEADSHOTS[cell.name]; return { ...cell, photo: hs ? teamHint(`${HEADSHOT_BASE}/nba/${hs}.webp`, cell.team) : null } }))
   }
   const recentFor = (date) => {
     const yesterday = new Date(date.y, date.m - 1, date.day - 1)
