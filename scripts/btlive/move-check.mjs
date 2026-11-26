@@ -13,6 +13,7 @@ function trial(pos, over, plan) {
   const s = createGame({ teams: [[man('a', 'guard', {})], [man('b', pos, over)]], seed: 'move' })
   for (let i = 0; i < 400 && s.phase !== 'live'; i++) step(s, [{}, {}])
   const a = s.players[0], p = s.players[1]
+  s.poss = 0; s.ball.holder = 0; s.ball.st = 'held'; s.mustClear = null       // (the ball his: ours is off it)
   // the man with the ball stands in the far corner; ours starts at half court, still
   a.x = 4; a.y = 4; p.x = 50; p.y = 46; p.vx = p.vy = 0; p.runT = 0
   const log = []
@@ -44,4 +45,28 @@ for (const [nm, pos, over] of rows) {
   const st = trial(pos, over, [...hold(Math.round(1.5 * GHZ), -1, 0), ...hold(GHZ, 0, 0)])
   const k0 = Math.round(1.5 * GHZ) - 1, stop = Math.abs(st.log[st.log.length - 1].x - st.log[k0].x)
   console.log(nm.padEnd(34) + `${fmt(R.top)}   ${fmt(t90, 2)} s        ${fmt(t15, 2)} s    ${fmt(vs)} (+${fmt((vs / R.top - 1) * 100, 0)}%)`.padEnd(46) + `${fmt(before)} -> ${fmt(after)} (-${fmt((1 - after / before) * 100, 0)}%)`.padEnd(40) + `${fmt(stop)} ft`)
+}
+
+// WITH THE BALL, BY WAY (the owner, 11-26: "backing up with the ball should be slower than driving to the basket"): a man
+// with the ball at the top of the key, nobody near, the stick held one way for 2 s: his speed at the end (ft/s). And a
+// defender a few feet off his man, the same: at him, across, backing off
+function wayTrial(pos, over, mx, my, guard = false) {
+  const s = createGame({ teams: [[man('a', pos, over)], [man('b', 'guard', {})]], seed: 'way' })
+  for (let i = 0; i < 400 && s.phase !== 'live'; i++) step(s, [{}, {}])
+  const a = s.players[0], b = s.players[1]
+  s.poss = guard ? 1 : 0; s.ball.holder = guard ? 1 : 0; s.ball.st = 'held'; s.mustClear = null
+  if (guard) { b.x = 28; b.y = 22; a.x = 28; a.y = 28 } else { a.x = 28; a.y = guard ? 28 : (my > 0 ? 18 : 40); b.x = 6; b.y = 44 }
+  a.vx = a.vy = 0; b.vx = b.vy = 0; a.runT = 0
+  let top = 0
+  for (let t = 0; t < Math.round(1.2 * GHZ); t++) {
+    if (guard) { b.x = 28; b.y = 22; b.vx = b.vy = 0; if (Math.hypot(a.x - b.x, a.y - b.y) < 4) { a.x = 28 + (a.x - 28) * 0.0; } }
+    step(s, guard ? [{ mx, my }, {}] : [{ mx, my }, {}]); s.clock = 99 * HZ; top = Math.max(top, Math.hypot(a.vx, a.vy))
+  }
+  return top
+}
+console.log('\nwith the ball, top speed over 1.2 s by way (ft/s; the basket is up the floor)')
+console.log('who'.padEnd(34) + 'at the rim   across   backing out   (backing out / at the rim)')
+for (const [nm, pos, over] of [rows[0], rows[3]]) {
+  const f = wayTrial(pos, over, 0, -1), sd = wayTrial(pos, over, 1, 0), bk = wayTrial(pos, over, 0, 1)
+  console.log(nm.padEnd(34) + `${fmt(f)}         ${fmt(sd)}     ${fmt(bk)}          ${fmt(100 * bk / f, 0)}%`)
 }

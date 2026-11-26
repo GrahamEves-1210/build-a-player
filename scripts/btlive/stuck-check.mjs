@@ -138,4 +138,61 @@ ok(stuckGames === 0, `every game finishes (${stuckGames} didn't)`)
 ok(edgeN === 0, `no CPU runs back and forth or pins himself at a line or in a corner (${edgeN})`)
 ok(longest <= 2, `no back and forth anywhere lasts over 2 s (longest ${longest.toFixed(2)} s)`)
 ok(rate < 5, `back and forth over ${(WIN / HZ).toFixed(1)} s anywhere: under 5 per 1000 min played (${total}: ${rate.toFixed(1)} per 1000 min)`)
+
+// TAKING IT BACK (the owner, 11-26: "the CPU runs to the corner after getting the ball and just stands there, never
+// clearing it"): a CPU comes down with a defensive board under the rim and in each corner, every level, 1v1 and 2v2,
+// 20 times each. Cleared (past the arc) inside about 3 s (3.6 at the most: from under the rim it's 29 ft), never standing still with it while it's still to be done; and with
+// it in the corner (cleared already: he got it behind the line) never standing there with it for over 1.5 s.
+// (King of the Hill: a stop is a dead ball and a check, nothing to take back)
+{
+  const gr = 1 + (80 - 57) / 44 * 9, mk2 = (id, pos) => ({ id, name: id, pos, build: flatBuild(pos, gr) })
+  let runs = 0, fast = 0, worst = 0, idle = 0, camp = 0, campRuns = 0, in3 = 0
+  for (const mode of ['1v1', '2v2']) for (const lvl of LV) for (const [x, y] of [[30, 3.6], [4.6, 5.5], [51.4, 6]]) for (let k = 0; k < 20; k++) {
+    const teams = mode === '1v1' ? [[mk2('a', 'guard')], [mk2('b', k % 2 ? 'big' : 'guard')]] : [[mk2('a', 'guard'), mk2('c', 'big')], [mk2('b', 'guard'), mk2('d', 'big')]]
+    const s = createGame({ teams, seed: `clr-${mode}-${lvl}-${x}-${k}` })
+    for (let i = 0; i < 400 && s.phase !== 'live'; i++) step(s, s.players.map(() => ({})))
+    const d = s.players.find(p => p.team !== s.poss)
+    d.x = x; d.y = y; d.vx = d.vy = 0
+    Object.assign(s.ball, { st: 'loose', x, y, z: 4, vx: 0, vy: 0, vz: 0, reb: true, grabAt: s.tick, from: -1, t: 99 })
+    let t0 = -1, done = -1, still = 0, corner = 0
+    for (let t = 0; t < 8 * HZ && done < 0; t++) {
+      step(s, s.players.map((_, i) => cpuInput(s, i, lvl)))
+      for (const e of s.events) if (e.e === 'clear' && t0 < 0) t0 = t
+      if (t0 < 0 && t > 40) break
+      if (t0 < 0) continue
+      const h = s.ball.st === 'held' ? s.players[s.ball.holder] : null
+      if (s.mustClear == null) {
+        // (cleared: in the corner with it, he doesn't stand there)
+        if (h && Math.abs(h.x - 28) > 19 && h.y < 12 && Math.hypot(h.vx, h.vy) < 1 && h.act === 'free') { if (++corner > 1.5 * HZ) { camp++; break } } else corner = 0
+        if (t - t0 > 2.5 * HZ || !h) { done = done < 0 ? t : done; break }
+        if (done < 0) done = t
+        continue
+      }
+      if (h && h.act === 'free' && Math.hypot(h.vx, h.vy) < 0.8) { if (++still > HZ) { idle++; still = -1e9 } } else still = Math.max(0, still)
+    }
+    if (t0 < 0) continue
+    runs++
+    if (x !== 30) campRuns++
+  }
+  // (timing taken back separately: the first point it's done)
+  for (const mode of ['1v1', '2v2']) for (const lvl of LV) for (const [x, y] of [[30, 3.6], [4.6, 5.5], [51.4, 6]]) for (let k = 0; k < 20; k++) {
+    const teams = mode === '1v1' ? [[mk2('a', 'guard')], [mk2('b', k % 2 ? 'big' : 'guard')]] : [[mk2('a', 'guard'), mk2('c', 'big')], [mk2('b', 'guard'), mk2('d', 'big')]]
+    const s = createGame({ teams, seed: `clr-${mode}-${lvl}-${x}-${k}` })
+    for (let i = 0; i < 400 && s.phase !== 'live'; i++) step(s, s.players.map(() => ({})))
+    const d = s.players.find(p => p.team !== s.poss)
+    d.x = x; d.y = y; d.vx = d.vy = 0
+    Object.assign(s.ball, { st: 'loose', x, y, z: 4, vx: 0, vy: 0, vz: 0, reb: true, grabAt: s.tick, from: -1, t: 99 })
+    let t0 = -1
+    for (let t = 0; t < 8 * HZ; t++) {
+      step(s, s.players.map((_, i) => cpuInput(s, i, lvl)))
+      for (const e of s.events) if (e.e === 'clear' && t0 < 0) t0 = t
+      if (t0 < 0 && t > 40) break
+      if (t0 >= 0 && s.mustClear == null) { const sec = (t - t0) / HZ; worst = Math.max(worst, sec); if (sec <= 3.6) fast++; if (sec <= 3) in3 = (in3 || 0) + 1; break }
+      if (t0 >= 0 && t === 8 * HZ - 1) worst = 99
+    }
+  }
+  console.log(`
+taking it back after a CPU's defensive board (under the rim, each corner; every level; 1v1, 2v2): ${runs} runs, ${in3} cleared inside 3 s and ${fast} inside 3.6 s, the slowest ${worst.toFixed(1)} s; stood still with it still to clear: ${idle}; stood in the corner with it over 1.5 s: ${camp} of ${campRuns}`)
+  ok(fast === runs && idle === 0 && camp === 0, 'a CPU always takes it back after a stop, quickly, and never stands with it in the corner')
+}
 process.exit(fails ? 1 : 0)

@@ -826,9 +826,19 @@ function move(s, p, inp) {
         const o = p.man >= 0 ? s.players[p.man] : null, od = o ? Math.hypot(o.x - p.x, o.y - p.y) : 99
         if (od < 14 && od > 0.1) {
           const dot = (mx * (o.x - p.x) + my * (o.y - p.y)) / (od * m)
-          top *= dot >= 0 ? T.slide + (1 - T.slide) * dot : T.slide + (T.backpedal - T.slide) * -dot
+          const sl = T.slide + T.slidePer * (p.R.perRaw ?? 0.5), bp = T.backpedal + T.backpedalPer * (p.R.perRaw ?? 0.5)
+          // (going with a man on the move, the way he's going: cutting off his line, all of it; the owner, 11-26: "too
+          // easy to blow past a CPU defender")
+          const ov = Math.hypot(o.vx, o.vy), mirror = ov > 3 ? clamp(((mx * o.vx + my * o.vy) / (m * ov) - 0.2) / 0.5, 0, 1) : 0
+          const k = dot >= 0 ? sl + (1 - sl) * dot : sl + (bp - sl) * -dot
+          top *= k + (1 - k) * mirror * T.mirror
         }
       }
+      // with the ball, the way he's going against the basket (the owner, 11-26: "backing up with the ball should be
+      // slower than driving to the basket"): at it all of it, across a step slower, backing out clearly slower (a good
+      // handler less so). (The post is its own thing: postFeet)
+      // (taking it back past the arc after a stop he turns and runs it out: no backing-out penalty)
+      if (has && p.act === 'free' && m > 0 && !p.post && s.mustClear !== p.team) top *= ballWay(p, mx / m, my / m)
       if (p.boost > 0 && p.act === 'free') top *= 1 + T.boost
       // a beaten defender (his man between him and the rim) running to get back: a burst, on his legs
       // (running back toward the rim, off the lines)
@@ -840,7 +850,9 @@ function move(s, p, inp) {
       } else {
         // a sprint: built going one way, not in a defensive stance
         const stance = def && !has && p.man >= 0 && Math.hypot(s.players[p.man].x - p.x, s.players[p.man].y - p.y) < 9 && !beatenBy(p, s.players[p.man])
-        if (!stance && p.act === 'free') top *= 1 + T.sprint * clamp((p.runT ?? 0) / T.sprintTime, 0, 1)
+        // (with the ball the sprint is a drive: it builds going at the rim, not backing out or going across)
+        const drive = !has || s.mustClear === p.team || ((mx * (RIM.x - p.x) + my * (RIM.y - p.y)) / ((m || 1) * (ref.rimDist(p) || 1))) > 0.3
+        if (!stance && p.act === 'free' && drive) top *= 1 + T.sprint * clamp((p.runT ?? 0) / T.sprintTime, 0, 1)
         move2(p, mx * top, my * top, top, (def ? p.R.accelDef : p.R.accel) / T.accel, p.R.spdRaw ?? 0.5)
       }
       // the ball in the hand on the side he's going (his right as he faces the basket): across to the other hand when
@@ -926,6 +938,15 @@ function postFeet(s, p, mx, my, m) {
     vx = -uy * lat * T.postSide; vy = ux * lat * T.postSide
   } else { p.bump = 0; p.awayT = 0 }
   p.vx += (vx - p.vx) * 0.6; p.vy += (vy - p.vy) * 0.6
+}
+
+// With the ball: his speed's share for going (ux, uy) against the way to the basket
+function ballWay(p, ux, uy) {
+  const d = ref.rimDist(p)
+  if (d < 1) return 1
+  const dot = (ux * (RIM.x - p.x) + uy * (RIM.y - p.y)) / d
+  const side = T.ballSide + T.ballSideHnd * p.R.hnd, back = T.ballBack + T.ballBackHnd * p.R.hnd
+  return dot >= 0 ? side + (1 - side) * dot : side + (back - side) * -dot
 }
 
 // a defender beaten: his man nearer the rim than him by a step, and close enough to matter

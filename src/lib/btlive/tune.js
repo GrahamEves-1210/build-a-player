@@ -69,7 +69,7 @@ export const T = {
   sizeSlow: 0.085,                    // Size 11 is this much slower than Size 1
   ballSpeed: 0.92,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.05,                // ...plus this at Handles 11 (an 80 keeps 96%: slower with it than without, always)
-  defSpeed: 1.013,                    // guarding, at Perimeter D 1 (x top speed)...
+  defSpeed: 1.10,                     // guarding, at Perimeter D 1 (x top speed; the owner, 11-26: defenders ~9% quicker)...
   defSpeedPer: 0.085,                 // ...plus this at Perimeter D 11 (on the plain grade: an 80 about 105%, a step quicker than the ball)
   accel: 12,                         // ft/s²: his push (x his rating's share: accelBase..)...
   firstStep: 3.0,                    // ...x this from a standstill (a quick first step: 36 ft/s²)...
@@ -77,8 +77,14 @@ export const T = {
                                      // (90% of it in 0.36 s for a quick guard, 0.58 s for a slow big: move-check.mjs)
   brake: 32,                         // ft/s²: slowing down or stopping (x the same rating factor): quicker than speeding up, not
                                      // instant (from a sprint that's about 2 ft of stopping: a man can overrun his spot)
-  backpedal: 0.88,                   // a defender's top speed going backwards (facing his man, giving ground)...
-  slide: 0.95,                       // ...and sliding sideways (forward, at his man: all of it)
+  backpedal: 0.9, backpedalPer: 0.06,    // a defender's top speed going backwards (facing his man, giving ground), + this at
+                                     // Perimeter D 11 (the plain grade)...
+  slide: 0.9, slidePer: 0.04,        // ...and sliding sideways (forward, at his man: all of it)
+  mirror: 0.6,                       // ...going with his man the way he's going, this much of what that costs back (cutting him off)
+  // with the ball, by the way he goes against the basket (the owner, 11-26: "speed is too constant with the ball"): at
+  // the rim all of it (and only a drive builds the sprint), across this share, backing out this share (+ this x Handles)
+  ballSide: 0.82, ballSideHnd: 0.06,
+  ballBack: 0.52, ballBackHnd: 0.1,
   boost: 0.09, boostTime: 0.45,      // out of a hesitation, a crossover, between the legs, an in-and-out: this much quicker for this long
   accelBase: 0.805, accelSpd: 0.54,   // ...x (0.85 + 0.45 x Speed, the plain grade): a quick first step
   accelSize: 0.3,                    // ...less this at Size 11
@@ -175,7 +181,7 @@ export const T = {
   setFeet3: 0.07,                    // ...and a three on the move this much more on top (owner 11-26: a moving three is harder)
   selfRebWaitL: 0.8,                 // ...off his own layup or dunk (he's coming down under it), this long
   selfRebWait: 0.6,                  // s: the shooter, coming down, can't get to his own miss before this (owner 11-26)
-  selfRebW: 0.5,                     // ...and in a scramble for it he's this much less likely to come up with it                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
+  selfRebW: 0.4,                     // ...and in a scramble for it he's this much less likely to come up with it                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
   runFrom: 0.2,                      // ...from this share of his top speed up (a drift is free)
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
   csBoost: 0.25,                     // ...and gains up to this much from the passer's Passing/Playmaking
@@ -218,8 +224,9 @@ export const T = {
   cpuBeat: 0.4, cpuBeatR: 0.8,       // ...how often he gets by his man: this, + this x (his Speed and Handles - the man's Speed and Perimeter D) / 2
   cpuDriveRisk: 0.74,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
   cpuJumpEdge: 0.08,                 // ...by this much (a miss at the rim comes back more often than a long one)
-  cpuCrash: 0.3, cpuCrashReb: 0.35,  // a CPU follows his own shot this often (+ this x his Rebounding); else he lands and...
-  cpuHold: 0.5,                      // ...holds this long into the miss before he goes for it (the owner, 11-26)
+  cpuCrash: 0.08, cpuCrashReb: 0.15,  // a CPU follows his own shot this often (+ this x his Rebounding); else he lands and...
+  cpuHold: 0.8,                      // ...holds this long into the miss before he goes for it (the owner, 11-26)
+  cpuCushion: 0.6,                   // ft a CPU gives a man driving at him (a step of cushion)
   cpuSitV: 0.33,                     // an open look over a man sitting back at the rim: worth taking from this
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
@@ -300,10 +307,10 @@ export const T = {
   // a flick to a side is the drop step (baseline) or the spin (middle), a flick away from the rim faces him up, and
   // SHOOT is the hook (turned side-on) or, with the stick away from the rim, the fadeaway ──────────────────────────
   postRange: 14,                     // inside this many feet of the rim...
-  postDef: 4.4,                      // ...his man within this of him, between him and the rim...
+  postDef: 5.2,                      // ...his man within this of him, between him and the rim...
   postFront: 0.3,                    // ...(this much in front: the cos to the line to the rim)
-  postSlow: 4.2,                     // ...going slower than this (ft/s), for postEnter (backing in: postEnterBack)
-  postEnter: 0.32, postEnterBack: 0.12,
+  postSlow: 5.8,                     // ...going slower than this (ft/s), for postEnter (backing in: postEnterBack)
+  postEnter: 0.16, postEnterBack: 0.05,   // (quicker into it: the owner, 11-26)
   postGuard: 0.72,                   // a guard posts only this big (plain Size) and only backing in
   postCd: 0.7,                       // after leaving the post, this long before he can be in it again
   postLose: 0.4,                     // his man gone off him (past postDef + 1.5) this long: he's out of it

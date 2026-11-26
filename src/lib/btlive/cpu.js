@@ -137,6 +137,8 @@ function pickPlan(s, p, m, only = null) {
     post: R.big ? 0.25 + R.size * 0.7 + R.fin * 0.3 : R.size > 0.7 ? 0.15 : 0,
   }
   if (m.driveOnly) w.three = w.mid = w.post = 0             // (a balance-script bot: drives only)
+  // (a jumper he just gave up on for the drive isn't picked again straight away: no out and back, out and back)
+  if (s.tick < (m.noJump ?? 0)) w.three = w.mid = 0
   if (only) for (const k in w) if (k !== only) w[k] = 0
   let t = roll(s) * (w.drive + w.three + w.mid + w.post)
   m.plan = 'drive'
@@ -147,28 +149,49 @@ function pickPlan(s, p, m, only = null) {
   m.spot = null
   if (m.plan === 'three' || m.plan === 'mid') {
     // the spot farthest from the defense, not too far to walk
-    const list = m.plan === 'three' ? ARC : MID
+    const list = m.plan === 'three' ? ARC.slice() : MID
+    // (a three from where he is: already by the line, he rises from there or steps back into it, sideways off his
+    // man, instead of going all the way back out; backing out with the ball is slow, the owner 11-26)
+    let here = null
+    if (m.plan === 'three') {
+      const past = ref.arcPast(p.x, p.y)
+      if (past > -5 && past < 3) {
+        const ax = p.x - COURT.arcC.x, ay = p.y - COURT.arcC.y, al = Math.hypot(ax, ay) || 1
+        here = p.y <= COURT.arcSideY ? { x: RIM.x + Math.sign(p.x - RIM.x) * (COURT.arcSideX + 1.2), y: p.y } : { x: COURT.arcC.x + ax / al * (COURT.arcR + 1.2), y: COURT.arcC.y + ay / al * (COURT.arcR + 1.2) }
+        if (ref.inBounds(here.x, here.y, -1.6)) list.push(here); else here = null
+      }
+    }
     let best = -99
     for (const sp of list) {
       let open = 99
       for (const o of s.players) if (o.team !== p.team && !o.out) open = Math.min(open, Math.hypot(o.x - sp.x, o.y - sp.y))
-      const sc = Math.min(open, 9) - Math.hypot(sp.x - p.x, sp.y - p.y) * 0.22 + roll(s) * 3
+      // (not into the corner with it: a trap, two lines; only now and then)
+      const sc = Math.min(open, 9) - Math.hypot(sp.x - p.x, sp.y - p.y) * 0.22 + roll(s) * 3 + (sp === here ? 2 : 0) - (sp.y < COURT.arcSideY ? 2.5 : 0)
       if (sc > best) { best = sc; m.spot = sp }
     }
+    // (time to get there at the speed he has going that way with the ball, and a beat to set up)
+    const d = Math.hypot(m.spot.x - p.x, m.spot.y - p.y)
+    m.planT += Math.round((0.5 + Math.min(2.5, d / Math.max(4, p.R.topBall * 0.6))) * GHZ)
   } else if (m.plan === 'post') m.spot = { x: RIM.x + (p.x < RIM.x ? -5.5 : 5.5), y: 9.5 }
 }
 
-// After a stop: where to take it back to, a couple of feet past the arc and away from the two defenders
-function pickClear(s, p, m) {
+// After a stop: where to take it back to. The shortest way out past the arc from where he is (straight out from the
+// rim), or a wing or the top if his man is sitting on that; never the corner (the owner, 11-26: "the CPU goes to the
+// corner and often doesn't clear it")
+function pickClear(s, p, m, stuck = false) {
   m.plan = 'clear'; m.planT = s.tick + Math.round(1.2 * GHZ)
   if (!m.side) m.side = roll(s) < 0.5 ? -1 : 1
+  const out = 2.6
+  let ax = p.x - COURT.arcC.x, ay = Math.max(p.y - COURT.arcC.y, 9), al = Math.hypot(ax, ay) || 1
+  const near = { x: COURT.arcC.x + ax / al * (COURT.arcR + out), y: COURT.arcC.y + ay / al * (COURT.arcR + out) }
+  const cands = [near, ...ARC.filter(sp => sp.y > COURT.arcSideY).map(sp => { const bx = sp.x - COURT.arcC.x, by = sp.y - COURT.arcC.y, bl = Math.hypot(bx, by) || 1; return { x: sp.x + bx / bl * 2.5, y: sp.y + by / bl * 2.5 } })]
   let best = -99
-  for (const sp of ARC) {
-    const ax = sp.x - COURT.arcC.x, ay = sp.y - COURT.arcC.y, a = Math.hypot(ax, ay) || 1
-    const at = sp.y <= COURT.arcSideY ? { x: sp.x, y: sp.y } : { x: sp.x + ax / a * 2.5, y: sp.y + ay / a * 2.5 }
+  for (const at of cands) {
+    if (!ref.inBounds(at.x, at.y, -1.8)) continue
     let open = 99
     for (const o of s.players) if (o.team !== p.team && !o.out) open = Math.min(open, Math.hypot(o.x - at.x, o.y - at.y))
-    const sc = Math.min(open, 12) - Math.hypot(at.x - p.x, at.y - p.y) * 0.3 + roll(s) * 2
+    // (stuck getting out: the way with nobody in it, whatever the walk)
+    const sc = Math.min(open, 6) * (stuck ? 1.5 : 0.4) - Math.hypot(at.x - p.x, at.y - p.y) * (stuck ? 0.3 : 1) + roll(s) * (stuck ? 2 : 0.5)
     if (sc > best) { best = sc; m.spot = at }
   }
 }
@@ -201,8 +224,13 @@ function withBall(s, p, m, lvl, out) {
   m.driveOnly = !!lvl.driveOnly
   // off a stop (every mode): his side has to take it back past the arc before a basket counts, so no shot till then
   const clearing = s.mustClear === p.team
-  if (clearing) { if (m.plan !== 'clear' || s.tick >= m.planT) pickClear(s, p, m) }
-  else if (m.plan === 'clear') m.plan = null
+  if (clearing) {
+    if (m.plan !== 'clear' || s.tick >= m.planT) pickClear(s, p, m)
+    // the watchdog: never idle with it to take back. Not nearer the arc in half a second: a new way out, the shortest
+    const left = -ref.arcPast(p.x, p.y)
+    if (m.clrT == null || left < m.clrD - 0.3) { m.clrD = left; m.clrT = s.tick }
+    else if (s.tick - m.clrT > Math.round(0.5 * GHZ)) { pickClear(s, p, m, true); m.clrD = left; m.clrT = s.tick }
+  } else { m.clrT = null; if (m.plan === 'clear') m.plan = null }
   if (m.plan == null) {
     m.gotT = s.tick; m.sag = nearestDef(s, p).d
     // he works for his shot: sizes his man up first, a beat or more (a shooter less, a smart one as long as it takes),
@@ -212,7 +240,7 @@ function withBall(s, p, m, lvl, out) {
     m.jab = roll(s) < 0.5 ? -1 : 1; m.jabbed = false; m.commit = 0
   }
   if (m.plan == null) pickPlan(s, p, m)
-  else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = m.commit = s.tick + Math.round(2 * GHZ) } else pickPlan(s, p, m) }
+  else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.noJump = s.tick + Math.round(3 * GHZ); m.plan = 'drive'; m.planT = m.commit = s.tick + Math.round(2 * GHZ) } else pickPlan(s, p, m) }
   if (s.tick >= (m.thinkT ?? 0)) { m.thinkT = s.tick + THINK; m.noise = (roll(s) - 0.5) * 2 * lvl.ev; m.go = roll(s) }
   const { def: D, d: dD } = nearestDef(s, p)
   // a crossover his man has stayed in front of: now and then he spins back the other way off it (a second flick,
@@ -244,7 +272,8 @@ function withBall(s, p, m, lvl, out) {
   if (mine.kind === 'jumper' && clockS > toRim + 0.3 + 0.5 * (1 - p.R.iq)) need = clockS <= late ? need : clamp(driveValue(s, p, D, dD, lvl) + T.cpuJumpEdge - Math.max(0, held - 2) * T.cpuHurry, 0.3, T.cpuDriveV)
   if (sitting && mine.kind === 'jumper' && clockS > late) need = Math.min(need, Math.max(T.cpuSitV, driveValue(s, p, D, dD, lvl)))
   // on his way out to the arc for a three: no long two on the way (unless it's a better shot than the three would be)
-  if (m.plan === 'three' && mine.kind === 'jumper' && !mine.three && clockS > 4) need = Math.max(need, Math.min(0.6, mine.v * T.twoValue))
+  // (and he doesn't settle for a long two a step inside the line: he steps back into the three)
+  if (m.plan === 'three' && mine.kind === 'jumper' && !mine.three && clockS > 4) need = Math.max(need, ref.arcPast(p.x, p.y) > -5 ? 0.62 : Math.min(0.6, mine.v * T.twoValue))
   if (mine.kind === 'jumper' && need >= T.cpuDriveV && clockS < 5.5 && m.plan !== 'drive' && mine.v < need) m.plan = 'drive'
   // a better look for a teammate
   // (taking it back: a teammate already behind the arc is a way to do it)
@@ -270,7 +299,9 @@ function withBall(s, p, m, lvl, out) {
   }
   // a jumper with a hand in his face isn't a shot unless the clock says so (a great shooter takes a little more of
   // one); sizing his man up, only a wide-open look goes
-  const handy = mine.kind === 'jumper' && mine.c > 0.38 + 0.25 * (p.R.jsRaw ?? p.R.js) && clockS > late
+  // (just off a step-back on his spot, the space it made is the shot: a little more of a hand is fine)
+  const off = m.plan === 'three' && p.mvT >= s.tick - Math.round(0.6 * GHZ) ? 0.12 : 0
+  const handy = mine.kind === 'jumper' && mine.c > 0.38 + off + 0.25 * (p.R.jsRaw ?? p.R.js) && clockS > late
   const wide = mine.c < 0.12
   // a layup from the edge of the paint into a man set in front of it isn't a shot: he keeps working to the rim
   const walled = mine.kind !== 'jumper' && mine.d > 4.6 && mine.c > 0.45 && clockS > late
@@ -301,21 +332,25 @@ function withBall(s, p, m, lvl, out) {
   else if (m.plan === 'three' || m.plan === 'mid') {
     tx = m.spot.x; ty = m.spot.y
     if (Math.hypot(tx - p.x, ty - p.y) < 1.2) {
+      // on his spot for the three with room (his man a step off, or just stepped back off him): he takes it; that's
+      // what he came out there for
+      if (m.plan === 'three' && mine.three && !clearing && p.noAct <= 0 && mine.v >= 0.3 && (dD >= 5.6 || p.mvT >= s.tick - Math.round(0.5 * GHZ)) && mine.c < 0.5 + 0.2 * (p.R.jsRaw ?? p.R.js)) { out.mx = 0; out.my = 0; out.shoot = true; return }
       // on his spot and still covered: make space with a move, or go
-      if (dD < 5.1 && p.moveCd <= 0 && p.frzCd <= 0 && m.go < lvl.move) {
+      // (a move needs only his feet ready: whether it can freeze his man again is another thing, frzCd)
+      if (dD < 5.1 && p.moveCd <= 0 && m.go < lvl.move) {
         // (straight back off him, a touch to one side: the step-back; now and then more across: behind the back)
         const ax = p.x - D.x, ay = p.y - D.y, a = Math.hypot(ax, ay) || 1, across = m.go < lvl.move * 0.3 ? 0.8 : 0.3
         out.mx = ax / a * (across > 0.5 ? 0.6 : 0.95) + (-ay / a) * m.side * across; out.my = ay / a * (across > 0.5 ? 0.6 : 0.95) + (ax / a) * m.side * across
         const l = Math.hypot(out.mx, out.my) || 1
         out.mx /= l; out.my /= l
-        if (ref.inBounds(p.x + out.mx * 6.5, p.y + out.my * 6.5, -1)) { const f = ref.flickFor(p, { x: out.mx, y: out.my }); out.dx = f.x; out.dy = f.y; return }
+        if (ref.inBounds(p.x + out.mx * 6.5, p.y + out.my * 6.5, -1)) { const f = ref.flickFor(p, { x: out.mx, y: out.my }); out.dx = f.x; out.dy = f.y; m.spot = { x: p.x + out.mx * 3, y: p.y + out.my * 3 }; return }   // (where the move lands him is his spot now: he doesn't walk back into his man)
         m.side = -m.side
       }
       // covered on his spot and no move to make: he doesn't stand there, he goes
       // (and he goes now, and keeps going: it used to aim this tick at the spot he stood on, a step back, and with
       // his man sat in the paint the next tick put him back on the jumper, on the same spot, which sent him to the
       // rim again: a step each way, over and over, in the corner)
-      if (p.moveCd > 0 || p.frzCd > 0 || s.tick > m.planT - GHZ || m.go >= lvl.move) { m.plan = 'drive'; m.planT = m.commit = s.tick + Math.round(2 * GHZ); tx = RIM.x; ty = RIM.y + 1.5 }
+      if ((p.moveCd > 0 && p.burst <= 0 && p.mvT < s.tick - GHZ) || s.tick > m.planT - GHZ || m.go >= lvl.move) { m.noJump = s.tick + Math.round(3 * GHZ); m.plan = 'drive'; m.planT = m.commit = s.tick + Math.round(2 * GHZ); tx = RIM.x; ty = RIM.y + 1.5 }
     }
   } else if (m.plan === 'post') {
     if (m.spot && Math.hypot(m.spot.x - p.x, m.spot.y - p.y) < 2.5) m.spot = null
@@ -493,7 +528,8 @@ function defend(s, p, m, lvl, out) {
   hist.push(man.x, man.y, man.vx, man.vy)
   // ...and later against a man who can shoot: he has to respect the jumper, so the first step gets on him a beat late
   // (a man who can't shoot gets played for the drive)
-  const react = Math.max(1, lvl.react + Math.round((man.R.js - 0.55) * T.cpuRespect))
+  // (a good on-ball defender, Perimeter D, sees it sooner; a poor one later)
+  const react = Math.max(1, Math.round(lvl.react * (1.25 - 0.5 * (p.R.perRaw ?? 0.5))) + Math.round((man.R.js - 0.55) * T.cpuRespect))
   while (hist.length > react * 4 + 4) hist.splice(0, 4)
   // ...and he reads where the man is going from it: a steady run is tracked, a change of direction is seen late
   const lead = (hist.length / 4 - 1) * DT + 0.08
@@ -563,6 +599,8 @@ function defend(s, p, m, lvl, out) {
     if (dRimM > 19 && Math.hypot(man.vx, man.vy) < 1.5 && man.R.js > 0.5) gap = Math.min(gap, 2.9 + lvl.gap * 0.5)
     // ...and a great shooter out there gets no air at all: make him put it on the floor
     if (dRimM > 19 && man.R.js > 0.92 && ref.isThree(man.x, man.y)) gap = Math.min(gap, 2.3 + lvl.gap * 0.5)
+    // a man coming at him with it: a step of cushion (so a first step doesn't go by him)
+    if (Math.hypot(man.vx, man.vy) > 3 && (man.vx * ux + man.vy * uy) > 2 && dRimM > 8) gap += T.cpuCushion
     if (man.act === 'gather') gap = 2.5
     // in the post: bodied up on him, between him and the rim; picked up: all over him (he can't go anywhere)
     if (man.post) gap = 3.05
@@ -603,7 +641,7 @@ function defend(s, p, m, lvl, out) {
     if (h) { tx += (h.x - tx) * 0.1; ty += (h.y - ty) * 0.1 }
     // a big on the block, the ball out top: front him (a smaller man, between him and the ball) or play behind him,
     // a hand on him, a step to the ball side (three-quarters)
-    if (h && h.team !== p.team && man.pos === 'big' && dRimM < 11 && Math.hypot(h.x - mx, h.y - my) > 9) {
+    if (h && h.team !== p.team && man.pos === 'big' && dRimM < 11 && my > RIM.y + 2 && Math.hypot(h.x - mx, h.y - my) > 9) {
       if (m.frontN !== s.possN) { m.frontN = s.possN; m.fronts = (p.R.sizeRaw ?? p.R.size) < (man.R.sizeRaw ?? man.R.size) - 0.1 ? roll(s) < 0.7 : roll(s) < 0.25 }
       const bx = h.x - mx, by = h.y - my, bl = Math.hypot(bx, by) || 1
       // (a body's width off him: on him, not into him)
@@ -629,6 +667,8 @@ function defend(s, p, m, lvl, out) {
       }
     }
   }
+  // (never set up behind the backboard: a man down there is guarded from in front of it)
+  if (!onBall && ty < RIM.y + 0.5) ty = RIM.y + 0.5
   // (off the ball he doesn't chase every half step his man's feet make: what he sees of a man shuffling in place,
   // led a beat ahead, swings a foot either way, and stepping at each swing had him rocking side to side)
   steer(p, tx, ty, out, onBall ? 0.35 : 1.0)

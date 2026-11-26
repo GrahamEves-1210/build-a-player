@@ -157,7 +157,7 @@ export function createPoser(N) {
     z.air = 0; z.scale = 1; z.lean = 0.04 * amp * Math.max(0, lx); z.down = 0; z.ox = 0; z.oy = 0; z.ball = false; z.two = false; z.bounce = false; z.thud = false; z.under = false; z.toeL = 0; z.toeR = 0
     // his stride (gait, below): squared up on his man it's the defensive slide, else a run
     const dm0 = guarding && p.act === 'free' ? Math.hypot(man.x - env.x, man.y - env.y) : 99
-    const wide = c01((10 - dm0) / 4) * (1 - c01((a.sp - 8) / 3))
+    const wide = c01((11.5 - dm0) / 4) * (1 - c01((a.sp - 8) / 3))
     gait(a, z, dt, now, wide, env)
     // the arms: at his sides, a small swing against his stride when he runs (each hand with the shoulder over it,
     // forward as the other side's foot goes forward), the hands coming up a little as they swing through
@@ -168,7 +168,8 @@ export function createPoser(N) {
     if (guarding && p.act === 'free') {
       const dm = Math.hypot(man.x - env.x, man.y - env.y), onBall = b.st === 'held' && b.holder === man.i
       // (the stance and the slide are in his stride: gait)
-      mix3(TL, 0.05, -0.5, 0.3, wide); mix3(TR, 0.05, 0.5, 0.3, wide)
+      // (the hands out wide and low, the arms near straight: a real stance; the owner, 11-26)
+      mix3(TL, 0.13, -0.7, 0.22, wide); mix3(TR, 0.13, 0.7, 0.22, wide)
       z.lean = Math.max(z.lean, 0.03 * wide)
       // his man rising for a shot: a hand up at it (no jump: that's the button)
       if (P[man.i].act === 'gather') {
@@ -181,7 +182,7 @@ export function createPoser(N) {
         const cf = Math.cos(a.ang - A[man.i].ang); if (Math.abs(cf) > 0.3 || !a.bsd) a.bsd = cf < 0 ? -1 : 1
         const ballSide = (P[man.i].hand || 1) * a.bsd
         const w = c01((8 - dm) / 2)
-        mix3(ballSide > 0 ? TR : TL, 0.15, ballSide > 0 ? 0.47 : -0.47, 0.34, w)
+        mix3(ballSide > 0 ? TR : TL, 0.24, ballSide > 0 ? 0.6 : -0.6, 0.26, w)
         // the hands working, a little (a quick small in-and-out, never a wave)
         const hw = 0.03 * w * Math.sin(now / 115)
         TL[0] += hw; TR[0] -= hw

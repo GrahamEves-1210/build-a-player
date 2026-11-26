@@ -509,12 +509,13 @@ head(`The pace: the game ${PACE}x quicker, the things a person does in real time
   ok(PACE === 1.2 && HZ === 36, `PACE ${PACE}: the game's own step is what it was (30 to one of its seconds), ${HZ} of them go by in a real second`)
   // a man at a full run, a real second of it
   const s = toLive(createGame({ teams: [[man('a0')], [man('b0')]], seed: 'pace' })), h = s.ball.holder, p = s.players[h]
-  put(p, 8, 36); put(s.players[1 - h], 45, 8)
-  for (let n = 0; n < 15; n++) { const inp = idle(s); inp[h] = { mx: 1, my: 0 }; step(s, inp) }
-  const x0 = p.x
-  for (let n = 0; n < HZ; n++) { const inp = idle(s); inp[h] = { mx: 1, my: 0 }; step(s, inp) }
+  // (straight at the rim: with the ball that's his full speed, and a drive builds the sprint; owner 11-26)
+  put(p, 28, 48); put(s.players[1 - h], 6, 8)
+  for (let n = 0; n < 15; n++) { const inp = idle(s); inp[h] = { mx: 0, my: -1 }; step(s, inp) }
+  const x0 = p.y
+  for (let n = 0; n < HZ; n++) { const inp = idle(s); inp[h] = { mx: 0, my: -1 }; step(s, inp) }
   // (a straight run builds a sprint on top of his top speed: T.sprint, the owner 11-26)
-  { const r = (p.x - x0) / (R.topBall * PACE); ok(r > 0.98 && r < 1 + T.sprint + 0.02, `with the ball at a full run: ${(p.x - x0).toFixed(1)} ft in a real second (${R.topBall.toFixed(1)} x ${PACE}, up to +${Math.round(T.sprint * 100)}% sprinting)`) }
+  { const r = (x0 - p.y) / (R.topBall * PACE); ok(r > 0.98 && r < 1 + T.sprint + 0.02, `with the ball at a full run at the rim: ${(x0 - p.y).toFixed(1)} ft in a real second (${R.topBall.toFixed(1)} x ${PACE}, up to +${Math.round(T.sprint * 100)}% sprinting)`) }
   ok(gticks(RULES.checkTime) === Math.round(RULES.checkTime * HZ / PACE) && gticks(T.jumpTime) < rticks(T.jumpTime), `game times are ${PACE}x shorter on a watch (the check ${gticks(RULES.checkTime)} ticks = ${(gticks(RULES.checkTime) / HZ).toFixed(2)} s, a jump ${gticks(T.jumpTime)} ticks = ${(gticks(T.jumpTime) / HZ).toFixed(2)} s)`)
   const t = toLive(createGame({ teams: [[man('a0')], [man('b0')]], seed: 'pace2' }))
   ok(t.clock === RULES.shotClock[0] * HZ, `the shot clock is real seconds: ${RULES.shotClock[0]} s is ${t.clock} ticks`)
