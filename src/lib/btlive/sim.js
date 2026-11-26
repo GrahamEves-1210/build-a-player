@@ -38,7 +38,7 @@
 import { HZ, DT, gticks, rticks, COURT, RULES, T, MOVES, MOVE_KEYS } from './tune.js'
 import { derive } from './ratings.js'
 import { rollAt, hashSeed } from './rng.js'
-import { meterSpec, meterQuality } from './meter.js'
+import { meterSpec, meterQuality, windowFor } from './meter.js'
 import * as ref from './referee.js'
 import { modeOfTeams } from './modes.js'
 
@@ -66,7 +66,7 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
     burst: 0, bdx: 0, bdy: 0,                // a dribble move in progress: ticks left, the way it goes (a spin: ends up going)
     mv: 0, bn: 0, bs: 0,                     // ...which one (MOVES[..].n), how many ticks it lasts, a spin's turn (radians, signed)
     moveCd: 0, stealCd: 0, noAct: 0, pb: 0,  // cooldowns (ticks: till the next move can start, a swipe...), the buttons held last tick
-    hand: 1, frzCd: 0,                       // the hand the ball is in (1 his right, -1 his left); till a move can freeze his man again
+    hand: 1, frzCd: 0, mvT: -1,                       // the hand the ball is in (1 his right, -1 his left); till a move can freeze his man again
     fkx: 0, fky: -1, mqx: 0, mqy: 0, mqT: -1, chn: 0, bk: 1,   // (chn: ticks since a move ended that make the next a chained one; bk: this move's speed share)  // the flick that made the move on now; a flick waiting for it to end (until tick mqT)
     sq: -1,                                  // the tick of his latest SHOOT press that hasn't started a shot (-1: none)
     shot: null,                              // going up: { kind, spec, d, three, run, read, cUp, mx, my (the way he was going into it) }
@@ -89,7 +89,7 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
     v: 1, seed: hashSeed(seed), rn: 0, tick: 0, size, rules, mode,
     players, score: teams.map(() => 0), poss: 0, phase: 'check', phaseT: ticks(rules.checkTime),
     king: null, sit: -1, mustClear: null,    // King of the Hill: the king, the man sitting out (indexes); 1v1/2v2: the side that must take it back (team)
-    clock: 0, next: null, winner: null, gamePoint: false, possN: 0,
+    clock: 0, next: null, winner: null, gamePoint: false, possN: 0, ck: 0, ckT: 0,   // (ck: King of the Hill's check, betweenPlays)
     ball: { st: 'held', holder: 0, x: 0, y: 0, z: 3, vx: 0, vy: 0, vz: 0, from: -1, to: -1, t: 0, n: 0, sx: 0, sy: 0, sz: 0, tx: 0, ty: 0, verdict: null, near: [], tried: [], lastTeam: 0, reb: false, grabAt: 0, speed: 0, kind: null,
       fd: -1, fD: 0, fl: false },            // a dead ball on its way to the man who checks it: to whom, from how far; has it hit the floor
     call: null,                              // a teammate calling for the ball: { pid (index), tick }
@@ -120,7 +120,7 @@ function pointOf(s, team) {
 function setSpots(s, team, carrier) {
   const C = COURT.check
   let wing = 0
-  const WINGS = [{ x: 44.5, y: 26.5 }, { x: 11.5, y: 26.5 }], POSTS = [{ x: 35.6, y: 11.5 }, { x: 20.4, y: 11.5 }]
+  const WINGS = [{ x: 44.5, y: 26.5 }, { x: 11.5, y: 26.5 }], POSTS = [{ x: 35.6, y: 12.5 }, { x: 20.4, y: 12.5 }]
   for (const p of s.players) {
     if (p.team !== team) continue
     if (p.i === carrier) { p.sx = C.x; p.sy = C.y; continue }
@@ -175,6 +175,8 @@ function endPossession(s, pts, nextTeam, carrier, why) {
     else if (c !== king) kingIs(s, c, king)
     else kingIs(s, c, sit)
     s.next.sit = s.sit
+    // the check: the ball goes to the man guarding the king, and he checks it up to him at the top (betweenPlays)
+    s.next.checker = kothDef(s)
     if (s.sit !== sit) s.events.push({ e: 'rotate', king: c, sit: s.sit, in: sit, why })
   }
   setSpots(s, nextTeam, c)
@@ -228,12 +230,29 @@ function kothNext(s, last) {
 // referee's word arrives (a dunk's green window is wider)
 export const dunkRoll = (s, i) => rollAt(s.seed ^ 0x0d0c, s.possN * 8 + i)
 // (an open lane, going at the rim: an able dunker takes off from farther out)
-export const shotKindAt = (s, i) => { const p = s.players[i]; return ref.shotKind(p.R, ref.rimDist(p), dunkRoll(s, i), ref.laneOpen(p, s.players.filter(o => o.team !== p.team && on(o)))) }
+export const shotKindAt = (s, i) => { const p = s.players[i], defs = s.players.filter(o => o.team !== p.team && on(o)); return ref.shotKind(p.R, ref.rimDist(p), dunkRoll(s, i), ref.laneOpen(p, defs), ref.dunkGuarded(p, defs)) }
+
+// How hard his shot is right now, and so how wide its green window: his rating from there, how far behind the line,
+// the hand in his face as it is this tick (a man closing out shrinks it while he rises), on the move, his legs, a shot
+// straight off the check, game point. Sets p.shot.spec.win (the meter reads it live), .read and .p
+export function shotWindow(s, p) {
+  const sh = p.shot
+  if (!sh) return
+  const defs = s.players.filter(o => o.team !== p.team && on(o)).map(fact)
+  const c = ref.contestOf(fact(p), defs, sh.kind).c
+  const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
+  const pT = ref.makeChance({ R: p.R, kind: sh.kind, d: sh.d, past: sh.kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, c, run: sh.run, cs, rushed: s.clock <= T.rushAt * HZ, gp: s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom, sta: p.sta, fresh: freshOf(s, p) })
+  sh.p = pT; sh.c = c
+  sh.spec.win = windowFor(pT) * (sh.spec.clutch ?? 1)
+  sh.read = c < 0.2 ? 0 : c < 0.5 ? 1 : 2
+}
+// a shot straight off the check: 1 at the check, fading to 0 over T.checkRushS or at his first move
+const freshOf = (s, p) => (s.liveT == null || p.mvT > s.liveT ? 0 : clamp(1 - (s.tick - s.liveT) / rticks(T.checkRushS), 0, 1))
 
 function startGather(s, p) {
   const d = ref.rimDist(p)
   const kind = shotKindAt(s, p.i)
-  const spec = meterSpec(kind, p.R, s.gamePoint)
+  const spec = meterSpec(kind, p.R, s.gamePoint, ref.dunkLift(p.R))
   const defs = s.players.filter(o => o.team !== p.team && on(o)).map(fact)
   const c0 = ref.contestOf(fact(p), defs, kind).c
   // how well he could be contested as he rises (every man in reach with a hand up): a man who only gets there late
@@ -248,6 +267,7 @@ function startGather(s, p) {
   const run = clamp(Math.hypot(p.vx, p.vy) / top, 0, 1), rl = Math.hypot(p.vx, p.vy) || 1
   p.shot = { kind, spec, d, three: kind === 'jumper' && ref.isThree(p.x, p.y), run, read, cUp, mx: run > 0.3 ? p.vx / rl : 0, my: run > 0.3 ? p.vy / rl : 0 }
   p.act = 'gather'; p.actT = 0; p.burst = 0; p.mv = 0; p.bs = 0; p.mqT = -1; p.boost = 0
+  shotWindow(s, p)
   s.events.push({ e: 'gather', pid: p.i, kind })
 }
 
@@ -258,7 +278,7 @@ function release(s, p, q) {
   // late in the game (game point, or anyone three from the goal): Clutch counts
   const late = s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom
   const defs = s.players.filter(o => o.team !== p.team && on(o))
-  const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp, gp: late },
+  const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, past: sh.kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp, gp: late, sta: p.sta, fresh: freshOf(s, p) },
     { block: defs.map(() => rnd(s)), make: rnd(s) })
   const st = s.stats[p.i]
   p.act = 'follow'; p.actT = 0; p.actN = ticks(T.follow); p.shot = null
@@ -274,7 +294,7 @@ function release(s, p, q) {
   const spot = ref.reboundSpot(p, sh.d, rnd(s), rnd(s))
   b.st = 'shot'; b.sx = p.x; b.sy = p.y; b.sz = sh.kind === 'dunk' ? 10.5 : 8; b.x = p.x; b.y = p.y; b.z = b.sz
   b.t = 0; b.n = ticks(sh.kind === 'dunk' ? 0.16 : sh.kind === 'layup' ? 0.36 : 0.5 + sh.d * 0.014)
-  b.tx = spot.x; b.ty = spot.y
+  b.tx = spot.x; b.ty = spot.y; b.rx = p.x; b.ry = p.y
   b.verdict = { made: v.made, pts: v.pts, poster: !!v.poster, deep: !!v.deep, three: sh.three, kind: sh.kind, d: sh.d, c: v.c, p: v.p, q, by: v.by ?? null, uncl: s.mustClear === p.team }
   s.events.push({ e: 'release', pid: p.i, kind: sh.kind, three: sh.three, d: sh.d, q, c: v.c, p: v.p, cs: cs != null, run: sh.run })
 }
@@ -376,6 +396,8 @@ export function moveBegin(p, dir) {
   const m = ref.moveOf(p, dir), M = MOVES[m.kind]
   p.mv = M.n; p.bn = p.burst = ticks(M.time); p.bdx = m.x; p.bdy = m.y; p.bs = 0; p.fkx = dir.x; p.fky = dir.y
   if (m.swap) p.hand = -(p.hand || 1)
+  // a spin from the stick: it rolls round from the way the flick went (back, off his man) to the way it comes out
+  if (m.kind === 'spin') { let t = Math.atan2(m.y, m.x) - Math.atan2(dir.y, dir.x); if (t > Math.PI) t -= 2 * Math.PI; else if (t < -Math.PI) t += 2 * Math.PI; p.bs = t }
   // tired legs: a slower, shorter burst (never none)
   p.bk = (p.chn > 0 ? T.chainSlow : 1) * (T.staFloor + (1 - T.staFloor) * (p.sta ?? 1))
   p.sta = Math.max(0, (p.sta ?? 1) - T.staMove - (p.chn > 0 ? T.staChain : 0))
@@ -455,6 +477,7 @@ function burstVel(p) {
 function doMove(s, p, dir) {
   const kind = dir ? moveInput(p, dir, s.tick) : moveQueued(p, s.tick)
   if (!kind) return
+  p.mvT = s.tick
   if (kind === 'spin') { s.events.push({ e: 'move', pid: p.i, def: -1, freeze: false, ankles: false, kind: 'spin', hand: p.hand }); return }
   // his man: the nearest defender (he can only be frozen so often: T.moveCd)
   let def = null, dd = T.moveRange
@@ -522,11 +545,25 @@ function act(s, p, inp) {
   const up = (edge & B_JUMP) || ((edge & B_SHOOT) && (p.team !== s.poss || ballUp))
   if (p.team !== s.poss) {
     if ((edge & B_STEAL) && p.stealCd <= 0 && b.st === 'held') { doSteal(s, p); return }
-    if (up) { p.act = 'jump'; p.actT = 0; s.events.push({ e: 'jump', pid: p.i }) }
+    if (up) { p.act = 'jump'; p.actT = 0; s.events.push({ e: 'jump', pid: p.i }); lateBlock(s, p) }
     return
   }
   if (up && ballUp) { p.act = 'jump'; p.actT = 0; p.sq = -1; s.events.push({ e: 'jump', pid: p.i }) }
   else if ((edge & B_PASS) && b.st === 'held') { s.call = { pid: p.i, tick: s.tick }; s.events.push({ e: 'call', pid: p.i }) }
+}
+
+// a man who goes up just after the release (T.blockAfter) can still get a hand on it, near where it left the hand
+function lateBlock(s, d) {
+  const b = s.ball
+  if (b.st !== 'shot' || b.t > ticks(T.blockAfter) || b.from < 0) return
+  const sh = s.players[b.from]
+  const at = { ...fact(sh), x: b.rx ?? sh.x, y: b.ry ?? sh.y }
+  const v = ref.judgeShot(at, [{ ...fact(d), act: 'jump', after: true }], { kind: b.kind, d: b.verdict?.d ?? 0, q: 0 }, { block: [rnd(s)] })
+  if (v.blocked == null) return
+  s.stats[d.i].blk++
+  b.verdict = null
+  swat(s, sh, d)
+  s.events.push({ e: 'block', pid: d.i, on: sh.i, chase: v.chase, kind: b.kind, late: true })
 }
 
 function timers(p) {
@@ -597,6 +634,12 @@ function move(s, p, inp) {
       }
       if (p.boost > 0 && p.act === 'free') top *= 1 + T.boost
       move2(p, mx * top, my * top, top, (def ? p.R.accelDef : p.R.accel) / T.accel)
+      // the ball in the hand on the side he's going (his right as he faces the basket): across to the other hand when
+      // he turns that way; straight at the basket or back keeps the hand it's in
+      if (has && p.act === 'free') {
+        const d = ref.rimDist(p) || 1, lat = p.vx * -(RIM.y - p.y) / d + p.vy * (RIM.x - p.x) / d
+        if (Math.abs(lat) > T.handSwitch && Math.sign(lat) !== (p.hand || 1)) { p.hand = Math.sign(lat); s.events.push({ e: 'hand', pid: p.i, hand: p.hand }) }
+      }
     }
   }
   p.x += p.vx * DT; p.y += p.vy * DT
@@ -792,36 +835,69 @@ function betweenPlays(s) {
   for (const p of P) if (!p.out) keepIn(p, 0)
   if (b.st === 'held') holdBall(s)
   // (a dunk: the ball is left under the rim a beat longer, while the man who threw it down is still on his way down)
-  else if (b.st === 'dead') deadBall(s, dead ? s.next.carrier : b.fd, !dead || since >= ticks(b.kind === 'dunk' && b.verdict?.made ? 0.6 : 0.2))
+  else if (b.st === 'dead') deadBall(s, dead ? s.next.checker ?? s.next.carrier : b.fd, !dead || since >= ticks(b.kind === 'dunk' && b.verdict?.made ? 0.6 : 0.2))
   s.phaseT--
   if (dead) {
     if (s.phaseT > 0) return
     s.phase = 'check'; s.phaseT = ticks(s.rules.checkTime)
     s.poss = s.next.team
-    const c = s.next.carrier
+    const c = s.next.carrier, chk = s.next.checker ?? -1
     s.next = null
+    // King of the Hill: a dead ball goes to the man guarding the king, who checks it up to him (s.ck: 1 waiting for it)
+    s.ck = chk >= 0 ? 1 : 0
     if (b.st === 'held') holdBall(s)                       // (only ever in his hands: endPossession)
-    else if (b.fd < 0) feedStart(s, c)                     // still coming down: it goes to him from here
+    else if (b.fd < 0) feedStart(s, s.ck ? chk : c)        // still coming down: it goes to him from here
     s.events.push({ e: 'check', team: s.poss, pid: c })
     return
   }
   // the check
-  if (s.phaseT > 0) return
-  if (b.st !== 'held') {
-    if (s.phaseT > -ticks(T.checkWait + 2)) return
-    b.holder = b.fd; b.fd = -1; holdBall(s)                // (never: the ball is quicker than any man)
+  if (s.ck === 2) { checkPass(s); return }
+  if (s.ck === 3) { if (--s.ckT > 0) return; s.ck = 0 }
+  else {
+    if (s.phaseT > 0) return
+    if (b.st !== 'held') {
+      if (s.phaseT > -ticks(T.checkWait + 2)) return
+      b.holder = b.fd; b.fd = -1; holdBall(s)              // (never: the ball is quicker than any man)
+    }
+    const there = P.every(p => p.out || Math.hypot(p.sx - p.x, p.sy - p.y) <= T.spotNear)
+    if (!there && s.phaseT > -ticks(T.checkWait)) return
+    // King of the Hill: CHECK. The man guarding the king bounces it to him; a beat, and it's live
+    if (s.ck === 1) {
+      s.ck = 0
+      if (b.holder !== s.king) {
+        const d = P[b.holder], k = P[s.king]
+        s.ck = 2; b.st = 'check'; b.from = d.i; b.to = k.i; b.t = 0; b.n = ticks(T.checkPass)
+        b.sx = b.x; b.sy = b.y; b.sz = b.z
+        s.events.push({ e: 'checkup', pid: d.i, to: k.i })
+        return
+      }
+    }
   }
-  const there = P.every(p => p.out || Math.hypot(p.sx - p.x, p.sy - p.y) <= T.spotNear)
-  if (!there && s.phaseT > -ticks(T.checkWait)) return
   // the ball is live: everyone where he stands (on his spot, or a step from it), set
   for (const p of P) {
     p.vx = p.vy = 0; p.act = 'free'; p.actT = 0; p.noAct = 0; p.pb = 0; p.sq = -1
     faceCheck(p, p.team === s.poss)
     p.catchFrom = -1
   }
-  s.phase = 'live'; s.clock = rticks(s.rules.shotClock[s.size - 1])
+  s.phase = 'live'; s.clock = rticks(s.rules.shotClock[s.size - 1]); s.liveT = s.tick
   holdBall(s)
   s.events.push({ e: 'live', team: s.poss })
+}
+
+// King of the Hill: the check, a bounce pass from the man guarding the king to the king's hands (down to the floor
+// half way, back up), then a beat (T.checkBeat) and the ball is live
+function checkPass(s) {
+  const b = s.ball, k = s.players[b.to]
+  b.t++
+  const f = clamp(b.t / b.n, 0, 1), tx = k.x + k.fx * 1.1, ty = k.y + k.fy * 1.1
+  b.vx = (tx - b.x) * HZ; b.vy = (ty - b.y) * HZ
+  b.x = b.sx + (tx - b.sx) * f; b.y = b.sy + (ty - b.sy) * f
+  b.z = f < 0.5 ? b.sz * (1 - f / 0.5) : 3 * (f - 0.5) / 0.5
+  if (b.t === Math.round(b.n / 2)) s.events.push({ e: 'checkbounce' })
+  if (b.t < b.n) return
+  b.holder = k.i; holdBall(s)
+  s.ck = 3; s.ckT = ticks(T.checkBeat)
+  s.events.push({ e: 'checked', pid: k.i })
 }
 
 // set for the check: the offense faces the rim, the defense faces his man (away from it)
@@ -901,6 +977,7 @@ function tick(s, inputs) {
   if (s.phase !== 'live') { betweenPlays(s); return s }
   const P = s.players
   for (const p of P) timers(p)
+  for (const p of P) if (p.act === 'gather' && p.shot) shotWindow(s, p)
   // everyone's buttons in turn, starting with a different man each tick: two things on the same tick (a swipe and a
   // shot going up, a jump and a release) don't always go the same man's way
   for (let k = 0; k < P.length; k++) { const p = P[(k + s.tick) % P.length]; if (s.phase !== 'live') return s; if (!p.out) act(s, p, inputs?.[p.i] || IDLE) }

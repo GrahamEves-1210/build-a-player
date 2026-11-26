@@ -1,102 +1,101 @@
-// BLACKTOP LIVE: dribble moves off the one stick (the owner, 11-25: "merging the left and right stick so movement with
-// the ball is more like dribble stick but you have to be more intentional to trigger them"). Pure: the screen feeds it
-// the move stick as it goes (t in ms, x and y -1..1) and it says when the thumb made a move on purpose. What it hands
-// back is the way of the flick (the old right stick's flick): which move that is stays the game's word (referee.moveOf:
-// the basket and the hand the ball is in), so the moves, the CPU and the wire are all as they were.
+// BLACKTOP LIVE: dribble moves off the one stick (the owner, 11-25: "trigger more dribble moves with left stick, almost
+// any quick motion should trigger it that direction"). Pure: the screen feeds it the move stick as it goes (t in ms,
+// x and y -1..1) and it says when the thumb made a quick motion. What it hands back is the way of the flick: which
+// move that is stays the game's word (referee.moveOf: the basket and the hand the ball is in), so the moves, the CPU
+// and the wire are all as they were.
 //
-// Steering never makes a move: a move is a fast change between two places the thumb HOLDS (still for a beat), and
-// only three shapes count:
-//   SNAP   held one way, then over to a new way at least GEST.snapDeg round inside GEST.snapMs (a hard cut, or
-//          straight through the middle to the other side), or GEST.flickDeg inside GEST.flickMs: the move that way
-//   PUMP   held one way, off to the middle and straight back out the same way inside GEST.pumpMs: the move that way
-//          (toward the basket: the hesitation)
-//   SPIN   held out, rolled round the outside at least GEST.spinDeg inside GEST.spinMs: a spin, ending the new way
-// A slow curve, a drift, easing off to stop, a thumb landing and pushing out from the middle: none of them is a move.
+// A move is the stick going a long way fast: inside GEST.winMs it has covered at least GEST.dist of its reach (a
+// flick out from rest, a snap sideways, straight across through the middle: the cross back) and it ends out past
+// GEST.out. The move goes the way the stick ends up. Plain steering is slow: it never gets that far that fast. Letting
+// go (the stick back to the middle) is never a move, and neither is the thumb landing and pushing out at once (it
+// has to have been on the stick for GEST.armMs first). One quick motion is one move (GEST.lockMs before the next).
 export const GEST = {
-  out0: 0.55,          // a held place counts from this far out (where the move starts from)
-  out1: 0.75,          // ...and a move ends at least this far out
-  still: 0.07,         // held: the thumb within this (of the stick's reach) of where it is...
-  stillMs: 40,         // ...for this long
-  snapMs: 100, snapDeg: 75,
-  flickMs: 60, flickDeg: 40,   // ...or an eighth of a turn, very quickly (driving at the basket, a flick to the diagonal)
-  pumpMs: 300, pumpDeg: 40, pumpIn: 0.45,
-  spinMs: 300, spinDeg: 170, spinR: 0.5,
-  keep: 700,           // ms of the stick kept
+  winMs: 120,          // the window...
+  dist: 0.55,          // ...and how far the stick has to go in it (of its reach)
+  out: 0.5,            // where it has to end up, at least (out from the middle)
+  armMs: 110,          // the thumb on the stick this long before a flick from where it landed counts
+  lockMs: 140,         // after a move, this long before another one
+  still: 0.06,         // the thumb has landed: a sample this close to the last one...
+  settleMs: 70,        // ...or this long after the motion was read (the move goes where the stick is then)
+  keep: 400,           // ms of the stick kept
 }
 
-const ang = (ax, ay, bx, by) => { const c = (ax * bx + ay * by) / ((Math.hypot(ax, ay) * Math.hypot(bx, by)) || 1); return Math.acos(Math.max(-1, Math.min(1, c))) * 180 / Math.PI }
 const unit = (x, y) => { const m = Math.hypot(x, y) || 1; return [x / m, y / m] }
 
-// feed(t, x, y): null, or { kind: 'snap' | 'pump' | 'spin', dir: [x, y] (unit: the flick), via: [x, y] (a spin: the
-// flick before it, a quarter turn back, that the spin rolls out of) }. reset(): the thumb came off
+// feed(t, x, y): null, or { kind: 'flick', dir: [x, y] (unit), ms (how long the motion took) }. reset(): the thumb came off
 export function createGesture(o = GEST) {
   const H = []
-  let anchor = null                 // the last place the thumb held, out: { t, x, y }
-  function reset() { H.length = 0; anchor = null }
+  let t0 = -1, lock = -1e9, pend = null
+  function reset() { H.length = 0; t0 = -1; pend = null }
   function feed(t, x, y) {
     if (H.length && t < H[H.length - 1].t) reset()
+    if (t0 < 0) t0 = t
     H.push({ t, x, y })
     while (H.length > 2 && t - H[0].t > o.keep) H.shift()
-    const n = H.length - 1, now = H[n], r = Math.hypot(x, y)
-    // held? every sample back to stillMs ago (and the one before that) within `still` of now
-    let i = n
-    while (i > 0 && t - H[i - 1].t <= o.stillMs) i--
-    if (i === 0) return null
-    for (let j = i - 1; j <= n; j++) if (Math.hypot(H[j].x - x, H[j].y - y) > o.still) return null
-    if (r < o.out0) { if (anchor && t - anchor.t > o.spinMs) anchor = null; return null }
-    // when it got here: the first of the run of samples that are all where it is now
-    let a = i - 1
-    while (a > 0 && Math.hypot(H[a - 1].x - x, H[a - 1].y - y) <= o.still) a--
-    const arrive = H[a].t
-    let out = null
-    if (anchor && arrive > anchor.t && r >= o.out1) out = judge(anchor, H, a, now, arrive)
-    anchor = { t, x, y }
-    return out
-  }
-  function judge(A, H, a, now, arrive) {
-    // how long it took: from the first sample off the held place to the first at the new one (samples come a frame
-    // apart, so this is the quick part itself, not the frames either side of it)
-    let leave = arrive
-    for (let j = 0; j <= a; j++) if (H[j].t > A.t && Math.hypot(H[j].x - A.x, H[j].y - A.y) > o.still) { leave = H[j].t; break }
-    const D = arrive - leave
-    // the path between: how near the middle it came, how far round it went (over the outside only)
-    let minR = Math.hypot(A.x, A.y), rot = 0, px = A.x, py = A.y
-    for (let j = 0; j <= a; j++) {
-      const h = H[j]
-      if (h.t <= A.t) continue
-      const hr = Math.hypot(h.x, h.y)
-      minR = Math.min(minR, hr)
-      if (hr >= 0.3 && Math.hypot(px, py) >= 0.3) { let d = Math.atan2(h.y, h.x) - Math.atan2(py, px); if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; rot += d }
-      if (hr >= 0.3) { px = h.x; py = h.y }
+    // a quick motion read, waiting for the thumb to land where it's going (still for a sample, or GEST.settleMs on)
+    if (pend) {
+      const p = H[H.length - 2], r = Math.hypot(x, y)
+      // (no word from the thumb for a while: it stayed where it last was, so that's where the move goes)
+      if (t - pend.t >= o.settleMs && Math.hypot(p.x - x, p.y - y) > o.still) {
+        const ms = p.t - pend.from
+        pend = null; lock = p.t
+        return Math.hypot(p.x, p.y) >= o.out * 0.8 ? { kind: 'flick', dir: unit(p.x, p.y), ms } : null
+      }
+      if (r < o.out * 0.8) { pend = null; return null }
+      if (Math.hypot(p.x - x, p.y - y) > o.still) return null
+      const ms = t - pend.from
+      pend = null; lock = t
+      return { kind: 'flick', dir: unit(x, y), ms }
     }
-    const turn = ang(A.x, A.y, now.x, now.y), dir = unit(now.x, now.y), deg = Math.abs(rot) * 180 / Math.PI
-    if (D <= o.spinMs && deg >= o.spinDeg && minR >= o.spinR && (D > o.snapMs || deg >= 175)) {
-      // the flick the spin rolls out of: a quarter turn back from where it ends, the way it came round
-      const s = rot > 0 ? -1 : 1, c = Math.cos(s * Math.PI / 2), sn = Math.sin(s * Math.PI / 2)
-      return { kind: 'spin', dir, via: [dir[0] * c - dir[1] * sn, dir[0] * sn + dir[1] * c], ms: D }
+    if (t - lock < o.lockMs) return null
+    const r = Math.hypot(x, y)
+    if (r < o.out) return null
+    // the farthest the stick was from here inside the window
+    let far = null, fd = 0
+    // (a sample holds till the next one comes: where the stick was as the window opened counts too)
+    for (let i = H.length - 2; i >= 0; i--) {
+      const h = H[i], old = t - h.t > o.winMs
+      const d = Math.hypot(h.x - x, h.y - y)
+      if (d > fd) { fd = d; far = old ? { t: t - o.winMs, x: h.x, y: h.y } : h }
+      if (old) break
     }
-    if ((D <= o.snapMs && turn >= o.snapDeg) || (D <= o.flickMs && turn >= o.flickDeg)) return { kind: 'snap', dir, ms: D }
-    if (D <= o.pumpMs && turn <= o.pumpDeg && minR <= o.pumpIn) return { kind: 'pump', dir, ms: D }
-    return null
+    if (!far || fd < o.dist) return null
+    // (the thumb only just landed and pushed straight out: that's starting to move, not a flick)
+    if (far.t - t0 < o.armMs) return null
+    // (the motion has to have been made since the last move: not the tail of the one already read)
+    if (far.t < lock) return null
+    pend = { t, from: far.t }
+    return feed2(t, x, y)
   }
+  // (the same sample again: maybe it has landed already)
+  function feed2(t, x, y) { const p = H[H.length - 2]; if (Math.hypot(p.x - x, p.y - y) <= o.still * 0.5) { const ms = t - pend.from; pend = null; lock = t; return { kind: 'flick', dir: unit(x, y), ms } } return null }
   return { feed, reset }
 }
 
-// The keyboard: a direction key tapped twice (a short tap, then again quickly) is the move that way; the other
-// direction keys held at the time go with it (W held and A tapped twice: up and left). down(k, t) returns the key that
-// was tapped twice, or null; up(k, t) as it's let go.
-export const TAPS = { tapMs: 190, gapMs: 190 }
+// The keyboard: a direction key tapped (down and up again quickly) is the move that way, with the other direction
+// keys held at the time (W held and A tapped: up and left); a new key that turns the way he's going hard (a quarter
+// turn or more: D held, then A, or W held and D pressed) is the move the new way at once.
+//   down(k, t, before, after): before/after are the stick's way (unit, or [0, 0]) as the key goes down. Returns true
+//   when that is a move now (the change of direction). up(k, t, before, after): 'turn', 'tap' or null
+export const TAPS = { tapMs: 170, turnDeg: 60 }
 export function createTaps(o = TAPS) {
-  const last = new Map()            // key -> { down, up }
+  const down = new Map()            // key -> { t, fired }
+  const turnCos = Math.cos(o.turnDeg * Math.PI / 180)
+  const turned = (a, b) => Math.hypot(a[0], a[1]) > 0.5 && Math.hypot(b[0], b[1]) > 0.5 && a[0] * b[0] + a[1] * b[1] <= turnCos
   return {
-    down(k, t) {
-      const L = last.get(k)
-      const hit = L && L.up != null && L.up - L.down <= o.tapMs && t - L.up <= o.gapMs
-      last.set(k, { down: t, up: null, hit })
-      if (hit) { last.set(k, { down: -1e9, up: null }); return k }   // (a third tap starts over)
-      return null
+    // a key going down: true when it turns him hard (a move the new way, now)
+    down(k, t, before, after) {
+      const turn = turned(before, after)
+      down.set(k, { t, fired: turn })
+      return turn
     },
-    up(k, t) { const L = last.get(k); if (L && L.up == null) L.up = t },
-    reset() { last.clear() },
+    // a key coming up: 'turn' when letting it go turns him hard (D and A both held, D let go: he's going left now),
+    // 'tap' when it was a quick tap (the move the way it pointed), else null
+    up(k, t, before = [0, 0], after = [0, 0]) {
+      const d = down.get(k); down.delete(k)
+      if (turned(before, after)) return 'turn'
+      return d && !d.fired && t - d.t <= o.tapMs ? 'tap' : null
+    },
+    reset() { down.clear() },
   }
 }

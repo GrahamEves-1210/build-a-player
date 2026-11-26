@@ -342,7 +342,7 @@ head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the
   const flick = (s, dx, dy) => { const inp = idle(s); inp[s.ball.holder] = { mx: 0, my: 0, dx, dy }; step(s, inp); return s.events.find(e => e.e === 'move') }
   // (the ball in his right hand: left is toward the off hand)
   for (const [dx, dy, kind, hand, word] of [[0, -1, 'hesi', 1, 'toward the basket: a hesitation'], [-1, 0, 'btl', -1, 'left (the off hand): between the legs, to the left hand'], [1, 0, 'inout', 1, 'right (the ball hand): the in-and-out, same hand'], [0, 1, 'back', 1, 'straight back: a step-back'],
-    [-0.72, 0.7, 'btb', -1, 'back and left: behind the back, to the left hand'], [0.72, 0.7, 'back', 1, 'back and right (the ball hand): the side step-back'], [-0.77, -0.64, 'cross', -1, 'forward and left (50 degrees off the basket): a crossover'], [-0.5, -0.87, 'cross', -1, 'forward, a little left (30 degrees): a crossover'],
+    [-0.72, 0.7, 'btb', -1, 'back and left: behind the back, to the left hand'], [0.72, 0.7, 'spin', 1, 'back and right (the ball hand): the spin'], , [-0.77, -0.64, 'cross', -1, 'forward and left (50 degrees off the basket): a crossover'], [-0.5, -0.87, 'cross', -1, 'forward, a little left (30 degrees): a crossover'],
     [0.77, -0.64, 'inout', 1, 'forward and right: the in-and-out'], [-0.15, -0.99, 'hesi', 1, 'at the basket, a touch left: the hesitation']]) {
     const s = fresh(), h = s.ball.holder, e = flick(s, dx, dy), p = s.players[h]
     ok(e?.kind === kind && MOVE_KEYS[p.mv] === kind && p.burst === gticks(MOVES[kind].time) && p.hand === hand && p.moveCd > p.burst, `${word} (${kind}), its burst on, the ball in his ${hand > 0 ? 'right' : 'left'} hand`)

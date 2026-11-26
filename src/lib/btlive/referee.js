@@ -5,7 +5,6 @@
 // returns a verdict: no state of its own, no clock, no randomness of its own. The simulation calls it locally in
 // practice; online the same file runs on the live server, so nobody's phone decides its own makes. Pure.
 import { COURT, RULES, T, MOVES } from './tune.js'
-import { releaseMult } from './meter.js'
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const RIM = COURT.rim
@@ -22,24 +21,39 @@ export function behindArc(x, y, m = 0) {
   if (y <= COURT.arcSideY) return Math.abs(x - RIM.x) > COURT.arcSideX + m
   return Math.hypot(x - COURT.arcC.x, y - COURT.arcC.y) > COURT.arcR + m
 }
+// how far behind the three-point line he is (ft; less than 0 inside it)
+export function arcPast(x, y) {
+  if (y <= COURT.arcSideY) return Math.abs(x - RIM.x) - COURT.arcSideX
+  return Math.hypot(x - COURT.arcC.x, y - COURT.arcC.y) - COURT.arcR
+}
 export const inPaint = (x, y) => x >= COURT.paint.x0 && x <= COURT.paint.x1 && y <= COURT.paint.y1
 export const inBounds = (x, y, pad = 0) => x >= COURT.minX - pad && x <= COURT.maxX + pad && y >= COURT.minY - pad && y <= COURT.maxY + pad
 
-// How far out an able dunker takes off with the lane open in front of him (a long gather step, a long takeoff):
-// up to 8-10 ft for a great leaper, more with size; no farther than the normal range for a man who can't get up
-export function dunkFrom(R) {
-  const bnc = R.bncRaw ?? R.bnc
-  return T.dunkRange + T.dunkFar * clamp((bnc - 0.25) / 0.6, 0, 1) + T.dunkFarSize * R.size * (bnc > T.dunkBounce ? 1 : 0)
+// How far up the Bounce scale a man is for dunking: 0 at T.dunkBounce (the least that can get up there), 1 at the top
+export const dunkLift = R => clamp(((R.bncRaw ?? R.bnc) - T.dunkBounce) / (1 - T.dunkBounce), 0, 1)
+// How far out a dunker takes off: a man who can only just get up there from right under it (T.dunkNear), a great
+// leaper from the normal range, and with the lane open in front of him from farther out (a long gather step, a long
+// takeoff: up to 8-10 ft, more with size)
+export function dunkFrom(R, open = true) {
+  const t = dunkLift(R)
+  const near = T.dunkNear + (T.dunkRange - T.dunkNear) * t
+  return open ? near + T.dunkFar * clamp((t - 0.35) / 0.65, 0, 1) + T.dunkFarSize * R.size * t : near
 }
 // A shot from here by him: a layup or a dunk near the rim, a jumper anywhere else. roll: one roll (the dunk).
-// open: the lane to the rim is his (no one in it, going downhill): an able dunker goes up for it from farther out
-export function shotKind(R, d, roll, open = false) {
-  const bnc = R.bncRaw ?? R.bnc                              // (who can get up: the plain grade)
-  const able = bnc > T.dunkBounce
-  if (open && able && d > T.dunkRange && d <= dunkFrom(R) && roll < 0.35 + 0.65 * clamp((bnc - T.dunkBounce) / 0.5, 0, 1)) return 'dunk'
+// open: the lane to the rim is his (no one in it, going downhill). guarded: a man on him at the rim; under T.dunkHop
+// of the way up the Bounce scale that's a layup (he can't go up over him), above it he can dunk on him
+export function shotKind(R, d, roll, open = false, guarded = false) {
+  const bnc = R.bncRaw ?? R.bnc, t = dunkLift(R)
+  const able = bnc >= T.dunkBounce && !(guarded && t < T.dunkHop)
+  if (able && d <= dunkFrom(R, open) && roll < (open ? 0.35 + 0.65 * t : (0.15 + 0.85 * t) * T.dunkChance * (0.7 + 0.6 * R.fin))) return 'dunk'
   if (d > T.layRange) return 'jumper'
-  if (d <= T.dunkRange && able && roll < (bnc - T.dunkBounce) * T.dunkChance * (0.7 + 0.6 * R.fin) * (open ? 1.3 : 1)) return 'dunk'
   return 'layup'
+}
+// is a man on him at the rim: a defender (not beaten) within T.dunkGuard of him, nearer the rim than him or right at it
+export function dunkGuarded(p, defs) {
+  const d = rimDist(p)
+  for (const o of defs) { if (beaten(o)) continue; if (dist(o, p) <= T.dunkGuard && (rimDist(o) < d + 0.5 || rimDist(o) < 4)) return true }
+  return false
 }
 // Is the lane open: nobody who can guard (defs: men, not beaten, not sitting out) between him and the rim, within
 // T.laneW of the line, and he's going at it (or standing right under it)
@@ -107,12 +121,15 @@ export function contestOf(shooter, defenders, kind) {
 }
 
 // The chance a shot goes in: what the rating gives at that spot x how good the release was x how well it was contested
-//   s: { R, kind, d (ft from the rim), q (release 0-1), c (contest 0-1), run (0-1 of top speed at the gather),
-//        cs (the passer's Passing 0-1 on a shot off the catch, else null), rushed, gp (game point: Clutch) }
+// for an average kid's release (the green window is made from it: meter.js windowFor; the release itself is the
+// meter's: green goes in, nothing else does)
+//   s: { R, kind, d (ft from the rim), past (ft behind the three-point line), c (contest 0-1), run (0-1 of top speed at
+//        the gather), cs (the passer's Passing 0-1 on a shot off the catch, else null), rushed, gp (game point: Clutch),
+//        sta (his legs 0-1), fresh (0-1: how much of the shot-off-the-check rush is on it) }
 export function makeChance(s) {
   const R = s.R
   let base, pen
-  if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin; pen = T.contestMaxD * s.c * (1 - T.dunkThrough * R.bnc) }
+  if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin - T.dunkLow * (1 - dunkLift(R)); pen = T.contestMaxD * s.c * (1 - T.dunkThrough * R.bnc) }
   else if (s.kind === 'layup') {
     base = T.layBase + T.layFin * R.fin - T.layFar * Math.max(0, s.d - 3)
     pen = T.contestMaxL * s.c * (1 - T.finThrough * R.fin)
@@ -120,15 +137,18 @@ export function makeChance(s) {
     const close = T.closeBase + T.closeJs * R.js, arc = T.arcBase + T.arcJs * R.js
     const t = clamp((s.d - 8) / (T.arcRef - 8), 0, 1)
     base = close + (arc - close) * Math.pow(t, T.curve)
-    if (s.d > T.deepAt) base -= (s.d - T.deepAt) * (T.deepFall - T.deepJs * R.js)
+    // behind the line: every foot farther back is harder, less so for a shooter with range
+    if ((s.past ?? 0) > 0) base *= Math.exp(-s.past * (T.pastK - T.pastJs * (R.jsRaw ?? R.js)))
     base *= 1 - T.setFeet * clamp(((s.run ?? 0) - T.runFrom) / (1 - T.runFrom), 0, 1)
     if (s.cs != null) base *= 1 + T.csBoost * s.cs
     pen = T.contestMaxJ * s.c * (1 - T.jsThrough * (R.jsRaw ?? R.js))     // a great shooter shoots over a hand (on the plain grade)
   }
   // a pass that hits him in stride at the rim: the defense is a beat late to it (the passer's Passing)
   if (s.cs != null && s.kind !== 'jumper') pen *= 1 - T.csLay * s.cs
-  let p = base * releaseMult(s.kind, s.q) * (1 - pen)
+  let p = base * (1 - pen)
   if (s.rushed) p *= 1 - T.rushPen * (1 - R.iq)
+  if (s.sta != null) p *= 1 - T.staShot * (1 - s.sta)
+  if (s.fresh) p *= 1 - T.checkRush * s.fresh
   if (s.gp) p *= 1 + T.clutchMake * ((R.clutchRaw ?? 0.5) - 0.5)
   return clamp(p, 0.02, 0.98)
 }
@@ -145,11 +165,14 @@ export function judgeShot(shooter, defenders, shot, rolls) {
     const dd = dist(d, shooter)
     const reach = T.blockReach + T.blockReachBnc * d.R.bnc + T.blockReachSize * d.R.size
     if (dd > reach) continue
-    const phase = d.actT / T.jumpTime
+    const phase = d.after ? 0.5 : d.actT / T.jumpTime
     const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : T.blockLate
     const kind = shot.kind === 'jumper' ? T.blockJumper : shot.kind === 'dunk' ? T.blockDunk : 1
-    const p = clamp(T.blockBase * onTime * (0.55 + T.blockInt * d.R.int) * (1 + T.blockSize * (d.R.size - shooter.R.size))
-      * (1 + T.blockBnc * (d.R.bnc - 0.75)) * kind * (1 - T.blockFar * dd / reach), 0, T.blockMax)
+    // (on the plain grades: a real rim protector, long and up there, against a smaller man gets plenty; a small guard
+    // almost never gets a big)
+    const ri = d.R.intRaw ?? d.R.int, rs = (d.R.sizeRaw ?? d.R.size) - (shooter.R.sizeRaw ?? shooter.R.size), rb = d.R.bncRaw ?? d.R.bnc
+    const p = clamp(T.blockBase * onTime * (T.blockInt0 + T.blockInt * ri) * Math.max(T.blockSizeMin, 1 + T.blockSize * rs)
+      * (T.blockBnc0 + T.blockBnc * rb) * kind * (1 - T.blockFar * dd / reach), 0, T.blockMax)
     if (roll < p) {
       const dot = sd > 2 && dd > 0.01 ? ((d.x - shooter.x) * (RIM.x - shooter.x) + (d.y - shooter.y) * (RIM.y - shooter.y)) / (dd * sd) : 1
       return { blocked: d.id, chase: dot < -T.chaseAngle && Math.hypot(shooter.vx, shooter.vy) > 3, made: false, pts: 0, c: 1, p: 0 }
@@ -157,11 +180,10 @@ export function judgeShot(shooter, defenders, shot, rolls) {
   }
   const cr = contestOf(shooter, defenders, shot.kind), by = cr.by
   const c = lateContest(cr.c, shot.cUp, shot.kind)
-  const p = makeChance({ R: shooter.R, kind: shot.kind, d: shot.d, q: shot.q, c, run: shot.run, cs: shot.cs, rushed: shot.rushed, gp: shot.gp })
-  // a green jumper goes in (a block is the only answer to it); a green at the rim does too unless a man is walled up
-  // in front of it; anything else rolls its chance
-  const green = shot.q >= 1 && (shot.kind === 'jumper' || c < T.greenWallL)
-  const made = green || rolls.make < p
+  const p = makeChance({ R: shooter.R, kind: shot.kind, d: shot.d, past: shot.past, c, run: shot.run, cs: shot.cs, rushed: shot.rushed, gp: shot.gp, sta: shot.sta, fresh: shot.fresh })
+  // the meter is the shot: a release in the green goes in (the window was made from how hard the shot was), nothing
+  // else does. (rolls.make is no longer read)
+  const made = shot.q >= 1
   return {
     blocked: null, made, pts: made ? (shot.three ? 2 : 1) : 0, c, by, p,
     // a poster: a dunk made on a man who went up to stop it, square in it
@@ -197,7 +219,8 @@ export function moveOf(p, dir) {
   // (the hesitation goes at the basket by his man's hip on the ball's side, not into his chest)
   if (a <= T.hesiTo) return go('hesi', 0.88, 0.47, hand)
   if (a > T.btbTo) return go('back', -1, 0)
-  if (a > T.btlTo) return off ? go('btb', -0.45, 1) : go('back', -0.8, 0.6)
+  // (back and toward the ball hand: the spin, rolled off his man and out to that side)
+  if (a > T.btlTo) return off ? go('btb', -0.45, 1) : go('spin', 0.35, 0.94)
   if (!off) return go('inout', 0.6, 0.8)
   return a <= T.crossTo ? go('cross', 0.55, 1) : go('btl', 0.2, 1)
 }

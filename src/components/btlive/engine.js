@@ -2,7 +2,8 @@
 // display's rate with the positions eased between ticks, reads the stick and the buttons, times the shot meter on
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
-import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
+import { paintCourt, drawHoop } from './court.js'
+import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, shotWindow, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
 import { drawFigure, drawShadow, pointAt, lookOf } from './figure.js'
 import { createPoser } from './pose.js'
@@ -32,8 +33,8 @@ export function createEngine({ setup, els, on, net = null }) {
   const ctx = els.canvas.getContext('2d')
   let s = createGame({ teams: setup.teams, seed: setup.seed, mode: setup.mode })
   const me = setup.me
-  // the dribble moves: on the move stick (the default: a snap, a pump or a half circle of it, gesture.js; on a keyboard a
-  // direction tapped twice, SHIFT the spin), or on a second stick (the right pad, the arrow keys) as before (setup.stick 'two')
+  // the dribble moves: on the move stick (the default: any quick flick of it, gesture.js; on a keyboard a direction
+  // tapped or a hard change of direction, SHIFT the spin), or on a second stick (the right pad, the arrow keys) as before (setup.stick 'two')
   const ONE = setup.stick !== 'two'
   const G = createGesture(), TP = createTaps()
   const levels = setup.levels.slice()
@@ -136,6 +137,9 @@ export function createEngine({ setup, els, on, net = null }) {
       else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
       else if (e.e === 'oob') { sfx('whistle'); say('OUT OF BOUNDS', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
+      // King of the Hill's check-up: CHECK under the king as the man guarding him bounces it over; the bounce heard
+      else if (e.e === 'checkup') { const q = s.players[e.to]; say('CHECK', q.x, q.y + 5.5, '#fff', false, 700) }
+      else if (e.e === 'checkbounce') sfx('dribble', 0.8)
       else if (e.e === 'check') { say('CHECK BALL', COURT.rim.x, 37.6, 'rgba(255,255,255,.75)', false, 900); H.na = H.a; H.nb = H.b; H.dq.length = 0; NB.aUsed = NB.n[0] }
       // a stop: no check, his side takes it back past the arc (the arc pulses for a few seconds, then stays lit till
       // it's done; not if he secured it behind the arc already, the same tick)
@@ -191,7 +195,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const p = s.players[me]
     if (p.act === 'gather' && !meter.on && !levels[me]) {
       meter.on = true; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0; meter.dy = 0
-      meter.base = meterSpec(p.shot.spec.kind ?? p.shot.kind, p.R, false)   // the window without game point (the clutch rating moves it)
+      meter.base = null                                          // (the window moves with the shot now: sim.js shotWindow)
       meter.t0 = clockNow - H.aT0 < 220 ? H.aT0 : clockNow - STEP
       if (!H.a && H.aUp >= H.aT0) letGo(H.aUp)                    // pressed and let go inside one tick
     } else if (p.act !== 'gather' && meter.on) {
@@ -245,7 +249,8 @@ export function createEngine({ setup, els, on, net = null }) {
       const c0 = ref.contestOf(p, s.players.filter(o => o.team !== p.team && !o.out), kind).c
       p.act = 'gather'; p.actT = 0
       const sp = Math.hypot(p.vx, p.vy), run = clamp(sp / p.R.topBall, 0, 1)
-      p.shot = { kind, spec: meterSpec(kind, p.R, s.gamePoint), d, three: kind === 'jumper' && ref.isThree(p.x, p.y), read: c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2, run, mx: run > 0.3 ? p.vx / sp : 0, my: run > 0.3 ? p.vy / sp : 0 }
+      p.shot = { kind, spec: meterSpec(kind, p.R, s.gamePoint, ref.dunkLift(p.R)), d, three: kind === 'jumper' && ref.isThree(p.x, p.y), read: c0 < 0.2 ? 0 : c0 < 0.5 ? 1 : 2, run, mx: run > 0.3 ? p.vx / sp : 0, my: run > 0.3 ? p.vy / sp : 0 }
+      shotWindow(s, p)
       NB.local = { act: 'gather', shot: p.shot, sn: NB.n[0] }
     }
     // a dribble move starts here too (the step's rules: sim.js doMove); the flick itself went to the referee as it was made
@@ -496,7 +501,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const kk = (ONE ? KEYS1.map(heldWay) : KEYWAY).map(d => ref.moveKind(p, d)).join()
     if (els.keys?.title && kk !== MV.keys) {
       MV.keys = kk
-      els.keys.title.textContent = ONE ? 'TAP TWICE' : 'DRIBBLE MOVES'
+      els.keys.title.textContent = ONE ? 'TAP A KEY' : 'DRIBBLE MOVES'
       els.keys.spinRow?.classList.toggle('is-off', !ONE)
       kk.split(',').forEach((kd, i) => { els.keys.arrows[i].textContent = NAME_KEY[kd]; els.keys.subs[i].textContent = ''; els.keys.rows[i].classList.remove('is-off') })
       if (els.keys.stealRow) els.keys.stealRow.classList.add('is-off')
@@ -510,7 +515,7 @@ export function createEngine({ setup, els, on, net = null }) {
   // the rim is drawn, a make drops through the net and a miss leaves the rim and comes down on the floor.
   const RIM = COURT.rim
   const LIFT = 0.27                                                  // feet up the screen per foot of height
-  const TOPY = 3.4                                                   // the backboard's front: a ball is never drawn above it
+  const TOPY = COURT.board.y                                          // the backboard's face: a ball is never drawn above it
   const colOf = i => TEAM[s.players[i].team] ?? '#fff'           // (King of the Hill: each man is his own side)
   const idxOf = v => (v == null || v === false ? -1 : typeof v === 'number' ? (v >= 0 && v < N ? v : -1) : s.players.findIndex(p => p.id === v))
   // King of the Hill: the king (not while he still has to take it back); every mode: the man taking it back
@@ -601,7 +606,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const FIG = LOOKS.map(look => ({ x: 0, y: 0, s: 30, ang: 0, scale: 1, air: 0, lean: 0, down: 0, lh: null, rh: null, lf: null, rf: null, toeL: 0, toeR: 0, look, hs: 20, cy: 0, ball: false, bounce: false, bl: null }))
   // (a man is drawn a little bigger than the body the game collides: from above, his arms reach past it)
   const FIGK = T.radius * 2 * 1.16
-  const ENV = { x: 0, y: 0, a: 0, dt: 0, held: 0, sFt: 3 }, BQ = [0, 0, 0]
+  const ENV = { x: 0, y: 0, a: 0, dt: 0, held: 0, sFt: 3 }, BQ = [0, 0, 0], BQ2 = [0, 0, 0]
   function figures(now, dt, a, tk) {
     const sF = FIGK * k
     for (let i = 0; i < N; i++) {
@@ -611,7 +616,7 @@ export function createEngine({ setup, els, on, net = null }) {
       ENV.held = i === me && !levels[me] && meter.on ? (meter.grade ? meter.gradeAt : now) - meter.t0 : (p.actT + a) * STEP
       const z = poser.pose(s, i, now, ENV)
       f.x = (DX[i] + z.ox) * k; f.y = (DY[i] + z.oy) * k; f.s = sF; f.ang = z.ang; f.scale = z.scale; f.air = z.air; f.lean = z.lean; f.down = z.down
-      f.lh = z.lh; f.rh = z.rh; f.lf = z.lf; f.rf = z.rf; f.toeL = z.toeL; f.toeR = z.toeR; f.ball = z.ball; f.bounce = z.bounce; f.bl = z.bl; f.under = z.under
+      f.lh = z.lh; f.rh = z.rh; f.lf = z.lf; f.rf = z.rf; f.toeL = z.toeL; f.toeR = z.toeR; f.ball = z.ball; f.bounce = z.bounce; f.bl = z.bl; f.under = z.under; f.bside = z.bside
       // the ball off the floor: heard on each bounce
       if (z.thud && s.phase === 'live') sfx('dribble', i === me ? 1 : 0.7)
       // (the square the names, the meters and the words keep off: where he's drawn, a man in the air a touch up the screen)
@@ -767,7 +772,7 @@ export function createEngine({ setup, els, on, net = null }) {
       chip(meter.grade, bx + bw / 2, overY, col)
     } else {
       // how open he is (as well as his IQ reads it)
-      const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][meter.read] ?? ''
+      const read = ['OPEN', 'CONTESTED', 'SMOTHERED'][p.shot?.read ?? meter.read] ?? ''
       if (read) chip(read, bx + bw / 2, overY, [GREEN, AMBER, RED][meter.read])
       // pulled up on the move: it costs him a little (referee: setFeet)
       if ((p.shot?.kind === 'jumper') && (p.shot.run ?? 0) > 0.45) chip('ON THE MOVE', bx + bw / 2, overY - fs * 1.45, AMBER)
@@ -805,6 +810,45 @@ export function createEngine({ setup, els, on, net = null }) {
     path(); ctx.lineWidth = Math.max(2, k * 0.26); ctx.strokeStyle = col; ctx.globalAlpha = still ? 0.85 : 0.35 + 0.6 * pulse; ctx.stroke()
     ctx.globalAlpha = 1
   }
+  // the rim taking a make or a miss, a dunk on it: drawn with the hoop (draw)
+  const C_RIMR = COURT.rimR
+  function rimFx(now) {
+    for (const f of fx) {
+      if (f.rim !== 'make') continue
+      const t = (now - f.t0) / f.dur
+      if (t < 0 || t > 1) continue
+      const r0 = k * C_RIMR * 1.1
+      ctx.lineWidth = Math.max(2, k * 0.26); ctx.strokeStyle = `rgba(255,255,255,${0.9 * (1 - t)})`
+      ctx.beginPath(); ctx.arc(RIM.x * k, RIM.y * k, r0 * (1 - t * 0.45), 0, 6.283); ctx.stroke()
+    }
+    // a dunk on the rim: the rim dragged his way and springing back, a ring thrown off it, the hit marked round it
+    for (const f of fx) {
+      if (f.rim !== 'dunk') continue
+      const t = (now - f.t0) / f.dur
+      if (t < 0 || t > 1) continue
+      const rx = RIM.x * k, ry = RIM.y * k, r0 = k * C_RIMR * 1.1, still = reduced()
+      if (t < 0.5) { const u = t / 0.5; ctx.lineWidth = Math.max(1.5, k * 0.22) * (1 - u) + 0.5; ctx.strokeStyle = `rgba(255,255,255,${0.85 * (1 - u)})`; ctx.beginPath(); ctx.arc(rx, ry, r0 * (1 + 1.6 * u * (2 - u)), 0, 6.283); ctx.stroke() }
+      if (t < 0.32 && !still) {
+        const u = t / 0.32, n = f.big ? 10 : 8
+        ctx.lineWidth = Math.max(2, k * 0.2); ctx.lineCap = 'round'; ctx.strokeStyle = `rgba(255,240,207,${1 - u})`
+        ctx.beginPath()
+        for (let j = 0; j < n; j++) { const an = j / n * 6.283 + 0.3, r1 = r0 * (1.6 + 1.2 * u), r2 = r1 + r0 * (f.big ? 1.2 : 0.8) * (1 - u * 0.5); ctx.moveTo(rx + Math.cos(an) * r1, ry + Math.sin(an) * r1); ctx.lineTo(rx + Math.cos(an) * r2, ry + Math.sin(an) * r2) }
+        ctx.stroke(); ctx.lineCap = 'butt'
+      }
+    }
+  }
+  // the rim pulled by a dunk, springing back: [x, y] px (or null)
+  function rimSway(now) {
+    for (const f of fx) {
+      if (f.rim === 'miss') { const t = (now - f.t0) / f.dur; if (t < 0 || t > 1 || reduced()) continue; const wob = Math.sin(t * 22) * (1 - t) * k * 0.22; return [wob, wob * 0.4] }
+      if (f.rim !== 'dunk') continue
+      const t = (now - f.t0) / f.dur
+      if (t < 0 || t > 1 || reduced()) continue
+      const sp = Math.exp(-5.2 * t) * Math.cos(t * 30) * k * 0.62
+      return [f.ux * sp, f.uy * sp]
+    }
+    return null
+  }
   let tk0 = 30
   const BARS = [], BAR_OF = [], DOTS = [], CHOICE = new Int8Array(N), TABY = new Int8Array(N), MSIDE = []
   function draw(now) {
@@ -824,16 +868,6 @@ export function createEngine({ setup, els, on, net = null }) {
     const b = s.ball, live = s.phase === 'live'
     const holder = b.st === 'held' ? b.holder : -1
     const king = kingOf(), clearer = clearerOf()
-    // the rim taking a make or a miss (a dunk: over the men, further down)
-    for (const f of fx) {
-      if (!f.rim || f.rim === 'dunk') continue
-      const t = (now - f.t0) / f.dur
-      if (t < 0 || t > 1) continue
-      const rx = RIM.x * k, ry = RIM.y * k, r0 = k * 0.95
-      const wob = f.rim === 'make' || reduced() ? 0 : Math.sin(t * 22) * (1 - t) * k * 0.22
-      ctx.lineWidth = Math.max(2, k * 0.26); ctx.strokeStyle = f.rim === 'make' ? `rgba(255,255,255,${0.9 * (1 - t)})` : `rgba(240,120,50,${1 - t * 0.5})`
-      ctx.beginPath(); ctx.arc(rx + wob, ry + wob * 0.4, r0 * (f.rim === 'make' ? 1 - t * 0.45 : 1), 0, 6.283); ctx.stroke()
-    }
     // who is cut by the edge of the screen (a tab at the edge instead of half a man)
     const half = FIGK * k * 0.5
     const cut = i => (worldW <= w + 1 ? 0 : X(i) - half < L ? -1 : X(i) + half > Rr ? 1 : 0)
@@ -874,8 +908,9 @@ export function createEngine({ setup, els, on, net = null }) {
       ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,255,255,${0.95 - 0.5 * f})`
       ctx.beginPath(); ctx.arc(FIG[ci].x, FIG[ci].y, FIGK * k * (0.64 + 0.2 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
     }
-    // players, the far ones first (a man in the air over the rest)
-    const order = P.map((_, i) => i).sort((i, j) => (P[i].y + (P[i].act === 'jump' ? 99 : 0)) - (P[j].y + (P[j].act === 'jump' ? 99 : 0)))
+    // players, the far ones first, by where their feet are (and a man in the air over the men on the floor)
+    const depth = i => DY[i] + FIG[i].air * 30
+    const order = P.map((_, i) => i).sort((i, j) => depth(i) - depth(j))
     // the ball first (where it is, how it turns), then everyone and it in the order things stand off the floor (below)
     let bx, by, bsc, gx, gy, bz, key
     const carry = holder >= 0 ? holder : b.st === 'shot' && b.kind === 'dunk' && b.from >= 0 && FIG[b.from].ball ? b.from : -1
@@ -883,8 +918,14 @@ export function createEngine({ setup, els, on, net = null }) {
       const f = FIG[carry]
       if (f.ball) {
         const q = pointAt(f, f.bl[0], f.bl[1], BQ)
-        bz = f.bl[2]; gx = q[0]; gy = q[2]; bx = q[0]; by = f.bounce ? q[1] - LIFT * bz * k * 0.7 : q[1]
+        bz = f.bl[2]; gx = q[0]; gy = q[2]; bx = q[0]; by = q[1]
         bsc = f.bounce ? 0.84 + bz * 0.05 : 0.9 + Math.min(bz, 9) * 0.022
+        if (f.bounce) {
+          // a dribble, seen from above: straight down under the dribbling hand and back up into it (the hand on top
+          // of it at the top of the bounce), never off to the side of him
+          const hd = f.bside > 0 ? f.rh : f.lh, hq = pointAt(f, hd[0], hd[1], BQ2), u = clamp((bz - 0.35) / 2.0, 0, 1)
+          bx = q[0] + (hq[0] - q[0]) * u; by = q[1] + (hq[1] - q[1]) * u; gx = bx; gy = q[2] + (hq[2] - q[2]) * u
+        }
       } else { bx = gx = f.x; by = f.cy; gy = f.y; bz = 3; bsc = 1 }
       key = 'h' + carry
     } else {
@@ -926,55 +967,60 @@ export function createEngine({ setup, els, on, net = null }) {
     const ballZ = carry >= 0 ? (FIG[carry].ball ? FIG[carry].bl[2] : 3) : DB[2]
     const ballR = Math.max(4.5, k * 0.7) * bsc
     if (!ballCut) { const f = clamp(1 - bz * 0.035, 0.45, 1); ctx.fillStyle = `rgba(0,0,0,${clamp(0.5 - bz * 0.03, 0.12, 0.5)})`; ctx.beginPath(); ctx.ellipse(GX + ballR * 0.12, GY + ballR * 0.3, ballR * 0.92 * f, ballR * 0.42 * f, 0, 0, 6.283); ctx.fill() }
-    let ballDone = ballCut
-    const over = i => { const f = FIG[i]; return Math.abs(f.x - BX) < f.hs + ballR && Math.abs(f.cy - BY) < f.hs + ballR }
+    // Everything off the floor in order of depth (feet nearer the top of the screen first; a man in the air over the
+    // men on the floor), the hoop in among them at the front of the rim: a man under it or behind it goes under the
+    // rim and the net, a man in front of it (a dunker rising at it) over them. The ball: in a man's hands under his
+    // hands and over his body when it's up at his head or higher; a dribble under him (his hand on top of it); loose
+    // or in the air by where it is, over the men once it's over their heads; going through the net between the
+    // backboard and net behind and the rim in front, then out in front of it all
+    const HOOPK = RIM.y + 0.8
+    const nearRim = Math.hypot(DB[0] - RIM.x, DB[1] - RIM.y) < C_RIMR + 0.5
+    let ballK
+    if (carry >= 0) ballK = -1
+    else if (nearRim && DB[2] > 3 && DB[2] < 10.3) ballK = 'net'
+    else if (nearRim && b.st === 'dead' && DB[2] <= 3) ballK = HOOPK + 0.01
+    else ballK = DB[1] + (DB[2] > 7 ? 30 : 0)
+    let ballDone = ballCut, hoopDone = false
+    const sway = rimSway(now)
+    const hoop = () => {
+      if (hoopDone) return
+      hoopDone = true
+      drawHoop(ctx, k, sway, 'back')
+      if (ballK === 'net' && !ballDone) {
+        drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true
+        // in the net: the front strings over it
+        const rx = RIM.x * k + (sway?.[0] || 0), ry = RIM.y * k + (sway?.[1] || 0), r0 = k * C_RIMR * 1.05, nh = k * 0.95
+        ctx.strokeStyle = 'rgba(245,245,240,.85)'; ctx.lineWidth = Math.max(1, k * 0.07)
+        ctx.beginPath()
+        for (let j = -3; j <= 3; j++) { const t = j / 3; ctx.moveTo(rx + t * r0, ry + r0 * 0.5); ctx.lineTo(rx + t * r0 * 0.55, ry + nh) }
+        ctx.stroke()
+      }
+      drawHoop(ctx, k, sway, 'front')
+      rimFx(now)
+    }
     DOTS.length = 0
     for (const i of order) {
+      if (depth(i) > HOOPK) hoop()
+      if (!ballDone && typeof ballK === 'number' && ballK >= 0 && ballK <= depth(i)) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
       if (cut(i)) continue
       const f = FIG[i]
-      // (the ball goes in under him: lower than him, on him on the screen, and not in his own hands)
-      if (!ballDone && i !== carry && (carry < 0 || order.indexOf(carry) < order.indexOf(i)) && ballZ < 6 + 3 * f.air && over(i)) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
+      // (his own ball: under him on the dribble and held low, over him once it's up at his head)
+      const mine = !ballDone && i === carry, high = mine && ballZ >= 6
+      if (mine && !high) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
       DOTS.push([f.x - f.hs, f.cy - f.hs, f.x + f.hs, f.cy + f.hs, i])
       if (import.meta.env.DEV) LAY.dots[i] = [f.x, f.cy, f.hs]
-      // (the ball between his legs goes under him)
-      if (f.under && holder === i && f.ball) { const q = pointAt(f, f.bl[0], f.bl[1], BQ); drawBall(q[0], q[1], 0.84, q[0], q[2], 0.4) }
       // the man sitting out (King of the Hill): at the side, a touch faded
       if (P[i].out) ctx.globalAlpha = 0.72
       drawFigure(ctx, f)
       ctx.globalAlpha = 1
+      if (mine && high) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
     }
+    hoop()
     if (!ballDone) drawBall(BX, BY, bsc, GX, GY, bz, false)
-    // through the net: a make dropping under the rim has the net's strings over it
-    if (b.st === 'dead' && b.verdict?.made !== false && Math.hypot(DB[0] - RIM.x, DB[1] - RIM.y) < 0.1 && DB[2] > 4 && DB[2] < 9.6) {
-      const rx = RIM.x * k, ry = RIM.y * k, r0 = k * 0.82, nh = k * 1.5
-      ctx.strokeStyle = 'rgba(245,245,240,.85)'; ctx.lineWidth = Math.max(1, k * 0.07)
-      ctx.beginPath()
-      for (let j = -3; j <= 3; j++) { const t = j / 3; ctx.moveTo(rx + t * r0, ry); ctx.lineTo(rx + t * r0 * 0.55, ry + nh) }
-      for (let j = 1; j <= 2; j++) { const u = j / 3, hw = r0 * (1 - 0.45 * u); ctx.moveTo(rx - hw, ry + nh * u); ctx.lineTo(rx + hw, ry + nh * u) }
-      ctx.stroke()
-    }
-    // a dunk on the rim: the rim dragged his way and springing back, a ring thrown off it, the hit marked round it
-    for (const f of fx) {
-      if (f.rim !== 'dunk') continue
-      const t = (now - f.t0) / f.dur
-      if (t < 0 || t > 1) continue
-      const rx = RIM.x * k, ry = RIM.y * k, r0 = k * 0.95, still = reduced()
-      const sp = still ? 0 : Math.exp(-5.2 * t) * Math.cos(t * 30) * k * 0.62
-      ctx.lineWidth = Math.max(2.5, k * 0.3); ctx.strokeStyle = `rgba(245,128,52,${1 - t * 0.5})`
-      ctx.beginPath(); ctx.arc(rx + f.ux * sp, ry + f.uy * sp, r0, 0, 6.283); ctx.stroke()
-      if (t < 0.5) { const u = t / 0.5; ctx.lineWidth = Math.max(1.5, k * 0.22) * (1 - u) + 0.5; ctx.strokeStyle = `rgba(255,255,255,${0.85 * (1 - u)})`; ctx.beginPath(); ctx.arc(rx, ry, r0 * (1 + 1.6 * u * (2 - u)), 0, 6.283); ctx.stroke() }
-      if (t < 0.32 && !still) {
-        const u = t / 0.32, n = f.big ? 10 : 8
-        ctx.lineWidth = Math.max(2, k * 0.2); ctx.lineCap = 'round'; ctx.strokeStyle = `rgba(255,240,207,${1 - u})`
-        ctx.beginPath()
-        for (let j = 0; j < n; j++) { const an = j / n * 6.283 + 0.3, r1 = r0 * (1.6 + 1.2 * u), r2 = r1 + r0 * (f.big ? 1.2 : 0.8) * (1 - u * 0.5); ctx.moveTo(rx + Math.cos(an) * r1, ry + Math.sin(an) * r1); ctx.lineTo(rx + Math.cos(an) * r2, ry + Math.sin(an) * r2) }
-        ctx.stroke(); ctx.lineCap = 'butt'
-      }
-    }
     // the king's crown, and CLEAR IT over the man who has to take it out past the arc
     const marks = []
     const fsN = Math.max(13, Math.round(tk * 0.4))
-    if (king >= 0 && !cut(king)) {
+    if (king >= 0 && !cut(king) && s.ck !== 2) {
       const cw = tk * 0.5, cy = FIG[king].cy - FIG[king].hs - 2
       drawCrown(X(king), cy, cw)
       marks.push([X(king) - cw / 2 - 2, cy - cw * 0.66 - 2, X(king) + cw / 2 + 2, cy + 2])
@@ -1142,6 +1188,7 @@ export function createEngine({ setup, els, on, net = null }) {
     stick.id = e.pointerId; stick.rect = r; stick.ox = e.clientX - r.left; stick.oy = e.clientY - r.top
     els.pad.setPointerCapture?.(e.pointerId)
     G.reset()
+    if (ONE) feedG(performance.now(), 0, 0)                          // (where the thumb landed: the stick's middle)
     setKnob(stick.ox, stick.oy, 0, 0, true)
   }
   const padMove = e => {
@@ -1172,8 +1219,6 @@ export function createEngine({ setup, els, on, net = null }) {
     const g = G.feed(gT, x, y)
     if (import.meta.env.DEV) { GLOG.push([Math.round(gT), +x.toFixed(2), +y.toFixed(2), g ? g.kind + (hasBall() ? '' : ' (no ball)') : '']); if (GLOG.length > 600) GLOG.shift() }
     if (!g || !hasBall()) return
-    // a spin: the flick it rolls out of, then the way it ends (the game's spin: a second flick round from the first)
-    if (g.kind === 'spin') flick(g.via[0], g.via[1])
     flick(g.dir[0], g.dir[1])
   }
   // where the stick rests: the layout's marker for it (btlive.css .btlv-stick-home), else a quarter across
@@ -1273,10 +1318,12 @@ export function createEngine({ setup, els, on, net = null }) {
   const KEY = { ' ': 'a', e: 'b' }
   const ARROW = { arrowup: [0, -1], arrowdown: [0, 1], arrowleft: [-1, 0], arrowright: [1, 0] }
   const arrows = new Set(), tapped = new Set()
+  const KW = { x: 0, y: 0, t: -1e9 }                  // the last way the keys had him going, and when
   const readKeys = () => {
     let x = 0, y = 0
     for (const kk of keys) { const d = DIR[kk]; if (d) { x += d[0]; y += d[1] } }
     const m = Math.hypot(x, y)
+    if (m) { KW.x = x / m; KW.y = y / m; KW.t = performance.now() } else if (H.mx || H.my) KW.t = performance.now()
     if (stick.id == null) { H.mx = m ? x / m : 0; H.my = m ? y / m : 0 }
   }
   const arrowVec = set => { let x = 0, y = 0; for (const kk of set) { x += ARROW[kk][0]; y += ARROW[kk][1] } const m = Math.hypot(x, y); dribbleAt(m ? x / m : 0, m ? y / m : 0) }
@@ -1302,9 +1349,12 @@ export function createEngine({ setup, els, on, net = null }) {
     if (e.metaKey || e.ctrlKey || e.altKey) return
     const kk = e.key.toLowerCase()
     if (DIR[kk]) {
-      e.preventDefault(); keys.add(kk); readKeys()
-      // tapped twice: the move that way
-      if (ONE && !e.repeat && TP.down(kk, performance.now()) && hasBall()) { const v = heldWay(kk); flick(v.x, v.y) }
+      e.preventDefault()
+      if (e.repeat) return
+      const before = [H.mx, H.my]
+      keys.add(kk); readKeys()
+      // a hard change of direction with it: the move the new way, now (a quick tap is one too, as it comes up: keyUp)
+      if (ONE && TP.down(kk, performance.now(), before, [H.mx, H.my]) && hasBall()) flick(H.mx, H.my)
     } else if (kk === 'shift') { if (ONE && !e.repeat && hasBall()) keySpin() }
     else if (kk === 'e') { e.preventDefault(); if (e.repeat) return; if (onDef()) stealKey(); else press('b', true) }
     else if (ARROW[kk]) {
@@ -1320,7 +1370,13 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   const keyUp = e => {
     const kk = e.key.toLowerCase()
-    if (DIR[kk]) { keys.delete(kk); readKeys(); TP.up(kk, performance.now()) }
+    if (DIR[kk]) {
+      // (the way he was going: D and A both down cancel out, so it's the way before that)
+      const v = heldWay(kk), before = H.mx || H.my ? [H.mx, H.my] : performance.now() - KW.t < 400 ? [KW.x, KW.y] : [0, 0]
+      keys.delete(kk); readKeys()
+      const up = ONE ? TP.up(kk, performance.now(), before, [H.mx, H.my]) : null
+      if (up && hasBall()) { if (up === 'turn') flick(H.mx, H.my); else flick(v.x, v.y) }
+    }
     else if (ARROW[kk]) { if (!arrows.delete(kk)) return; if (!DS.kt) { tapped.clear(); arrowVec(arrows) } }
     else if (KEY[kk]) press(KEY[kk], false)
   }
@@ -1336,6 +1392,12 @@ export function createEngine({ setup, els, on, net = null }) {
   const ro = new ResizeObserver(() => { resize(); camera(1e6); if (stick.id == null) rest() }); ro.observe(els.court)
   resize(); camera(1e6)
   rest()
+  // the floor: the court picture with its own lines painted out and a real half court painted on (court.js)
+  const floorImg = els.world?.querySelector('img')
+  if (floorImg) {
+    const paint = () => { if (dead) return; try { const cv = paintCourt(floorImg); cv.className = 'btlv-floor'; els.world.appendChild(cv); floorImg.style.display = 'none' } catch (e) { console.warn('court', e) } }
+    if (floorImg.complete && floorImg.naturalWidth) paint(); else floorImg.addEventListener('load', paint, { once: true })
+  }
   if (els.root) els.root.dataset.stick = ONE ? 'one' : 'two'
   document.fonts?.load?.(`16px ${FONT}`).catch(() => {})
   for (let i = 0; i < N; i++) { prev[i * 2] = s.players[i].x; prev[i * 2 + 1] = s.players[i].y }

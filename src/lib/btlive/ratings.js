@@ -43,6 +43,7 @@ export function derive(build, pos = 'guard') {
   R.mass = 1 + T.massSize * sizeRaw
   R.clutchRaw = raw(clutch)
   R.bncRaw = raw(bnc)                                       // (the plain grade: who can dunk)
+  R.intRaw = raw(intD); R.sizeRaw = sizeRaw                 // (the plain grades: who blocks shots, over whom)
   R.jsRaw = raw(js)                                         // (the plain grade: how much of a hand a shooter shoots over)
   R.passSpeed = T.passSpeed + T.passSpeedPas * R.pas
   R.moveCd = T.moveCd - T.moveCdHnd * R.hnd

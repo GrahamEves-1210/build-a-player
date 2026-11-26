@@ -19,18 +19,25 @@ export const DT = 1 / GHZ            // the game's seconds in one tick
 export const gticks = sec => Math.max(1, Math.round(sec * GHZ))
 export const rticks = sec => Math.max(1, Math.round(sec * HZ))
 
-// The half court, in feet, laid over the court picture (public/court-*.webp, 4:3, 56 x 42 ft edge to edge;
-// the same lines on every court in the shop). x runs left to right, y from the baseline wall down to half court.
+// The half court, in feet, at its real size (an NBA half court: 50 ft wide, 47 ft from the baseline to half court).
+// x runs left to right, y from the top of the picture (behind the baseline) down past half court. The lines are drawn
+// from these same numbers (engine.js courtLines), so what the game counts is what the floor shows.
+const BASE = 2.3, RIMY = BASE + 5.25
 export const COURT = {
-  W: 56, H: 42,                      // the whole picture
-  minX: 3.0, maxX: 53.2,             // sidelines
-  minY: 2.3, maxY: 39.7,             // baseline, half-court line
-  rim: { x: 28, y: 4.5 },
-  arcSideX: 20.8,                    // the three-point line runs straight up the sides this far from the rim's x...
-  arcSideY: 15.5,                    // ...down to this y, then curves
-  arcC: { x: 28, y: 8.6 }, arcR: 21.9,   // the curve: a circle through the two side lines' ends and the top (28, 30.5)
-  paint: { x0: 21.2, x1: 34.6, y1: 18.7 },
-  check: { x: 28, y: 34 },           // where the ball is checked
+  W: 56, H: 51.6,                    // the whole picture (the court and the apron round it)
+  minX: 3.0, maxX: 53.0,             // sidelines (50 ft apart)
+  minY: BASE, maxY: BASE + 47,       // baseline, half-court line
+  board: { y: BASE + 4, w: 6 },      // the backboard's face: 4 ft in from the baseline, 6 ft wide
+  rim: { x: 28, y: RIMY },           // the rim's middle: 15 in out from the board (5 ft 3 in from the baseline)
+  rimR: 0.75,                        // the rim, 18 in across
+  arcSideX: 22,                      // the three-point line: straight up each corner 22 ft from the rim's x...
+  arcSideY: RIMY + Math.sqrt(23.75 * 23.75 - 22 * 22),   // ...to where it meets the arc (about 14 ft up from the baseline)...
+  arcC: { x: 28, y: RIMY }, arcR: 23.75,   // ...then 23 ft 9 in round the rim
+  paint: { x0: 20, x1: 36, y1: BASE + 19 },   // the lane: 16 ft wide, the free-throw line 15 ft from the board
+  ftR: 6,                            // the free-throw circle
+  ra: 4,                             // the restricted area: 4 ft round the rim
+  centerR: 6, centerR2: 2,           // the centre circle at half court (and the small one inside it)
+  check: { x: 28, y: RIMY + 23.75 + 2.6 },   // where the ball is checked: the top of the key, just behind the arc
 }
 
 export const RULES = {
@@ -87,7 +94,7 @@ export const T = {
   jTotalMs: 900,                     // a jumper's meter runs this long; held past it, the shot goes up late
   jIdealMs: 500,                     // the middle of the green window
   jWinMs: 11, jWinJs: 31,            // green half-width: 11 + 31 x (plain Jump Shot)²: 42 ms at 11, 11 at a 1 (a green always goes in)
-  jFallMs: 170,                      // past the green, quality runs down to 0 over this long
+  jFallMs: 170,                      // past the green, quality runs down to 0 over this long (the meter's fill: a miss either way)
   lTotalMs: 620, lIdealMs: 300,      // layups and dunks: a quicker meter
   lWinMs: 24, lWinFin: 32,           // green half-width from Finishing: 24 + 32 x (plain Finishing)²: 56 ms at 11, 24 at a 1
   lFallMs: 190,
@@ -100,6 +107,16 @@ export const T = {
   relMinJ: 0.42,                     // a jumper let go at the worst time keeps this much of its chance (a bad one can still drop)
   relMinL: 0.62,                     // ...a layup this much
   slightJ: 0.86,                     // just outside the green: the chance starts from here and falls to relMin
+  // THE GREEN WINDOW IS THE SHOT (the owner, 11-25: "no slightly makes, just make the green window match the shot").
+  // A release in the green goes in, anything else misses; nothing is rolled. How wide the green is comes from how
+  // hard the shot is right now (the make chance below: his rating there, the distance, the hand in his face, on the
+  // move, his legs, game point): wide enough that an average kid's timing (kidSd: the spread of his release, ms)
+  // makes it that often. It changes while he rises (a man closing out shrinks it on the meter)
+  kidSd: 75,                         // ms: the release error of an average kid (the CPU levels: cpu.js LEVELS meterSd)
+  winMin: 4, winMax: 120,            // ms either side of the ideal, at the least and the most
+  checkRush: 0.4,                    // a shot right off the check (before a move, inside checkRushS): the chance x (1 - this), fading out
+  checkRushS: 1.0,                   // ...over this long (real seconds)
+  staShot: 0.12,                     // legs empty: the chance x (1 - this)
 
   // ── Make chance: rating at that spot x release x contest. Open, perfect release: ─────────────────
   layBase: 0.58, layFin: 0.38,       // layup: 87% at Finishing 1, 96% at 11 (an 80: 91%) open at the rim: the best shot there is
@@ -108,14 +125,19 @@ export const T = {
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkFar: 4.5, dunkFarSize: 0.9,    // an open lane: he takes off from farther out, up to this more at Bounce 11 (+ this at Size 11)
   laneW: 3.6,                        // ...open: no one who can guard within this of the line from him to the rim
-  dunkBounce: 0.25,                  // Bounce (the plain grade, 0-1) under this: never dunks (a Bounce 3 or lower never does)
+  dunkBounce: 0.35,                  // Bounce (the plain grade, 0-1) under this: never dunks, lays it up (a Bounce 4 or lower)
+  dunkNear: 2.6,                     // a low leaper only dunks from this close (at dunkBounce)...
+  dunkHop: 0.45,                     // ...and only with nobody on him; under this share of the way up the Bounce scale a man near
+                                     //    him turns it into a layup (above it, he goes up over him: a poster)
+  dunkGuard: 5,                      // ...a man within this of him, between him and the rim or at it, is on him
+  dunkSlow: 0.4,                     // a low leaper's dunk gathers this much slower (the meter's ideal, x 1 + this at the floor)
+  dunkLow: 0.14,                     // ...and goes down this much less often open
   dunkChance: 0.9,                   // how often an able dunker dunks: (plain Bounce - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
   closeBase: -0.58, closeJs: 1.30,   // a jumper from 8 ft: 41% at Jump Shot 1, 72% at 11 (steep: spread is small, a non-shooter still can't shoot)
   arcBase: -0.66, arcJs: 1.20,       // a jumper from the arc (25 ft): 25% at Jump Shot 1, 54% at 11 (an 80: 39%)
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
-  deepAt: 27.5,                      // past this it's deep...
-  deepFall: 0.06, deepJs: 0.04,      // ...and loses 3.9% a foot at Jump Shot 1, 2% at 11 (range)
+  pastK: 0.16, pastJs: 0.06,         // every foot behind the three-point line: the chance x e^-(0.16 - 0.06 x Jump Shot) (range)
   setFeet: 0.16,                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
   runFrom: 0.2,                      // ...from this share of his top speed up (a drift is free)
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
@@ -142,8 +164,8 @@ export const T = {
   contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.28,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
-  contestMaxJ: 0.82,                 // a perfect contest takes this share off a jumper
-  jsThrough: 0.34,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
+  contestMaxJ: 0.86,                 // a perfect contest takes this share off a jumper
+  jsThrough: 0.28,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
   contestMaxL: 0.85,                 // ...off a layup
   contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
@@ -166,14 +188,15 @@ export const T = {
   jumpLand: 0.10,                    // ...then this long to land before he can move again
   blockReach: 3.6,                   // within this of the shooter at the release (plus Bounce and Size)...
   blockReachBnc: 0.9, blockReachSize: 0.7,
-  blockIn: 0.2, blockOut: 0.68,       // ...and between these fractions of his jump: on time. Else a quarter the chance
-  blockBase: 0.26,                   // on-time chance at average everything
-  blockInt: 0.9,                     // x (0.55 + this * Interior D)
-  blockSize: 0.45,                   // x (1 + this * (his Size n - the shooter's))
-  blockBnc: 0.9,                     // x (1 + this * (his Bounce n - 0.75))
+  blockIn: 0.0, blockOut: 0.95,      // ...and in the air at the release (any of the jump but the landing): on time. Else blockLate of it
+  blockAfter: 0.16,                  // a man who goes up just after the release can still get it, this long into its flight (s)
+  blockBase: 0.15,                   // on-time chance, x the four below (the plain grades, 0-1)
+  blockInt0: 0.25, blockInt: 1.5,    // x (0.25 + 1.5 x Interior D)
+  blockSize: 1.2, blockSizeMin: 0.12,// x (1 + 1.2 x (his Size - the shooter's)), never under 0.12
+  blockBnc0: 0.6, blockBnc: 0.8,     // x (0.6 + 0.8 x Bounce)
   blockJumper: 0.55, blockDunk: 0.5, // jumpers and dunks are harder to get than layups
   blockMax: 0.7,
-  blockLate: 0.2,                    // off time (up too early, too late): this share of the chance
+  blockLate: 0.3,                    // off time (up too early, too late): this share of the chance
   blockFar: 0.25,                    // at the edge of his reach he gets this much less of it
 
   // ── Steals (a swipe with a cooldown; a miss costs a beat) ───────────────────────────────────────
@@ -193,16 +216,17 @@ export const T = {
   // ── Dribble moves (the right stick, or the arrow keys: a flick picks the move; MOVES below) ──────
   // NBA 2K's pro stick, read from the basket and the hand the ball is in (referee.moveOf). Every move is a burst that
   // may freeze his man (referee.judgeMove); moves chain, a short recovery apart, and his man can be frozen once a while.
+  handSwitch: 3.2,                   // going this fast (ft/s) to one side, the ball goes to the hand on that side
   moveAt: 0.5,                       // the stick pushed this far is a flick (the screen and the CPU send it once)
   // which move: the angle between the flick and the way to the basket, in degrees, and which hand it's toward
   hesiTo: 22.5, crossTo: 67.5, btlTo: 112.5, btbTo: 157.5,
   spinTurn: 60, spinMax: 150,        // a second flick this far round from the first (and no farther), early in the move: a spin
   spinWithin: 0.5,                   // ...inside this share of the first move
-  moveBuffer: 0.32,                  // a flick made while a move is still on goes the moment it can (the chain), this long at most
+  moveBuffer: 0.5,                   // a flick made while a move is still on goes the moment it can (the chain), this long at most
   chainRec: 0.12, chainRecHnd: 0.06, // after a move, this long (less at Handles 11) before the next one starts
   chainSlow: 0.7, chainGap: 0.4,     // a move started this soon after the last one ended goes at this share of its speed
   moveSpeed: 1.95,                   // the fastest any move goes, x top speed (what a device's own position is held to)
-  moveCd: 3.4, moveCdHnd: 1.0,       // a move can freeze his man once in this long: 3.4 s at Handles 1, 2.4 s at 11
+  moveCd: 2.8, moveCdHnd: 1.0,       // a move can freeze his man once in this long: 2.8 s at Handles 1, 1.8 s at 11
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.15,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
@@ -252,6 +276,8 @@ export const T = {
   feedSpeed: 24,                     // a dead ball (through the net, out of bounds) goes back to whoever checks it this fast
   spotNear: 0.6,                     // the ball goes live when everyone is this close to his spot...
   checkWait: 0.6,                    // ...or this long past the check, wherever they are
+  checkPass: 0.32,                   // King of the Hill: the check, a bounce pass from the man guarding the king (s)...
+  checkBeat: 0.16,                   // ...and a beat with it in the king's hands before it's live
 
   // ── Online (a player on his own device: lib/btlive/net.js, live/src/btlive.js) ───────────────────
   remoteWaitMs: 650,                 // a shot waits this long past the end of the meter for his device's release
