@@ -5,7 +5,7 @@ import { CAR_K } from './offseason'
 import { makeSchedule } from './schedule'
 import { makePicks, makeClass } from './draft'
 import { records, recText } from './season'
-import { addNews, fixWire } from './news'
+import { addNews, fixWire, wireTime } from './news'
 import { placeBuilds, reseatBuilds, BUILD_MAX } from './builds'
 import * as X from './seams'
 import { numberAll, needsNumbers } from './numbers'
@@ -48,13 +48,16 @@ export function createNbaFranchise(setup) {
   // the GM's own builds: named in the setup, onto the roster as rookies (builds.js)
   F.builds = (setup.builds ?? []).slice(0, BUILD_MAX).map(B => ({ pos: B.pos, ...(B.spot && { spot: B.spot }), build: B.build, types: B.types ?? null, name: B.name, num: B.num, face: B.face ?? null, age: 20, ...(B.sandbox && { sandbox: 1 }) }))
   if (F.builds.some(B => B.sandbox)) F.sandbox = true
+  // (the GM is named first: his builds' signings and the payroll lines they bring come after it on the wire)
+  addNews(F, { k: 'gm', tag: 'FRONT OFFICE', s: F.team, text: `The ${TEAM[F.team].name} have named ${F.owner} general manager` })
   placeBuilds(F)
   numberAll(F)
   F.ss = {}; F.ps = {}; F.log = []; F.box = []; F.po = null
   makeSchedule(F)
+  // (the setup's wire, written before the calendar existed: dated opening night's eve with everything else that day)
+  { const t = wireTime(F); if (t != null) for (const n of F.news) if (n.t == null) n.t = Math.floor(t / 86400000) }
   makePicks(F)
   makeClass(F)
-  addNews(F, { k: 'gm', tag: 'FRONT OFFICE', s: F.team, text: `The ${TEAM[F.team].name} have named ${F.owner} general manager` })
   // FULL or LIGHT, for the life of the save (setup.pace: the setup's MODE step; a save without F.pace is FULL: light.js)
   if (setup.pace === 'light') lightInit(F); else F.pace = 'full'
   return F
