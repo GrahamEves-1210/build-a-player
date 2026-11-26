@@ -1201,7 +1201,7 @@ export function paintMan(x, o, L) {
   }
   // the arms across his front, the head, then any hand up at the head
   for (const r of arms) if (r.at === 'front') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
-  paintHead(x, sxx, syy, hx, hy, skin, skinD, hairC, L.beard && L.beard !== 'none' ? `${cut}|${L.beard}` : cut, front, o, tilt, turnH)
+  paintHead(x, sxx, syy, hx, hy, skin, skinD, hairC, L.beard ? `${cut}|${L.beard}` : cut, front, o, tilt, turnH)
   for (const r of arms) if (r.at === 'late') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
   // a clipboard held in front of him
   if (L.clipboard) {
@@ -1313,6 +1313,12 @@ function skull(x, hx, hy, back = false) {
   }
   x.closePath()
 }
+// one loc: a rope of hair from (x0, y0) to (x1, y1), bowed out a little, inked round
+function rope(x, x0, y0, x1, y1, w, hair, bow = 0.6) {
+  x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo((x0 + x1) / 2 + Math.sign(x1 - x0 || 1) * bow, (y0 + y1) / 2, x1, y1)
+  x.strokeStyle = INK; x.lineWidth = w + OL * 1.2; x.stroke()
+  x.strokeStyle = hair; x.lineWidth = w; x.stroke()
+}
 const VOL = { crop: 0.7, fade: 1.3, curly: 1.6, long: 0.8, bun: 0.35, buzz: 0.2 }
 // the hair's outer shape over the crown (its volume); g grows it (for the ink)
 function crown(x, hx, hy, cut, g = 0) {
@@ -1359,14 +1365,17 @@ function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, 
 }
 function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cutIn, front, o, tilt, turnH, collar = null) {
   const up = clamp(tilt, -1, 1)
-  // (cut|beard: a created face's beard rides on the cut; locs hang like long hair, in ropes)
-  const [cut0, beard = 'none'] = String(cutIn).split('|'), locs = cut0 === 'locs', cut = locs ? 'long' : cut0
+  // (cut|beard: a created face, its beard riding on the cut; locs hang like long hair, in ropes)
+  const parts = String(cutIn).split('|'), made = parts.length > 1
+  const [cut0, beard = 'none'] = parts, locs = cut0 === 'locs', cut = locs ? 'long' : cut0, ropes = made && locs
   collar?.()
   const ex = -turnH * 1.3, ears = sd => [hx + sd * (SK - 0.1) + ex, hy + 0.6]
+  // (a created face's locs from the front: the ones falling behind his head and neck, before the head)
+  if (ropes && front) for (const sd of [-1, 1]) { rope(x, hx + sd * 4.4, hy - 6, hx + sd * (SK + 2.4), hy + 9.2, 1.9, hair); rope(x, hx + sd * 2.6, hy - 6, hx + sd * (SK + 0.9), hy + 10.4, 1.9, hair) }
   // the ink: the skull and jaw, the ears, the hair
   x.fillStyle = INK; x.strokeStyle = INK; x.lineWidth = OL * 2
   x.beginPath(); skull(x, hx, hy, !front); crown(x, hx, hy, cut); x.fill(); x.stroke()
-  if (cut === 'long') { x.beginPath(); if (front) { x.roundRect(hx - SK - 1.2 - OL, hy - 2, 2.2 + OL * 2, 6.6 + OL, 1.1); x.roundRect(hx + SK - 1.0 - OL, hy - 2, 2.2 + OL * 2, 6.6 + OL, 1.1) } else x.roundRect(hx - SK - 0.4 - OL, hy - 3, (SK + 0.4 + OL) * 2, 8.4 + OL, 3.4); x.fill() }
+  if (cut === 'long' && !ropes) { x.beginPath(); if (front) { x.roundRect(hx - SK - 1.2 - OL, hy - 2, 2.2 + OL * 2, 6.6 + OL, 1.1); x.roundRect(hx + SK - 1.0 - OL, hy - 2, 2.2 + OL * 2, 6.6 + OL, 1.1) } else x.roundRect(hx - SK - 0.4 - OL, hy - 3, (SK + 0.4 + OL) * 2, 8.4 + OL, 3.4); x.fill() }
   for (const sd of [-1, 1]) { const [ax, ay] = ears(sd); x.beginPath(); x.ellipse(ax, ay, 1.6 + OL, 2.2 + OL, 0, 0, 6.2832); x.fill() }
   // (long hair from behind falls over the ears)
   for (const sd of [-1, 1]) { const [ax, ay] = ears(sd); x.fillStyle = skinD; x.beginPath(); x.ellipse(ax, ay, 1.6, 2.2, 0, 0, 6.2832); x.fill(); x.fillStyle = tone(skin, 0.68); x.beginPath(); x.ellipse(ax + sd * 0.3, ay + 0.2, 0.6, 1.1, 0, 0, 6.2832); x.fill() }
@@ -1397,10 +1406,17 @@ function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cutIn, front, o, tilt, t
     x.lineTo(hx + SK - 1.5, line + 2.0); x.quadraticCurveTo(hx + SK - 2.2, line - 0.2, hx + 2.4, line - 0.3); x.quadraticCurveTo(hx, line + 0.5, hx - 2.4, line - 0.5); x.quadraticCurveTo(hx - SK + 2.2, line - 0.4, hx - SK + 1.5, line + 1.8)
     x.lineTo(hx - SK + 1.35, sb - 1.4); x.quadraticCurveTo(hx - SK + 0.7, sb + 0.3, hx - SK - 1, sb); x.closePath(); x.fill()
     x.globalAlpha = 1
-    if (cut === 'fade') { x.globalAlpha = 0.4; x.fillRect(hx - SK - 1, sb, 2.6, 3.2); x.fillRect(hx + SK - 1.6, sb, 2.6, 3.2); x.globalAlpha = 1 }
+    if (cut === 'fade' && made) {
+      // a created fade: short sideburns, tapered to a point in front of the ear, faded like the sides
+      x.globalAlpha = 0.5
+      for (const sd of [-1, 1]) { x.beginPath(); x.moveTo(hx + sd * (SK + 1), sb - 1.2); x.lineTo(hx + sd * (SK - 1.45), sb - 1.2); x.quadraticCurveTo(hx + sd * (SK - 1.25), sb + 1.3, hx + sd * (SK - 0.45), sb + 3.1); x.lineTo(hx + sd * (SK + 1), sb + 3.1); x.closePath(); x.fill() }
+      x.globalAlpha = 1
+    } else if (cut === 'fade') { x.globalAlpha = 0.4; x.fillRect(hx - SK - 1, sb, 2.6, 3.2); x.fillRect(hx + SK - 1.6, sb, 2.6, 3.2); x.globalAlpha = 1 }
     if (beard !== 'none') {
-      // the beard: down from the sideburns along the jaw and over the chin, the moustache over the lip
-      const bx = hx + turnH * 1.5, by = hy + up * -1.1
+      // the beard, every edge on the jaw (the skull's clip): full / stubble from the sideburns down over the cheeks to
+      // the moustache; a chin strap a band along the jaw from the sideburns round the chin; a goatee the moustache
+      // and the chin, joined round the mouth
+      const bx = hx + turnH * 1.5, by = hy + up * -1.1, jy = hy + JAW + 0.1
       x.fillStyle = hair
       if (beard === 'full' || beard === 'stubble') {
         x.globalAlpha = beard === 'stubble' ? 0.32 : 1
@@ -1408,20 +1424,23 @@ function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cutIn, front, o, tilt, t
         x.quadraticCurveTo(bx, by + 3.0, bx + 2.6, by + 3.6); x.quadraticCurveTo(hx + SK - 2.2, by + 3.6, hx + SK - 1.6, sb - 1); x.lineTo(hx + SK + 1, sb - 1); x.lineTo(hx + SK + 1, hy + 12); x.lineTo(hx - SK - 1, hy + 12); x.closePath(); x.fill()
         x.globalAlpha = 1
       } else if (beard === 'goatee') {
-        x.beginPath(); x.ellipse(bx, by + 6.6, 2.5, 2.2, 0, 0, 6.2832); x.fill()
-        x.beginPath(); x.roundRect(bx - 2.3, by + 3.7, 4.6, 1.1, 0.5); x.fill()
+        x.beginPath(); x.moveTo(bx - 2.5, by + 5.2); x.quadraticCurveTo(bx - 2.6, by + 3.5, bx, by + 3.6); x.quadraticCurveTo(bx + 2.6, by + 3.5, bx + 2.5, by + 5.2)
+        x.quadraticCurveTo(bx + 2.9, by + 6.8, bx + 2.7, jy + 1); x.lineTo(bx - 2.7, jy + 1); x.quadraticCurveTo(bx - 2.9, by + 6.8, bx - 2.5, by + 5.2); x.closePath(); x.fill()
       } else {
-        x.beginPath(); x.ellipse(bx, by + 7.2, 1.6, 1.3, 0, 0, 6.2832); x.fill()
+        x.strokeStyle = hair; x.lineWidth = 2.6; x.lineJoin = 'round'; x.beginPath(); x.moveTo(hx - SK, sb - 1); x.lineTo(hx - SK, hy - 0.8)
+        x.bezierCurveTo(hx - SK - 0.2, hy + 4.2, hx - 5.8, hy + JAW - 0.3, hx - 2.7, jy); x.lineTo(hx + 2.7, jy)
+        x.bezierCurveTo(hx + 5.8, hy + JAW - 0.3, hx + SK + 0.2, hy + 4.2, hx + SK, hy - 0.8); x.lineTo(hx + SK, sb - 1); x.stroke()
+        x.beginPath(); x.ellipse(bx, jy - 0.3, 2.2, 1.3, 0, 0, 6.2832); x.fill()
       }
-      // (the mouth, light on the dark of it)
-      if (beard !== 'stubble') { x.strokeStyle = tone(skin, 0.7); x.lineWidth = 0.6; x.beginPath(); x.moveTo(bx - 1.4, by + 5.0); x.quadraticCurveTo(bx, by + 5.3, bx + 1.4, by + 4.9); x.stroke() }
+      // (the lower lip clear of it, the mouth's line drawn on that with the face)
+      if (beard === 'full' || beard === 'goatee') { x.fillStyle = tone(skin, 0.9); x.beginPath(); x.ellipse(bx, by + 5.15, 1.75, 0.62, 0, 0, 6.2832); x.fill() }
     }
   }
   x.restore()
   // the volume over the crown (and long hair down past the jaw)
   x.fillStyle = hair; x.globalAlpha = cut === 'buzz' ? 0.7 : 1
   x.beginPath(); crown(x, hx, hy, cut); x.fill()
-  if (cut === 'long') {
+  if (ropes) {} else if (cut === 'long') {
     x.beginPath()
     if (front) { x.roundRect(hx - SK - 1.2, hy - 2, 2.2, 6.6, 1.1); x.roundRect(hx + SK - 1.0, hy - 2, 2.2, 6.6, 1.1) } else x.roundRect(hx - SK - 0.4, hy - 3, (SK + 0.4) * 2, 8.4, 3.4)
     x.fill()
@@ -1448,6 +1467,22 @@ function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cutIn, front, o, tilt, t
       x.fillStyle = hair; x.beginPath(); x.ellipse(hx - 1.6, hy - SKY + 1.0, 4.9, 2.6, -0.3, 0, 6.2832); x.fill()
     }
     x.restore()
+  }
+  if (ropes) {
+    // a created face's locs: ropes from the crown, framing his face past the ears to his shoulders; from behind,
+    // side by side down the back of his head over the collar
+    if (front) for (const sd of [-1, 1]) rope(x, hx + sd * (SK - 1.3), hy - 4.2, hx + sd * (SK + 0.5), hy + 9.6, 1.9, hair, 0.9)
+    else {
+      const xs = [-6.4, -4.4, -2.2, 0, 2.2, 4.4, 6.4], ys = [8.4, 9.8, 9.2, 10.2, 9.0, 9.8, 8.6]
+      x.strokeStyle = INK; x.lineWidth = 2.1 + OL * 1.2; x.beginPath(); xs.forEach((d, i) => { x.moveTo(hx + d, hy - 3.4); x.lineTo(hx + d * 1.06, hy + ys[i]) }); x.stroke()
+      x.strokeStyle = hair; x.lineWidth = 2.1; x.stroke()
+      x.strokeStyle = lumOf(hair) < 0.12 ? 'rgba(255,255,255,.13)' : tone(hair, 0.72); x.lineWidth = 0.4; x.beginPath()
+      for (let i = 0; i < xs.length - 1; i++) { const m = (xs[i] + xs[i + 1]) / 2; x.moveTo(hx + m, hy - 1.4); x.lineTo(hx + m * 1.06, hy + Math.min(ys[i], ys[i + 1]) - 0.4) }
+      x.stroke()
+      // (their roots under the hair over the crown, so each one starts out of it)
+      x.save(); x.beginPath(); skull(x, hx, hy, true); x.clip(); x.fillStyle = hair; x.beginPath(); x.moveTo(hx - SK - 1, hy - 12); x.lineTo(hx + SK + 1, hy - 12); x.lineTo(hx + SK + 1, hy - 2.4)
+      x.quadraticCurveTo(hx, hy - 0.6, hx - SK - 1, hy - 2.4); x.closePath(); x.fill(); x.clip(); x.fillStyle = tone(hair, 0.8); x.beginPath(); x.ellipse(hx + SK * 1.08, hy - 1.6, SK * 0.5, SKY * 1.15, 0, 0, 6.2832); x.fill(); x.restore()
+    }
   }
   if (!front) return
   // the face: brows, eyes, the nose's shade, the mouth (a roar, a set mouth, gutted)
