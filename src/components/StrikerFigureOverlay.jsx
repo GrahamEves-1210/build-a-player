@@ -89,7 +89,7 @@ const Group = ({ ids, fill, opacity, mask }) => (
   </g>
 )
 
-const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }
+const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none', opacity: 0.9 }   // (every colour layer 10% less, owner 11-25)
 const ART = '/st-silhouette.webp'
 
 // the face's features, on the art's own face (art pixels), kept to the scale and softness of the render: he looks
