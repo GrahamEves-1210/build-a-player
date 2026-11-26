@@ -8225,3 +8225,5 @@ html.is-soccer .bap-wm--img .wmi--soccer, [data-sport="soccer"] .bap-wm--img .wm
 /* Salary Cap cards: a FotMob face (headshots/soccer/fmr-*.webp, smaller and lower on ESPN's canvas) zoomed from its foot so it
    sits like the ESPN photos beside it (owner 11-25: soccer faces not centred on the cards) */
 .sc-card .sc-card-headshot[src*="/soccer/fmr-"] { object-position: 50% 82%; transform: scale(1.16); transform-origin: 50% 60%; }   /* (the face, 57% down the photo, held in the middle of the visible box at any shape) */
+/* phones: the soccer figure's eyes without the lid fold and lower-lid lines (owner 11-26) */
+@media (max-width: 768px) { .st-eyeline { display: none; } }
