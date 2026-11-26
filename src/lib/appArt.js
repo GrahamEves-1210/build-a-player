@@ -50,7 +50,7 @@ const classicArt = key => {
 // where the jersey breaks out of its box (owner 11-19: "these don't need to be bound to anything"): drawn bare, no
 // tile, and the screen's own CSS (app-game.css, App art) sets it loose: angled behind the spin card's name, over a
 // row's edge, fanned on Home's pool cards, cut off by a Franchise slab, standing on the depth chart's field
-const BARE = '.qb-reveal-hero, .simp-attr-row .qb-avatar, .cr-trait-av, .crl-man .crl-face, .ag-mode-faces, .fk-l3-slab, .crl-face--sm'
+const BARE = '.sc-card .sc-card-headshot, .qb-reveal-hero, .simp-attr-row .qb-avatar, .cr-trait-av, .crl-man .crl-face, .ag-mode-faces, .fk-l3-slab, .crl-face--sm'
 const bareArt = key => (INDEX.p[key]?.split('|')[3] === 'HC' ? null : playerArt(key, key.split('/')[0], 'bare'))   // (a coach stays his team's mark)
 let nativeSet = null
 
