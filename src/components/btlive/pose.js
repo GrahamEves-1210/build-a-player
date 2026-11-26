@@ -482,7 +482,8 @@ export function createPoser(N) {
   // court.js, so his body is drawn up there with it, less the height he's drawn at already)
   function glide(z, env, toRim, dRim, w) {
     if (dRim < 0.3 || w <= 0) return
-    const reach = 0.34 * env.sFt * (1 + 0.16 * z.air)   // (the hand as drawn: a raised arm is foreshortened, figure.js), lift = z.air * env.sFt * 0.2
+    // (the hand as drawn: a raised arm is foreshortened, figure.js; lift: how far up the screen he's drawn for his height)
+    const reach = 0.34 * env.sFt * (1 + 0.16 * z.air), lift = z.air * env.sFt * 0.2
     const cx = RIM.x - Math.cos(z.ang) * reach, cy = RIM.y - HOOP_LIFT - Math.sin(z.ang) * reach + lift
     z.ox = (cx - env.x) * w; z.oy = (cy - env.y) * w
   }
