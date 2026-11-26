@@ -25,7 +25,7 @@ const set3 = (h, x, y, z) => { h[0] = x; h[1] = y; h[2] = z }
 const mix3 = (h, x, y, z, w) => { h[0] += (x - h[0]) * w; h[1] += (y - h[1]) * w; h[2] += (z - h[2]) * w }
 
 const DRIB = 440, DRIB_RUN = 340      // ms a bounce, standing and at a run
-export const DUNK = { hang: 230, drop: 190, land: 120 }   // ms: on the rim, coming down, the knees taking it
+export const DUNK = { hang: 290, drop: 240, land: 150 }   // ms: on the rim, coming down, the knees taking it (owner 11-26: a touch slower, so it reads; all after the make, in the dead ball before the check)
 const FOLLOW = 560                    // ms a shooter holds his follow-through
 const EASE_HAND = 70, EASE_FAST = 24, EASE_FOOT = 34      // ms: how quickly the drawn hands and feet reach the pose
 const FOOT_V = 3.6                    // the quickest a drawn foot moves (his size units a second)
@@ -578,7 +578,7 @@ export function createPoser(N) {
     } else {
       // THE DUNK. The gather: down into his legs with the ball in both hands. The takeoff: up hard, the ball cocked
       // back behind his head on one arm, his legs trailing
-      const r = out3((g - 0.36) / 0.64)
+      const r = ease((g - 0.3) / 0.7)   // (a steady rise, not a snap: the same take-off and top as the game's)
       z.scale = 1 - 0.07 * Math.sin(Math.PI * c01(g / 0.5)) * (1 - r)
       z.air = 0.75 * r
       const bh = sd > 0 ? TR : TL, oh = sd > 0 ? TL : TR
@@ -633,7 +633,7 @@ export function createPoser(N) {
       else if (miss) up = 1 - ease(since / (DUNK.drop + 40))
       const total = slam ? DUNK.hang + DUNK.drop + DUNK.land : DUNK.drop + 40 + DUNK.land
       if (since > total) { a.rel = null; return false }
-      const w = c01(t / fly), thr = out3(w)
+      const w = c01(t / fly), thr = ease(w)
       z.air = Math.max(R.air, 0.75) * up + (slam && since < DUNK.hang ? 0.03 * Math.sin(since / 40) : 0)
       // his body: in front of the rim the whole way, up and down (glide), through the landing
       glide(z, env, a, 0.55 + 0.45 * thr)
