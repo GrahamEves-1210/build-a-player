@@ -13,7 +13,7 @@
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, GOOD, GOLD, particles, nudge, manOf, text, rr, lightMode, LABEL } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperShot, heldBall, parried, defenderBeaten, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
+  shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, celebFx, celebLens, keeperBeaten, keeperShot, heldBall, parried, defenderBeaten, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
 import { promptY } from './soccerPads.js'
 
 export const how = {
@@ -180,7 +180,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (g.res) return
     g.res = kind; g.why = why; g.resAt = g.t; g.endAt = g.t + (now ? 380 : kind === 'goal' ? 120 : 60)
     if (kind === 'goal') {
-      g.cel = celebration(`${seed}|head`, { sit: g.sit, from: { x: g.to.x, z: g.to.z }, toward: { x: clamp(g.to.x + 2, -3, 3.6), z: g.to.z - 3.4 }, side: 1, athletic: v >= 8, mates: [{ x: -5.2, z: -9.4 }, { x: CROSS.x - 4, z: CROSS.z + 1 }, { x: -2, z: -16 }] })
+      g.cel = celebration(`${seed}|head`, { sit: g.sit, from: { x: g.to.x, z: g.to.z }, toward: { x: clamp(g.to.x + 2, -3, 3.6), z: g.to.z - 3.4 }, side: 1, athletic: v >= 8, mates: [{ x: -5.2, z: -9.4 }, { x: CROSS.x - 4, z: CROSS.z + 1 }, { x: -9, z: -12 }] })
     }
   }
   function finish() {
@@ -278,9 +278,9 @@ const EXTRAS = [{ x: 3.1, z: -3.4, side: 'them', n: 5 }, { x: -3.4, z: -6.6, sid
 const manB = (ctx, C, X, Z, pose, look, o = {}) => man(ctx, C, X, Z, pose, look, { ...o, size: BIG })
 export function draw(ctx, g, view) {
   g.vh = view.h; g.hud.y = promptY(view)
-  const C = camFor(g, view), K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
+  const C0 = camFor(g, view), C = g.res === 'goal' && g.cel ? celebLens(C0, g.cel, g.t - g.endAt, view) : C0, K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
   stadium(ctx, view, C, { team, away, board: boardWords(g) })
-  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
+  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, g.cel?.roar ?? 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
   const b = ballNow(g), s = g.shot
   const ripple = g.res === 'goal' ? { x: s.to.x, y: s.to.y, at: s.at + s.T + 80 } : null
   net(ctx, C, ripple, g.t)
@@ -315,8 +315,10 @@ export function draw(ctx, g, view) {
     list.push({ z: e.z, fn: () => manB(ctx, C, e.x, e.z, pose, dress(e.side === 'us' ? K.us : K.them, { number: e.n, skin: e.n === 5 ? '#5e3c22' : '#c09060' }, { front: e.side === 'them' })) })
   })
   if (b.z <= 0.05 && !b.held) list.push({ z: b.z - 0.02, fn: () => ball(ctx, C, b.x, b.y, b.z, b.spin) })
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
   list.sort((p, q) => q.z - p.z)
   for (const m of list) m.fn()
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'over')
   if (b.held) ball(ctx, C, b.x, b.y, b.z, b.spin, 0, false)
   // the tell, at a glance: a quiet line over him while he's watching the ball, and the gap between you on the grass
   if (g.phase === 'mark' && !g.res) {

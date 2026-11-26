@@ -24,7 +24,7 @@
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, nudge, manOf, paceOf, text, rr, circle, keyCap, lightMode, DISPLAY, LABEL } from './kit.js'
 import { placeStamp } from './read.js'
 import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribblePose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D, BOX_W,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperShot, heldBall, defenderBeaten, keeperRoar, strikerDenied, celebMs, skipOutro,
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, celebFx, celebLens, keeperBeaten, keeperShot, heldBall, defenderBeaten, keeperRoar, strikerDenied, celebMs, skipOutro,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar } from './soccer.js'
 import { tip, promptY } from './soccerPads.js'
 
@@ -598,10 +598,10 @@ function defenderPose(g) {
 }
 export function draw(ctx, g, view) {
   g.vh = view.h; g.keysView = !!view.keys; g.lastView = { w: view.w, h: view.h }; g.hud.y = promptY(view)
-  const C = camOf(view, { x: g.camX, y: 5.4, z: g.camZ, F: 480, hzAt: 0.13 })
+  const C0 = camOf(view, { x: g.camX, y: 5.4, z: g.camZ, F: 480, hzAt: 0.13 }), C = g.res === 'goal' && g.cel ? celebLens(C0, g.cel, g.t - g.endAt, view) : C0
   const K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
   stadium(ctx, view, C, { team, away, board: boardWords(g) })
-  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
+  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, g.cel?.roar ?? 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
   const b = ballNow(g), s = g.shot
   const ripple = g.res === 'goal' && s ? { x: s.to.x, y: s.to.y, at: s.at + s.T + 80 } : null
   net(ctx, C, ripple, g.t)
@@ -641,8 +641,10 @@ export function draw(ctx, g, view) {
   }
   list.push({ z: g.df.z, fn: () => man(ctx, C, g.df.x, g.df.z, defenderPose(g), dfLook) })
   if (b.z <= 0.05 && !b.held) list.push({ z: b.z - 0.01, fn: () => ball(ctx, C, b.x, b.y, b.z, b.spin) })
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
   list.sort((p, q) => q.z - p.z)
   for (const m of list) m.fn()
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'over')
   if (b.held) ball(ctx, C, b.x, b.y, b.z, b.spin, 0, false)
   // the aim, on the goal, while he's lining it up (drawn: where the stroke sent it)
   if (g.k.drawn && g.k.phase === 'strike' && !g.res) aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
