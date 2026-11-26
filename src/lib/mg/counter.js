@@ -47,7 +47,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   const g = {
     t: 0, zones: 'none', stick: true, fx: [], done: null, doneAt: null, outro: celebMs() + 300, stamp: null,
     sit: situation ?? null, seed,
-    who: { me: manOf(cast, 'us', 'st', 0), mate: manOf(cast, 'us', 'st', 1), cb: manOf(cast, 'them', 'cb', 0), gk: manOf(cast, 'them', 'gk', 0) },
+    who: { me: manOf(cast, 'us', 'st', 0), mate: manOf(cast, 'us', 'st', 1), trail: [2, 3].map(i => manOf(cast, 'us', 'st', i)), cb: manOf(cast, 'them', 'cb', 0), gk: manOf(cast, 'them', 'gk', 0) },
     rs, W, v, goes, fake, commitGap, k,
     me: { x: x0, z: START_Z, cyc: 0 }, mate: { x: rs * RUNNER_X, z: START_Z + 0.6, cyc: 0.4 },
     cb: { x: rs * 1.1, z: -25, cyc: 0, side: 0 }, gk: { x: 0, z: -0.4 },
@@ -222,7 +222,10 @@ export function make({ v, seed, cast = null, situation = null }) {
       const scorer = assist ? g.mate : g.me, other = assist ? g.me : g.mate
       const side = assist ? rs : (scorer.x < 0 ? -1 : 1)
       // (off toward the corner of the box on his side, in front of the camera, not out past it)
-      g.cel = celebration(`${seed}-21`, { sit: g.sit, from: { x: scorer.x, z: scorer.z }, side, toward: { x: scorer.x * 0.4 + side * 4.5, z: Math.max(scorer.z - 1.5, -9) }, mates: [{ x: other.x, z: other.z, who: assist ? g.who.me : g.who.mate }] })
+      // (and the two who broke with them, arriving from the halfway line: a midfielder up through the middle behind
+      // the play, and the far-side winger in off his line)
+      const trail = [{ x: -rs * 2.4, z: scorer.z - 12.5 }, { x: -rs * 10.5, z: scorer.z - 8.5 }]
+      g.cel = celebration(`${seed}-21`, { sit: g.sit, from: { x: scorer.x, z: scorer.z }, side, toward: { x: scorer.x * 0.4 + side * 4.5, z: Math.max(scorer.z - 1.5, -9) }, mates: [{ x: other.x, z: other.z, who: assist ? g.who.me : g.who.mate }, ...trail] })
     } else g.fx.push('deny', 'h:heavy')
   }
   return g
@@ -331,6 +334,15 @@ export function draw(ctx, g, view) {
   } else if (g.res && age > 300) mp.pose = mix(mp.pose, POSE.hips, easeOut(prog(age, 300, 700)))
   men.push({ x: mp.x, z: mp.z, pose: mp.pose, look: dress(K.us, g.who.mate ?? { number: 7, skin: '#f0c4a0' }), o: { lift: mp.lift, turn: mp.turn } })
   men.push({ x: me.x, z: me.z, pose: me.pose, look: dress(K.us, g.who.me ?? { number: 9, skin: '#8d5a3b' }), o: { name: g.res ? null : g.who.me?.name, lift: me.lift, turn: me.turn } })
+  // the two arriving from the break, in on the pile
+  if (g.res === 'goal' && g.cel) {
+    const sc = scorerAt(g.cel, age), took = [g.who.me?.number ?? 9, g.who.mate?.number ?? 7]
+    for (let i = 1; i < g.cel.mates.length; i++) {
+      const at = mateAt(g.cel, i, age, sc), w = g.who.trail?.[i - 1]
+      const who = w && !took.includes(w.number) ? w : [{ number: 8, skin: '#c09060' }, { number: 11, skin: '#5e3c22' }][i - 1]
+      men.push({ x: at.x, z: at.z, pose: at.pose, look: dress(K.us, who), o: { lift: at.lift, turn: at.turn } })
+    }
+  }
   for (const [i, ch] of g.chase.entries()) men.push({ x: ch.x, z: ch.z, pose: g.res === 'goal' ? defenderBeaten(i + 1, age, runPose(ch.cyc % 1, 0.4)) : runPose(ch.cyc % 1, g.res ? 0.4 : 1), look: dress(K.them, { number: i ? 4 : 3, skin: i ? '#c09060' : '#3a2a1e' }) })
   if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
   men.sort((a, c2) => c2.z - a.z)

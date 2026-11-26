@@ -316,7 +316,7 @@ export function draw(ctx, g, view) {
   if (g.res === 'goal' && g.cel) {
     const sc = scorerAt(g.cel, age)
     list.push({ z: sc.z, fn: () => man(ctx, C, sc.x, sc.z, sc.pose, meLook, { lift: sc.lift, turn: sc.turn, name: g.who.me?.name }) })
-    g.cel.mates.forEach((m, i) => { if (age < m.delay) return; const at = mateAt(g.cel, i, age, sc); list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, dress(K.us, g.who.mates?.[i] ?? { number: [7, 10, 11][i], skin: ['#5e3c22', '#f0c4a0', '#c09060'][i] }), { lift: at.lift, turn: at.turn }) }) })
+    g.cel.mates.forEach((m, i) => { if (age < m.delay) return; const at = mateAt(g.cel, i, age, sc); list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, dress(K.us, (g.who.mates?.[i]?.number != null && g.who.mates[i].number !== meLook.number && g.who.mates.findIndex(w => w?.number === g.who.mates[i].number) === i ? g.who.mates[i] : null) ?? { number: [7, 10, 11, 14].filter(n => n !== meLook.number && !g.who.mates?.some(w => w?.number === n))[i], skin: ['#5e3c22', '#f0c4a0', '#c09060'][i] }), { lift: at.lift, turn: at.turn }) }) })
   } else {
     const sp = takerAt(g)
     list.push({ z: sp.z, fn: () => man(ctx, C, sp.x, sp.z, sp.pose, meLook, { name: g.who.me?.name, lift: sp.lift ?? 0 }) })
