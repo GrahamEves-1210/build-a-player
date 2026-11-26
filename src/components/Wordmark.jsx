@@ -5,11 +5,17 @@
 // attribute made every inline style the page writes, each frame of a wheel or an animation, cost a style match)
 // (the B and the P have the real logo's cut: the upper bowl open at the back, no upright between the top bar and
 // the middle one: .wm-cb / .wm-cp in app-game.css, owner 11-25)
-export default function Wordmark({ tail = null, emStyle }) {
+// (owner 11-25: the logo is one picture used everywhere, so it can never set differently from one screen to the next. The
+// pictures are the spin screen's nav wordmark cut out (public/wordmark/*-m.webp); app-game.css .bap-wm--img sizes them by
+// the place's font-size. tail (basketball's BUCKET) picks Build-A-Bucket; soccer's grey -A- shows wherever soccer's on)
+export default function Wordmark({ tail = null }) {
+  if (tail) return (
+    <span className="bap-wm bap-wm--img"><img className="wmi wmi--bucket" src="/wordmark/bucket-m.webp" alt="Build-A-Bucket" draggable={false} /></span>
+  )
   return (
-    <span className="bap-wm">
-      <i className="wm-cb">B</i>UI<i className="wm-k wm-k2">L</i><i className="wm-d">D</i><em className={emStyle ? undefined : 'wm-a'} style={emStyle}><i className="wm-g1">-</i><i className="wm-g2">A</i><i className="wm-g3">-</i></em>
-      {tail ?? <><i className="wm-k wm-p wm-cp">P</i><i className="wm-k">L</i>AY<i className="wm-k wm-e">E</i>R</>}
+    <span className="bap-wm bap-wm--img">
+      <img className="wmi wmi--nfl" src="/wordmark/nfl-m.webp" alt="Build-A-Player" draggable={false} />
+      <img className="wmi wmi--soccer" src="/wordmark/soccer-m.webp" alt="Build-A-Player" draggable={false} />
     </span>
   )
 }

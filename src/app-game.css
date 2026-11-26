@@ -8208,25 +8208,14 @@ html:is(.is-app, .app-look) .game-layout.ag-drop .spin-panel .attr-chip .chip-na
 /* the soccer build screen's striker, the whole figure (the art and its colour layers together) a little darker (owner 11-25) */
 .sil-wrap--st > div:has(> .sil-img) { filter: brightness(.82); }
 .ag-banner small, .ag-banner b { text-align: center; }   /* (a two-line word, BALLON D'ORS, centred in its banner) */
-/* desktop Home: the wordmark is its cut-out picture (the letters' height: the type's caps, 0.70em; BUCKET's ball rises above) */
-.ag-wordmark-img { display: none; }
-@media (min-width: 1024px) {
-  .ag-home .ag-wordmark > .bap-wm { display: none; }
-  .ag-home .ag-wordmark-img { display: block; height: .704em; width: auto; margin: .16em auto .2em; }
-  .ag-home .ag-wordmark-img--bucket { height: .838em; margin-top: .03em; }
-}
-/* Home's wordmark set exactly like the spin screen's nav wordmark (owner 11-25: that one looks right). The nav's dash tucks are in px
-   at 16px (phone) / 25px (desktop); Home gets the same tucks as em so they hold at its larger size, and desktop goes back to type (not the picture) */
-.ag-wordmark-img { display: none !important; }
-@media (min-width: 1024px) { .ag-home .ag-wordmark > .bap-wm { display: inline !important; } }
-/* phones and tablets: the spin screen's own nav wordmark as a picture (public/wordmark/*-m.webp: its 16px type, cut out), the type's size */
-@media (max-width: 1023px) {
-  .ag-home .ag-wordmark > .bap-wm { display: none !important; }
-  .ag-home .ag-wordmark-img { display: block !important; height: .7083em; width: auto; max-width: 100%; margin: .097em auto .2em; }
-  .ag-home .ag-wordmark-img--bucket { height: .8333em; margin-top: .03em; }
-}
-@media (max-width: 768px) {
-  .ag-home .bap-wm em > .wm-g1 { margin-left: -.0674em; }   /* (-.033em - .55px at 16px) */
-  .ag-home .bap-wm em > .wm-g3 { margin-right: -.1295em; }  /* (-.067em - 1px at 16px) */
-}
-@media (min-width: 769px) { .ag-home .bap-wm em > .wm-g1 { margin-left: -.045em; } }   /* (-.033em - .3px at 25px) */
+/* The wordmark is one picture everywhere (owner 11-25: "make it into a logo and use it universally"): the spin screen's nav
+   wordmark cut out at high resolution (public/wordmark/nfl-m, soccer-m, bucket-m.webp), sized by the place's font-size (the
+   letters' cap height, 0.702em; BUCKET's ball rises above, 0.833em), sitting on the baseline. Components/Wordmark.jsx */
+.bap-wm.bap-wm--img { display: inline-block; line-height: 0; letter-spacing: 0 !important; vertical-align: baseline; white-space: nowrap; }
+.bap-wm--img .wmi { display: inline-block; height: .7021em; width: auto; max-width: none; vertical-align: baseline; }
+.bap-wm--img .wmi--bucket { height: .8333em; }
+.bap-wm--img .wmi--soccer { display: none; }
+html.is-soccer .bap-wm--img .wmi--nfl, [data-sport="soccer"] .bap-wm--img .wmi--nfl, .ag-home--soccer .bap-wm--img .wmi--nfl { display: none; }
+html.is-soccer .bap-wm--img .wmi--soccer, [data-sport="soccer"] .bap-wm--img .wmi--soccer, .ag-home--soccer .bap-wm--img .wmi--soccer { display: inline-block; }
+/* (Home: a hair of room above and below, as the type had) */
+.ag-home .ag-wordmark .bap-wm--img { margin: .15em 0 .19em; }

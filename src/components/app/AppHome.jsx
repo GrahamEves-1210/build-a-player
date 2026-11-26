@@ -684,9 +684,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <img src="/bap-mark.webp" alt="" className="ag-brand-mark" draggable={false} />
           <div className="ag-wordmark">
             <Wordmark tail={isBucket ? <><i className="wm-cb">B</i><HoopU />CKET</> : null} />
-            {/* desktop: the wordmark as a picture, cut out of the type above (public/wordmark/: owner 11-25), so the B and P are
-                drawn once and can't drift */}
-            <img className={`ag-wordmark-img ag-wordmark-img--${isBucket ? 'bucket' : isSoccer ? 'soccer' : 'nfl'}`} src={`/wordmark/${isBucket ? 'bucket' : isSoccer ? 'soccer' : 'nfl'}-m.webp`} alt={isBucket ? 'Build-A-Bucket' : 'Build-A-Player'} draggable={false} />
           </div>
         </div>
 
