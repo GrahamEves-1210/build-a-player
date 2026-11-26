@@ -138,7 +138,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   }
   function head() {
     if (g.phase !== 'cross' || g.jumpAt != null || g.res) return
-    g.jumpAt = g.t
+    g.jumpAt = g.t; g.hud.prompt = null; g.hud.hot = false
     g.fx.push('h:light')
     const e = g.t + RISE - g.arriveAt
     const reach = Math.hypot(g.me.x - g.to.x, g.me.z - g.to.z)

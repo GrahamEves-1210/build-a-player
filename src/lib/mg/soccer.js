@@ -1494,7 +1494,8 @@ export function readStroke(st, C, o = {}) {
   // (o.base: the game's plain strike: 'driven', 'pen' for a penalty, 'volley' for one hit first time)
   const base = o.base ?? 'driven'
   let type, label
-  if (power < DRAW.chipP && y > DRAW.chipY) { type = 'chip'; label = pen && Math.abs(x) < 1.1 ? 'PANENKA' : 'CHIP' }
+  // (o.chipP: a game where a careful, slow line shouldn't turn into a dink: only a really soft one is)
+  if (power < (o.chipP ?? DRAW.chipP) && y > DRAW.chipY) { type = 'chip'; label = pen && Math.abs(x) < 1.1 ? 'PANENKA' : 'CHIP' }
   else if (curl) { type = pen ? 'pen' : 'finesse'; label = outside ? 'OUTSIDE OF THE BOOT' : pen ? 'PLACED' : 'CURLER' }
   else if (base === 'driven' && y < DRAW.lowY) { type = 'low'; label = 'LOW DRIVEN' }
   else { type = base; label = { pen: 'PENALTY', volley: 'FIRST TIME' }[base] ?? 'DRIVEN' }

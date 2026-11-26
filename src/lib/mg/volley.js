@@ -142,7 +142,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.touch = { at: g.t, heavy }
     g.bl = { x: at.x, z: at.z, tx: at.x + (d.x / dl) * dist, tz: at.z + (d.z / dl) * dist, y: at.y }
     g.phase = 'touched'
-    g.df.st = 'charge'; g.df.go = g.t + 260
+    g.df.st = 'charge'; g.df.go = g.t + 420
     g.hud.prompt = heavy ? 'HEAVY TOUCH' : null
     g.fx.push('dribble', 'h:light')
   }
@@ -176,7 +176,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (d.st === 'hold') return
     if (d.st === 'charge' && g.t >= d.go) {
       const tx = (g.bl?.x ?? g.me.x) + 0.2, tz = (g.bl?.z ?? g.me.z) + 0.9
-      const dx = tx - d.x, dz = tz - d.z, dd = Math.hypot(dx, dz) || 1, sp = 5.6
+      const dx = tx - d.x, dz = tz - d.z, dd = Math.hypot(dx, dz) || 1, sp = 5.0
       d.vx = (dx / dd) * sp; d.vz = (dz / dd) * sp
       d.x += d.vx * s; d.z += d.vz * s; d.cycle += sp * s / 2.5
       if (dd < 1.5) { d.st = 'slide'; d.at = g.t }
@@ -184,7 +184,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (d.st === 'slide') {
       const a = g.t - d.at
       if (a < 380) { d.x += d.vx * s * 0.6; d.z += d.vz * s * 0.6 }
-      if (!g.shot && !g.res && g.phase === 'touched' && a > 120) settle('blocked', 'Took too long: the defender closed him down and blocked it', true)
+      if (!g.shot && !g.res && g.phase === 'touched' && a > 200) settle('blocked', 'Took too long: the defender closed him down and blocked it', true)
     }
   }
   function shotTick() {

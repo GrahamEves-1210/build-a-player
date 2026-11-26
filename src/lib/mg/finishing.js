@@ -81,7 +81,7 @@ export function make({ v, seed }) {
     if (a.kind === 'move') { strokeMove(st, a.x, a.y, g.t, id); return true }
     strokeUp(st, a.x, a.y, g.t, id)
     if (g.phase !== 'aim' || k.phase !== 'idle') return true
-    const rd = readStroke(st, st.C ?? g.aimView().C, { foot: 1, base: shots[g.i].spot.roll ? 'volley' : 'driven' })
+    const rd = readStroke(st, st.C ?? g.aimView().C, { foot: 1, base: shots[g.i].spot.roll ? 'volley' : 'driven', chipP: 0.12 })
     if (rd.tap || rd.back) return true
     // (a stroke that ends by the lit target is drawn onto it, the more so the better the finisher: the stick's
     // corners are the targets, and a finger's never that exact)
@@ -206,7 +206,7 @@ export function draw(ctx, g, view) {
   if (g.phase === 'aim' && g.k.drawn && g.k.phase === 'strike') aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
   else if (g.phase === 'aim' && (g.k.phase === 'power' || g.k.phase === 'strike')) { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }
   text(ctx, `BALL ${Math.min(g.i + 1, N)} OF ${N} · ${sh.spot.name}`, 12, 60, { font: LABEL, size: 16, align: 'left', track: 0.6, color: 'rgba(255,255,255,.85)' })
-  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, base: sh.spot.roll ? 'volley' : 'driven' })
+  strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, base: sh.spot.roll ? 'volley' : 'driven', chipP: 0.12 })
   // the first ball: a stroke drawn off the ball to the lit target, and the line under it
   if (g.phase === 'aim' && g.i === 0 && g.k.phase === 'idle' && !g.st.on) {
     const bp = P(C, sh.spot.x, 0.11, sh.spot.z), [tx, ty] = TARGETS[sh.k], to = P(C, tx, ty, 0)

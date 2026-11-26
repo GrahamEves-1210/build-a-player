@@ -18,7 +18,7 @@ import { clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manOf } f
 import { placeStamp } from './read.js'
 import {
   camOf, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, line,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, aimTo, celebration, scorerAt, mateAt, keeperShot, heldBall, parried, defenderBeaten, keeperRoar,
+  shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, keeperShot, heldBall, parried, defenderBeaten, keeperRoar,
   strikerDenied, celebMs, skipOutro, POST, BAR, NET_D, P,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar,
 } from './soccer.js'
