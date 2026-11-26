@@ -611,7 +611,7 @@ export default function SoccerApp() {
   const careerNew = useRef({ slot: 0, name: null })
   const startCareerBuild = useCallback(() => { handleStart('classic'); setPage('career-build') }, [handleStart])
   // ── TRAIT AUCTION (lib/auction.js, soccer's kit lib/soccerAuction.js): the striker, locked in while it's on ──
-  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'soccer', pos: 'st' })
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'soccer' })
   const auctionLive = au.phase === 'auction'
   useEffect(() => {
     if (!auctionLive) return
@@ -1087,7 +1087,7 @@ export default function SoccerApp() {
   if (page === 'auction') {
     return withGame(
       <Suspense fallback={null}>
-        <AppTraitAuction au={au} sport="soccer" position="st" positions={[{ pos: 'st', label: 'STRIKER' }]} onPosition={() => {}} onHome={() => setPage('splash')} />
+        <AppTraitAuction au={au} sport="soccer" onHome={() => setPage('splash')} />
       </Suspense>
     )
   }

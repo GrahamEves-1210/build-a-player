@@ -24,7 +24,7 @@ import { liveSocket } from './blacktopServer'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
 import { SPORT } from './career'
-import { auctionCoreKit, AUCTION_FILL_SECS } from './auctionCore'
+import { auctionCoreKit, AUCTION_FILL_SECS, AUCTION_POS, AUCTION_ANY, posOk } from './auctionCore'
 import { nflHeadshot } from '../utils/simulation'
 import { teamHint } from './teamHint'
 import { APP_ART } from './platform'
@@ -32,12 +32,24 @@ import { APP_ART } from './platform'
 export * from './auctionCore'
 
 // the rules' kit, plus what the screens show: the position's name, photos, logos
+// every position a sport's room can draw: its tag and its name (the lobby lists them; the reveal lands on one)
+export const POS_INFO = {
+  nfl: [{ pos: 'qb', tag: 'QB', name: 'Quarterback' }, { pos: 'rb', tag: 'RB', name: 'Running back' }, { pos: 'wr', tag: 'WR', name: 'Wide receiver' }],
+  bucket: [{ pos: 'guard', tag: 'GUARD', name: 'Guard' }, { pos: 'big', tag: 'BIG', name: 'Big' }],
+  soccer: [{ pos: 'st', tag: 'ST', name: 'Striker' }],
+}
+export const posInfo = (sport, pos) => POS_INFO[sport]?.find(o => o.pos === pos) ?? null
+
+// a slot's name in full on every auction screen (Salary Cap's board shortens a few for its column heads)
+const FULL = { ELUSIVE: 'ELUSIVENESS' }
+const fullLabel = f => k => { const l = f(k); return FULL[l] ?? l }
+
 // a sport that adds its own kit adds its look too (soccer: lib/soccerAuctionUi.js)
 const LOOKS = {}
 export const addAuctionLook = (sport, look) => { LOOKS[sport] = look }
 export function auctionKit(sport, pos) {
   const k = auctionCoreKit(sport, pos)
-  if (LOOKS[k.sport]) { const L = LOOKS[k.sport]; return { ...k, ...L, label: L.label } }
+  if (LOOKS[k.sport]) { const L = LOOKS[k.sport]; return { ...k, ...L, label: L.label, attrLabel: fullLabel(k.attrLabel) } }
   const S = SPORT[k.sport]
   // the lot's card: his photo the way Salary Cap finds it (the headshot list, else the pool's own headshot; no photo,
   // the app draws his team's jersey, the website shows the team's logo), on his team's colour
@@ -50,11 +62,15 @@ export function auctionKit(sport, pos) {
     if (src) return teamHint(src, team ?? p?.team)
     return APP_ART && p ? `/headshots/x/${lg}/${team ?? p.team}/${p.number ?? ''}.webp` : null
   }
-  return { ...k, label: S.label[k.pos], photo, logo: S.logo, teamColor: team => tint[team] ?? '#3a2a22' }
+  return { ...k, label: S.label[k.pos], photo, logo: S.logo, teamColor: team => tint[team] ?? '#3a2a22', attrLabel: fullLabel(k.attrLabel) }
 }
 
-export function useAuction({ enabled, user, sport, pos }) {
-  const kit = useMemo(() => auctionKit(sport, pos), [sport, pos])
+// One queue a sport: the room draws the position (lib/auctionCore auctionPosFor). The kit is the room's once it's
+// known, the sport's first position until then
+export function useAuction({ enabled, user, sport }) {
+  const [match, setMatch] = useState(null)           // { code, seed, created, sport, pos, anyPos, types, bidSecs, reset, players }
+  const roomPos = match?.pos ?? null
+  const kit = useMemo(() => auctionKit(sport, roomPos ?? AUCTION_POS[sport]?.[0]), [sport, roomPos])
   const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
   // an auction this device left mid-way (reload, the app killed): book the forfeit it was
   useEffect(() => {
@@ -65,7 +81,6 @@ export function useAuction({ enabled, user, sport, pos }) {
   const [queue, setQueue] = useState([])
   const [startsAt, setStartsAt] = useState(null)     // the queue's countdown, on this phone's clock
   const [link, setLink] = useState('connecting')
-  const [match, setMatch] = useState(null)           // { code, seed, created, sport, pos, types, bidSecs, reset, players }
   const [present, setPresent] = useState([])
   const [st, setSt] = useState(null)                 // { n, stage, lot, t0, last, high, passed, sold, soldAt, L }
   const [ranked, setRanked] = useState([])
@@ -88,6 +103,7 @@ export function useAuction({ enabled, user, sport, pos }) {
   const onRoom = useCallback(msg => {
     if (msg.t === 'gone') { leave(); return }
     if (msg.t !== 'state' || !msg.m || !msg.st) return
+    if (!posOk(msg.m)) return   // a room whose position isn't the one its seed draws: not taken
     const t = Date.now(), s = msg.st
     setMatch(msg.m)
     setPresent((msg.here ?? []).map(vid => ({ vid })))
@@ -96,8 +112,8 @@ export function useAuction({ enabled, user, sport, pos }) {
   }, [leave])
   const enterRoom = useCallback((code, players) => {
     qRef.current?.close(); qRef.current = null
-    setMatch({ code, players, types: kit.types, sport: kit.sport, pos: kit.pos }); setPhase('auction'); booked.current = null
-    markEntered({ kind: 'auction', code, sport: kit.sport, pos: kit.pos, of: players.length })
+    setMatch({ code, players, sport: kit.sport, pos: null, types: null }); setPhase('auction'); booked.current = null
+    markEntered({ kind: 'auction', code, sport: kit.sport, pos: AUCTION_ANY, of: players.length })
     roomRef.current = liveSocket(`/auction/room/${code}`, () => ({ t: 'hello', vid: me.vid }), onRoom, setLink)
   }, [kit, me.vid, onRoom])
 
@@ -106,7 +122,7 @@ export function useAuction({ enabled, user, sport, pos }) {
     if (!claimLive('auction')) { setPhase('busy'); return }
     closeAll()
     setPhase('queue'); setMatch(null); setSt(null); setQueue([]); setStartsAt(null)
-    qRef.current = liveSocket(`/auction/q?sport=${kit.sport}&pos=${kit.pos}`, () => ({ t: 'hello', ...me }), msg => {
+    qRef.current = liveSocket(`/auction/q?sport=${kit.sport}&pos=${AUCTION_ANY}`, () => ({ t: 'hello', ...me }), msg => {
       if (msg.t === 'queue') { setQueue(msg.list ?? []); setStartsAt(msg.startsIn == null ? null : Date.now() + msg.startsIn) }
       else if (msg.t === 'match' && msg.players?.some(p => p.vid === me.vid)) enterRoom(msg.code, msg.players)
     }, setLink)

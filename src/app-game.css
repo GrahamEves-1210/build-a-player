@@ -8565,3 +8565,33 @@ html.app-look .au-screen.au-hub { padding-left: 0; padding-right: 0; }
 html.app-look .au-screen.au-hub > .au-hub-body { margin-left: auto; margin-right: auto; }
 @media (min-width: 1024px) { .au-hub-gavel { height: 170px; bottom: 54px; right: calc(max(20px, 50% - 470px) + 60px); } }
 @media (min-width: 1024px) { .au-floor.is-draw { align-items: stretch; } }
+
+/* ═══ TRAIT AUCTION: one queue a sport, the room draws the position (owner 11-26) ═══ */
+/* the lobby: the positions the room can draw, each with its five slots; none picked */
+.au-hub-pos.is-list .au-hub-row { cursor: default; color: var(--au-white); background: none; box-shadow: none; }
+.au-hub-line small { font-size: 13px; letter-spacing: 1.6px; color: var(--au-amber); }
+.au-hub-pos.is-list .au-hub-line { color: var(--au-muted); }
+.au-hub-wait { display: inline-flex; align-items: center; gap: 7px; margin-top: -6px; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.4px; color: var(--au-amber); }
+.au-hub-wait i { width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; }
+.au-hub-main > .au-hub-sec:first-child { margin-bottom: -6px; }
+/* every slot by its full name: a long one takes two lines in the strip, never an ellipsis */
+.au-cell-t { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.05; min-height: 2.1em; display: flex; align-items: flex-end; justify-content: center; overflow-wrap: anywhere; }
+.au-dcard-face small, .au-draw-chips i { white-space: normal; overflow-wrap: anywhere; line-height: 1.05; }
+
+/* the reveal: the sport's positions run past and land on the room's, big, its name under it */
+.au-reveal { display: grid; justify-items: center; gap: 6px; padding: 18px 0 16px; text-align: center; }
+.au-reveal-tag { font-family: var(--ag-display); font-weight: 400; font-size: 96px; line-height: .9; letter-spacing: 1px; color: var(--au-white); }
+.au-reveal.is-landed .au-reveal-tag { color: var(--au-amber-hi); }
+.au-reveal-name { min-height: 18px; font-family: var(--ag-font); font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: var(--au-white); }
+.au-reveal-row { display: flex; gap: 6px; margin-top: 6px; }
+.au-reveal-row i { font-style: normal; min-width: 48px; padding: 5px 10px 3px; border-radius: 6px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.4px; color: var(--au-muted); background: var(--au-panel); }
+.au-reveal-row i.is-on { color: var(--au-ink); background: var(--au-amber); }
+.au-reveal.is-landed .au-reveal-row i:not(.is-on) { opacity: .4; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .au-reveal-tag { animation: au-rv-step .12s ease-out both; }
+  html:not(.bap-reduce-motion) .au-reveal.is-landed .au-reveal-tag { animation: au-rv-land .38s cubic-bezier(.2,.9,.3,1.3) both; }
+  html:not(.bap-reduce-motion) .au-reveal.is-landed .au-reveal-name { animation: ag-rise .3s .12s both; }
+}
+@keyframes au-rv-step { from { transform: translateY(-10px); opacity: .4; } }
+@keyframes au-rv-land { from { transform: scale(1.35); } }
+@media (min-width: 1024px) { .au-reveal-tag { font-size: 128px; } .au-reveal { padding: 34px 0 28px; } }

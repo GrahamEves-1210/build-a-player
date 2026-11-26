@@ -852,9 +852,8 @@ export default function BucketApp() {
   }, [isBucketCustomMode])
 
   // ── TRAIT AUCTION (lib/auction.js): its own online mode, locked in while it's on ──
-  const [auctionPos, setAuctionPos] = useState(() => { let p = 'guard'; try { p = localStorage.getItem('bap_auction_bpos') || localStorage.getItem('bucketPosition') || 'guard' } catch {}; return p === 'big' ? 'big' : 'guard' })
-  const pickAuctionPos = useCallback(p => { setAuctionPos(p); try { localStorage.setItem('bap_auction_bpos', p) } catch {} }, [])
-  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'bucket', pos: auctionPos })
+  // (one queue for basketball: the room draws guard or big, owner 11-26)
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'bucket' })
   const auctionLive = au.phase === 'auction'
   useEffect(() => {
     if (!auctionLive) return
@@ -2217,8 +2216,7 @@ export default function BucketApp() {
   if (page === 'auction') {
     return withGame(
       <Suspense fallback={null}>
-        <AppTraitAuction au={au} sport="bucket" position={auctionPos} positions={[{ pos: 'guard', label: 'GUARD' }, { pos: 'big', label: 'BIG' }]}
-          onPosition={pickAuctionPos} onHome={() => setPage('splash')} />
+        <AppTraitAuction au={au} sport="bucket" onHome={() => setPage('splash')} />
       </Suspense>
     )
   }

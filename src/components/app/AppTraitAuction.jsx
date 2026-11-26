@@ -5,7 +5,7 @@ import { XpIco } from './GainIcons'
 import { COMPETE_REWARDS, useProgress } from '../../lib/progress'
 import { IconClose, IconArrow } from './icons'
 import { Form, TierChip } from './OnlineRecord'
-import { AUCTION_SIZE, BUDGET, auctionKit } from '../../lib/auction'
+import { AUCTION_SIZE, BUDGET, AUCTION_ANY, auctionKit, POS_INFO, posInfo } from '../../lib/auction'
 import { guardLeave } from '../../lib/liveLock'
 const AppAuction = lazy(() => import('./AppAuction'))
 
@@ -39,15 +39,19 @@ function AuctionRecord() {
   )
 }
 
-export default function AppTraitAuction({ au, sport, position, positions, onPosition, onHome }) {
+export default function AppTraitAuction({ au, sport, onHome }) {
   const live = au.phase !== 'idle'
   const here = usePresence()?.areas?.auction ?? 0
-  // how many are waiting in each position's queue (lib/liveCounts.js), while the lobby's up
+  // how many are waiting in the sport's queue (lib/liveCounts.js), while the lobby's up
   const waiting = useLiveCounts(!live)
   const isBucket = sport === 'bucket'
   const sportKey = isBucket ? 'bucket' : sport === 'soccer' ? 'soccer' : 'nfl'
   const sportName = { bucket: 'BASKETBALL', soccer: 'SOCCER', nfl: 'FOOTBALL' }[sportKey]
-  const posName = positions.find(o => o.pos === position)?.label ?? position.toUpperCase()
+  // one queue a sport: the room draws the position (lib/auctionCore auctionPosFor); known once the room's open
+  const positions = POS_INFO[sportKey]
+  // (shown once the first card's up: before that the room is drawing it, AppAuction PosReveal)
+  const roomPos = au.match?.pos && au.st?.n > 0 ? posInfo(sportKey, au.match.pos) : null
+  const posName = roomPos?.tag ?? ''
   const prog = useProgress()
 
   let body
@@ -67,8 +71,8 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
   }
   const rating = prog.stats?.online?.rating ?? 800
 
-  // the lobby: Blacktop's hub (AppBlacktop BlacktopHubView): the name big on a full-bleed header, the positions as
-  // one list, one button, the record on one line, the prizes and the rules under it
+  // the lobby: Blacktop's hub (AppBlacktop BlacktopHubView): the name big on a full-bleed header, the positions the
+  // room can draw, one button, the record on one line, the prizes and the rules under it
   if (!live && au.phase !== 'busy') {
     return (
       <div className={`ag-screen cp au-screen au-hub cp--${sportKey}`}>
@@ -90,24 +94,21 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
         </header>
         <div className="au-hub-body">
           <div className="au-hub-main">
-            {positions.length > 1 ? (
-              <div className="au-hub-pos" role="radiogroup" aria-label="Position">
-                {positions.map(o => {
-                  const on = o.pos === position
-                  const n = searching(waiting, `au:${sportKey}-${o.pos}`)
-                  const k = auctionKit(sportKey, o.pos)
-                  return (
-                    <button key={o.pos} role="radio" aria-checked={on} className={`au-hub-row${on ? ' is-on' : ''}`} onClick={() => onPosition(o.pos)}>
-                      <b className="au-hub-tag">{o.label}</b>
-                      <span className="au-hub-line">{k.types.map(t => k.attrLabel(t)).join(' · ')}{n && <em><i aria-hidden="true" />{n} SEARCHING</em>}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="au-hub-pos"><div className="au-hub-row is-on is-only"><b className="au-hub-tag">{posName}</b><span className="au-hub-line">{au.kit.types.map(t => au.kit.attrLabel(t)).join(' · ')}</span></div></div>
-            )}
+            {/* what the auction is: every position the room can draw, with its five slots (nobody picks: one queue a sport) */}
+            <div className="au-hub-sec"><span>{positions.length > 1 ? 'POSITION · DRAWN WHEN THE ROOM FILLS' : 'POSITION'}</span></div>
+            <div className="au-hub-pos is-list">
+              {positions.map(o => {
+                const k = auctionKit(sportKey, o.pos)
+                return (
+                  <div key={o.pos} className="au-hub-row">
+                    <b className="au-hub-tag">{o.tag}</b>
+                    <span className="au-hub-line"><small>{o.name}</small>{k.types.map(t => k.attrLabel(t)).join(' · ')}</span>
+                  </div>
+                )
+              })}
+            </div>
             <button className="ag-btn au-hub-go" onClick={() => au.join()}>FIND AN AUCTION <IconArrow size={18} /></button>
+            {searching(waiting, `au:${sportKey}-${AUCTION_ANY}`) && <span className="au-hub-wait"><i aria-hidden="true" />{searching(waiting, `au:${sportKey}-${AUCTION_ANY}`)} SEARCHING</span>}
             <AuctionRecord />
           </div>
           <div className="au-hub-side">
@@ -119,9 +120,10 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
             </div>
             <div className="au-hub-sec"><span>HOW IT WORKS</span></div>
             <ol className="au-how">
-              <li><b>1</b>5 slots · ${BUDGET} to fill them</li>
-              <li><b>2</b>Highest bid wins the card</li>
-              <li><b>3</b>Fill first, the rest get random cards</li>
+              <li><b>1</b>{positions.length > 1 ? 'The room draws the position' : `5 slots · $${BUDGET} to fill them`}</li>
+              {positions.length > 1 && <li><b>2</b>5 slots · ${BUDGET} to fill them</li>}
+              <li><b>{positions.length > 1 ? 3 : 2}</b>Highest bid wins the card</li>
+              <li><b>{positions.length > 1 ? 4 : 3}</b>Fill first, the rest get random cards</li>
             </ol>
           </div>
         </div>
@@ -132,7 +134,7 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
   return (
     <div className={`ag-screen cp au-screen cp--${sportKey}${au.phase === 'auction' || au.phase === 'result' ? ' is-live' : ''}`}>
       <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{sportName} · {posName}</span><h1 className="ag-h1">Trait Auction</h1></div>
+        <div><span className="ag-eyebrow">{sportName}{roomPos ? ` · ${roomPos.tag}` : ''}</span><h1 className="ag-h1">Trait Auction</h1></div>
         <button className="ag-round-btn" onClick={() => guardLeave(() => { if (au.phase === 'queue') au.leave(); onHome() })} aria-label="Home"><IconClose size={16} /></button>
       </div>
       {body}

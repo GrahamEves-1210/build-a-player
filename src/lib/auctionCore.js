@@ -33,6 +33,15 @@ export const FILLER_VAL = 3         // a slot nobody won by the end: a free agen
 
 // Football: QB, RB or WR (each on its Salary Cap board's five slots); basketball: guard or big; soccer: the striker
 export const AUCTION_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'], soccer: ['st'] }
+// One queue a sport (owner 11-26): nobody picks the position. When the room fills, its seed draws it, so every seat
+// gets the same one and any phone can check the server's word (posOk). The queue asks for pos 'any'; a phone from
+// before this asks for its own position and gets a room at that position, as it always did.
+export const AUCTION_ANY = 'any'
+export const auctionPosFor = (sport, seed) => {
+  const list = AUCTION_POS[sport] ?? []
+  return list.length <= 1 ? (list[0] ?? null) : list[Math.floor(seeded(`${seed}:pos`)() * list.length)]
+}
+export const posOk = m => !!m && (!m.anyPos || m.pos === auctionPosFor(m.sport, m.seed))
 const NFL_OVR = { qb: calcOVR, rb: calcOVRRB, wr: calcOVRWR }
 const avg = vs => (vs.length ? vs.reduce((x, y) => x + y, 0) / vs.length : 5)
 
@@ -123,6 +132,35 @@ const lotCard = l => ({ trait: l.trait, name: l.name, team: l.team, val: l.val, 
 const sameCard = (a, b) => a.trait === b.trait && a.name === b.name
 const byName = pool => [...pool].sort((a, b) => a.name.localeCompare(b.name))
 
+// The odds lean toward better cards (owner 11-26): a player comes up for a slot with weight 1 + GRADE_TILT x g², g his
+// grade step there (0 = F … 11 = S, valToGrade's scale), for the lots and the draw alike. (Straight 1 + k·g flattens
+// out at about +0.8 of a grade however big k gets; the square reaches a full grade at k = 0.06.) The average card is about one grade
+// higher than an even draw (C+/B- → B/B+); S and A come up clearly more, C and D still come up. Seeded like
+// everything else: one number from the seed picks the player, so the server, the phones and the ledger check agree.
+// (scripts/auction/core-check.mjs prints the grade spread with and without it, for every sport and position.)
+export let GRADE_TILT = 0.06
+export const setGradeTilt = k => { GRADE_TILT = k; TILT.clear() }   // (the rules check only: it measures 0 against the real one)
+const TILT = new Map()   // kit → slot → { cands, cum, total }
+function tilted(kit, t) {
+  let byKit = TILT.get(kit)
+  if (!byKit) { byKit = {}; TILT.set(kit, byKit) }
+  if (!byKit[t]) {
+    const cands = byName(kit.pool)
+    let total = 0
+    const cum = cands.map(pl => (total += 1 + GRADE_TILT * Math.max(0, Math.min(11, Math.round(kit.lotOf(pl, t).val))) ** 2))
+    byKit[t] = { cands, cum, total }
+  }
+  return byKit[t]
+}
+// one number in [0, 1) → a player for slot t, by those weights
+export function pickFor(kit, t, x) {
+  const { cands, cum, total } = tilted(kit, t)
+  const want = x * total
+  let lo = 0, hi = cum.length - 1
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (cum[mid] > want) hi = mid; else lo = mid + 1 }
+  return cands[lo]
+}
+
 // The next lot: a trait somebody still needs (the ones most of the room needs
 // come up more), on a real player who has it. Now and then it's a card that went
 // back into the deck unsold: it comes up face up, its grade already known
@@ -136,10 +174,9 @@ export function pickLot(m, L, kit, n) {
   const back = (L.back ?? []).filter(c => need[c.trait])
   if (back.length && r() < BACK_ODDS) return { n, ...back[Math.floor(r() * back.length)], known: true }
   const trait = bag[Math.floor(r() * bag.length)]
-  const cands = byName(kit.pool)
   // a slightly better field than pure chance: a second player is drawn, and
-  // the better of the two at this slot is the lot most of the time
-  const one = cands[Math.floor(r() * cands.length)], two = cands[Math.floor(r() * cands.length)]
+  // the better of the two at this slot is the lot most of the time (each drawn by the grade-leaning odds above)
+  const one = pickFor(kit, trait, r()), two = pickFor(kit, trait, r())
   const a = kit.lotOf(one, trait), b = kit.lotOf(two, trait)
   return { n, ...(r() < BETTER_ODDS && b.val > a.val ? b : a) }
 }
@@ -153,14 +190,13 @@ export function returnLot(L, lot, m) {
 }
 
 // Somebody has filled his build while others still have open slots: that's the
-// auction. Every other bidder's open slots are dealt a completely random card
-// (any player in the pool, at no cost), one seeded draw a seat a slot, so it's
+// auction. Every other bidder's open slots are dealt a random card
+// (any player in the pool, by the grade-leaning odds, at no cost), one seeded draw a seat a slot, so it's
 // the same on every phone and the server's word can be checked
 export const finishedEarly = (L, m, vid) => !!vid && !L.out.includes(vid) && openSlots(L, vid, m.types).length === 0
   && m.players.some(p => p.vid !== vid && !L.out.includes(p.vid) && openSlots(L, p.vid, m.types).length > 0)
 export function drawCard(m, kit, vid, t) {
-  const cands = byName(kit.pool)
-  return lotCard(kit.lotOf(cands[Math.floor(seeded(`${m.seed}:draw:${vid}:${t}`)() * cands.length)], t))
+  return lotCard(kit.lotOf(pickFor(kit, t, seeded(`${m.seed}:draw:${vid}:${t}`)()), t))
 }
 export function drawFor(m, L, kit) {
   const cards = {}
@@ -207,6 +243,8 @@ export const callOf = left => (left > 4000 ? null : left > 2000 ? 'once' : 'twic
 // or rewrite who paid for what.
 export function ledgerOk(prev, next, m, kit) {
   if (!next || !prev || typeof next !== 'object') return false
+  // the room's position is the one its seed draws (a room that drew it)
+  if (!posOk(m) || (kit && m.pos && kit.pos !== m.pos)) return false
   const realLot = (w, t) => {
     if (!w || !m.types.includes(t)) return false
     const pl = kit.pool.find(x => x.name === w.name)

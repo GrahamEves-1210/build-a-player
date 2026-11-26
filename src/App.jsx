@@ -52,7 +52,7 @@ import { FRANCHISE_LIVE } from './lib/franchiseLive'
 import { FranchiseWait } from './components/franchise2/FranchiseCard'   // (the skeleton while the mode's file loads: FranchiseCard is on Home already)
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { setLiveLock, liveLock, guardLeave } from './lib/liveLock'
-import { useAuction, AUCTION_POS } from './lib/auction'
+import { useAuction } from './lib/auction'
 import { FORFEIT_RATING } from './lib/progress'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
@@ -585,9 +585,8 @@ export default function App() {
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
 
   // ── TRAIT AUCTION (lib/auction.js): its own online mode, locked in while it's on ──
-  const [auctionPos, setAuctionPos] = useState(() => { let p = 'qb'; try { p = localStorage.getItem('bap_auction_pos') || localStorage.getItem('lastPosition') || 'qb' } catch {}; return AUCTION_POS.nfl.includes(p) ? p : 'qb' })
-  const pickAuctionPos = useCallback(p => { setAuctionPos(p); try { localStorage.setItem('bap_auction_pos', p) } catch {} }, [])
-  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'nfl', pos: auctionPos })
+  // (one queue for football: the room draws QB, RB or WR, owner 11-26)
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'nfl' })
   const auctionLive = au.phase === 'auction'
   useEffect(() => {
     if (!auctionLive) return
@@ -1791,8 +1790,7 @@ export default function App() {
   if (page === 'auction') {
     return withGame(
       <Suspense fallback={null}>
-        <AppTraitAuction au={au} sport="nfl" position={auctionPos} positions={POS_OPTIONS.filter(o => AUCTION_POS.nfl.includes(o.pos))}
-          onPosition={pickAuctionPos} onHome={() => setPage('splash')} />
+        <AppTraitAuction au={au} sport="nfl" onHome={() => setPage('splash')} />
       </Suspense>
     )
   }
