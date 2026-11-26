@@ -14,6 +14,7 @@
 // on window.__btlive (state, pause, run, auto, press, stick, flick, wait) for screenshots and tests.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { adsOffHere } from '../../lib/ads'
+import { holdLiveGame } from '../../lib/routes'
 import { useCourt } from '../app/BlacktopCourt'
 import { buildFromPlayer } from '../../lib/hoops'
 import { getUsername } from '../../lib/discord'
@@ -283,6 +284,8 @@ export function Game({ setup, name, onMenu, onRematch, link = null, again = null
   const refs = useRef({})
   const set = k => el => { refs.current[k] = el }
   const [final, setFinal] = useState(null)
+  // while it's played: its own address and the corner video only, the rails would sit on the controls (lib/routes.js)
+  useLayoutEffect(() => (final ? undefined : holdLiveGame()), [!!final])
   const [ask, setAsk] = useState(false)          // QUIT asks first
   const caps = useMemo(() => !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches, [])
   useEffect(() => {

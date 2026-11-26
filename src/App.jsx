@@ -80,7 +80,7 @@ import { LiveLeaveButton } from './components/app/LiveLeave'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './components/app/AppBuildTray'
 import { loadSquad, saveSquad, clearSquad, syncSquadFromCloud, nextToBuild, fillSlot, afterBuilding } from './lib/squad'
 import { setSandboxGate, sandboxItemFor, sandboxLocked, clearSandboxHint } from './components/app/AppSandbox'
-import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
+import { routePage, pageAtLoad, onRoutePop, atRoot } from './lib/routes'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -116,12 +116,23 @@ try {
   if (_enc) _sharedData = decodeBuild(_enc)
 } catch {}
 
-const _isPrivacy = window.location.pathname === '/privacy'
-const _isTerms   = window.location.pathname === '/terms'
-const _isProfile = !_sharedData && !_isPrivacy && !_isTerms && window.location.pathname === '/profile'
-const _isAbout   = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && new URLSearchParams(window.location.search).has('about')
-const _isDepthChart = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && !_isAbout && window.location.pathname === '/depth-chart'
-const _isWiki     = !_sharedData && window.location.pathname.startsWith('/wiki')   // /wiki and /wiki/<page>; the wiki routes its own pages
+// the page the address names (lib/routes.js): /home, /ranks, /career… (the old /simulate, /leaderboard, /salary too)
+const _want = pageAtLoad('nfl')
+const _isPrivacy = _want === 'privacy'
+const _isTerms   = _want === 'terms'
+const _isProfile = !_sharedData && _want === 'profile'
+const _isAbout   = !_sharedData && _want === 'about'
+const _isDepthChart = !_sharedData && _want === 'depth-chart'
+const _isWiki     = !_sharedData && _want === 'wiki'   // /wiki and /wiki/<page>; the wiki routes its own pages
+// the other pages a refresh can open straight from the address (the build pages come back through lib/buildSave.js;
+// a season, a 1v1, Salary Cap's board need what the reload lost or start over: Salary Cap opens a fresh board below)
+const _openAt = !_sharedData && ['leaderboard', 'auction', 'career-intro', 'squad'].includes(_want) ? _want
+  : !_sharedData && _want === 'career' && APP_LOOK ? 'career'
+  : !_sharedData && _want === 'cfb' && CFB_LIVE ? 'cfb'
+  : !_sharedData && _want === 'franchise' && FRANCHISE_LIVE ? 'franchise' : null
+// the build the tab was on comes back on the bare address or its own (/build, /career/spin…); any other address opens
+// what it names, or Home
+const _resumeOk = atRoot('nfl') || ['game', 'squad-build', 'career-build', 'franchise-build'].includes(_want)
 
 // App: switching sport from Home lands on Home (the build in progress waits for PLAY)
 const _goHome = (() => { try { const v = sessionStorage.getItem('bap_go_home') === '1'; sessionStorage.removeItem('bap_go_home'); return v } catch { return false } })()
@@ -204,7 +215,7 @@ const _resumeAt = (() => {
 })()
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _resumeAt ?? (CFB_LIVE && !_sharedData && buildPageAtLoad('nfl') === 'cfb' ? 'cfb' : !_sharedData && (IS_APP || APP_LOOK) && buildPageAtLoad('nfl') === 'career' ? 'career' : 'splash'))   // opening the app lands on the menu; a saved build waits on its Resume card (a reload on the build page goes back to it)
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _openAt ?? (!_resumeOk ? 'splash' : _resumeAt ?? (CFB_LIVE && !_sharedData && buildPageAtLoad('nfl') === 'cfb' ? 'cfb' : !_sharedData && (IS_APP || APP_LOOK) && buildPageAtLoad('nfl') === 'career' ? 'career' : 'splash')))   // opening the app lands on the menu; a saved build waits on its Resume card (a reload on the build page goes back to it)
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -223,7 +234,6 @@ export default function App() {
   useLayoutEffect(() => {
     if (user) { hadUserRef.current = true; return }
     if (hadUserRef.current && page === 'profile') {
-      if (window.location.pathname.endsWith('/profile')) window.history.replaceState({}, '', window.location.pathname.slice(0, -8) || '/')
       setPage('splash')
     }
   }, [user, page])
@@ -425,7 +435,7 @@ export default function App() {
       else if (to === 'depth-chart') setPage('depth-chart')
       else if (to === 'salarycap') handleStart('salarycap', 'qb')
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
-      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
+      else if (to === 'profile') { if (user) setPage('profile'); else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') setPage('about')
       else if (to === 'wiki') setPage('wiki')
       else if (to === 'auction' || to === 'compete') setPage('auction')   // (Compete is retired: an old link opens the auction)
@@ -435,22 +445,9 @@ export default function App() {
     return () => window.removeEventListener('bap:nav', onNav)
   }, [page, gameMode, simResult, user])
 
-  // Ads on every page change (lib/ads.js): destroy all units, then add this
-  // page's off-page units with the path set explicitly (the URL sync effect
-  // below runs after this). A layout effect, so it's queued before the new
-  // page's own in-page units. Home runs the bottom rail and the corner video (wide desktops); the left rail only
-  // runs on /simulate, Salary Cap and /depth-chart. Ad-free players keep forceUnits 'off'.
-  useLayoutEffect(() => {
-    const onSimulate = page === 'sim' && !!simResult
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/', soft: true }); return }
-    const here = window.location.pathname
-    const path = onSimulate ? '/simulate'
-      : page === 'depth-chart' ? '/depth-chart'
-      : page === 'leaderboard' ? '/leaderboard'
-      : page === 'wiki' ? (here.startsWith('/wiki') ? here : '/wiki')
-      : (['/simulate', '/leaderboard', '/depth-chart'].includes(here) || here.startsWith('/wiki')) ? '/' : here
-    rampPage({ ads: onSimulate || page === 'depth-chart' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
-  }, [page, simResult])
+  // The address and the ads on every page change (lib/routes.js, lib/ads.js). A layout effect, so the ads are queued
+  // before the new page's own in-page units.
+  useLayoutEffect(() => { routePage('nfl', page) }, [page])
 
   // Which mode the build belongs to (Squad Builder, Career), saved with it
   const tkRef = useRef(_saved?.tk ?? null)
@@ -487,6 +484,7 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
+      if (!u) setPage(p => (p === 'profile' ? 'splash' : p))   // (/profile opened signed out: Home)
       if (!u) {
         try { localStorage.removeItem('bap_subscribed') } catch {}
         try { localStorage.removeItem('bap_ads_off') } catch {}
@@ -533,54 +531,6 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    const handlePop = () => {
-      const path = window.location.pathname
-      let changed = false
-      if (path !== '/profile') {
-        setPage(prev => prev === 'profile' ? 'game' : prev)
-        changed = true
-      }
-      if (path !== '/simulate') {
-        setPage(prev => prev === 'sim' ? 'game' : prev)
-        changed = true
-      }
-      if (path !== '/leaderboard') {
-        setPage(prev => prev === 'leaderboard' ? (IS_APP || APP_LOOK ? 'splash' : 'game') : prev)
-        changed = true
-      }
-      if (path !== '/depth-chart') {
-        setPage(prev => prev === 'depth-chart' ? 'splash' : prev)
-        changed = true
-      }
-      // The wiki owns /wiki/*: Back into it reopens it, Back out of it lands on the splash
-      if (path.startsWith('/wiki')) { setPage(prev => (prev === 'wiki' ? prev : 'wiki')); changed = true }
-      else { setPage(prev => (prev === 'wiki' ? 'splash' : prev)); changed = true }
-      if (changed) window.scrollTo({ top: 0, behavior: 'instant' })
-    }
-    window.addEventListener('popstate', handlePop)
-    return () => window.removeEventListener('popstate', handlePop)
-  }, [])
-
-  // Dedicated URLs for the simulate/season/playoffs/final flow, the
-  // leaderboard, and the depth chart mini-game — lets Playwire apply ad
-  // rules by path. Purely a URL sync layer; doesn't touch page state, the
-  // ad calls (lib/ads.js), or any in-app navigation logic.
-  useEffect(() => {
-    const onWikiPath = window.location.pathname.startsWith('/wiki')
-    const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : page === 'depth-chart' ? '/depth-chart' : page === 'wiki' ? (onWikiPath ? window.location.pathname : '/wiki') : null
-    if (targetPath) {
-      if (window.location.pathname !== targetPath) {
-        window.history.pushState({}, '', targetPath)
-      }
-    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath || (page !== 'profile' && window.location.pathname === '/profile')
-      || (page !== 'privacy' && window.location.pathname === '/privacy') || (page !== 'terms' && window.location.pathname === '/terms')
-      || (page !== 'about' && new URLSearchParams(window.location.search).has('about'))) {
-      // (left the profile, Privacy, Terms or About: drop its address, or a refresh or opening
-      // the site again lands back there)
-      window.history.replaceState({}, '', '/')
-    }
-  }, [page, simResult])
 
   const isRB        = position === 'rb'
   const isWR        = position === 'wr'
@@ -887,7 +837,7 @@ export default function App() {
   // Opened from Build-A-Bucket's Daily screen (/?daily=1)
   useEffect(() => {
     if ((!IS_APP && !APP_LOOK) || !new URLSearchParams(window.location.search).has('daily')) return
-    window.history.replaceState({}, '', '/')
+    window.history.replaceState({}, '', window.location.pathname)
     startDaily()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1051,28 +1001,31 @@ export default function App() {
         .then(({ error }) => { if (error) console.error('[qb salary save]', error.code, error.message) })
     }
   }, [])
-  // Salary Cap has its own URL (/salary), like basketball's /bucket/salary: browser
-  // Back from its season returns to the board, Back from the board goes Home, and
-  // a refresh on /salary reopens it
-  const salaryStartRef = useRef(window.location.pathname === '/salary')
-  const salaryPushedRef = useRef(false)   // the entry under /salary is ours, so its Back button can step back to it
-  useEffect(() => {
-    if (salaryStartRef.current) { salaryStartRef.current = false; handleStart('salarycap', 'qb'); return }
-    if (page === 'salarycap') { if (window.location.pathname !== '/salary') { window.history.pushState({}, '', '/salary'); salaryPushedRef.current = true } }
-    // (not on the way into its season: /salary stays under /simulate, so Back to Salary
-    // lands on the board and not on the build screen)
-    else if (window.location.pathname === '/salary' && page !== 'sim') window.history.replaceState({}, '', '/')
-  }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
-  // a layout effect so this listener is added before the page's general popstate
-  // handler: React renders popstate updates synchronously, so it must see /salary first
-  useLayoutEffect(() => {
-    const onPop = () => {
-      if (window.location.pathname === '/salary') setPage(prev => (prev === 'splash' ? prev : 'salarycap'))
-      else setPage(prev => (prev === 'salarycap' ? 'splash' : prev))
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
+  // Salary Cap has its own address (/salary-cap, lib/routes.js): a refresh there opens a fresh board
+  const salaryStartRef = useRef(_want === 'salarycap')
+  useEffect(() => { if (salaryStartRef.current) { salaryStartRef.current = false; handleStart('salarycap', 'qb') } }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Back / Forward (lib/routes.js): the page the address names, when it can still be shown; Home when it needs what's
+  // gone (a season after a reload, a 1v1). The dock's screens (/daily, /shop) are AppTabBar's: the page stays.
+  const popToRef = useRef(null)
+  popToRef.current = ({ page: want, screen }) => {
+    if (screen || want === page) return          // (a live game's Back stays on its own address: LiveLeave)
+    const built = !!gameMode && gameMode !== 'salarycap'
+    const ok = !want ? false
+      : want === 'profile' ? !!user
+      : want === 'sim' ? !!simResult && !!gameMode
+      : want === 'game' ? built
+      : want === 'squad-build' ? built && tkRef.current === 'squad'
+      : want === 'career-build' ? built && tkRef.current === 'career'
+      : want === 'franchise-build' ? built && tkRef.current === 'franchise'
+      : want === 'career' ? !!careerRef.current && (IS_APP || APP_LOOK)
+      : want === 'cfb' ? CFB_LIVE
+      : want === 'franchise' ? FRANCHISE_LIVE
+      : !(want === 'shared' || want.startsWith('versus'))
+    if (ok && want === 'salarycap' && gameMode !== 'salarycap') { handleStart('salarycap', 'qb'); return }
+    setPage(ok ? want : 'splash')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  useEffect(() => onRoutePop('nfl', r => popToRef.current?.(r)), [])
 
   // Books a finished season: award, save, lifetime counters, XP
   // `leaving`: booked as you leave the season page mid-season (SimPage's unmount): stay where
@@ -1478,7 +1431,7 @@ export default function App() {
     onAbout: () => setPage('about'),
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
-    onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
+    onProfile: () => setPage('profile'),
     onLeaderboard: () => setPage('leaderboard'),
     // switching position leaves the game: a live one (the Daily, a pool, an auction) asks first and forfeits
     // (a new Career's build switches in place: going home dropped the career, so RB couldn't be picked)
@@ -1907,7 +1860,7 @@ export default function App() {
           user={user}
           vsRecord={vsRecord}
           onSignIn={() => setShowAuth(true)}
-          onProfile={() => { window.history.pushState({}, '', '/profile'); setPage('profile') }}
+          onProfile={() => setPage('profile')}
           onAbout={() => setPage('about')}
           onLeaderboard={() => setPage('leaderboard')}
         />
@@ -1971,7 +1924,6 @@ export default function App() {
           build={sharedBuild}
           types={sharedTypes}
           onPlay={() => {
-            window.history.replaceState({}, '', window.location.pathname)
             setPage('splash')
           }}
         />
@@ -2047,7 +1999,7 @@ export default function App() {
             else document.documentElement.setAttribute('data-theme', themeId)
           }}
           // the new look: back always means Home (history could land anywhere)
-          onBack={() => { if (IS_APP || APP_LOOK) { window.history.pushState({}, '', '/'); setPage('splash') } else window.history.back() }}
+          onBack={() => { if (IS_APP || APP_LOOK) setPage('splash'); else window.history.back() }}
           onSignOut={() => { setUser(null); window.location.href = '/' }}
           onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
           onOpenCustomModal={() => setShowCustomModal(true)}
@@ -2131,7 +2083,7 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <QBSalaryCap user={user} initialDateStr={salaryReturnDate} onConfirm={handleQBSalaryConfirm}
-          onBack={() => { setGameMode(null); if (salaryPushedRef.current && window.location.pathname === '/salary') window.history.back(); else setPage('splash') }} />
+          onBack={() => { setGameMode(null); setPage('splash') }} />
       </Suspense>
     )
   }

@@ -9,7 +9,7 @@ import { track } from '../lib/track'
 import { seededShuffle, useProgress } from '../lib/progress'
 import { dealTeam, dealPlayer } from '../lib/seatSpin'
 import { itemById } from '../lib/cosmetics'
-import { rampRail, rampSpinAd, SPIN_AD_ID } from '../lib/ads'
+import { rampRail, rampSpinAd, rampNoLeftRail, SPIN_AD_ID } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
 import { LOW_POWER, sampleFrames } from '../lib/lowPower'
 import { watchFor, REWARDED_ON } from '../lib/rewardedAd'
@@ -52,6 +52,7 @@ const reelKey = x => `${x?.name}|${x?.team ?? x?.short}`
 
 // the wheels show names only: no logos or headshots in the rows (owner 11-14)
 export function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, getImg = null, getImgFull = null, onStop, blurred, fast, durationMs = 1400, jitterMs = 500, target = null }) {
+  useLayoutEffect(() => rampNoLeftRail(), [])   // (every wheel, wherever it spins: no left rail while it's up, lib/ads.js)
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
@@ -593,6 +594,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   }, [resetKey])
 
   useEffect(() => () => clearAll(), [])
+  // no left rail while the wheels are up, on any page of any mode (lib/ads.js; a layout effect, so it's held before
+  // the page's own ad call in the same commit)
+  useLayoutEffect(() => rampNoLeftRail(), [])
   // the 320x50 is asked for as soon as the spin screen is up, not on the first SPIN (owner, 11-13); spins refresh it after that
   useEffect(() => { if (adsDisabled) return; const t = setTimeout(rampSpinAd, 2500); return () => clearTimeout(t) }, [])   // (after the page's own rail has loaded: both at once looked like two loading) // eslint-disable-line react-hooks/exhaustive-deps
 

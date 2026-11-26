@@ -17406,3 +17406,18 @@ html.app-look .cr-overlay { padding-bottom: calc(12px + var(--web-rail, 0px)) !i
 .splash-pos-option:not(.splash-pos-option--disabled) { transition: background 0.14s, border-color 0.14s, transform .15s ease-out; }
 /* a spin under way (or already dealt): Pick is shut (lib/teamSpin.js) */
 .tpm-tab:disabled { opacity: 0.35; cursor: default; }
+
+/* No left rail while spin wheels are up (lib/ads.js rampNoLeftRail): its slots are taken down, and hidden meanwhile */
+html.no-left-rail [id^="pw-oop-left_rail"] { display: none !important; }
+/* ...and no bottom or left rail while a live Blacktop game is played (lib/ads.js rampLiveGame): the corner video only */
+html.ads-live-game [id^="pw-oop-bottom_rail"], html.ads-live-game [id^="pw-oop-left_rail"] { display: none !important; }
+
+/* The left rail (lib/ads.js, 1500 wide and up, measured into --web-left by lib/railWatch.js): the page moves over just
+   as far as it must for its centred column (1200 at most on the pages that run it: Home, Daily, Shop, Ranks, Profile,
+   Depth Chart, Career) to clear it, and the full screens over the page (Home, Daily, Shop) start that far in */
+@media (min-width: 1500px) {
+  html.has-left-rail:not(.is-app) { --web-shift: max(0px, calc(var(--web-left, 0px) * 2 + 1200px - 100vw)); }
+  html.has-left-rail:not(.is-app) body { padding-left: var(--web-shift); }
+  html.has-left-rail:not(.is-app) .ag-home,
+  html.has-left-rail:not(.is-app) .ag-screen { left: var(--web-shift); }
+}

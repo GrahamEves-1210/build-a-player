@@ -45,7 +45,7 @@ import '../lib/soccerAuctionUi'   // the Trait Auction's soccer kit (the striker
 import { flagEmoji, ensureFlagFont } from '../lib/flagEmoji'
 import { setSandboxGate, sandboxItemFor, sandboxLocked, clearSandboxHint } from './app/AppSandbox'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
-import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
+import { routePage, pageAtLoad, onRoutePop } from '../lib/routes'
 import { SOCCER_SILHOUETTE, SOCCER_POOL, SOCCER_MODES, SOCCER_KIT_SLOT, SOCCER_SIZE_SLOT, soccerPoolOf, soccerArchetype } from '../lib/soccerUi'
 import { encodeSoccerBuild, decodeSoccerBuild } from '../lib/soccerShare'
 import { switchSport } from './app/AppHome'
@@ -94,7 +94,12 @@ function enableAdFreeMode() {
   hide()
   new MutationObserver(hide).observe(document.body, { childList: true, subtree: true })
 }
-const START_ON_SALARY = window.location.pathname === '/soccer/salary'
+// the page the address names (lib/routes.js): /soccer/home, /soccer/ranks… (the old /soccer/salary too)
+const WANT = pageAtLoad('soccer')
+const START_ON_SALARY = WANT === 'salarycap'
+// the pages a refresh opens straight from the address (Career's hub opens on its saves; a build or a season needs
+// what the reload lost: Home)
+const OPEN_AT = ['leaderboard', 'auction', 'career-intro', 'squad', 'profile', 'privacy'].includes(WANT) ? WANT : WANT === 'career' ? 'career-intro' : null
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 // ── The rosters ──────────────────────────────────────────────────────────────
@@ -311,7 +316,7 @@ export default function SoccerApp() {
   // (a season saved before the nine ratings, 11-16: its build and types read with the new keys)
   const [liveAt] = useState(() => (SHARED ? null : migrateSoccerKeys(readLive('soccer'))))
   // (a link to the leaderboard, or a refresh on it, opens it: it needs nothing else set up)
-  const [page, setPage]               = useState(SHARED ? 'shared' : typeof window !== 'undefined' && window.location.pathname === '/soccer/leaderboard' && SOCCER_LIVE ? 'leaderboard' : 'splash')
+  const [page, setPage]               = useState(SHARED ? 'shared' : SOCCER_LIVE && OPEN_AT ? OPEN_AT : 'splash')
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? null)   // 'classic' (Top Divisions) | 'all-time' (World Cup) | 'salarycap'
   const position = 'st'
   const pool = soccerPoolOf(gameMode)
@@ -328,7 +333,6 @@ export default function SoccerApp() {
   useLayoutEffect(() => {
     if (user) { hadUserRef.current = true; return }
     if (hadUserRef.current && page === 'profile') {
-      if (window.location.pathname.endsWith('/profile')) window.history.replaceState({}, '', window.location.pathname.slice(0, -8) || '/')
       setPage('splash')
     }
   }, [user, page])
@@ -407,30 +411,6 @@ export default function SoccerApp() {
     return () => { bodyObs.disconnect(); elObs?.disconnect() }
   }, [])
 
-  // back / forward between the soccer addresses
-  useEffect(() => {
-    const onPop = () => {
-      const path = window.location.pathname
-      if (path !== '/profile') setPage(p => (p === 'profile' ? 'game' : p))
-      if (path !== '/soccer/simulate') setPage(p => (p === 'sim' ? 'game' : p))
-      if (path !== '/soccer/leaderboard') setPage(p => (p === 'leaderboard' ? (IS_APP || APP_LOOK ? 'splash' : 'game') : p))
-      if (path === '/soccer/salary') setPage(p => (p === 'splash' ? p : 'salarycap'))
-      else setPage(p => (p === 'salarycap' ? 'splash' : p))
-      window.scrollTo({ top: 0, behavior: 'instant' })
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
-
-  // each page has its own address under /soccer (the ads follow the path; a refresh lands back in soccer)
-  useEffect(() => {
-    const target = page === 'sim' ? '/soccer/simulate' : page === 'leaderboard' ? '/soccer/leaderboard' : page === 'salarycap' ? '/soccer/salary' : null
-    const here = window.location.pathname
-    if (target) { if (here !== target) window.history.pushState({}, '', at(target)) }
-    else if (['/soccer/simulate', '/soccer/leaderboard', '/soccer/salary'].includes(here) || (page !== 'profile' && here === '/profile') || (page !== 'shared' && new URLSearchParams(window.location.search).has('b'))) {
-      window.history.replaceState({}, '', at('/soccer'))
-    }
-  }, [page])
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
@@ -468,7 +448,7 @@ export default function SoccerApp() {
       else if (to === 'salarycap') handleStartRef.current?.('salarycap')
       else if (to === 'squad') openSquadRef.current?.()
       else if (to === 'career') openCareerRef.current?.()
-      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
+      else if (to === 'profile') { if (user) setPage('profile'); else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') window.location.href = '/?about'
       else if (to === 'wiki') window.location.href = '/wiki'
       // the Daily Challenge is a football or basketball day: it opens on its own side
@@ -479,14 +459,8 @@ export default function SoccerApp() {
     return () => window.removeEventListener('bap:nav', onNav)
   }, [page, gameMode, user, simResult])
 
-  // ads on every page change (lib/ads.js), the paths under /soccer like basketball's under /bucket
-  useLayoutEffect(() => {
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/soccer', soft: true }); return }
-    const here = window.location.pathname
-    const path = page === 'sim' ? '/soccer/simulate' : page === 'salarycap' ? '/soccer/salary' : page === 'leaderboard' ? '/soccer/leaderboard'
-      : ['/soccer/simulate', '/soccer/leaderboard', '/soccer/salary'].includes(here) ? '/soccer' : here
-    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
-  }, [page])
+  // the address and the ads on every page change (lib/routes.js, lib/ads.js); soccer switched off is its Home only
+  useLayoutEffect(() => { routePage('soccer', SOCCER_LIVE ? page : 'splash') }, [page])
 
   // the account, and Pro / ad-free from it (as BucketApp)
   useEffect(() => {
@@ -496,6 +470,7 @@ export default function SoccerApp() {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
+      if (!u) setPage(p => (p === 'profile' ? 'splash' : p))   // (/profile opened signed out: Home)
       if (!u) { try { localStorage.removeItem('bap_subscribed'); localStorage.removeItem('bap_ads_off') } catch {}; return }
       let attempts = 0
       const check = () => supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
@@ -695,6 +670,23 @@ export default function SoccerApp() {
     }
   }, [activeTypes])
   useEffect(() => { if (START_ON_SALARY) handleStart('salarycap') }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Back / Forward (lib/routes.js): the page the address names, when it can still be shown; Home when it needs what's
+  // gone. The dock's screens (/soccer/daily…) are AppTabBar's: the page stays.
+  const popToRef = useRef(null)
+  popToRef.current = ({ page: want, screen }) => {
+    if (screen || want === page || !SOCCER_LIVE) return
+    const built = !!gameMode && gameMode !== 'salarycap'
+    const ok = !want ? false
+      : want === 'profile' ? !!user
+      : want === 'sim' ? !!simResult && !!gameMode
+      : want === 'game' || want === 'squad-build' || want === 'career-build' ? built
+      : want === 'career' ? !!careerRef.current
+      : ['leaderboard', 'auction', 'career-intro', 'squad', 'privacy', 'salarycap', 'splash'].includes(want)
+    if (ok && want === 'salarycap' && gameMode !== 'salarycap') { handleStart('salarycap'); return }
+    setPage(ok ? want : 'splash')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  useEffect(() => onRoutePop('soccer', r => popToRef.current?.(r)), [])
 
   const handleDrop = useCallback(() => {
     const drag = activeDragRef.current
@@ -855,7 +847,7 @@ export default function SoccerApp() {
     onReset: handleReset,
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
-    onProfile: () => (user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
+    onProfile: () => (user ? setPage('profile') : setShowAuth(true)),
     onAbout: () => { window.location.href = '/?about' },
     onLeaderboard: () => setPage('leaderboard'),
     onSubscribe: async () => {
@@ -1000,7 +992,7 @@ export default function SoccerApp() {
           <SharedBuildPage build={SHARED.build} types={SHARED.types} attrMap={SOCCER_ATTR} logoDir={LOGO_DIR[SHARED.pool]}
             ovr={calcOvr(SHARED.build, SHARED.types)} arch={archOf(calcOvr(SHARED.build, SHARED.types), SHARED.build, SHARED.types)}
             height={SHARED.build[SOCCER_SIZE_SLOT]?.height ?? null} weight={SHARED.build[SOCCER_SIZE_SLOT]?.weight ?? null}
-            onPlay={() => { setPage('splash'); window.history.replaceState({}, '', at('/soccer')) }} />
+            onPlay={() => setPage('splash')} />
         </Suspense>
       </>
     )
@@ -1122,7 +1114,7 @@ export default function SoccerApp() {
         <Suspense fallback={null}>
           <ProfilePage
             user={user} build={build} types={activeTypes} isPlus={isSubscribed} isSoccer
-            onBack={() => { if (IS_APP || APP_LOOK) { window.history.pushState({}, '', at('/soccer')); setPage('splash') } else window.history.back() }}
+            onBack={() => { if (IS_APP || APP_LOOK) setPage('splash'); else window.history.back() }}
             onSignOut={() => { setUser(null); window.location.href = at('/soccer') }}
             onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
             onThemeChange={themeId => {

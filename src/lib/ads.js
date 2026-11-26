@@ -31,12 +31,12 @@ const serial = job => {
 }
 
 const OOP = type => ({ type })
-// Off-page units by page kind. Home runs the bottom rail and the corner video, the same as
-// the other pages (the app-look home keeps clear of the rail, see AppTabBar's --web-rail);
-// the left rail only runs on the simulate pages, Salary Cap and the Depth Chart.
+// Off-page units by page kind (lib/routes.js picks: owner 2026-11-26). The five dock pages (Home, Daily, Shop, Ranks,
+// Profile), Depth Chart and Career's hub run the left rail with the corner video and the bottom rail; every other page
+// runs the corner video and the bottom rail. Never on a spin screen (rampNoLeftRail).
 export const RAIL_UNITS = [OOP('corner_ad_video'), OOP('bottom_rail')]
-export const HOME_UNITS = RAIL_UNITS
-export const RAIL_UNITS_WITH_LEFT = [OOP('corner_ad_video'), OOP('left_rail'), OOP('bottom_rail')]
+export const DOCK_UNITS = [OOP('corner_ad_video'), OOP('left_rail'), OOP('bottom_rail')]
+export const HOME_UNITS = DOCK_UNITS
 
 // The bottom rail's slots, by name. A rail the player closed isn't always
 // cleared by destroyUnits('all'), and then it's never requested again: it's
@@ -63,7 +63,60 @@ const keepRunning = units => units && units === lastPageUnits && Date.now() - la
 // rail needs 1500: narrower, it covered the left of the page. The bottom rail always runs:
 // everything keeps clear of it (--web-rail, AppTabBar).
 const wide = px => !!window.matchMedia?.(`(min-width: ${px}px)`).matches
-const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(1440) : a.type === 'left_rail' ? wide(1500) : true))
+const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(1440) : a.type === 'left_rail' ? wide(1500) && !noLeft && !liveGame : a.type === 'bottom_rail' ? !liveGame : true))
+
+// ── No left rail on a spin screen ────────────────────────────────────────────────────────────────
+// Anything that draws the spin wheels (SpinScreen, the team spin) holds this while it's up: the left rail's slots are
+// taken down at once, and no left rail is added until the last one lets go, whatever page asked for it and whenever
+// its request runs (a page change still in the queue checks again as it runs, and anything it added is removed).
+// Its slots are hidden by CSS too while it's held (html.no-left-rail, index.css). Returns the release.
+let noLeft = 0
+const leftSlots = () => Object.entries(window.ramp?.settings?.slots ?? {}).filter(([, s]) => s?.type === 'left_rail').map(([name]) => name)
+const dropLeft = () => { const l = leftSlots(); try { return l.length ? window.ramp.destroyUnits(l) : null } catch { return null } }
+const noLeftNow = ads => ads.filter(a => !((noLeft || liveGame) && a.type === 'left_rail') && !(liveGame && a.type === 'bottom_rail'))
+
+// ── A live Blacktop game: the corner video only ───────────────────────────────────────────────────
+// The bottom rail sat on the game's controls (owner 11-26): while one is played (Blacktop Live's Game, an online
+// Blacktop game) the bottom and left rails are taken down and nothing brings them back (a page change, rampRail,
+// useRailOn, a mini game closing) until it ends. lib/routes.js holdLiveGame holds this and re-asks the page's units after.
+let liveGame = 0
+const railAndLeft = () => Object.entries(window.ramp?.settings?.slots ?? {}).filter(([, s]) => s?.type === 'bottom_rail' || s?.type === 'left_rail').map(([name]) => name)
+const dropRails = () => { const l = railAndLeft(); try { return l.length ? window.ramp.destroyUnits(l) : null } catch { return null } }
+export function rampLiveGame() {
+  if (IS_APP) return () => {}
+  liveGame++
+  document.documentElement.classList.add('ads-live-game')
+  serial(dropRails)
+  let done = false
+  return () => {
+    if (done) return
+    done = true
+    if (--liveGame) return
+    document.documentElement.classList.remove('ads-live-game')
+    lastPageUnits = ''
+  }
+}
+export function rampNoLeftRail() {
+  if (IS_APP) return () => {}
+  noLeft++
+  document.documentElement.classList.add('no-left-rail')
+  if (lastPageUnits.includes('left_rail')) lastPageUnits = lastPageUnits.split(',').filter(t => t !== 'left_rail').join()
+  serial(dropLeft)
+  let done = false
+  return () => {
+    if (done) return
+    done = true
+    noLeft--
+    if (noLeft) return
+    document.documentElement.classList.remove('no-left-rail')
+    // the page under it wants the rail (nothing changed page in the same commit): it comes back
+    Promise.resolve().then(() => {
+      if (noLeft || inGame || !pageWants || !forScreen(pageWants.ads).some(a => a.type === 'left_rail') || lastPageUnits.split(',').includes('left_rail')) return
+      lastPageUnits = ''
+      rampPage(pageWants)
+    })
+  }
+}
 
 // ads: units to add after the destroy ([] = none)
 // soft: the same units already up stay up, however long ago they came (the dock's own pages, Home, Ranks and Profile: the rail
@@ -96,7 +149,10 @@ export function rampPage({ ads: wanted = [], path, soft = false } = {}) {
       .then(() => {
         if (!ads.length) return
         if (ads.some(a => a.type === 'bottom_rail')) lastRail = Date.now()
-        return window.ramp.spaAds({ ads, countPageview: true, ...(path ? { path } : {}) })
+        const now = noLeftNow(ads)
+        if (!now.length) return
+        return Promise.resolve(window.ramp.spaAds({ ads: now, countPageview: true, ...(path ? { path } : {}) }))
+          .then(() => (liveGame ? dropRails() : noLeft ? dropLeft() : null))   // (a spin screen or a live game came up while it loaded)
       })
   })
 }
@@ -107,7 +163,7 @@ export function rampAdd(ads) {
   if (inGame) return
   // read `ready` after the current render's effects, so a page change in the
   // same commit is waited for too
-  Promise.resolve().then(() => serial(() => window.ramp.spaAddAds(ads)))
+  Promise.resolve().then(() => serial(() => { const now = noLeftNow(ads); return now.length ? window.ramp.spaAddAds(now) : null }))
 }
 
 // Destroy every slot of one unit type (destroyUnits wants slot names)
@@ -159,7 +215,7 @@ export function rampSpinAd() {
 // its slots removed, then requested again, closed or not. At most once every
 // RAIL_GAP_MS; never for ad-free players
 export function rampRail() {
-  if (inGame) return
+  if (inGame || liveGame) return
   if (Date.now() - lastRail < RAIL_GAP_MS) return
   if (document.documentElement.classList.contains('ads-hidden')) return
   lastRail = Date.now()
@@ -170,7 +226,7 @@ export function rampRail() {
     let gone
     try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
     return Promise.resolve(gone).catch(() => {}).then(() => {
-      if (gen !== pageGen || document.querySelector('[id^="pw-oop-bottom_rail"]')) return   // never a second rail on the page
+      if (gen !== pageGen || liveGame || document.querySelector('[id^="pw-oop-bottom_rail"]')) return   // never a second rail on the page
       return window.ramp.spaAddAds([{ type: 'bottom_rail' }])
     })
   }))
@@ -232,7 +288,7 @@ export function minigameOpen({ url = true } = {}) {
     closed = true
     games--
     if (games) return
-    if (url) leaveGameUrl(cameFrom)
+    if (url) { leaveGameUrl(cameFrom); window.dispatchEvent(new Event('bap:minigame-closed')) }   // (lib/routes.js)
     // (a wait for the ads: the next drill in a combine, or AGAIN, opens straight away)
     adsBack = setTimeout(() => {
       if (games || !inGame) return
