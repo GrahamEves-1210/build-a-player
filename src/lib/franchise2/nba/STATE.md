@@ -501,3 +501,32 @@ missed. `nba-dynasty.mjs` prints a season's health line (taxpayers, the top payr
   false)`): a screen opened before the market read him had fixed his ask at that moment (nba-seed run 5).
 - **Coach photos:** a real coach's ESPN 65px jpg shows as its cut-out, `public/headshots/nba-coaches/cut/<espn>.png`
   (`coachShot`; made by `scripts/franchise2/nba/cut.py`), in the players' 600x436 frame.
+
+## Launch QA fixes (round 10, 2026-11-25, branch r26-nbafix)
+
+Fields (all optional: an older save loads with none):
+- Man `rp`: on a build, the id of the man the setup named him to replace (builds.js placeBuilds, the same read as
+  setup.js setupStarters). rotation.js `setOf` passes `bnm` (those men): `buildFive` pins each build at his own spot,
+  keeps the named man on the bench while he's healthy, and fills the rest of the five by the coach's best healthy
+  men, so an injury to the named man never benches a better starter. A save without `rp` reads the coach's five.
+- `F.sbp` { pos, spot, build, types }: a Sandbox build back from the build page, waiting for his name. Prospect
+  `sb: 1`: a Sandbox build in the class (draft.js `addSandboxProspect`, `canSandbox`: Sandbox on, before the first
+  pick). `F.sandbox` is set by the setup's League rules (rulesIn) and the hub's.
+- `F.tof` { s, deal, d, y, st?, until?, work? }: a league team's offer for one of the GM's men (trades.js `cpuOffer`,
+  rolled every night in season.js endDay and at the draft, free agency and camp stops; `offerNow`, `offerText`,
+  `answerOffer`). `F.tofx` [[team, manId, year]]: calls turned down (not made again that season).
+
+Rules that changed:
+- **Aging** (aging.js): DECL runs to 39 (touch and the head go from 34, faster each year); a man past 92 gives back
+  (o - 92) x 0.22 a summer from 25 and a prime has its up and down years (not the builds). rotation.js `oldPull`: from
+  35 a coach takes about 1.5 minutes a year off a man (up to 6, half in the playoffs); game.js `TUNE.usageOld`: from
+  34 his share of the shots comes down (exp(-0.06 x (age - 33))). Game men carry `ag` from 34.
+- **Keeping stars** (market.js keepLine): "whatever it takes" only for a team's two best on big deals; a third star to
+  the second apron + 5% of the cap (1% for a repeater), a fourth only to the owner's line (the first apron at most).
+- **Stars on the market** (market.js wantsOut / cpuExtensions): a top-40 man 25-32 tests free agency more (+8% on a
+  contender, +20% in the mix, +28% rebuilding), and a veteran star passes on an extension 25 / 40 / 55% of summers.
+- **League trades** (trades.js `firstsIn` / `firstsFor` / `firstsForRoom` / `evenEnough`): each side gets 85% of what
+  it gives by gauge; firsts buy top-25 (3), top-60 (2), top-120 (1) men; a salary move pays a first for 8% of the cap
+  cleared, two for 16%.
+- Checks: `nba-buildstart.mjs` (item 1), `nba-parity.mjs` (titles, aging, free agents, trade balance over a long run),
+  `nba-sandbox.mjs`, `nba-calls.mjs`.
