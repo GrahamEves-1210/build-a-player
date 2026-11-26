@@ -785,20 +785,22 @@ function through(x, xs, ys, n) {
 }
 const BX = [new Float64Array(24), new Float64Array(24)], BY = [new Float64Array(24), new Float64Array(24)]
 function part(x, d, g = 0, kp = 1, km = 1) {
+  // (an outline can be thinner down one side: d.gp / d.gm, the ink's width down the + / - side, in place of g)
+  const gp = g && d.gp != null ? d.gp : g, gm = g && d.gm != null ? d.gm : g
   const [ax, ay] = d.a, [bx, by] = d.b, t0 = d.t0 ?? 0, t1 = d.t1 ?? 1, k = d.k ?? 1
   const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 0.001, ux = dx / L, uy = dy / L, nx = -uy, ny = ux
   const P = sideOf(PTS[0], d.p, t0, t1), M = sideOf(PTS[1], d.m, t0, t1), np = P.length / 2, nm = M.length / 2
   const xp = BX[0], yp = BY[0], xm = BX[1], ym = BY[1]
-  for (let i = 0; i < np; i++) { const t = P[i * 2], r = P[i * 2 + 1] * k * kp + g; xp[i] = ax + dx * t + nx * r; yp[i] = ay + dy * t + ny * r }
-  for (let i = 0; i < nm; i++) { const t = M[nm * 2 - 2 - i * 2], r = M[nm * 2 - 1 - i * 2] * k * km + g; xm[i] = ax + dx * t - nx * r; ym[i] = ay + dy * t - ny * r }
+  for (let i = 0; i < np; i++) { const t = P[i * 2], r = P[i * 2 + 1] * k * kp + gp; xp[i] = ax + dx * t + nx * r; yp[i] = ay + dy * t + ny * r }
+  for (let i = 0; i < nm; i++) { const t = M[nm * 2 - 2 - i * 2], r = M[nm * 2 - 1 - i * 2] * k * km + gm; xm[i] = ax + dx * t - nx * r; ym[i] = ay + dy * t - ny * r }
   const th = Math.atan2(ny, nx)
   x.moveTo(xp[0], yp[0]); through(x, xp, yp, np)
   // the end at b
-  const rpB = P[np * 2 - 1] * k * kp + g, rmB = M[nm * 2 - 1] * k * km + g, Bx = ax + dx * t1, By = ay + dy * t1
+  const rpB = P[np * 2 - 1] * k * kp + gp, rmB = M[nm * 2 - 1] * k * km + gm, Bx = ax + dx * t1, By = ay + dy * t1
   if (d.cb === 0) x.lineTo(xm[0], ym[0])
   else x.arc(Bx + (nx * (rpB - rmB)) / 2, By + (ny * (rpB - rmB)) / 2, Math.max(0.05, (rpB + rmB) / 2), th, th - Math.PI, true)
   through(x, xm, ym, nm)
-  const rpA = P[1] * k * kp + g, rmA = M[1] * k * km + g, Ax = ax + dx * t0, Ay = ay + dy * t0
+  const rpA = P[1] * k * kp + gp, rmA = M[1] * k * km + gm, Ax = ax + dx * t0, Ay = ay + dy * t0
   if (d.ca === 0) x.lineTo(xp[0], yp[0])
   else x.arc(Ax + (nx * (rpA - rmA)) / 2, Ay + (ny * (rpA - rmA)) / 2, Math.max(0.05, (rpA + rmA) / 2), th + Math.PI, th, true)
   x.closePath()
@@ -854,7 +856,24 @@ const BOOTS = [['#15181c', '#f2f2ee', '#e6e8e4'], ['#f2f2ee', '#15181c', '#2a2e3
 const bootOf = c => BOOTS.find(b => b[0] === c) ?? [c, lumOf(c) > 0.5 ? '#15181c' : '#f2f2ee', '#e6e8e4']
 // A boot on the ground (or a foot down under him), by its ankle: from behind, the heel and its counter with the outside of
 // the foot and the soleplate past it; from the front, the toe box at us, the laces, the sole. A flash down the outside.
+// (stamped from a picture painted once per boot, way and size, like the head)
+const boots = new Map(), BB = [-7.5, -7, 15, 9.5]
 function bootUp(x, A, out, bt, front, bw, ink) {
+  const m = typeof x.getTransform === 'function' ? x.getTransform() : null, sc = m ? Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d)) : 0
+  if (!m || typeof document === 'undefined' || sc < 0.25 || sc > 12) return bootPaint(x, A, out, bt, front, bw, ink)
+  const res = 2 ** (Math.ceil(Math.log2(sc) * 4) / 4), b = Math.round(bw * 20) / 20
+  const id = `${bt[0]}|${out}|${front ? 1 : 0}|${ink ? 1 : 0}|${b}|${FINE ? 1 : 0}|${res}`
+  let c = boots.get(id)
+  if (!c) {
+    if (boots.size > 200) boots.delete(boots.keys().next().value)
+    c = document.createElement('canvas'); c.width = Math.ceil(BB[2] * res); c.height = Math.ceil(BB[3] * res)
+    const h = c.getContext('2d'); h.scale(res, res); h.translate(-BB[0], -BB[1]); h.lineCap = 'round'; h.lineJoin = 'round'
+    bootPaint(h, [0, -2.6], out, bt, front, b, ink)
+    boots.set(id, c)
+  }
+  x.drawImage(c, A[0] + BB[0], A[1] + 2.6 + BB[1], BB[2], BB[3])
+}
+function bootPaint(x, A, out, bt, front, bw, ink) {
   const [up, flash, plate] = bt, ax = A[0], ay = A[1], s = out
   x.save(); x.translate(ax, ay + 2.6); x.scale(s * bw, bw)
   // (in his units now: x out from the ankle, the ground at 0)
@@ -1025,10 +1044,9 @@ export function paintMan(x, o, L) {
   // front the jaw's shadow across its top
   const neck = D([sxx - sl * 1.5, syy + cl * 1.5], [hx, hy + 3.2], NECK, NECK)
   inkP(x, [neck]); fillP(x, [neck], skin)
-  x.save(); x.beginPath(); part(x, neck); x.clip()
-  if (front) { x.fillStyle = skinD; x.beginPath(); x.ellipse(hx, hy + 4.6, 4.6, 2.6, 0, 0, 6.2832); x.fill() }
-  else { x.strokeStyle = tone(skin, 0.74); x.lineWidth = 0.55; x.beginPath(); x.moveTo(lerp(sxx, hx, 0.35), lerp(syy, hy, 0.35)); x.lineTo(lerp(sxx, hx, 0.75), lerp(syy, hy, 0.75)); x.stroke() }
-  x.restore()
+  // (no clip: the head goes over the top of the shadow and the shirt over its foot)
+  if (front) { x.fillStyle = skinD; x.beginPath(); x.ellipse(hx, hy + 4.4, 3.4, 2.6, 0, 0, 6.2832); x.fill() }
+  else if (FINE) { x.strokeStyle = tone(skin, 0.74); x.lineWidth = 0.55; x.beginPath(); x.moveTo(lerp(sxx, hx, 0.35), lerp(syy, hy, 0.35)); x.lineTo(lerp(sxx, hx, 0.75), lerp(syy, hy, 0.75)); x.stroke() }
   // the body: the shorts, the shirt and the sleeves, inked as one
   // The shorts: fitted, to the middle of the thigh, a leg of them round each thigh with its hem cut straight across.
   // (a thigh driven at us or away from us is short on the screen; the shorts still hang off it, so the leg of them goes
@@ -1044,7 +1062,7 @@ export function paintMan(x, o, L) {
     const w0 = 7.4 * bw + d, w1 = HIPW + 5.6 * bw + d, nx = -sl, ny = cl
     // (wound the same way as the legs of them, so the two fill as one)
     x.moveTo(hipX - cl * w0 - nx * (5.6 + d), hipY - sl * w0 - ny * (5.6 + d)); x.lineTo(hipX - cl * w1 + nx * (2 + d), hipY - sl * w1 + ny * (2 + d))
-    x.lineTo(hipX + cl * w1 + nx * (2 + d), hipY + sl * w1 + ny * (2 + d)); x.lineTo(hipX + cl * w0 - nx * (5.6 + d), hipY + sl * w0 - ny * (5.6 + d)); x.closePath()
+    x.lineTo(hipX + nx * (3.4 + d), hipY + ny * (3.4 + d)); x.lineTo(hipX + cl * w1 + nx * (2 + d), hipY + sl * w1 + ny * (2 + d)); x.lineTo(hipX + cl * w0 - nx * (5.6 + d), hipY + sl * w0 - ny * (5.6 + d)); x.closePath()
   }
   // The shirt, in its own frame (0, 0 the middle of his shoulders, y down to the hem): the neckline, the trapezius
   // sloping down to the shoulders (not a box), round over the deltoid into the sleeve; under the arm the lats, in to a
@@ -1087,12 +1105,11 @@ export function paintMan(x, o, L) {
   // (one piece of cloth: the far leg of them in shade down its outside, the near leg's inside in shade under the fork)
   const shL = lumOf(L.shorts) < DARK
   x.fillStyle = L.shorts; x.beginPath(); waist(0); for (const s of shortsL) part(x, s); x.fill()
-  x.save(); x.beginPath(); waist(0); for (const s of shortsL) part(x, s); x.clip()
+  // (the shade's inside the far leg of them and the shirt's shadow inside the waist: no clip needed)
   { const s = shortsL[1], sd = shadeSide(s); x.fillStyle = shL ? tone(L.shorts, 1.38) : tone(L.shorts, 0.8); x.beginPath(); part(x, s, 0, sd > 0 ? 1 : -0.35, sd > 0 ? -0.35 : 1); x.fill() }
-  { const s = shortsL[0]; alongP(x, s, shadeSide(s), 0.8, 0.25, 1, shL ? tone(L.shorts, 1.38) : tone(L.shorts, 0.82), 1.6) }
+  { const s = shortsL[0]; x.lineCap = 'butt'; alongP(x, s, shadeSide(s), 0.8, 0.25, 0.97, shL ? tone(L.shorts, 1.38) : tone(L.shorts, 0.82), 1.6); x.lineCap = 'round' }
   // the shirt's shadow across the top of them
-  x.fillStyle = 'rgba(0,0,0,.12)'; x.beginPath(); x.ellipse(hipX + sl * 2, hipY + 1.2, 12, 2.2, lean, 0, 6.2832); x.fill()
-  x.restore()
+  x.fillStyle = 'rgba(0,0,0,.12)'; x.beginPath(); x.ellipse(hipX + sl * 2, hipY + 1.2, 9, 2.0, lean, 0, 6.2832); x.fill()
   for (const s of shortsL) { acrossP(x, s, 0.9, stripe, 1.15, 1.0); acrossP(x, s, 0.985, 'rgba(0,0,0,.28)', 0.5, 1.0) }
   const fold = 'rgba(0,0,0,.2)'
   if (!FINE) {} else if (!front && bow < 0.5) {
@@ -1237,6 +1254,9 @@ function paintArm(x, a, out, L, skin, handR, gk, o, front, seg = 'full') {
   // ('arm': all but the hand; 'hand': only the hand, over whatever it's by)
   const body = seg !== 'hand', withHand = seg !== 'arm'
   // (a lighter line round the arm and lighter still round the hand: slim, not a sausage in a thick outline)
+  // (an arm by his side: only a hairline down its inside, so where it hangs close to the shirt the two outlines don't run
+  // together into one thick black band)
+  if (seg === 'arm') { const o2 = -out > 0, gi = 0.4, go = OL * 0.85; upper.gp = o2 ? go : gi; upper.gm = o2 ? gi : go; fore.gp = upper.gp; fore.gm = upper.gm }
   if (body) inkP(x, seg === 'full' ? [top, upper, fore] : [upper, fore], OL * 0.85)
   if (withHand) inkP(x, gk ? hand : hand.concat(thumb ? [thumb] : []), gk ? OL : OL * 0.62)
   if (body) fillP(x, [upper, fore], col)
@@ -1310,10 +1330,29 @@ function crown(x, hx, hy, cut, g = 0) {
 }
 // (the head a touch big, the way a game draws a man so his head reads at a glance: grown up and out from his neck)
 const HS = 1.08
+// The head is the costliest part to paint (its clips and curls) and the same from frame to frame, so it's painted once
+// per look, face, tilt and turn (a little rounded) at the size it's drawn, and stamped. (Its box, about its middle.)
+const heads = new Map(), HB = [-12.5, -18, 25, 31]
 function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar = null) {
-  x.save(); x.translate(hx, hy + 6); x.scale(HS, HS); x.translate(-hx, -(hy + 6))
-  headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar)
-  x.restore()
+  const m = typeof x.getTransform === 'function' ? x.getTransform() : null, sc = m ? Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d)) : 0
+  if (!m || typeof document === 'undefined' || sc < 0.25 || sc > 12) {
+    x.save(); x.translate(hx, hy + 6); x.scale(HS, HS); x.translate(-hx, -(hy + 6))
+    headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar)
+    x.restore(); return
+  }
+  const res = 2 ** (Math.ceil(Math.log2(sc) * 4) / 4), up = Math.round(clamp(tilt, -1, 1) * 8) / 8, tn = Math.round(turnH * 10) / 10, face = o.face ?? 0
+  const id = `${skin}|${hair}|${cut}|${front ? 1 : 0}|${face}|${up}|${tn}|${FINE ? 1 : 0}|${res}`
+  let c = heads.get(id)
+  if (!c) {
+    if (heads.size > 300) heads.delete(heads.keys().next().value)
+    c = document.createElement('canvas'); c.width = Math.ceil(HB[2] * res); c.height = Math.ceil(HB[3] * res)
+    const h = c.getContext('2d')
+    h.scale(res, res); h.translate(-HB[0], -HB[1]); h.lineCap = 'round'; h.lineJoin = 'round'
+    h.translate(0, 6); h.scale(HS, HS); h.translate(0, -6)
+    headOf(h, 0, 0, 0, 0, skin, skinD, hair, cut, front, { face }, up, tn, null)
+    heads.set(id, c)
+  }
+  x.drawImage(c, hx + HB[0], hy + HB[1], HB[2], HB[3])
 }
 function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar = null) {
   const up = clamp(tilt, -1, 1)
