@@ -189,10 +189,10 @@ function withBall(s, p, m, lvl, out) {
     // and doesn't settle for the first look; off a catch or a board it's quicker
     const fresh = s.tick - p.catchT < 6
     m.work = Math.round((fresh ? 0.25 : 0.75 + 0.9 * roll(s)) * (1.15 - 0.45 * p.R.js) * GHZ)
-    m.jab = roll(s) < 0.5 ? -1 : 1; m.jabbed = false
+    m.jab = roll(s) < 0.5 ? -1 : 1; m.jabbed = false; m.commit = 0
   }
   if (m.plan == null) pickPlan(s, p, m)
-  else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = s.tick + Math.round(2 * GHZ) } else pickPlan(s, p, m) }
+  else if (s.tick >= m.planT && !clearing) { if (m.plan === 'three' || m.plan === 'mid') { m.plan = 'drive'; m.planT = m.commit = s.tick + Math.round(2 * GHZ) } else pickPlan(s, p, m) }
   if (s.tick >= (m.thinkT ?? 0)) { m.thinkT = s.tick + THINK; m.noise = (roll(s) - 0.5) * 2 * lvl.ev; m.go = roll(s) }
   const { def: D, d: dD } = nearestDef(s, p)
   // a crossover his man has stayed in front of: now and then he spins back the other way off it (a second flick,
@@ -207,7 +207,8 @@ function withBall(s, p, m, lvl, out) {
   const mine = shotValue(s, p, lvl, defs)
   const dRim = mine.d
   // his man sitting back at the rim (camped in the paint, or sagged way off him): he isn't driven on, he's shot over
-  const sitting = !clearing && D && dD > 6.5 && ref.rimDist(D) < Math.min(10, dRim - 5) && D.act !== 'frozen' && D.act !== 'down'
+  // (not while he's going to the rim off a jumper he gave up on: that's his read made, see below)
+  const sitting = !clearing && s.tick >= (m.commit ?? 0) && D && dD > 6.5 && ref.rimDist(D) < Math.min(10, dRim - 5) && D.act !== 'frozen' && D.act !== 'down'
   if (sitting && m.plan !== 'three' && m.plan !== 'mid') pickPlan(s, p, m, p.R.js > 0.45 ? 'three' : 'mid')
   const beat = !clearing && (!D || D.act === 'frozen' || D.act === 'down' || ref.rimDist(D) > dRim + 0.8)
   // how good a shot has to be: a good one early, any shot late (a low IQ lets the clock run down further)
@@ -288,7 +289,10 @@ function withBall(s, p, m, lvl, out) {
         m.side = -m.side
       }
       // covered on his spot and no move to make: he doesn't stand there, he goes
-      if (p.moveCd > 0 || p.frzCd > 0 || s.tick > m.planT - GHZ || m.go >= lvl.move) m.plan = 'drive'
+      // (and he goes now, and keeps going: it used to aim this tick at the spot he stood on, a step back, and with
+      // his man sat in the paint the next tick put him back on the jumper, on the same spot, which sent him to the
+      // rim again: a step each way, over and over, in the corner)
+      if (p.moveCd > 0 || p.frzCd > 0 || s.tick > m.planT - GHZ || m.go >= lvl.move) { m.plan = 'drive'; m.planT = m.commit = s.tick + Math.round(2 * GHZ); tx = RIM.x; ty = RIM.y + 1.5 }
     }
   } else if (m.plan === 'post') {
     if (m.spot && Math.hypot(m.spot.x - p.x, m.spot.y - p.y) < 2.5) m.spot = null
@@ -307,18 +311,39 @@ function withBall(s, p, m, lvl, out) {
         m.side = Math.abs(lat) > 1.5 ? (lat > 0 ? -1 : 1) : m.side
         m.sideT = s.tick + Math.round(GHZ)
       }
-      const ang = (dD < 4.2 ? 1.05 : 0.6) * m.side
+      let ang = (dD < 4.2 ? 1.05 : 0.6) * m.side
+      // (not the side with a line on it: that way the line takes the step away and he only runs into his man, in
+      // the corner, again and again. He goes round the other side, and keeps to it)
+      const room = a => ref.inBounds(p.x + (dirx * Math.cos(a) - diry * Math.sin(a)) * 3, p.y + (dirx * Math.sin(a) + diry * Math.cos(a)) * 3, -2.4)
+      if (!room(ang) && room(-ang)) { m.side = -m.side; m.sideT = s.tick + Math.round(GHZ); ang = -ang }
       const cx = dirx * Math.cos(ang) - diry * Math.sin(ang), cy = dirx * Math.sin(ang) + diry * Math.cos(ang)
       dirx = cx; diry = cy
-      if (dD < 5.0 && p.moveCd <= 0 && p.frzCd <= 0 && m.go < lvl.move * 0.5 && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { const f = ref.flickFor(p, { x: dirx, y: diry }); out.mx = dirx; out.my = diry; out.dx = f.x; out.dy = f.y; return }
+      // (no dribble move with a line at his feet: the burst would carry him over it)
+      if (dD < 5.0 && p.moveCd <= 0 && p.frzCd <= 0 && m.go < lvl.move * 0.5 && ref.inBounds(p.x, p.y, -4.5) && ref.inBounds(p.x + dirx * 6.5, p.y + diry * 6.5, -1)) { const f = ref.flickFor(p, { x: dirx, y: diry }); out.mx = dirx; out.my = diry; out.dx = f.x; out.dy = f.y; return }
     }
   }
-  // keep it in bounds
-  const nx = p.x + dirx * 3, ny = p.y + diry * 3
-  if (nx < COURT.minX + 1.6 || nx > COURT.maxX - 1.6) dirx = (RIM.x - p.x) > 0 ? Math.abs(dirx) : -Math.abs(dirx)
-  if (ny < COURT.minY + 1.6) diry = Math.abs(diry)
-  if (ny > COURT.maxY - 1.6) diry = -Math.abs(diry)
-  out.mx = dirx; out.my = diry
+  // keep it in bounds: a step that would take him over a line loses the part of it going that way (he slides along
+  // the line), looking no farther ahead than his spot. (It used to turn him round toward the rim whenever a point
+  // 3 ft ahead was out, so going to a spot near a line, the corner three above all, he turned round, took a step,
+  // turned back and went again: back and forth in the corner for as long as the plan lasted.)
+  const look = Math.min(3, dl)
+  const nx = p.x + dirx * look, ny = p.y + diry * look
+  let kx = dirx, ky = diry
+  // ...but a man already at the line, or carrying over it (his speed that way), is pushed back off it. Every spot he
+  // goes to is farther in than that, so the push never fights his spot
+  // (the baseline keeps him farther off it than a sideline: no spot is near it, and a man going along it with his
+  // defender on his hip gets leaned out over it)
+  const near = (d, vOut, band = 1.6) => d - Math.max(0, vOut) * 0.3 < band
+  if (near(p.x - COURT.minX, -p.vx)) kx = Math.abs(kx) + 0.3; else if (near(COURT.maxX - p.x, p.vx)) kx = -Math.abs(kx) - 0.3
+  else if ((nx < COURT.minX + 1.6 && kx < 0) || (nx > COURT.maxX - 1.6 && kx > 0)) kx = 0
+  if (near(p.y - COURT.minY, -p.vy, 3)) ky = Math.abs(ky) + 0.3; else if (near(COURT.maxY - p.y, p.vy)) ky = -Math.abs(ky) - 0.3
+  else if ((ny < COURT.minY + 1.6 && ky < 0) || (ny > COURT.maxY - 1.6 && ky > 0)) ky = 0
+  const kl = Math.hypot(kx, ky)
+  // (and he slows into a spot rather than running through it: one by a line he'd carry over it)
+  const arrive = clearing || m.plan === 'three' || m.plan === 'mid' ? clamp(dl / 2.2, 0.35, 1) : 1
+  if (kl > 0.25) { out.mx = kx / kl * arrive; out.my = ky / kl * arrive; return }
+  // (nothing left of it: straight for his spot, which is in bounds)
+  steer(p, tx, ty, out, 0.5)
 }
 
 // going after a ball that's up or loose; true if he's handling it
@@ -455,7 +480,9 @@ function defend(s, p, m, lvl, out) {
       }
     }
   }
-  steer(p, tx, ty, out, 0.35)
+  // (off the ball he doesn't chase every half step his man's feet make: what he sees of a man shuffling in place,
+  // led a beat ahead, swings a foot either way, and stepping at each swing had him rocking side to side)
+  steer(p, tx, ty, out, onBall ? 0.35 : 1.0)
 }
 
 function offBall(s, p, m, lvl, out) {

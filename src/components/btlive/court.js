@@ -190,3 +190,27 @@ export function drawHoop(ctx, k, sway = null, part = 'all') {
     ctx.beginPath(); ctx.arc(rx, ry, r, 0, 6.283); ctx.stroke()
   }
 }
+
+// The hoop's shadow on the floor (drawn with the floor, under everything): the sun is the one the men's shadows
+// show (high, a touch from the top left), so a thing 10 ft up throws its shadow most of a foot down and right of
+// where it stands. The arm, the board, the rim (a ring) and the net (a thin shade); the rim's moves with a dunk
+export function drawHoopShadow(ctx, k, sway = null) {
+  const sx = 0.055, sy = 0.085                     // ft of shadow offset per ft of height
+  const off = h => [h * sx * k, h * sy * k]
+  const [ax, ay] = off(10.5), [bx, by] = off(12), [rx0, ry0] = off(10)
+  const by0 = C.board.y * k, bw = C.board.w * k
+  ctx.save()
+  ctx.fillStyle = 'rgba(0,0,0,.24)'
+  ctx.beginPath()
+  // the arm (from the pole behind the baseline) and the board, one shape so they don't darken where they meet
+  ctx.rect(RIM.x * k - k * 0.22 + ax, (C.minY - 2.1) * k + ay, k * 0.44, by0 - (C.minY - 2.1) * k - k * 0.3)
+  ctx.rect(RIM.x * k - bw / 2 + bx, by0 - k * 0.36 + by, bw, k * 0.42)
+  ctx.fill()
+  const rx = RIM.x * k + (sway?.[0] || 0) + rx0, ry = RIM.y * k + (sway?.[1] || 0) + ry0, r = C.rimR * k * 1.1
+  // the net: a faint shade inside the ring, out to where the net's own shadow falls
+  ctx.fillStyle = 'rgba(0,0,0,.1)'
+  ctx.beginPath(); ctx.ellipse(rx + k * 0.05, ry + k * 0.12, r * 0.95, r * 1.05, 0, 0, 6.283); ctx.fill()
+  ctx.strokeStyle = 'rgba(0,0,0,.26)'; ctx.lineWidth = Math.max(1.6, k * 0.16)
+  ctx.beginPath(); ctx.arc(rx, ry, r, 0, 6.283); ctx.stroke()
+  ctx.restore()
+}

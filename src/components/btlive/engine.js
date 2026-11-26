@@ -2,7 +2,7 @@
 // display's rate with the positions eased between ticks, reads the stick and the buttons, times the shot meter on
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
-import { paintCourt, drawHoop } from './court.js'
+import { paintCourt, drawHoop, drawHoopShadow } from './court.js'
 import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, shotWindow, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
 import { drawFigure, drawShadow, pointAt, lookOf } from './figure.js'
@@ -516,6 +516,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const RIM = COURT.rim
   const LIFT = 0.27                                                  // feet up the screen per foot of height
   const TOPY = COURT.board.y                                          // the backboard's face: a ball is never drawn above it
+  const UP_AIR = 0.6                                                  // how far off the floor (pose.js air) a man is up at the rim's height
   const colOf = i => TEAM[s.players[i].team] ?? '#fff'           // (King of the Hill: each man is his own side)
   const idxOf = v => (v == null || v === false ? -1 : typeof v === 'number' ? (v >= 0 && v < N ? v : -1) : s.players.findIndex(p => p.id === v))
   // King of the Hill: the king (not while he still has to take it back); every mode: the man taking it back
@@ -875,6 +876,8 @@ export function createEngine({ setup, els, on, net = null }) {
     // the first few seconds (none with Reduce Motion), then it stays lit, still, till it's done
     if (s.mustClear != null && s.phase === 'live') { if (CLR.team !== s.mustClear) { CLR.team = s.mustClear; CLR.t0 = now } } else CLR.team = -1
     if (CLR.team >= 0) drawArc(TEAM[CLR.team] ?? '#fff', now - CLR.t0)
+    // the hoop's shadow on the floor, always there (it moves with the rim on a dunk)
+    drawHoopShadow(ctx, k, rimSway(now))
     // every man's shadow first (no shadow lies on a man)
     for (let i = 0; i < N; i++) if (!cut(i)) drawShadow(ctx, FIG[i])
     // under the player this device controls: a white ring on the floor (his jersey is his side's colour, so the ring
@@ -968,11 +971,14 @@ export function createEngine({ setup, els, on, net = null }) {
     const ballR = Math.max(4.5, k * 0.7) * bsc
     if (!ballCut) { const f = clamp(1 - bz * 0.035, 0.45, 1); ctx.fillStyle = `rgba(0,0,0,${clamp(0.5 - bz * 0.03, 0.12, 0.5)})`; ctx.beginPath(); ctx.ellipse(GX + ballR * 0.12, GY + ballR * 0.3, ballR * 0.92 * f, ballR * 0.42 * f, 0, 0, 6.283); ctx.fill() }
     // Everything off the floor in order of depth (feet nearer the top of the screen first; a man in the air over the
-    // men on the floor), the hoop in among them at the front of the rim: a man under it or behind it goes under the
-    // rim and the net, a man in front of it (a dunker rising at it) over them. The ball: in a man's hands under his
-    // hands and over his body when it's up at his head or higher; a dribble under him (his hand on top of it); loose
-    // or in the air by where it is, over the men once it's over their heads; going through the net between the
-    // backboard and net behind and the rim in front, then out in front of it all
+    // men on the floor), then the hoop, then whoever is up at the rim. The hoop is always there and always at its
+    // height: the arm, the board, the rim and the net are 10 ft and more up, over every man on the floor wherever he
+    // stands (under it, behind the board, in front of it, posting up under the rim), so he walks under it and it
+    // never goes under him. Only a man up at the rim (a dunk, a layup at the rim, a block or a board at its height),
+    // in front of the board, is drawn over it while he's up there. The ball: in a man's hands with him; a dribble
+    // under him (his hand on top of it); loose or in the air by where it is, over the men once it's over their
+    // heads, over the hoop once it's over the rim; going through the net between the backboard and net behind and
+    // the rim in front
     const HOOPK = RIM.y + 0.8
     const nearRim = Math.hypot(DB[0] - RIM.x, DB[1] - RIM.y) < C_RIMR + 0.5
     let ballK
@@ -980,11 +986,11 @@ export function createEngine({ setup, els, on, net = null }) {
     else if (nearRim && DB[2] > 3 && DB[2] < 10.3) ballK = 'net'
     else if (nearRim && b.st === 'dead' && DB[2] <= 3) ballK = HOOPK + 0.01
     else ballK = DB[1] + (DB[2] > 7 ? 30 : 0)
-    let ballDone = ballCut, hoopDone = false
+    // (a loose ball or a shot up over the rim's height near the hoop goes over it, with the men up there)
+    const ballUp = typeof ballK === 'number' && carry < 0 && DB[2] > 10.3 && Math.hypot(DB[0] - RIM.x, DB[1] - TOPY) < 9
+    let ballDone = ballCut
     const sway = rimSway(now)
     const hoop = () => {
-      if (hoopDone) return
-      hoopDone = true
       drawHoop(ctx, k, sway, 'back')
       if (ballK === 'net' && !ballDone) {
         drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true
@@ -998,11 +1004,12 @@ export function createEngine({ setup, els, on, net = null }) {
       drawHoop(ctx, k, sway, 'front')
       rimFx(now)
     }
+    // up at the rim: off the floor about as high as a dunk or a layup takes him, in front of the board's face
+    const upAt = i => FIG[i].air >= UP_AIR && DY[i] > TOPY && Math.abs(DX[i] - RIM.x) < 8 && DY[i] < RIM.y + 9
     DOTS.length = 0
-    for (const i of order) {
-      if (depth(i) > HOOPK) hoop()
-      if (!ballDone && typeof ballK === 'number' && ballK >= 0 && ballK <= depth(i)) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
-      if (cut(i)) continue
+    const man = i => {
+      if (!ballDone && typeof ballK === 'number' && ballK >= 0 && ballK <= depth(i) && (upAt(i) || !ballUp)) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
+      if (cut(i)) return
       const f = FIG[i]
       // (his own ball: under him on the dribble and held low, over him once it's up at his head)
       const mine = !ballDone && i === carry, high = mine && ballZ >= 6
@@ -1015,7 +1022,11 @@ export function createEngine({ setup, els, on, net = null }) {
       ctx.globalAlpha = 1
       if (mine && high) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
     }
+    for (const i of order) if (!upAt(i)) man(i)
+    // a ball still to draw that isn't up over the rim goes under the hoop too
+    if (!ballDone && typeof ballK === 'number' && !ballUp) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
     hoop()
+    for (const i of order) if (upAt(i)) man(i)
     if (!ballDone) drawBall(BX, BY, bsc, GX, GY, bz, false)
     // the king's crown, and CLEAR IT over the man who has to take it out past the arc
     const marks = []
