@@ -55,20 +55,22 @@ export const T = {
   // Every "at a 1" below is really at "1 - spread" of the way down from an 11: the top of each rating is where
   // the brief puts it (a great shooter, a great finisher) and this one number sets how much worse a low grade is,
   // so how often a 95 beats an 80. 1 = the full range below; lower = builds closer together.
-  spread: 0.24,
+  // (the owner, 11-26: "make grades matter a little more across the board": 0.24 to 0.29, and every coefficient on a
+  // plain grade about a fifth wider, the base moved so a middling grade plays as before; scripts/btlive/grades-check.mjs)
+  spread: 0.29,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
   // REAL WEIGHT (the owner, 11-26: "players all seem the same speed and there's no acceleration aspect, or sprint"):
   // a quick guard and a slow big are clearly different, a first step then a build to top speed, a sprint that builds
   // the longer he goes one way, cuts that cost speed (less for a quick man), stopping that takes room, a beaten
   // defender's burst to get back, and a running jump that carries. The CPU runs on the same feet
-  speedMin: 9.3,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it)
-  speedBand: 0.20,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
-  sizeSlow: 0.07,                    // Size 11 is this much slower than Size 1
+  speedMin: 9.2,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it)
+  speedBand: 0.24,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
+  sizeSlow: 0.085,                    // Size 11 is this much slower than Size 1
   ballSpeed: 0.92,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.05,                // ...plus this at Handles 11 (an 80 keeps 96%: slower with it than without, always)
-  defSpeed: 1.02,                    // guarding, at Perimeter D 1 (x top speed)...
-  defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (on the plain grade: an 80 about 105%, a step quicker than the ball)
+  defSpeed: 1.013,                    // guarding, at Perimeter D 1 (x top speed)...
+  defSpeedPer: 0.085,                 // ...plus this at Perimeter D 11 (on the plain grade: an 80 about 105%, a step quicker than the ball)
   accel: 12,                         // ft/s²: his push (x his rating's share: accelBase..)...
   firstStep: 3.0,                    // ...x this from a standstill (a quick first step: 36 ft/s²)...
   stepFade: 2.8,                     // ...falling by this x (his speed / top), never under x0.4: top speed takes a run to build
@@ -78,17 +80,17 @@ export const T = {
   backpedal: 0.88,                   // a defender's top speed going backwards (facing his man, giving ground)...
   slide: 0.95,                       // ...and sliding sideways (forward, at his man: all of it)
   boost: 0.09, boostTime: 0.45,      // out of a hesitation, a crossover, between the legs, an in-and-out: this much quicker for this long
-  accelBase: 0.85, accelSpd: 0.45,   // ...x (0.85 + 0.45 x Speed, the plain grade): a quick first step
-  accelSize: 0.25,                   // ...less this at Size 11
+  accelBase: 0.805, accelSpd: 0.54,   // ...x (0.85 + 0.45 x Speed, the plain grade): a quick first step
+  accelSize: 0.3,                    // ...less this at Size 11
   sprint: 0.12, sprintTime: 1.1,     // a sprint: going one way he builds up to this much over top speed, all of it after this long
                                      // (the game's seconds) going straight...
   sprintKeep: 0.6,                   // ...a turn keeps the sprint while the way he's going stays within this (cos) of the way he was
   cutLoss: 3.2, cutSpd: 0.55,        // a hard cut at speed (over 50 deg off the way he's going) bleeds this share of his speed a
                                      // second, a Speed 11 this much less of it: a quick guard cuts sharper
-  recover: 0.10, recoverSta: 0.22,   // a beaten defender's burst back: this much quicker, his legs this much a second
+  recover: 0.10, recoverSta: 0.14,   // a beaten defender's burst back: this much quicker, his legs this much a second
   airDrag: 0.8,                      // in the air he carries the way he went up, losing this share a second
   layRun: 1.4,                       // a layup from a run: from this much farther out at top speed (a long gather step)
-  defAccel: 0.92, defAccelPer: 0.24, // a defender's: x (0.92 + this * Perimeter D, the plain grade)
+  defAccel: 0.895, defAccelPer: 0.29, // a defender's: x (0.92 + this * Perimeter D, the plain grade)
   walk: 0.25,                        // stick pushed less than this far: ignored (dead zone)
   radius: 1.55,                      // a body's radius (the dot on the screen is this big): nobody walks through anybody
   ground: 3.0,                       // anyone standing still (not the man guarding the ball) is this much harder to move
@@ -187,7 +189,7 @@ export const T = {
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.28,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
   contestMaxJ: 0.92,                 // a perfect contest takes this share off a jumper
-  jsThrough: 0.28,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
+  jsThrough: 0.33,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
   contestMaxL: 0.90,                 // ...off a layup
   contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
@@ -213,9 +215,9 @@ export const T = {
   blockIn: 0.0, blockOut: 0.95,      // ...and in the air at the release (any of the jump but the landing): on time. Else blockLate of it
   blockAfter: 0.16,                  // a man who goes up just after the release can still get it, this long into its flight (s)
   blockBase: 0.15,                   // on-time chance, x the four below (the plain grades, 0-1)
-  blockInt0: 0.25, blockInt: 1.5,    // x (0.25 + 1.5 x Interior D)
-  blockSize: 1.2, blockSizeMin: 0.12,// x (1 + 1.2 x (his Size - the shooter's)), never under 0.12
-  blockBnc0: 0.6, blockBnc: 0.8,     // x (0.6 + 0.8 x Bounce)
+  blockInt0: 0.1, blockInt: 1.8,     // x (0.25 + 1.5 x Interior D)
+  blockSize: 1.44, blockSizeMin: 0.12,// x (1 + 1.2 x (his Size - the shooter's)), never under 0.12
+  blockBnc0: 0.52, blockBnc: 0.96,     // x (0.6 + 0.8 x Bounce)
   blockJumper: 0.55, blockDunk: 0.5, // jumpers and dunks are harder to get than layups
   blockMax: 0.7,
   blockLate: 0.3,                    // off time (up too early, too late): this share of the chance
@@ -234,7 +236,7 @@ export const T = {
   stealBurst: 0.45,                  // against a handler in the middle of a dribble move
   stealGather: 1.25,                 // against a handler going up
   stealBehind: 0.35,                 // from behind him
-  stealIq: 0.5,                      // x (1 + this * (0.75 - the handler's IQ)): a smart handler sees the swipe coming
+  stealIq: 0.6,                      // x (1 + this * (0.75 - the handler's IQ)): a smart handler sees the swipe coming
   stealMax: 0.42,
   stealCd: 1.7,                      // cooldown
   stealMiss: 0.34,                   // frozen this long after any miss...
@@ -245,9 +247,16 @@ export const T = {
   // may freeze his man (referee.judgeMove); moves chain, a short recovery apart, and his man can be frozen once a while.
   handSwitch: 3.2,                   // going this fast (ft/s) to one side, the ball goes to the hand on that side
   moveAt: 0.5,                       // the stick pushed this far is a flick (the screen and the CPU send it once)
-  // which move: the angle between the flick and the way to the basket, in degrees, and which hand it's toward
-  hesiTo: 22.5, crossTo: 67.5, btlTo: 112.5, btbTo: 157.5,
-  spinTurn: 60, spinMax: 150,        // a second flick this far round from the first (and no farther), early in the move: a spin
+  // which move (the owner, 11-26: "spin moves trigger too often"; the right move has to come out): the angle between
+  // the flick and the way to the basket, in degrees. At the basket (within hesiTo) the hesitation, straight back (past
+  // backFrom) the step-back, anything sideways a move to that side: toward the ball hand the in-and-out; toward the
+  // other hand by how he's going: standing (or going across) the crossover, going forward at an easy pace between the
+  // legs, at speed behind the back. A spin is never a flick: it's the stick rolled round (gesture.js 'roll', the
+  // input's sp) or SHIFT
+  hesiTo: 35, backFrom: 145,
+  btlSpeed: 0.2, btlFwd: 0.35,       // between the legs: going this share of his top speed or more, and this much of it forward
+  btbSpeed: 0.62,                    // behind the back: going this share of his top speed or more
+  spinTurn: 60, spinMax: 150,        // (the two-stick pad: a second flick this far round from the first, early in a move, is the roll)
   spinWithin: 0.5,                   // ...inside this share of the first move
   moveBuffer: 0.5,                   // a flick made while a move is still on goes the moment it can (the chain), this long at most
   chainRec: 0.12, chainRecHnd: 0.06, // after a move, this long (less at Handles 11) before the next one starts
@@ -257,17 +266,75 @@ export const T = {
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.15,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
-  moveHnd: 0.50,                     // ...plus this * (Handles n - his Perimeter D n)
-  moveIq: 0.30,                      // ...minus this * (his IQ n - 0.5): a smart defender reads the move
+  moveHnd: 0.60,                     // ...plus this * (Handles n - his Perimeter D n)
+  moveIq: 0.36,                      // ...minus this * (his IQ n - 0.5): a smart defender reads the move
   moveFreeze: 0.38,                  // frozen this long
-  // the legs for it (the owner, 11-25: "slight stamina when dribbling ... so you can't spam them"): 1 full
-  staMove: 0.2, staChain: 0.12,      // a move costs this, one chained straight off the last this much more...
-  staSpin: 0.1,                      // ...a spin rolled out of a move this
+  // the legs for it (the owner, 11-25: "slight stamina when dribbling ... so you can't spam them"): 1 full. The owner,
+  // 11-26: "drains too quick and should recover each possession": a third and more off every cost (3-4 moves strung
+  // together before he's low), and every new possession everyone starts full (sim.js endPossession, stop)
+  staMove: 0.125, staChain: 0.075,      // a move costs this, one chained straight off the last this much more...
+  staSpin: 0.065,                     // ...a spin rolled out of a move this
   staBack: 0.13,                     // back this much a second once he's off his moves (empty to full in about 8 s; owner 11-26: it came back too fast)
   staFloor: 0.55,                    // at empty a move has this share of its burst and of its chance to freeze his man
   staLoose: 0.8,                     // ...and a swipe at the ball in it has up to this much more chance
   ankleBase: 0.02,                   // of the frozen ones, this share (x Handles and the lean) sit down: the ankle-breaker
   ankleDown: 1.25,                   // on the floor this long
+
+  // ── Post game (the owner, 11-26): a big with his man on him near the basket, slowed to a dribble or backing into
+  // him, is in the post: his back to him, the stick toward the rim backs him down (bump by bump, Size against Size),
+  // a flick to a side is the drop step (baseline) or the spin (middle), a flick away from the rim faces him up, and
+  // SHOOT is the hook (turned side-on) or, with the stick away from the rim, the fadeaway ──────────────────────────
+  postRange: 14,                     // inside this many feet of the rim...
+  postDef: 4.4,                      // ...his man within this of him, between him and the rim...
+  postFront: 0.3,                    // ...(this much in front: the cos to the line to the rim)
+  postSlow: 4.2,                     // ...going slower than this (ft/s), for postEnter (backing in: postEnterBack)
+  postEnter: 0.32, postEnterBack: 0.12,
+  postGuard: 0.72,                   // a guard posts only this big (plain Size) and only backing in
+  postCd: 0.7,                       // after leaving the post, this long before he can be in it again
+  postLose: 0.4,                     // his man gone off him (past postDef + 1.5) this long: he's out of it
+  postBump: 0.44,                    // a bump step: one this often while he backs down...
+  postPush: 0.45,                    // ...the first share of it the shove, the rest settling
+  postGain: 1.25,                    // ft a bump takes off his man, even Size...
+  postSize: 1.15,                    // ...x (1 + this x (his Size - his man's), the plain grades)...
+  postStr: 0.25,                     // ...x (1 + this x (his Finishing - 0.75))...
+  postInt: 0.55,                     // ...x (1 - this x (his man's Interior D - 0.5), the plain grade)
+  postGainMin: 0.12, postGainMax: 2.0,
+  postFree: 3.4,                     // backing into nobody: this fast (ft/s)
+  postSide: 2.4,                     // sliding along the block (the stick across): this fast
+  postSta: 0.03,                     // his legs: a bump costs this
+  postAway: 0.45,                    // the stick held away from the rim this long: he faces up and leaves the post
+  postLay: 4.6,                      // SHOOT in the post this close: the layup or the dunk (the power move), not the hook
+  dropBase: 0.34, dropSize: 0.55, dropIq: 0.3, dropInt: 0.5, dropSpd: 0.3,   // the drop step or the spin gets by him: base + Size
+                                     // edge + IQ - his man's Interior D + the first step (the plain grades), 0.08-0.8
+  dropFreeze: 0.5,                   // got by: his man sealed off this long
+  dropCut: 0.55,                     // read: the burst goes this share (his man cuts it off)
+  // the hook and the fadeaway: on the jumper's meter (the green window is the shot, as every shot)
+  hookBase: 0.12, hookFin: 0.34, hookSize: 0.14, hookIq: 0.1,   // a hook from 6-8 ft: about 60% for a skilled big open, 35% for a stiff
+  hookFar: 0.035,                    // ...less this a foot past 6 ft
+  contestMaxH: 0.62,                 // a perfect contest takes this share off a hook (it's shot away from his body)...
+  hookThrough: 0.35,                 // ...less this share of it at Size 11 (over the top)
+  blockHook: 0.45,                   // a hook is this much as easy to block as a layup
+  fadeK: 0.8,                        // the fadeaway: the jumper from there, x this (off balance)...
+  fadeSize: 0.12,                    // ...plus this at Size 11 (a big's fade is over everyone)...
+  fadeSpace: 0.6,                    // ...and the contest on it counts this share (he's fading away from the hand)
+
+  // ── Pump fakes (the owner, 11-26): a tap of SHOOT, let go before fakeMs, is a pump fake. He shows it and brings it
+  // back down; his man may go up for it. A man who does is out of the play for a beat (biting: he's coming down), and
+  // the next shot gets a much bigger green window. A man who had dribbled and pumps has picked up his dribble: no more
+  // dribbling, only a shot, a pass or a pivot (fakeFresh: one who hadn't, off a catch or the check, still has it)
+  fakeMs: 130,                       // real ms: SHOOT let go sooner than this is a fake, not a shot
+  fakeTime: 0.34,                    // the fake: up and back down (the game's seconds)
+  biteAfter: 0.16,                   // a man who goes up this soon after the fake came down still bit (real s)
+  bitLand: 0.42,                     // a man who bit comes down this long (the game's seconds), out of the play
+  fakeOpen: 1.9,                     // the next shot's green window x this...
+  fakeOpenS: 1.0,                    // ...if it starts this soon after he bit (real s)
+  uauRange: 9.5,                     // the up-and-under: a man who bit, a step through toward the rim from inside this: a layup
+  pivotR: 1.7,                       // picked up: his pivot foot down, the other foot reaches this far (ft)...
+  pivotSpeed: 5.5,                   // ...this fast
+  // a CPU's bite: (the fake's sell) x (bite0 - biteIq x (his IQ - 0.5)) x his level's bite
+  sell0: 0.3, sellShot: 0.5, sellIq: 0.2, sellAgain: 0.55,   // the sell: a threat to shoot from there sells it; a second fake
+                                     // in the same hold sells this share of the one before
+  bite0: 0.62, biteIq: 0.55,
 
   // ── Passing ──────────────────────────────────────────────────────────────────────────────────────
   passSpeed: 26, passSpeedPas: 13,   // ft/s: 26 at Passing 1, 39 at 11
@@ -276,7 +343,7 @@ export const T = {
   pickBase: 0.22,                    // ...this often at average everything
   pickPer: 0.8,                      // x (0.55 + this * Perimeter D)
   pickPas: 0.8,                      // x (1.35 - this * the passer's Passing)
-  pickIq: 0.3,                       // x (1.15 - this * the passer's IQ): a smart passer doesn't throw it to the defense
+  pickIq: 0.36,                       // x (1.15 - this * the passer's IQ): a smart passer doesn't throw it to the defense
   pickMax: 0.7,
   passCd: 0.35,                      // can't shoot or pass again this soon after a catch (the catch itself)
 
@@ -339,5 +406,8 @@ export const MOVES = {
   spin: { n: 5, time: 0.36, speed: 1.65 },
   inout: { n: 6, time: 0.34, speed: 1.75, stall: 0.11, stallSpeed: 0.4, fake: true, boost: true },
   btl: { n: 7, time: 0.26, speed: 1.65, swap: true, boost: true },
+  // the post: the drop step (a flick to the baseline side) round his man to the rim; the spin to the middle is the
+  // spin above, out of the post
+  drop: { n: 8, time: 0.32, speed: 1.6, boost: true },
 }
-export const MOVE_KEYS = [null, 'cross', 'hesi', 'back', 'btb', 'spin', 'inout', 'btl']
+export const MOVE_KEYS = [null, 'cross', 'hesi', 'back', 'btb', 'spin', 'inout', 'btl', 'drop']

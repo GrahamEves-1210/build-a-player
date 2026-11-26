@@ -65,7 +65,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const EVLOG = [], PFN = SNAP_ACT                 // (PFN: where a snapshot row keeps the act: proto.js snapOf)
   // the men as they're drawn: each one's look (his side's colour, his skin and number) and his pose (pose.js)
   const poser = createPoser(N)
-  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS' }
+  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS', drop: 'DROP STEP' }
 
   // The court is a window onto the half court: its height always shows the whole depth (baseline to half court);
   // on a narrow screen (a phone held upright) it shows about 34 of the 56 feet across and pans with the play.
@@ -134,6 +134,11 @@ export function createEngine({ setup, els, on, net = null }) {
         // his own move, named as he makes it (how the small stick is learned)
         if (e.pid === me && !levels[me] && !e.ankles && MOVE_WORD[e.kind]) { for (const f of fx) if (f.mv) f.dur = 0; fx.push({ text: MOVE_WORD[e.kind], x: p.x, y: p.y < 9 ? p.y + 4.6 : p.y - 4.6, t0: clockNow, dur: 750, color: 'rgba(255,255,255,.92)', big: false, small: true, mv: true }) }
       }
+      // the pump fake (his own, named like a move), his man going up for it, the post
+      else if (e.e === 'fake') { if (e.pid === me && !levels[me]) { for (const f of fx) if (f.mv) f.dur = 0; fx.push({ text: 'PUMP FAKE', x: p.x, y: p.y < 9 ? p.y + 4.6 : p.y - 4.6, t0: clockNow, dur: 700, color: 'rgba(255,255,255,.92)', big: false, small: true, mv: true }); haptic('light') } }
+      else if (e.e === 'bite') { say('IN THE AIR', p.x, wordY(p.y), FLOOD, false, 900); if (e.on === me || e.pid === me) haptic('medium') }
+      else if (e.e === 'post') { if (e.pid === me) haptic('light') }
+      else if (e.e === 'bump') { if (e.pid === me || e.on === me) haptic('light') }
       else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
       else if (e.e === 'oob') { sfx('whistle'); say('OUT OF BOUNDS', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
@@ -172,10 +177,12 @@ export function createEngine({ setup, els, on, net = null }) {
     const st = H.ts, jp = H.tj
     H.ta = H.tb = H.ts = H.tj = false
     const fl = H.dq.shift()                                     // a flick of the right stick with the ball: a dribble move, this tick
-    const inp = { mx: H.mx, my: H.my, shoot: A, steal: st, pass: B, jump: jp, dx: fl ? fl[0] : 0, dy: fl ? fl[1] : 0, q: null, t: s.tick }
+    const inp = { mx: H.mx, my: H.my, shoot: A, steal: st, pass: B, jump: jp, dx: fl ? fl[0] : 0, dy: fl ? fl[1] : 0, sp: fl ? fl[2] || 0 : 0, q: null, t: s.tick }
     if (p.act === 'gather' && meter.on) {
-      // the release goes out with the quality this device judged; until then the button counts as held
-      if (meter.q != null) { inp.shoot = false; inp.q = meter.q; meter.q = null } else inp.shoot = true
+      // the release goes out with the quality this device judged; until then the button counts as held. A tap: the
+      // pump fake
+      if (meter.fake) { inp.shoot = false; inp.fake = true; meter.fake = false }
+      else if (meter.q != null) { inp.shoot = false; inp.q = meter.q; meter.q = null } else inp.shoot = true
     }
     return inp
   }
@@ -194,12 +201,14 @@ export function createEngine({ setup, els, on, net = null }) {
   function meterWatch() {
     const p = s.players[me]
     if (p.act === 'gather' && !meter.on && !levels[me]) {
-      meter.on = true; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0; meter.dy = 0
+      meter.on = true; meter.fake = false; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0; meter.dy = 0
       meter.base = null                                          // (the window moves with the shot now: sim.js shotWindow)
       meter.t0 = clockNow - H.aT0 < 220 ? H.aT0 : clockNow - STEP
       if (!H.a && H.aUp >= H.aT0) letGo(H.aUp)                    // pressed and let go inside one tick
     } else if (p.act !== 'gather' && meter.on) {
       meter.on = false
+      // a pump fake: no shot went up, and no word on the meter
+      if (p.act === 'fake' || s.events.some(e => e.e === 'fake' && e.pid === me)) { meter.grade = null; meter.rel = null; meter.fake = false; return }
       // did the shot go up? (practice: the step's word this tick. A gather ended by the shot clock, a steal or a
       // turnover is no shot at all, whatever the button did; the physics may say so itself: a 'noshot' event)
       const ev = s.events
@@ -215,8 +224,18 @@ export function createEngine({ setup, els, on, net = null }) {
     }
   }
   function letGo(at) {
-    if (!meter.on || meter.grade) return
+    if (!meter.on || meter.grade || meter.fake) return
     const held = clamp(at - meter.t0, 0, meter.spec.total)
+    // let go before the meter is under way: a pump fake, not a shot
+    if (held < T.fakeMs) {
+      meter.fake = true
+      if (online && NB.local?.act === 'gather') {
+        NB.rel = relMsg(NB.local.sn, -1); NB.edge = true
+        NB.local = null; meter.on = false; meter.fake = false
+        const p = s.players[me]; p.act = 'free'; p.shot = null
+      }
+      return
+    }
     meter.q = meterQuality(meter.spec, held); meter.grade = meterGrade(meter.spec, held); meter.gradeGood = meter.q >= 1; meter.gradeAt = at
     meter.rel = { held, at }
     // the ball leaving his hand, and a cue of its own for a green release
@@ -257,7 +276,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const fl = H.dq.shift()
     if (p.moveCd > 0) p.moveCd--
     if (has && p.act === 'free' && p.noAct <= 0) {
-      if (fl) { moveInput(p, { x: fl[0], y: fl[1] }, NB.lt); NB.lastMv = NB.lt }
+      if (fl && !p.pick && !p.post) { moveInput(p, { x: fl[0], y: fl[1] }, NB.lt, fl[2] || 0); NB.lastMv = NB.lt }
       else moveQueued(p, NB.lt)
     }
     if (NB.local?.act === 'gather') p.actT++
@@ -464,9 +483,9 @@ export function createEngine({ setup, els, on, net = null }) {
   // the hand the ball is in decides the side: referee.moveOf), on the right pad's eight ways and the four arrow keys.
   // A new set waits a few ticks before it shows (so a name doesn't flicker on a line between two moves)
   const MV = { cand: '', n: 0, pad: '', keys: '' }
-  const NAME = { hesi: 'HESI', cross: 'CROSS', btl: 'BETWEEN\nLEGS', btb: 'BEHIND\nBACK', back: 'STEP-BACK', inout: 'IN & OUT', spin: 'SPIN' }
+  const NAME = { hesi: 'HESI', cross: 'CROSS', btl: 'BETWEEN\nLEGS', btb: 'BEHIND\nBACK', back: 'STEP-BACK', inout: 'IN & OUT', spin: 'SPIN', drop: 'DROP\nSTEP' }
   const NAME_SIDE = { back: 'STEP\nBACK', inout: 'IN &\nOUT' }
-  const NAME_KEY = { hesi: 'HESITATION', cross: 'CROSSOVER', btl: 'BETWEEN THE LEGS', btb: 'BEHIND THE BACK', back: 'STEP-BACK', inout: 'IN AND OUT', spin: 'SPIN' }
+  const NAME_KEY = { hesi: 'HESITATION', cross: 'CROSSOVER', btl: 'BETWEEN THE LEGS', btb: 'BEHIND THE BACK', back: 'STEP-BACK', inout: 'IN AND OUT', spin: 'SPIN', drop: 'DROP STEP' }
   const WAY = Array.from({ length: 8 }, (_, i) => ({ x: Math.sin(i * Math.PI / 4), y: -Math.cos(i * Math.PI / 4) }))
   const KEYWAY = [WAY[0], WAY[6], WAY[2], WAY[4]]
   // the keyboard's ways (WASD), in the panel's order (up, left, right, down); a key with the others held with it
@@ -1114,6 +1133,17 @@ export function createEngine({ setup, els, on, net = null }) {
       drawTag(rc, 'TAKE IT BACK', fs, AMBER, true, false)
       marks.push(rc)
     }
+    // the man with the ball in the post (POST) or with his dribble picked up (PIVOT: he can only shoot, pass or pivot)
+    if (holder >= 0 && live && !clearTag && !cut(holder) && (P[holder].post || P[holder].pick) && P[holder].act !== 'gather') {
+      const word = P[holder].pick ? 'PIVOT' : 'POST'
+      const cx = FIG[holder].x, cy = FIG[holder].cy - FIG[holder].hs - 2
+      const fs = Math.max(13, Math.round(tk * 0.36)); ctx.font = `${fs}px ${FONT}`
+      const tw = ctx.measureText(word).width + 10, th = Math.round(fs * 1.2)
+      const x0 = clamp(cx - tw / 2, L + 2, Rr - 2 - tw), y0 = Math.max(1, cy - th)
+      const rc = [x0, y0, x0 + tw, y0 + th]
+      drawTag(rc, word, fs, word === 'PIVOT' ? AMBER : '#f3f6f8', true, false)
+      marks.push(rc)
+    }
     // the men cut by the edge of the screen
     // (at his height, or the nearest height that isn't on a man near the edge, another name or another tab)
     const tfs = Math.max(13, Math.round(tk * 0.36))
@@ -1245,13 +1275,21 @@ export function createEngine({ setup, els, on, net = null }) {
   const GLOG = []                                   // DEV: the move stick as the gesture reader saw it
   const hasBall = () => s.phase === 'live' && s.ball.st === 'held' && s.ball.holder === me
   let gT = 0
-  function gesture() { if (ONE && stick.id != null) feedG(performance.now(), H.mx, H.my) }
+  function gesture() {
+    if (!ONE) return
+    // (the way to the basket on the stick: the back half, for a back-and-around roll)
+    const p = s.players[me]; G.aim(COURT.rim.x - p.x, COURT.rim.y - p.y)
+    if (stick.id != null) feedG(performance.now(), H.mx, H.my)
+  }
   function feedG(t, x, y) {
     gT = Math.max(gT, t)
-    const g = G.feed(gT, x, y)
+    useG(G.feed(gT, x, y), x, y)
+  }
+  // a move off the stick: a tap or a snap the way it went, a roll the spin, rolled that way
+  function useG(g, x, y) {
     if (import.meta.env.DEV) { GLOG.push([Math.round(gT), +x.toFixed(2), +y.toFixed(2), g ? g.kind + (hasBall() ? '' : ' (no ball)') : '']); if (GLOG.length > 600) GLOG.shift() }
     if (!g || !hasBall()) return
-    flick(g.dir[0], g.dir[1])
+    flick(g.dir[0], g.dir[1], g.kind === 'roll' ? Math.sign(g.turn) || 1 : 0)
   }
   // where the stick rests: the layout's marker for it (btlive.css .btlv-stick-home), else a quarter across
   const rest = () => {
@@ -1261,7 +1299,9 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   const padUp = e => {
     if (e.pointerId !== stick.id) return
-    stick.id = null; H.mx = H.my = 0; G.reset()
+    stick.id = null; H.mx = H.my = 0
+    // (a tap let go out there is still the tap)
+    if (ONE) useG(G.release(Math.max(gT, performance.now())), 0, 0); else G.reset()
     rest()                                                           // back to its resting place
   }
   // the moment of a press, on the game's clock but to the millisecond (not to the frame): the meter is timed with it
@@ -1294,9 +1334,10 @@ export function createEngine({ setup, els, on, net = null }) {
   // screen only sends the way it pointed. Without the ball: down is a swipe at it (on defense), up a jump.
   const DS = { id: null, ox: 0, oy: 0, r: 26, sc: 1, on: false, fx: 0, fy: 0, kt: 0 }
   const SPIN_COS = Math.cos(T.spinTurn * Math.PI / 180)
-  const flick = (x, y) => {
-    H.dq.push([x, y]); if (H.dq.length > MOVE_KEEP) H.dq.shift()
-    if (online) { NB.n[2]++; NB.d.push([r2(x), r2(y)]); if (NB.d.length > MOVE_KEEP) NB.d.shift(); NB.edge = true }
+  // (sp: the stick rolled round that way: the spin)
+  const flick = (x, y, sp = 0) => {
+    H.dq.push([x, y, sp]); if (H.dq.length > MOVE_KEEP) H.dq.shift()
+    if (online) { NB.n[2]++; NB.d.push(sp ? [r2(x), r2(y), sp] : [r2(x), r2(y)]); if (NB.d.length > MOVE_KEEP) NB.d.shift(); NB.edge = true }
   }
   const tap = steal => {
     if (steal) H.ts = true; else H.tj = true
@@ -1315,7 +1356,10 @@ export function createEngine({ setup, els, on, net = null }) {
     if (m < T.moveAt + 0.08) return
     const ux = x / m, uy = y / m
     if (DS.on && ux * DS.fx + uy * DS.fy > SPIN_COS) return
+    // (already out and rolled round from there: the roll, the spin)
+    const roll = DS.on ? (DS.fx * uy - DS.fy * ux >= 0 ? 1 : -1) : 0
     DS.on = true; DS.fx = ux; DS.fy = uy
+    if (roll && hasBall()) { flick(ux, uy, roll); return }
     rightFlick(ux, uy)
   }
   const dsMove = e => {
@@ -1368,7 +1412,8 @@ export function createEngine({ setup, els, on, net = null }) {
     const d = ref.rimDist(p), fx = d > 0.5 ? (COURT.rim.x - p.x) / d : 0, fy = d > 0.5 ? (COURT.rim.y - p.y) / d : -1
     const hs = p.hand || 1, side = v => (v[0] * -fy + v[1] * fx) * hs
     const a = [-ey, ex], b = [ey, -ex], via = side(a) >= side(b) ? a : b
-    flick(via[0], via[1]); flick(ex, ey)
+    // (round from there to the way he's going: the way it rolls)
+    flick(ex, ey, via[0] * ey - via[1] * ex >= 0 ? 1 : -1)
   }
   // E on defense: STEAL (the STEAL row beside the court lights as it goes)
   const onDef = () => shown.mode === 'def' || shown.mode === 'dboard'
