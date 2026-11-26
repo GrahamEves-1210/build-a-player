@@ -541,10 +541,10 @@ export const mix = (a, b, f) => {
 export const POSE = {
   // stood: his weight on his right leg (that hip up, the shoulders the other way), the left knee easy, the arms
   // hanging loose with a little bend at the elbow and the hands turned in at his thighs
-  stand: pz({ hx: 1.6, hip: 0.26, lean: -0.04, lx: -10, ly: -0.6, lk: 0.34, rx: 5.6, hlx: -15.0, hly: -45.8, hrx: 13.8, hry: -45.4, el: 0, er: 0, fore: 0.95, head: 0.15 }),
+  stand: pz({ hx: 1.0, hip: 0.15, lean: -0.03, lx: -10, ly: -0.6, lk: 0.34, rx: 5.6, hlx: -15.0, hly: -45.8, hrx: 13.8, hry: -45.4, el: 0, er: 0, fore: 0.95, head: 0.15 }),
   // a penalty taker waiting on the whistle: loose, the shoulders down, his weight on his right leg, the arms hanging
   // easy a touch in front of him, his eyes on the keeper
-  wait: pz({ hx: 2.2, hip: 0.32, lean: -0.045, lx: -11.5, ly: -0.3, lk: 0.42, rx: 4.6, hlx: -15.6, hly: -45.6, hrx: 13.9, hry: -45.2, el: 0, er: 0, fore: 0.95, tilt: 0.12, head: 0.35 }),
+  wait: pz({ hx: 1.3, hip: 0.18, lean: -0.03, lx: -11.5, ly: -0.3, lk: 0.42, rx: 4.6, hlx: -15.6, hly: -45.6, hrx: 13.9, hry: -45.2, el: 0, er: 0, fore: 0.95, tilt: 0.12, head: 0.35 }),
   // on his toes, knees soft, arms loose and a little out from his sides
   ready: pz({ hy: 50, bow: 0.1, lx: -11, rx: 11, lk: 0.2, rk: 0.2, hlx: -15.8, hly: -51, hrx: 15.8, hry: -51, el: 0.08, er: 0.08, fore: 0.75 }),
   // a keeper set: feet a bit wider than his shoulders, knees bent, his weight forward on the balls of his feet, the
@@ -673,7 +673,7 @@ export function kickPose(f, foot = 1, o = null) {
   return { ...p, lx: -p.rx, ly: p.ry, lk: p.rk, rx: -p.lx, ry: p.ly, rk: p.lk, hlx: -p.hrx, hly: p.hry, hrx: -p.hlx, hry: p.hly, el: p.er, er: p.el, lean: -p.lean, hx: -p.hx, zl: p.zr, zr: p.zl }
 }
 
-const TH = 27, SH = 26, UA = 19, FA = 17.8, TORSO = 33, HR = 7.4, SHW = 9.7, HIPW = 5
+const TH = 27, SH = 26, UA = 19, FA = 17.8, TORSO = 33, HR = 7.4, SHW = 10.0, HIPW = 4.4
 const OL = 1.4   // the ink round every part, in rig units
 // a limb: two circles joined by their tangents (a cone with round ends)
 function taper(x, ax, ay, ra, bx, by, rb) {
@@ -843,12 +843,12 @@ const add = (pr, g) => pr.map(([t, r]) => [t, r + g])
 
 // The leg: the thigh full at the top and swelling on its outside, the inside (the teardrop) low by the knee; a real knee;
 // the calf high and fuller on the inside, in to a slim ankle
-const THIGH_O = [[0, 6.0], [0.3, 6.3], [0.6, 5.5], [0.85, 4.4], [1, 3.9]]
-const THIGH_I = [[0, 5.6], [0.2, 5.7], [0.5, 4.9], [0.78, 4.2], [0.9, 4.3], [1, 3.75]]
+const THIGH_O = [[0, 5.5], [0.3, 5.6], [0.6, 5.05], [0.85, 4.3], [1, 3.9]]
+const THIGH_I = [[0, 5.2], [0.2, 5.2], [0.5, 4.7], [0.78, 4.15], [0.9, 4.25], [1, 3.75]]
 const SHIN_O = [[0, 3.8], [0.1, 3.75], [0.27, 4.6], [0.5, 3.75], [0.78, 2.35], [0.93, 2.0], [1, 2.15]]
 const SHIN_I = [[0, 3.7], [0.1, 3.7], [0.31, 5.0], [0.53, 3.95], [0.78, 2.45], [0.93, 2.1], [1, 2.25]]
 const SOCK_O = add(SHIN_O, 0.4), SOCK_I = add(SHIN_I, 0.4), FOLD_O = add(SHIN_O, 0.95), FOLD_I = add(SHIN_I, 0.95)
-const SHORT_O = [[0, 5.9], [0.5, 6.25], [1, 6.05]], SHORT_I = [[0, 5.4], [0.6, 5.6], [1, 5.35]]
+const SHORT_O = [[0, 5.4], [0.5, 5.55], [1, 5.6]], SHORT_I = [[0, 5.0], [1, 5.0]]
 const NECK = [[0, 4.4], [0.35, 3.8], [1, 3.4]]
 const SOCK_T = 0.15, FOLD_T = [0.11, 0.21]
 // boots: [the upper, its flash, the soleplate]
@@ -1059,7 +1059,7 @@ export function paintMan(x, o, L) {
   })
   // the seat and the waistband: from the hips across, down to the fork
   const waist = d => {
-    const w0 = 7.4 * bw + d, w1 = HIPW + 5.6 * bw + d, nx = -sl, ny = cl
+    const w0 = 7.4 * bw + d, w1 = HIPW + 5.1 * bw + d, nx = -sl, ny = cl
     // (wound the same way as the legs of them, so the two fill as one)
     x.moveTo(hipX - cl * w0 - nx * (5.6 + d), hipY - sl * w0 - ny * (5.6 + d)); x.lineTo(hipX - cl * w1 + nx * (2 + d), hipY - sl * w1 + ny * (2 + d))
     x.lineTo(hipX + nx * (3.4 + d), hipY + ny * (3.4 + d)); x.lineTo(hipX + cl * w1 + nx * (2 + d), hipY + sl * w1 + ny * (2 + d)); x.lineTo(hipX + cl * w0 - nx * (5.6 + d), hipY + sl * w0 - ny * (5.6 + d)); x.closePath()
@@ -1067,7 +1067,7 @@ export function paintMan(x, o, L) {
   // The shirt, in its own frame (0, 0 the middle of his shoulders, y down to the hem): the neckline, the trapezius
   // sloping down to the shoulders (not a box), round over the deltoid into the sleeve; under the arm the lats, in to a
   // narrow waist, and out a touch over the hips where it hangs over the shorts
-  const wa = W - 0.9, wl = W - 0.2, ww = 8.7 * bw, wh = 10.0 * bw, T2 = T - 2.6   // (T2: the hem, over the top of the shorts)
+  const wa = W - 0.6, wl = W + 0.2, ww = 9.2 * bw, wh = 9.6 * bw, T2 = T - 2.6   // (T2: the hem, over the top of the shorts)
   const shirt = () => {
     x.moveTo(-3.7, -2.6)
     x.quadraticCurveTo(-W * 0.55, -2.0, -W + 1.2, 0.3)
@@ -1115,7 +1115,7 @@ export function paintMan(x, o, L) {
   if (!FINE) {} else if (!front && bow < 0.5) {
     // from behind: the seam down the seat, and the gluteal fold across each leg of them
     x.strokeStyle = fold; x.lineWidth = 0.6; x.beginPath(); x.moveTo(hipX - sl * -4, hipY - 4); x.lineTo(hipX + sl * 3, hipY + 3.4); x.stroke()
-    for (const s of shortsL) { const t = 0.5, d = s, ox = (d.b[0] - d.a[0]), oy = (d.b[1] - d.a[1]), px = d.a[0] + ox * t, py = d.a[1] + oy * t; x.beginPath(); x.moveTo(px - 3.6, py - 0.6); x.quadraticCurveTo(px, py + 1.2, px + 3.6, py - 0.6); x.stroke() }
+    // (no folds drawn across the seat: they round it)
   } else if (front) {
     // from the front: the creases from the fork, and the number small on his left leg
     x.strokeStyle = fold; x.lineWidth = 0.55; x.beginPath(); x.moveTo(hipX - 1, hipY + 2.6); x.lineTo(hipX - 3.6, hipY - 0.4); x.moveTo(hipX + 1, hipY + 2.6); x.lineTo(hipX + 3.6, hipY - 0.4); x.stroke()
@@ -1461,7 +1461,7 @@ export function man(ctx, C, X, Z, pose, look, o = {}) {
     ctx.fillStyle = `rgba(2,10,6,${(0.42 * clamp(1 - lift / 2, 0.3, 1)).toFixed(3)})`
     ctx.beginPath(); ctx.ellipse(p.x + 2 * k, p.y + 0.5 * k, (lie ? 44 : 15) * k * clamp(1 - lift / 3, 0.5, 1), 3.6 * k, 0, 0, 6.2832); ctx.fill()
   }
-  const turn = o.turn ?? 0, sxk = Math.max(0.3, Math.abs(Math.cos(turn * Math.PI)))
+  const turn = o.turn ?? 0, sxk = Math.max(0.45, Math.abs(Math.cos(turn * Math.PI)))   // (side-on he's still a body's depth wide)
   const L = turn > 0.5 ? { ...look, front: !look.front } : look
   ctx.save(); ctx.translate(p.x, p.y - lift * p.s); ctx.scale(k * sxk, k)
   FINE = k * 110 > 64
@@ -1521,36 +1521,59 @@ export function celebration(seed, o = {}) {
   let h = 0; for (const ch of String(seed)) h = (h * 33 + ch.charCodeAt(0)) % 1000003
   const mood = o.mood !== undefined ? o.mood : goalMood(o.sit), sz = SIZES[mood] ?? SIZE0, pace = lightMode() ? 0.6 : 1
   const side = o.side ?? (h % 2 ? 1 : -1), from = o.from ?? { x: 0, z: -10 }
-  let to = o.toward ?? { x: from.x + side * 4.6, z: from.z - 2.6 }
-  let dx = to.x - from.x, dz = to.z - from.z, dl = Math.hypot(dx, dz)
-  if (dl < 0.05) { dx = side; dz = 0; dl = 1 }
-  const ux = dx / dl, uz = dz / dl
-  // (he needs a run at it: a few strides at least)
-  if (dl < 3) { dl = 3; to = { x: from.x + ux * 3, z: from.z + uz * 3 } }
+  // the move: the knee slide, or now and then (about one goal in six, never one that only pulls one back) the jump,
+  // the half turn in the air and the landing, feet wide and arms flung down and out, to the crowd
+  // (window.__bapCelMove: a test's way to pick one)
+  const move = o.move ?? (typeof window !== 'undefined' ? window.__bapCelMove : undefined) ?? (mood !== 'back' && Math.floor(h / 7) % 6 === 0 ? 'spin' : 'slide')
+  // He goes to the crowd: off toward the corner on his side, away from the camera, so it sees him from behind or side-on
+  // playing to the fans (the game's own 'toward' only says how far he goes). Short of the goal line, inside the pitch.
+  const want = o.toward ? Math.hypot(o.toward.x - from.x, o.toward.z - from.z) : 4.6
+  let dl = clamp(want, 3, 5.4), ux = side * 0.76, uz = 0.65
+  const v0 = dl / (clamp((dl / 6.6) * 1000 * (1 + ACC / 2), 560, 1150) / 1000) / (1 - ACC / 2)
+  const len0 = move === 'spin' ? 1.3 : clamp(v0 * 0.4 * sz.len, 1.4, 4.2), room = -1.6 - from.z
+  if (room < (dl + len0) * uz) { uz = clamp(room / (dl + len0), 0.08, uz); ux = side * Math.sqrt(1 - uz * uz) }
+  if (Math.abs(from.x + ux * (dl + len0)) > HALF_W - 2) { ux = -ux }
+  const to = { x: from.x + ux * dl, z: from.z + uz * dl }
   const run = clamp((dl / 6.6) * 1000 * (1 + ACC / 2), 560, 1150) * pace
   const v = dl / (run / 1000) / (1 - ACC / 2)                  // his pace as he goes down (m/s)
-  const len = clamp(v * 0.4 * sz.len, 1.4, 4.2)                 // the slide
-  const S = clamp((2 * len) / v * 1000, 520, 1200) * pace      // its ms, slowing all the way from his pace to nothing
+  const len = move === 'spin' ? 1.3 : clamp(v * 0.4 * sz.len, 1.4, 4.2)   // the slide (or the skip and the jump)
+  const S = move === 'spin' ? SPIN.land * pace : clamp((2 * len) / v * 1000, 520, 1200) * pace
   const end = { x: to.x + ux * len, z: to.z + uz * len }
-  // he turns to the lens if he's coming toward it (or across it): a slide is to the crowd and the cameras
-  const face = uz < 0.35
-  // the pile: the nearest one in first, on his knees beside him; the next over the top of him; the last jumps on
+  // (he turns to the lens only if he's somehow coming at it)
+  const face = uz < -0.35
+  // His teammates run over and join him the way players do: the first in puts an arm round him, the next ruffles his
+  // head or slaps his back, the last comes up alongside pointing at him. Nobody dives on him; they all face the fans.
   const list = (o.mates ?? []).slice(0, sz.mates)
   const order = list.map((m, i) => [i, Math.hypot(m.x - end.x, m.z - end.z)]).sort((p, q) => p[1] - q[1]).map(p => p[0])
-  const stop = run + S
-  const mates = list.map((m, i) => {
-    const rank = order.indexOf(i), role = ['kneel', 'over', 'jump'][rank], sd = Math.sign(m.x - end.x) || (rank % 2 ? -side : side)
-    const t = role === 'kneel' ? { x: end.x + sd * 0.5, z: end.z + 0.08 } : role === 'over' ? { x: end.x - sd * 0.12, z: end.z + 0.42 } : { x: end.x + sd * 0.18, z: end.z + 0.3 }
+  // (after the jump they give him his moment, the landing held, before they get to him)
+  const stop = run + S + (move === 'spin' ? 650 * pace : 0)
+  let s0 = 0
+  // (one starting back toward the camera is already on his way in by the time the lens has turned to the corner: he
+  // comes in from no nearer than a few metres short of him, never across the front of the picture)
+  const mates = list.map((m0, i) => {
+    const far = Math.hypot(m0.x - end.x, m0.z - end.z) > 4.5, m = far ? { ...m0, z: Math.max(m0.z, end.z - 2.4) } : m0
+    const rank = order.indexOf(i), role = ['hug', 'pat', 'point'][rank]
+    let sd = Math.sign(m.x - end.x) || (rank % 2 ? -side : side)
+    if (rank === 0) s0 = sd
+    if (rank === 1) sd = -s0 || sd
+    if (rank === 2) sd = s0 || sd
+    const t = role === 'hug' ? { x: end.x + sd * 0.55, z: end.z + 0.06 } : role === 'pat' ? { x: end.x + sd * 0.6, z: end.z + 0.12 } : { x: end.x + sd * 1.7, z: end.z - 0.55 }
     // (one coming from nearer the lens than the slide would run in across it, in front of the moment: he swings out
     // wide and comes in from the side)
     const wide = m.z < end.z - 1.2, q = wide ? { x: end.x + sd * Math.max(3.4, Math.abs(m.x - end.x)), z: lerp(m.z, t.z, 0.8) } : { x: (m.x + t.x) / 2, z: (m.z + t.z) / 2 }
     const d = Math.hypot(q.x - m.x, q.z - m.z) + Math.hypot(t.x - q.x, t.z - q.z)
     // (each in when he gets there: none of them stood about waiting for the slide to finish)
-    const arrive = Math.max(stop + (rank * 260 - 140) * pace, Math.min((d / 9.2) * 1000 * 1.2, stop + (rank * 260 + 450) * pace))
+    const arrive = Math.max(stop + (rank * 240 - 120) * pace, Math.min((d / 8.6) * 1000 * 1.2, stop + (rank * 240 + 420) * pace))
     return { ...m, role, sd, tx: t.x, tz: t.z, qx: q.x, qz: q.z, arrive, delay: 0 }
   })
-  return { kind: 'slide', mood, side, from, to, end, ux, uz, len, v, S, run, stop, face, pace, mates, roar: sz.roar, seed: h, keeper: h % 3 === 0 ? 'sit' : 'down' }
+  return { kind: 'slide', move, mood, side, from, to, end, ux, uz, len, v, S, run, stop, face, pace, mates, roar: sz.roar, seed: h, keeper: h % 3 === 0 ? 'sit' : 'down' }
 }
+// The jump and the turn, in ms from the end of his run: two quick skipping steps (the arms swing back), off both feet,
+// half a turn in the air, and down hard, feet wide, knees bent, arms flung down and out, chest out, the shout
+const SPIN = { skip: 300, off: 330, land: 820, peak: 0.62 }
+const SPIN_AIR = pz({ hy: 52, bow: 0.04, lx: -10, ly: -8, lk: 0.6, rx: 10, ry: -8, rk: 0.6, hlx: -30, hly: -92, hrx: 30, hry: -92, elbow: 0.2, fore: 0.2, face: 1, tilt: 0.4 })
+const SPIN_LAND = pz({ hy: 43, bow: 0.06, lx: -19, rx: 19, lk: 0.45, rk: 0.45, hlx: -36, hly: -52, hrx: 36, hry: -52, elbow: 0, el: 0, er: 0, fore: 0, face: 1, tilt: 0.55 })
+POSE.spinLand = SPIN_LAND
 const ease = f => 1 - (1 - f) * (1 - f)
 // the slide, as a man: on both knees, the shins flat on the grass behind him (kn), leaning back (bow), arms out wide
 const KNEE_SLIDE = pz({ hy: 27, bow: 0.24, lx: -11, ly: 0, rx: 11, ry: 0, lk: -1, rk: -1, kn: 1, hlx: -45, hly: -80, hrx: 45, hry: -80, elbow: 0, el: 0, er: 0, fore: 0, face: 1, tilt: 0.85 })
@@ -1561,6 +1584,11 @@ POSE.kneeSlide = KNEE_SLIDE; POSE.kneeRoar = KNEE_ROAR
 function slideDist(c, a) {
   const L = Math.hypot(c.to.x - c.from.x, c.to.z - c.from.z)
   if (a < c.run) { const f = a / c.run; return (L * (f < ACC ? (f * f) / (2 * ACC) : f - ACC / 2)) / (1 - ACC / 2) }
+  if (c.move === 'spin') {
+    // (the skip carries him half a metre on, the jump the rest; down, he stays put)
+    const t = (a - c.run) / c.pace
+    return L + c.len * (t < SPIN.off ? 0.4 * smoothS(t / SPIN.off) : 0.4 + 0.6 * clamp((t - SPIN.off) / (SPIN.land - SPIN.off), 0, 1))
+  }
   const u = clamp((a - c.run) / c.S, 0, 1)
   return L + c.len * (1 - (1 - u) * (1 - u))
 }
@@ -1570,6 +1598,7 @@ export function scorerAt(c, age) {
   const x = c.from.x + c.ux * d, z = c.from.z + c.uz * d
   // (turned to the lens as he peels away, if that's the way he's going)
   const turn = c.face ? smoothS(prog(a, 40 * p, 40 * p + Math.min(260, c.run * 0.35))) : 0
+  if (c.move === 'spin') return spinnerAt(c, a, x, z)
   const down = c.run - 80 * p, hit = c.run + 70 * p
   let pose
   if (a < down) {
@@ -1590,7 +1619,7 @@ export function scorerAt(c, age) {
     // (held there, the fists shaking, the roar going on)
     if (a > c.stop) { const k = Math.sin((a - c.stop) / 140) * (1 - prog(a, c.stop + 700, c.stop + 1400)); pose.hly += k * 2.5; pose.hry -= k * 2.5 }
     // (the one down on his knees beside him: his arm comes down round him)
-    const kn = c.mates.find(m => m.role === 'kneel')
+    const kn = c.mates.find(m => m.role === 'hug')
     if (kn) {
       const w = smoothS(prog(a, kn.arrive + 60 * p, kn.arrive + 300 * p)), ax = (kn.tx - c.end.x) / RIG_M * 0.85
       if (kn.sd > 0) { pose.hrx = lerp(pose.hrx, ax + 6, w); pose.hry = lerp(pose.hry, -64, w); pose.er = lerp(pose.er, 0, w) } else { pose.hlx = lerp(pose.hlx, ax - 6, w); pose.hly = lerp(pose.hly, -64, w); pose.el = lerp(pose.el, 0, w) }
@@ -1598,44 +1627,69 @@ export function scorerAt(c, age) {
   }
   return { x, z, pose, lift: 0, turn, low: a > down + 60 }
 }
-// a teammate i: in from where he was, then on him
+// the jump and the turn, as a man (a: ms since the goal; x, z where he is)
+function spinnerAt(c, a, x, z) {
+  const p = c.pace, t = (a - c.run) / p
+  if (t < 0) {
+    // the run in to the corner, the arms pumping
+    return { x, z, pose: runPose(a / 250, 1), lift: 0, turn: 0, low: false }
+  }
+  if (t < SPIN.off) {
+    // two quick skipping steps, shortening, the arms swinging down and back to load the jump
+    const f = t / SPIN.off, step = runPose(c.run / 250 + f * 1.1, lerp(0.9, 0.45, f))
+    const load = pz({ hy: 47, bow: 0.12, lx: -8, rx: 8, lk: 0.45, rk: 0.45, hlx: -17, hly: -50, hrx: 17, hry: -50, el: 0, er: 0, fore: 0.9, tilt: 0.1 })
+    return { x, z, pose: mix(step, load, smoothS(prog(f, 0.45, 1))), lift: Math.abs(Math.sin(f * Math.PI * 2)) * 0.05, turn: 0, low: false }
+  }
+  if (t < SPIN.land) {
+    // in the air: off both feet, the arms come up, the knees tuck a touch, and he turns half way round over the
+    // jump (the turn's quickest in the middle of it), to land facing back up the pitch
+    const f = (t - SPIN.off) / (SPIN.land - SPIN.off), lift = 4 * SPIN.peak * f * (1 - f)
+    const pose = mix(mix(POSE.ready, SPIN_AIR, smoothS(prog(f, 0, 0.3))), SPIN_LAND, smoothS(prog(f, 0.7, 1)))
+    return { x, z, pose, lift, turn: smoothS(prog(f, 0.08, 0.92)), low: false }
+  }
+  // down hard: the dip of the landing and back up into it, then held, the shout going on, the chest out
+  const u = t - SPIN.land, dip = Math.sin(prog(u, 0, 220) * Math.PI) * (1 - prog(u, 0, 220) * 0.4)
+  const pose = { ...SPIN_LAND }
+  pose.hy -= dip * 4.5; pose.hly += dip * 3; pose.hry += dip * 3
+  const hold = Math.sin(Math.max(0, u - 300) / 180) * (1 - prog(u, 900, 1600))
+  pose.hlx -= hold * 1.2; pose.hrx += hold * 1.2; pose.tilt = SPIN_LAND.tilt + 0.15 * prog(u, 0, 300)
+  return { x, z, pose, lift: 0, turn: 1, low: false }
+}
+// a teammate i: in from where he was, then in with him, turned to the fans like him
 export function mateAt(c, i, age, me = null) {
   const m = c.mates[i], s = me ?? scorerAt(c, age), a = Math.max(0, age), p = c.pace
-  // (up to speed in a few strides, flat out, and a last check as he gets to him)
-  const T = m.arrive, f = clamp(a / T, 0, 1), A0 = 0.2, A1 = 0.12, e = (f < A0 ? (f * f) / (2 * A0) : f > 1 - A1 ? 1 - A0 / 2 - A1 / 2 - ((1 - f) * (1 - f)) / (2 * A1) : f - A0 / 2) / (1 - A0 / 2 - A1 / 2)
+  // (up to speed in a few strides, then easing down as he gets to him: a jog in at the end, not a dive)
+  const T = m.arrive, f = clamp(a / T, 0, 1), A0 = 0.2, A1 = 0.22, e = (f < A0 ? (f * f) / (2 * A0) : f > 1 - A1 ? 1 - A0 / 2 - A1 / 2 - ((1 - f) * (1 - f)) / (2 * A1) : f - A0 / 2) / (1 - A0 / 2 - A1 / 2)
   const u = 1 - e, x = u * u * m.x + 2 * u * e * m.qx + e * e * m.tx, z = u * u * m.z + 2 * u * e * m.qz + e * e * m.tz
-  // (he faces the way he's running; once he's in on him, he's turned to us with him)
-  const dz = m.tz - m.z, runTurn = dz < -Math.abs(m.tx - m.x) * 0.5 ? 1 : 0, sp = (Math.hypot(m.tx - m.x, m.tz - m.z) / (T / 1000)) * clamp(Math.min(f / A0, (1 - f) / A1 + 0.3), 0, 1)
-  const k = clamp(sp / 7, 0.35, 1), ph = (age + i * 90) / 255
-  // in the last strides the arms go up, he's after him
-  const runP = () => mix(runPose(ph, k), runPose(ph, k, null, { arms: 'wide' }), smoothS(prog(f, 0.55, 0.9)))
+  // (he faces the way he's running; once he's in with him, he's turned with him toward the crowd)
+  const dz = m.tz - m.z, runTurn = dz < -Math.abs(m.tx - m.x) * 0.5 ? 1 : 0, sp = (Math.hypot(m.tx - m.x, m.tz - m.z) / (T / 1000)) * clamp(Math.min(f / A0, (1 - f) / A1 + 0.25), 0, 1)
+  const k = clamp(sp / 7, 0.3, 1), ph = (age + i * 90) / 255
+  // (the last strides, the arms come up: he's after him)
+  const runP = () => mix(runPose(ph, k), runPose(ph, k, null, { arms: 'fist' }), smoothS(prog(f, 0.6, 0.95)) * (m.role === 'point' ? 0 : 0.6))
   const t = a - T
   const dxr = (s.x - m.tx) / RIG_M   // (the scorer, across from him, in his own units)
-  const bob = Math.sin(Math.max(0, t) / 150) * 0.03 * (1 - prog(t, 600, 1400))
-  if (m.role === 'kneel') {
-    // in on his knees beside him, sliding into him, the arm round his back, the other fist up
-    // (the near arm round his shoulders, the other hand on his chest, the head in against his)
-    const hug = pz({ ...KNEE_SLIDE, hy: 28, bow: 0.22, lean: -m.sd * 0.16, hx: dxr * 0.06, elbow: 0.3, fore: 0.45, face: 1, tilt: 0.3, head: -m.sd * 0.6 })
-    const far = dxr - m.sd * 13, near = dxr * 0.45
-    if (m.sd > 0) { hug.hlx = far; hug.hly = -66; hug.hrx = near; hug.hry = -52 } else { hug.hrx = far; hug.hry = -66; hug.hlx = near; hug.hly = -52 }
-    if (t < -150 * p) return { x, z, pose: runP(), lift: 0, turn: runTurn }
-    const g = smoothS(prog(t, -150 * p, 90 * p))
-    return { x, z, pose: mix(runP(), hug, g), lift: 0, turn: lerp(runTurn, c.face ? 1 : 0, g) }
+  const kneeling = c.move !== 'spin', sh = kneeling ? -58 : -82, hd = kneeling ? -72 : -98, sg = Math.sign(dxr) || -m.sd
+  const live = Math.sin(Math.max(0, t) / 170 + i) * (1 - prog(t, 700, 1500))
+  let pose
+  if (m.role === 'hug') {
+    // the arm round him (across his shoulders), the other fist up to the fans, bent in over him if he's down
+    pose = pz({ hy: kneeling ? 49 : 52, bow: kneeling ? 0.3 : 0.08, lean: sg * (kneeling ? 0.12 : 0.06), hx: dxr * 0.05, lx: -8, rx: 8, lk: 0.3, rk: 0.3, elbow: 0.1, fore: 0.4, face: 1, tilt: 0.35 })
+    const near = dxr + sg * 6, up = -112 + live * 4
+    if (sg > 0) { pose.hrx = near; pose.hry = sh; pose.hlx = -16; pose.hly = up; pose.el = 0.3 } else { pose.hlx = near; pose.hly = sh; pose.hrx = 16; pose.hry = up; pose.er = 0.3 }
+  } else if (m.role === 'pat') {
+    // a hand on his head (a ruffle of it), the other arm out to the crowd
+    pose = pz({ hy: 52, bow: kneeling ? 0.18 : 0.05, lean: sg * 0.05, lx: -8, rx: 8, lk: 0.2, rk: 0.2, elbow: 0.15, fore: 0.3, face: 1, tilt: 0.3 })
+    const near = dxr * 0.9, ruffle = Math.sin(Math.max(0, t) / 90) * 2 * (1 - prog(t, 300, 900))
+    if (sg > 0) { pose.hrx = near + ruffle; pose.hry = hd; pose.hlx = -30; pose.hly = -96; pose.el = 0.1 } else { pose.hlx = near + ruffle; pose.hly = hd; pose.hrx = 30; pose.hry = -96; pose.er = 0.1 }
+  } else {
+    // alongside, both arms out at him: this man, him
+    pose = pz({ hy: 51, bow: 0.05, lean: sg * 0.03, lx: -10, rx: 10, lk: 0.2, rk: 0.2, elbow: 0, fore: 0.1, face: 1, tilt: 0.25 })
+    const ax = sg * 34, ay = -82 + live * 2
+    if (sg > 0) { pose.hrx = ax; pose.hry = ay; pose.fr = 1; pose.hlx = ax * 0.55; pose.hly = ay - 2; pose.fl = 1 } else { pose.hlx = ax; pose.hly = ay; pose.fl = 1; pose.hrx = ax * 0.55; pose.hry = ay - 2; pose.fr = 1 }
   }
-  if (m.role === 'over') {
-    // over the top of him, bent down on to him, both arms round his shoulders; a little hop as he gets there
-    const over = pz({ hy: 50, bow: 0.42, lx: -10, rx: 10, lk: 0.3, rk: 0.3, hx: dxr * 0.1, hlx: dxr * 0.8 - 13, hly: -64, hrx: dxr * 0.8 + 13, hry: -64, elbow: 0.25, fore: 0.5, face: 1, tilt: -0.1 })
-    if (t < -120 * p) return { x, z, pose: runP(), lift: 0, turn: runTurn }
-    const g = smoothS(prog(t, -120 * p, 120 * p))
-    return { x, z, pose: mix(runP(), over, g), lift: Math.sin(prog(t, -120 * p, 200 * p) * Math.PI) * 0.18 + bob, turn: lerp(runTurn, 1, g) }
-  }
-  // the jump: a leap on to the top of the pile, arms round the lot, his legs up behind him
-  // (laid across the top of the pile, his arms down round the two under him, his legs bent up behind)
-  const top = pz({ hy: 50, bow: 0.12, lx: -6, ly: -8, lk: 0.8, rx: 7, ry: -16, rk: 0.9, hlx: -14, hly: -96, hrx: 14, hry: -96, elbow: 0.55, fore: 0.3, face: 1, tilt: 0.4 })
-  if (t < -260 * p) return { x, z, pose: runP(), lift: 0, turn: runTurn }
-  const j = prog(t, -260 * p, 180 * p), g = smoothS(j)
-  const lift = j < 1 ? lerp(0, 0.62, g) + Math.sin(j * Math.PI) * 0.4 : 0.62 + bob
-  return { x, z, pose: { ...mix(mix(runP(), POSE.jump, smoothS(prog(j, 0, 0.35))), top, smoothS(prog(j, 0.3, 1))), rot: -m.sd * 0.95 * g }, lift, turn: runTurn }
+  if (t < -200 * p) return { x, z, pose: runP(), lift: 0, turn: runTurn }
+  const g = smoothS(prog(t, -200 * p, 160 * p))
+  return { x, z, pose: mix(runP(), pose, g), lift: 0, turn: lerp(runTurn, 0, g) }
 }
 // The lens on the slide: once he's off, the camera eases in on where he'll go down (the end of the slide in the middle
 // of the picture, close enough that the slide and the pile on him fill it), and stays there. C: the game's camera.
@@ -1655,6 +1709,27 @@ export function celebLens(C, c, age, view) {
 const rnd = s => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
 export function celebFx(ctx, C, c, age, layer = 'under') {
   if (!c || c.kind !== 'slide') return
+  if (c.move === 'spin') {
+    // the landing: a puff of turf and dust off his studs, out low and wide, falling back
+    const at = c.run + SPIN.land * c.pace
+    if (layer !== 'over' || lightMode() || age < at) return
+    const t = (age - at) / 1000
+    if (t > 0.7) return
+    ctx.save()
+    const fade = 1 - t / 0.7, q0 = P(C, c.end.x, 0.05, c.end.z)
+    if (q0.ok) { ctx.globalAlpha = 0.3 * fade; ctx.fillStyle = '#e8eedf'; ctx.beginPath(); ctx.ellipse(q0.x, q0.y, q0.s * (0.5 + t * 1.2), q0.s * (0.1 + t * 0.15), 0, 0, 6.2832); ctx.fill() }
+    for (let i = 0; i < 22; i++) {
+      const r1 = rnd(c.seed * 13 + i * 7), r2 = rnd(c.seed * 29 + i * 11), ang = r1 * 6.2832, sp = 0.8 + r2 * 1.6, vy = 0.5 + r2 * 1.2, life = (2 * vy) / 9.8
+      if (t > life) continue
+      const X = c.end.x + Math.cos(ang) * (0.25 + sp * t), Z = c.end.z + Math.sin(ang) * (0.25 + sp * t) * 0.6, Y = vy * t - 4.9 * t * t
+      const q = P(C, X, Math.max(0, Y), Z)
+      if (!q.ok) continue
+      ctx.globalAlpha = 0.4 + 0.6 * (1 - t / life); ctx.fillStyle = ['#3f9a55', '#2c7a42', '#6bc47a', '#5a3e25'][i % 4]
+      const sz = Math.max(1, q.s * 0.04); ctx.fillRect(q.x - sz, q.y - sz * 0.3, sz * 2, sz * 0.6)
+    }
+    ctx.restore()
+    return
+  }
   const hit = c.run + 40 * c.pace
   if (age < hit) return
   const at = a => { const d = slideDist(c, a); return [c.from.x + c.ux * d, c.from.z + c.uz * d] }
