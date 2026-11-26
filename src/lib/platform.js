@@ -15,7 +15,22 @@ const appSim = () => {
     return sessionStorage.getItem('bap_appsim') === '1'
   } catch { return false }
 }
-export const APP_ART = IS_APP || appSim()
+// The clean build (App Store IP-safe), set when it's built (scripts/clean-flag.mjs: the app-clean branch on Cloudflare
+// Pages or Codemagic, or VITE_CLEAN=1): the website shows the app's art and words too (jerseys and team tags for
+// photos, logos and crests, lib/appArt.js; no league marks in the copy, lib/appTerms.js; drawn heads on the figures).
+// Off on main and app, where nothing changes. To look at it locally: ?clean=1 on the dev server or a localhost
+// preview (it sticks for the tab; ?clean=0 ends it).
+const BUILT_CLEAN = typeof __CLEAN__ !== 'undefined' && __CLEAN__ === true
+const cleanSim = () => {
+  try {
+    if (!import.meta.env.DEV && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) return false
+    const q = new URLSearchParams(window.location.search).get('clean')
+    if (q != null) sessionStorage.setItem('bap_clean', q === '0' ? '' : '1')
+    return sessionStorage.getItem('bap_clean') === '1'
+  } catch { return false }
+}
+export const CLEAN = BUILT_CLEAN || cleanSim()
+export const APP_ART = IS_APP || appSim() || CLEAN
 
 // The website uses the app's look for its home and profile screens: the app's
 // home menu, profile card, shop, achievements, locker and the More sheet.

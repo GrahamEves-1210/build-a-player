@@ -15,6 +15,8 @@ const NBA_HS = (await load('nba-headshots.json')).default
 const MLB_HS = (await load('mlb-headshots.json')).default
 const SOC_HS = (await load('soccer-headshots.json')).default
 const COACH_HS = (await load('coach-headshots.json')).default
+// soccer's FotMob photos (soccer/fmr-<id>) where ESPN has none: the game's own lookup (lib/soccerFace.js)
+const { soccerFaceKey } = await server.ssrLoadModule('/src/lib/soccerFace.js')
 
 // ── teams: league → short → [color, color2] ──────────────────────────────────────────────────────────────────
 const teams = { nfl: {}, nba: {}, cfb: {}, cbb: {}, mlb: {}, soc: {}, nat: {} }
@@ -56,6 +58,7 @@ const keyOf = (p, lg) => {
   if (lg === 'nba' && NBA_HS[p.name]) return 'nba/' + strip(NBA_HS[p.name])
   if (lg === 'mlb' && p.espn != null && MLB_HS[String(p.espn)]) return strip(MLB_HS[String(p.espn)])
   if (lg === 'soc' && p.espn != null && SOC_HS[String(p.espn)]) return strip(SOC_HS[String(p.espn)])
+  if (lg === 'soc') return soccerFaceKey(p)
   return null
 }
 const players = {}
