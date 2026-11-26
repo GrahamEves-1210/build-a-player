@@ -82,9 +82,9 @@ export const handUp = d => (beaten(d) ? d : { ...d, act: 'jump' })
 // ...and a man square in it as he went up still bothers a layup he slides by in the air (he has to finish around him)
 export const lateContest = (c, cUp, kind = 'jumper') => {
   if (cUp == null) return c
-  const k = kind === 'jumper' ? T.lateShare : T.lateShareL
+  const k = jumpLike(kind) ? T.lateShare : T.lateShareL
   const late = c * (1 - k) + Math.min(c, cUp) * k
-  return kind === 'jumper' ? late : Math.max(late, cUp * T.gatherHoldL)
+  return jumpLike(kind) ? late : Math.max(late, cUp * T.gatherHoldL)
 }
 
 // How much the defense is in the shot, 0..1, and whose hand it is. Players: { id, x, y, vx, vy, act, R }
@@ -92,9 +92,11 @@ export const lateContest = (c, cUp, kind = 'jumper') => {
 // who beat him), how he's standing (in the air, set, on his heels, frozen), and who he is: his defense (Perimeter D
 // on jumpers, Interior D in the paint and at the rim), his IQ (a smart man is in the right spot with the right hand),
 // his Bounce in the air and his Size against the shooter's
+// (a jumper and a fadeaway are shot from out on the floor; a hook is a shot at the rim, in the paint, over his man)
+export const jumpLike = kind => kind === 'jumper' || kind === 'fade'
 export function contestOf(shooter, defenders, kind) {
   const sd = rimDist(shooter)
-  const jumper = kind === 'jumper'
+  const jumper = jumpLike(kind)
   const paint = !jumper || inPaint(shooter.x, shooter.y)
   const near = jumper ? T.contestNear : T.contestNearL, range = jumper ? T.contestRange : T.contestRangeL
   let best = 0, second = 0, by = null
@@ -114,7 +116,7 @@ export function contestOf(shooter, defenders, kind) {
     const set = !jumper && front === 1 && Math.hypot(d.vx || 0, d.vy || 0) < 3
     const stance = beaten(d) ? T.contestBeat : d.act === 'jump' ? T.contestJump + T.contestJumpBnc * d.R.bnc : set ? T.contestSet : T.contestStand
     const rate = T.contestRate + T.contestRateDef * (paint ? d.R.int : d.R.per) + T.contestRateIq * d.R.iq
-    const size = 1 + T.contestSize * (d.R.size - shooter.R.size)
+    const size = kind === 'hook' ? Math.max(0.4, 1 + T.contestSizeH * ((d.R.sizeRaw ?? d.R.size) - (shooter.R.sizeRaw ?? shooter.R.size))) : 1 + T.contestSize * (d.R.size - shooter.R.size)
     const c = clamp(prox * stance * front * rate * size, 0, 1)
     if (c > best) { second = best; best = c; by = d.id } else if (c > second) second = c
   }
@@ -130,7 +132,17 @@ export function contestOf(shooter, defenders, kind) {
 export function makeChance(s) {
   const R = s.R
   let base, pen
-  if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin - T.dunkLow * (1 - dunkLift(R)); pen = T.contestMaxD * s.c * (1 - T.dunkThrough * R.bnc) }
+  if (s.kind === 'hook') {
+    // the hook: his touch at the rim (Finishing), his size over the top, the read; farther out than 6 ft it's harder
+    base = T.hookBase + T.hookFin * R.fin + T.hookSize * R.size + T.hookIq * R.iq - T.hookFar * Math.max(0, s.d - 6)
+    pen = T.contestMaxH * s.c * (1 - T.hookThrough * (R.sizeRaw ?? R.size))
+  } else if (s.kind === 'fade') {
+    // the fadeaway: the jumper from there, off balance (a big's over everyone), and the hand counts less
+    const close = T.closeBase + T.closeJs * R.js, arc = T.arcBase + T.arcJs * R.js
+    const t = clamp((s.d - 8) / (T.arcRef - 8), 0, 1)
+    base = (close + (arc - close) * Math.pow(t, T.curve)) * (T.fadeK + T.fadeSize * (R.sizeRaw ?? R.size))
+    pen = T.contestMaxJ * s.c * T.fadeSpace * (1 - T.jsThrough * (R.jsRaw ?? R.js))
+  } else if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin - T.dunkLow * (1 - dunkLift(R)); pen = T.contestMaxD * s.c * (1 - T.dunkThrough * R.bnc) }
   else if (s.kind === 'layup') {
     base = T.layBase + T.layFin * R.fin - T.layFar * Math.max(0, s.d - 3)
     // open, at the rim: the easiest shot there is (T.openLay)
@@ -148,7 +160,7 @@ export function makeChance(s) {
     pen = T.contestMaxJ * s.c * (1 - T.jsThrough * (R.jsRaw ?? R.js))     // a great shooter shoots over a hand (on the plain grade)
   }
   // a pass that hits him in stride at the rim: the defense is a beat late to it (the passer's Passing)
-  if (s.cs != null && s.kind !== 'jumper') pen *= 1 - T.csLay * s.cs
+  if (s.cs != null && !jumpLike(s.kind) && s.kind !== 'hook') pen *= 1 - T.csLay * s.cs
   let p = base * (1 - pen)
   if (s.rushed) p *= 1 - T.rushPen * (1 - R.iq)
   if (s.sta != null) p *= 1 - T.staShot * (1 - s.sta)
@@ -176,7 +188,7 @@ export function judgeShot(shooter, defenders, shot, rolls) {
     const phase = d.after ? 0.5 : d.actT / T.jumpTime
     const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : T.blockLate + (1 - T.blockLate) * T.blockCloseTime * close
     // a short jumper is nearer a layup to get to than a three is
-    const kind = shot.kind === 'jumper' ? T.blockJumper + (1 - T.blockJumper) * T.blockShort * clamp((14 - (shot.d ?? 20)) / 8, 0, 1) : shot.kind === 'dunk' ? T.blockDunk : 1
+    const kind = jumpLike(shot.kind) ? T.blockJumper + (1 - T.blockJumper) * T.blockShort * clamp((14 - (shot.d ?? 20)) / 8, 0, 1) : shot.kind === 'dunk' ? T.blockDunk : shot.kind === 'hook' ? T.blockHook : 1
     // (on the plain grades: a real rim protector, long and up there, against a smaller man gets plenty; a small guard
     // almost never gets a big)
     const ri = d.R.intRaw ?? d.R.int, rs = (d.R.sizeRaw ?? d.R.size) - (shooter.R.sizeRaw ?? shooter.R.size), rb = d.R.bncRaw ?? d.R.bnc
@@ -213,10 +225,16 @@ export function judgeSteal(def, handler, roll) {
   return { ok, reach: !ok && behind }
 }
 
-// Which dribble move a flick is, NBA 2K's pro stick: by the angle between it and the way to the basket from where he
-// stands (the basket is "forward" wherever he is on the floor, so the same flick is the same move every time), and by
-// which hand the ball is in (p.hand: 1 his right, -1 his left; "toward the off hand" is the side it isn't on).
-// dir: the flick (unit). Returns { kind, x, y (the way the burst takes him, unit), swap (the ball changes hands) }
+// Which dribble move a flick is: by the angle between it and the way to the basket from where he stands (the basket is
+// "forward" wherever he is on the floor, so the same flick is the same move every time), the hand the ball is in
+// (p.hand: 1 his right, -1 his left; "toward the off hand" is the side it isn't on) and how he's going (p.vx, p.vy):
+//   at the basket                         the hesitation
+//   straight back                         the step-back
+//   to the ball hand's side               the in-and-out
+//   to the other side, standing or across the crossover; going forward at an easy pace between the legs; at speed
+//                                         behind the back
+// A spin is never a flick (the stick rolled round: moveSpinStart). dir: the flick (unit).
+// Returns { kind, x, y (the way the burst takes him, unit), swap (the ball changes hands) }
 export function moveOf(p, dir) {
   const d = rimDist(p)
   const fx = d > 0.5 ? (RIM.x - p.x) / d : 0, fy = d > 0.5 ? (RIM.y - p.y) / d : -1
@@ -227,11 +245,14 @@ export function moveOf(p, dir) {
   const go = (kind, f, l, side = s) => { const x = fx * f + rx * side * l, y = fy * f + ry * side * l, n = Math.hypot(x, y) || 1; return { kind, x: x / n, y: y / n, swap: !!MOVES[kind].swap } }
   // (the hesitation goes at the basket by his man's hip on the ball's side, not into his chest)
   if (a <= T.hesiTo) return go('hesi', 0.88, 0.47, hand)
-  if (a > T.btbTo) return go('back', -1, 0)
-  // (back and toward the ball hand: the spin, rolled off his man and out to that side)
-  if (a > T.btlTo) return off ? go('btb', -0.45, 1) : go('spin', 0.35, 0.94)
+  if (a >= T.backFrom) return go('back', -1, 0)
   if (!off) return go('inout', 0.6, 0.8)
-  return a <= T.crossTo ? go('cross', 0.55, 1) : go('btl', 0.2, 1)
+  // how he's going: of his top speed with the ball, and how much of it is forward
+  const top = p.R?.topBall || 9, sp = Math.hypot(p.vx || 0, p.vy || 0), v = sp / top
+  const vf = sp > 0.3 ? ((p.vx || 0) * fx + (p.vy || 0) * fy) / sp : 0
+  if (v >= T.btbSpeed) return go('btb', 0.4, 1)
+  if (v >= T.btlSpeed && vf >= T.btlFwd) return go('btl', 0.3, 1)
+  return go('cross', 0.55, 1)
 }
 export const moveKind = (p, dir) => moveOf(p, dir).kind
 // The flick that takes him most nearly the way he wants to go (the CPU's thumb: it thinks in where, a person's stick in
@@ -244,6 +265,16 @@ export function flickFor(p, want) {
 }
 // a second flick early in a move: far enough round from the first (and not straight back at it) to be a spin
 export const spinTurn = (p, dir) => { const a = Math.acos(clamp(dir.x * (p.fkx ?? p.bdx) + dir.y * (p.fky ?? p.bdy), -1, 1)) * 180 / Math.PI; return a >= T.spinTurn && a <= T.spinMax }
+
+// The post: a drop step or a spin off his man (dir: the way the burst goes). Got by him (his man sealed off a beat:
+// freeze) or read (cut off). handler/def: { R, ... }
+export function judgePost(handler, def, roll) {
+  if (!def || beaten(def)) return { by: true, p: 1 }
+  const h = handler.R, d = def.R
+  const p = clamp(T.dropBase + T.dropSize * ((h.sizeRaw ?? h.size) - (d.sizeRaw ?? d.size)) + T.dropIq * (h.iq - 0.5) - T.dropInt * ((d.intRaw ?? d.int) - 0.5)
+    + T.dropSpd * ((h.spdRaw ?? h.spd) - (d.spdRaw ?? d.spd)), 0.08, 0.8) * (T.staFloor + (1 - T.staFloor) * (handler.sta ?? 1))
+  return { by: roll < p, p }
+}
 
 // A dribble move against his man: frozen, or sat down. dir: the way the burst goes (unit)
 export function judgeMove(handler, def, dir, roll1, roll2) {

@@ -7,7 +7,8 @@
 //     hello  { vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
 //                                                              take a seat (or take it back). The first one in sets the
 //                                                              mode; humans (dev): start before every seat has a person
-//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m, st, jp], d: [[x, y], ...], rel: { sn, q } | null }
+//     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m, st, jp], d: [[x, y, sp?], ...], rel: { sn, q } | null }
+//            (sp on a flick: the stick rolled round that way, the spin; q -1: SHOOT tapped, a pump fake)
 //            k: his own count of messages (old ones are dropped). mx/my: the stick. x..vy: where his device has him.
 //            h: the buttons held now (bits: 1 SHOOT, 2 PASS). n: how many times each button has been pressed, ever,
 //            (m) how many dribble moves his right stick has flicked, ever, and how many times it has been flicked down
@@ -36,7 +37,7 @@ export const AWAY_MS = 1500                       // a player not heard from for
 const r2 = v => Math.round(v * 100) / 100
 export const MOVE_KEEP = 3                        // a message carries his last 3 flicks (a move and the turn that made it a spin)
 const PF = ['x', 'y', 'vx', 'vy', 'fx', 'fy', 'bdx', 'bdy', 'bs', 'bk', 'sta']
-const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn', 'hand', 'frzCd', 'chn', 'boost', 'man', 'out']
+const PI = ['actT', 'actN', 'burst', 'moveCd', 'stealCd', 'noAct', 'catchT', 'catchFrom', 'mv', 'bn', 'hand', 'frzCd', 'chn', 'boost', 'man', 'out', 'post', 'pick', 'bit']
 export const SNAP_ACT = PF.length + PI.length     // where a snapshot's row for a player keeps what he's doing (act)
 
 // ── the referee's side ──────────────────────────────────────────────────────────────────────────────
@@ -62,11 +63,13 @@ export function seatMsg(seat, m, now) {
       const no = seat.n[2] - (list.length - 1 - j), v = list[j]
       if (no <= was || !Array.isArray(v)) continue
       const x = num(v[0], -1, 1), y = num(v[1], -1, 1), l = Math.hypot(x, y)
-      if (l > 0.01) seat.d.push({ no, x: x / l, y: y / l })
+      // (a third number: the stick rolled round that way, the spin)
+      if (l > 0.01) seat.d.push({ no, x: x / l, y: y / l, sp: Math.sign(+v[2] || 0) })
     }
     if (seat.d.length > MOVE_KEEP) seat.d.splice(0, seat.d.length - MOVE_KEEP)
   }
-  if (m.rel && Number.isInteger(m.rel.sn) && m.rel.sn > seat.relDone) seat.rel = { sn: m.rel.sn, q: num(m.rel.q, 0, 1) }
+  // (q -1: SHOOT tapped, a pump fake)
+  if (m.rel && Number.isInteger(m.rel.sn) && m.rel.sn > seat.relDone) seat.rel = { sn: m.rel.sn, q: +m.rel.q === -1 ? -1 : num(m.rel.q, 0, 1) }
   return true
 }
 // The input for this tick. Every press makes its own edge (a press that came in while the button already showed as
@@ -92,7 +95,7 @@ export function seatInput(seat, s, i) {
   seat.last = bits
   out.shoot = !!(bits & 1); out.pass = !!(bits & 2); out.steal = !!(bits & 8); out.jump = !!(bits & 16)
   // a dribble move: his next flick, one a tick (a move, then the turn that makes it a spin, go on two ticks)
-  if (seat.d.length) { const f = seat.d.shift(); out.dx = f.x; out.dy = f.y; seat.used[2] = f.no } else seat.used[2] = seat.n[2]
+  if (seat.d.length) { const f = seat.d.shift(); out.dx = f.x; out.dy = f.y; out.sp = f.sp || 0; seat.used[2] = f.no } else seat.used[2] = seat.n[2]
   // his shot: the one that started with his latest A press goes with the quality his device timed
   if (p.act === 'gather') {
     if (seat.gatherSn == null) seat.gatherSn = seat.used[0]

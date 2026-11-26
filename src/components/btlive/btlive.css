@@ -172,11 +172,15 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 /* SHOOT on defense is BLOCK (and REBOUND with the ball up): the same big button in the defense's colours */
 .btlv .btlv-btn-a.is-def { background: var(--text); border-color: rgba(0, 0, 0, .35); color: var(--ink); }
 /* the dribble moves on the move stick: with the ball the right side is just SHOOT, bigger, and PASS beside it */
-.btlv.btlv-game[data-stick='one'][data-mode='ball'] .btlv-btn-a { width: 116px; height: 116px; right: 20px; }
-.btlv.btlv-game[data-stick='one'][data-mode='ball'] .btlv-btn-a b { font-size: 26px; }
-.btlv.btlv-game[data-stick='one'][data-mode='ball']:not(.is-team) .btlv-btn-a { margin-top: -58px; }
-.btlv.btlv-game[data-stick='one'][data-mode='ball'].is-team .btlv-btn-a { bottom: 18px; }
-.btlv.btlv-game[data-stick='one'][data-mode='ball'] .btlv-btn-b { right: 150px; top: auto; bottom: 58px; width: 78px; height: 78px; font-size: 19px; }
+/* the phone (one stick): exactly two buttons, the same size and the same place every possession (the owner, 11-26).
+   SHOOT / BLOCK / REBOUND in the orange; PASS / CALL FOR IT / STEAL in steel blue */
+.btlv.btlv-game[data-stick='one'] .btlv-btn-a, .btlv.btlv-game[data-stick='one'] .btlv-btn-b { width: 96px; height: 96px; margin: 0; top: auto; }
+.btlv.btlv-game[data-stick='one'] .btlv-btn-a { right: 16px; bottom: 26px; }
+.btlv.btlv-game[data-stick='one'] .btlv-btn-a b { font-size: 23px; }
+.btlv.btlv-game[data-stick='one'] .btlv-btn-b { right: 124px; bottom: 76px; font-size: 21px; font-family: var(--num); letter-spacing: 1px; background: #3d6f9e; border-color: rgba(0, 0, 0, .35); color: #f3f6f8; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), inset 0 -3px 0 rgba(0, 0, 0, .22), 0 2px 0 rgba(0, 0, 0, .6); }
+.btlv.btlv-game[data-stick='one'] .btlv-btn-b.is-two { font-size: 16px; }
+.btlv.btlv-game[data-stick='one'] .btlv-btn-b.is-cd { opacity: .5; }
+.btlv.btlv-game[data-stick='one'] .btlv-btn.is-down { background: var(--text); color: var(--ink); }
 /* a very narrow phone: the pad and SHOOT a touch smaller */
 @media (max-width: 360px) { .btlv-ds { right: 98px; width: 128px; height: 128px; margin-top: -64px; } .btlv .btlv-btn-a { width: 80px; height: 80px; } .btlv-game:not(.is-team) .btlv-btn-a { margin-top: -40px; } }
 
@@ -253,8 +257,8 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
   .btlv-ds { right: calc(var(--sar) + max(6px, (100vw - var(--sal) - var(--sar) - var(--cwl)) / 4 - 69px)); top: auto; bottom: 110px; margin: 0; }
   .btlv .btlv-btn-a, .btlv-game:not(.is-team) .btlv-btn-a { right: calc(var(--sar) + 12px); top: auto; bottom: 14px; margin: 0; width: 84px; height: 84px; }
   .btlv .btlv-btn-b { right: calc(var(--sar) + 104px); top: auto; bottom: 22px; width: 56px; height: 56px; }
-  .btlv.btlv-game[data-stick='one'][data-mode='ball'] .btlv-btn-a { right: calc(var(--sar) + 16px); bottom: 22px; margin: 0; width: 108px; height: 108px; }
-  .btlv.btlv-game[data-stick='one'][data-mode='ball'] .btlv-btn-b { right: calc(var(--sar) + 34px); bottom: 146px; width: 72px; height: 72px; }
+  .btlv.btlv-game[data-stick='one'] .btlv-btn-a { right: calc(var(--sar) + 16px); bottom: 20px; margin: 0; width: 88px; height: 88px; }
+  .btlv.btlv-game[data-stick='one'] .btlv-btn-b { right: calc(var(--sar) + 116px); bottom: 60px; width: 88px; height: 88px; }
 }
 
 /* ── QUIT's question and the final ─────────────────────────────────────────────────────────────── */

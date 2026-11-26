@@ -30,7 +30,7 @@ export function playGame(teams, bots, seed) {
   const s = createGame({ teams: [side(teams[0], 'a'), side(teams[1], 'b')], seed })
   const inp = []
   const t = { poss: [0, 0], scored: [0, 0], pts: [0, 0], stl: [0, 0], blk: [0, 0], tov: [0, 0], oreb: [0, 0], dreb: [0, 0], ank: 0, fz: 0, poster: 0, deep: 0, chase: 0,
-    shots: { jumper2: [[0, 0], [0, 0]], jumper1: [[0, 0], [0, 0]], layup: [[0, 0], [0, 0]], dunk: [[0, 0], [0, 0]] }, green: [0, 0], rel: [0, 0], cSum: [0, 0], why: {} }
+    shots: { jumper2: [[0, 0], [0, 0]], jumper1: [[0, 0], [0, 0]], layup: [[0, 0], [0, 0]], dunk: [[0, 0], [0, 0]], post: [[0, 0], [0, 0]] }, green: [0, 0], rel: [0, 0], cSum: [0, 0], why: {} }
   const cap = 30 * 60 * HZ
   while (s.phase !== 'over' && s.tick < cap) {
     for (let i = 0; i < s.players.length; i++) inp[i] = bots[i](s, i)
@@ -38,8 +38,8 @@ export function playGame(teams, bots, seed) {
     for (const e of s.events) {
       const tm = e.pid != null ? s.players[e.pid].team : e.team
       if (e.e === 'poss') { if (e.why !== 'oob-keep') { t.poss[e.team]++; if (e.pts) t.scored[e.team]++ } t.why[e.why] = (t.why[e.why] || 0) + 1 }
-      else if (e.e === 'release') { const k = e.kind === 'jumper' ? (e.three ? 'jumper2' : 'jumper1') : e.kind; t.shots[k][tm][0]++; t.rel[tm]++; if (e.q >= 1) t.green[tm]++; t.cSum[tm] += e.c }
-      else if (e.e === 'make') { const k = e.kind === 'jumper' ? (e.three ? 'jumper2' : 'jumper1') : e.kind; t.shots[k][tm][1]++; t.pts[tm] += e.pts; if (e.poster) t.poster++; if (e.deep) t.deep++ }
+      else if (e.e === 'release') { const k = e.kind === 'jumper' ? (e.three ? 'jumper2' : 'jumper1') : e.kind === 'hook' || e.kind === 'fade' ? 'post' : e.kind; t.shots[k][tm][0]++; t.rel[tm]++; if (e.q >= 1) t.green[tm]++; t.cSum[tm] += e.c }
+      else if (e.e === 'make') { const k = e.kind === 'jumper' ? (e.three ? 'jumper2' : 'jumper1') : e.kind === 'hook' || e.kind === 'fade' ? 'post' : e.kind; t.shots[k][tm][1]++; t.pts[tm] += e.pts; if (e.poster) t.poster++; if (e.deep) t.deep++ }
       else if (e.e === 'steal' || e.e === 'pick') t.stl[tm]++
       else if (e.e === 'block') { t.blk[tm]++; if (e.chase) t.chase++ }
       else if (e.e === 'oob' || e.e === 'clock') t.tov[tm]++
@@ -55,7 +55,7 @@ const cpu = level => (s, i) => cpuInput(s, i, level)
 // n games between two sides, the ball tipping to each side half the time (the seed decides)
 export function series(a, b, botsA, botsB, n, tag) {
   const sum = { n: 0, winA: 0, poss: [0, 0], scored: [0, 0], pts: [0, 0], stl: 0, blk: 0, tov: 0, oreb: 0, dreb: 0, secs: 0, ank: 0, fz: 0, poster: 0, deep: 0, chase: 0, stuck: 0,
-    shots: { jumper2: [[0, 0], [0, 0]], jumper1: [[0, 0], [0, 0]], layup: [[0, 0], [0, 0]], dunk: [[0, 0], [0, 0]] }, green: [0, 0], rel: [0, 0], c: [0, 0], close: 0, why: {} }
+    shots: { jumper2: [[0, 0], [0, 0]], jumper1: [[0, 0], [0, 0]], layup: [[0, 0], [0, 0]], dunk: [[0, 0], [0, 0]], post: [[0, 0], [0, 0]] }, green: [0, 0], rel: [0, 0], c: [0, 0], close: 0, why: {} }
   const bots = [...a.map((_, i) => (typeof botsA === 'function' ? botsA : botsA[i])), ...b.map((_, i) => (typeof botsB === 'function' ? botsB : botsB[i]))]
   for (let g = 0; g < n; g++) {
     const r = playGame([a, b], bots, `${tag}-${g}`)
@@ -73,7 +73,7 @@ export function series(a, b, botsA, botsB, n, tag) {
 
 const pct = (a, b) => (b ? (100 * a / b).toFixed(0) + '%' : '-')
 const f1 = x => x.toFixed(1)
-const shotLine = (S, t) => ['jumper2', 'jumper1', 'layup', 'dunk'].map(k => `${k === 'jumper2' ? '3s' : k === 'jumper1' ? 'mid' : k} ${f1(S.shots[k][t][0] / S.n)}/g ${pct(S.shots[k][t][1], S.shots[k][t][0])}`).join('  ')
+const shotLine = (S, t) => ['jumper2', 'jumper1', 'layup', 'dunk', 'post'].map(k => `${k === 'jumper2' ? '3s' : k === 'jumper1' ? 'mid' : k === 'post' ? 'hook/fade' : k} ${f1(S.shots[k][t][0] / S.n)}/g ${pct(S.shots[k][t][1], S.shots[k][t][0])}`).join('  ')
 const possPct = (S, t) => pct(S.scored[t], S.poss[t])
 const both = S => pct(S.scored[0] + S.scored[1], S.poss[0] + S.poss[1])
 const verdict = (v, lo, hi) => (v >= lo && v <= hi ? 'ok' : v < lo ? 'LOW' : 'HIGH')
