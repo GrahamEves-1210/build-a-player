@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { XpIco } from './GainIcons'
-import { AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BUDGET, RESET_SECS, DRAW_STEP_MS, openSlots, maxBid, minNext, canBidOn, lotEnd, spinOf, callOf } from '../../lib/auction'
+import { POS_INFO, posInfo, AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BUDGET, RESET_SECS, DRAW_STEP_MS, openSlots, maxBid, minNext, canBidOn, lotEnd, spinOf, callOf } from '../../lib/auction'
 import { COMPETE_REWARDS } from '../../lib/progress'
 import { valToGrade } from '../../utils/simulation'
 import { seededShuffle } from '../../lib/rng'
@@ -25,7 +25,7 @@ const Pic = ({ p, me, size = 34 }) => <AvatarBadge name={p.name} cos={p.cos} sel
 const Name = ({ p, me }) => <NameTag name={p.name} cos={p.cos} self={p.vid === me} />
 
 // a slot's name, short enough for the build strip (PACE & SIZE → PACE/SIZE, SIZE & ATHLETICISM → SIZE)
-const shortLabel = l => { const s = String(l).replace(' & ', '/'); return s.length > 10 ? String(l).split(/ & | /)[0] : s }
+const shortLabel = l => String(l)   // (every slot by its full name, owner 11-26: no ELUSIVE, no PACE/SIZE)
 const lastName = n => { const w = String(n || '').split(' '); return w.length > 1 ? w.slice(1).join(' ') : w[0] }
 
 // The lot: a real player card, the way Salary Cap draws one (his team's colour, the logo faded behind him, the ESPN
@@ -78,6 +78,39 @@ function Deck({ kit, lot, seed }) {
   )
 }
 const CardBack = () => <div className="au-card-back"><span>BAP</span></div>
+
+// The room's position, drawn from its seed (lib/auctionCore auctionPosFor): before the first card the sport's
+// positions run past and land on it, big, with its name under it. About 1.5s; Reduce Motion lands at once, and so
+// does a phone that comes in after it's landed. One position (soccer): it just shows
+const STEPS = [60, 60, 65, 70, 80, 95, 115, 140, 175, 220]
+const reduced = () => { try { return document.documentElement.classList.contains('bap-reduce-motion') || window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } }
+function PosReveal({ sport, pos, since }) {
+  const list = POS_INFO[sport] ?? []
+  const target = Math.max(0, list.findIndex(o => o.pos === pos))
+  const instant = list.length < 2 || since > 1200 || reduced()
+  const start = ((target - STEPS.length) % list.length + list.length) % list.length || 0
+  const [i, setI] = useState(instant ? target : start)
+  const [landed, setLanded] = useState(instant)
+  useEffect(() => {
+    if (instant) return
+    let k = 0, cur = start, t
+    const step = () => {
+      if (k >= STEPS.length) { setLanded(true); sfx('flip'); haptic('medium'); return }
+      t = setTimeout(() => { cur = (cur + 1) % list.length; setI(cur); sfx('tick'); k++; step() }, STEPS[k])
+    }
+    step()
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const o = list[i] ?? posInfo(sport, pos)
+  return (
+    <div className={`au-reveal${landed ? ' is-landed' : ''}`} aria-live="polite" aria-label={landed ? `Position: ${o?.name}` : 'Drawing the position'}>
+      <span className="au-lbl">{landed ? 'POSITION' : 'DRAWING THE POSITION'}</span>
+      <b className="au-reveal-tag" key={landed ? 'landed' : i}>{o?.tag}</b>
+      <small className="au-reveal-name">{landed && o?.name.toUpperCase() !== o?.tag ? o?.name : '\u00a0'}</small>
+      {list.length > 1 && <span className="au-reveal-row" aria-hidden="true">{list.map((x, j) => <i key={x.pos} className={j === i ? 'is-on' : ''}>{x.tag}</i>)}</span>}
+    </div>
+  )
+}
 
 // The gavel (public/fx: the hammer and its block, cut from one picture so they line up):
 // it winds back, comes down on the block, bounces, and lifts away again
@@ -142,7 +175,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           <span className="ag-eyebrow">FINDING AN AUCTION · {posName}</span>
           <b className="cp-count">{n}<i>/{AUCTION_SIZE}</i></b>
           <span className="cp-sub">{n >= AUCTION_SIZE ? 'Starting…' : n < AUCTION_MIN ? 'Waiting for another bidder. Auctions are real players only.' : `Starts in ${Math.max(0, AUCTION_FILL_SECS - au.waited)}s with ${n}, or as soon as a third is in.`}</span>
-          <LinkPill link={au.link} onRetry={au.retry} room={`${{ bucket: 'BASKETBALL', soccer: 'SOCCER' }[kit.sport] ?? 'FOOTBALL'} ${posName} AUCTION`} />
+          <LinkPill link={au.link} onRetry={au.retry} room={`${{ bucket: 'BASKETBALL', soccer: 'SOCCER' }[kit.sport] ?? 'FOOTBALL'} AUCTION`} />
           <span className="cp-sub cp-sub--room">Friends find you by picking the same sport and position.</span>
         </div>
         <div className="cp-seats au-seats">
@@ -356,7 +389,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
 
   let act
   const note = (txt, cls = '') => <div className={`au-act au-act--note${cls}`}><span>{txt}</span></div>
-  if (!lot || st.stage === 'wait') act = note('Shuffling the deck')
+  if (!lot || st.stage === 'wait') act = note(`Everyone has $${BUDGET} · ${m.types.length} slots to fill`)
   else if (sold) act = note(myDone ? 'Build done' : st.sold ? 'Next card coming up' : 'Back in the deck · next card coming up')
   else if (!mayBid) act = note(L.won[mine]?.[lot.trait] ? `${kit.attrLabel(lot.trait)} filled · watching this one` : 'Out of money for this one')
   else if (spinning) act = note(lot.known ? 'Back up, grade showing · bidding opens' : 'Bidding opens when the card turns')
@@ -407,7 +440,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
               </div>
             </div>
           ) : (
-            <div className="au-lot au-lot--wait"><span className="au-lbl">GET READY</span><span className="au-wait-line">Everyone has ${BUDGET} and {m.types.length} slots. New cards come up face down; the grade turns over at the gavel.</span></div>
+            <PosReveal sport={kit.sport} pos={m.pos} since={au.now - st.t0} />
           )}
           {(st.stage === 'lot' || sold) && (
             <div className="au-board">
@@ -436,7 +469,8 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
 
       <div className="au-side">
         {room}
-        {mySlots}
+        {/* (not while the position's being drawn: its five slots would give it away) */}
+        {lot || st.n > 0 ? mySlots : null}
         {back.length > 0 && (
           <div className="au-back" aria-label="Back in the deck">
             <span className="au-lbl">BACK IN THE DECK</span>

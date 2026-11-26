@@ -13,7 +13,7 @@
 
 import {
   AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BID_SECS, RESET_SECS, SOLD_MS, DRAW_MS, DRAW_STEP_MS, GRACE_MS,
-  AUCTION_POS, auctionCoreKit, freshLedger, canTop, minNext, maxBid, auctionOver, pickLot, takeLot, returnLot,
+  AUCTION_POS, AUCTION_ANY, auctionPosFor, auctionCoreKit, freshLedger, canTop, minNext, maxBid, auctionOver, pickLot, takeLot, returnLot,
   finishedEarly, drawFor, applyDraw, rankAuction, lotEnd, spinOf,
 } from '../../src/lib/auctionCore.js'
 import '../../src/lib/soccerAuction.js'   // soccer's kit (the striker): added to the rules above
@@ -24,7 +24,8 @@ import { bookRatings } from './rating.js'
 const WAIT_MS = 2400            // the room opens, then the first card is pulled
 const EMPTY_MS = 90000          // everyone gone this long: the auction is called off
 
-export const validSportPos = (sport, pos) => !!AUCTION_POS[sport]?.includes(pos)
+// one queue a sport ('any': the room draws the position from its seed), or a position's own queue (a phone from before)
+export const validSportPos = (sport, pos) => !!AUCTION_POS[sport] && (pos === AUCTION_ANY || AUCTION_POS[sport].includes(pos))
 
 // ── The queue ─────────────────────────────────────────────────────────────────
 export class AuctionQueue extends BaseQueue {
@@ -50,8 +51,11 @@ export class AuctionRoom {
       if (!validSportPos(b.sport, b.pos)) return new Response('bad', { status: 400 })
       const players = (Array.isArray(b.players) ? b.players : []).slice(0, AUCTION_SIZE)
       if (players.length < AUCTION_MIN) return new Response('bad', { status: 400 })
-      this.kit = auctionCoreKit(b.sport, b.pos)
-      this.m = { code: b.code, seed: `au-${b.code}`, created: Date.now(), sport: this.kit.sport, pos: this.kit.pos, types: this.kit.types, bidSecs: BID_SECS, reset: RESET_SECS, players }
+      const seed = `au-${b.code}`
+      // the sport's queue: the position is drawn from the room's seed, the same for every seat (lib/auctionCore posOk)
+      const anyPos = b.pos === AUCTION_ANY
+      this.kit = auctionCoreKit(b.sport, anyPos ? auctionPosFor(b.sport, seed) : b.pos)
+      this.m = { code: b.code, seed, created: Date.now(), sport: this.kit.sport, pos: this.kit.pos, ...(anyPos ? { anyPos: true } : {}), types: this.kit.types, bidSecs: BID_SECS, reset: RESET_SECS, players }
       this.keys = b.keys || {}
       this.st = { n: 0, stage: 'wait', lot: null, t0: Date.now(), last: 0, high: null, passed: [], sold: null, soldAt: 0, draw: null, L: freshLedger(players) }
       this.at(WAIT_MS, () => this.nextLot())
