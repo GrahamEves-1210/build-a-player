@@ -110,6 +110,11 @@ html:is(.is-app, .app-look) .ag-screen.btl-hub { padding-top: 0; }
 .btl-mode-n { display: inline-flex; align-items: center; gap: 7px; font-family: var(--bt-cap); font-size: 13px; letter-spacing: 1.6px; line-height: 1; color: var(--bt-muted); white-space: nowrap; }
 .btl-mode-n .btl-dot { width: 6px; height: 6px; }
 @media (hover: hover) { .btl-mode:not(.is-on):hover { color: var(--bt-muted); } }
+/* King of the Hill: the name is too long for the tag column, so it runs the width of the row with its line under it */
+.btl-mode--wide { grid-template-columns: minmax(0, 1fr); gap: 7px; padding-top: 12px; padding-bottom: 12px; }
+.btl-mode--wide .btl-mode-tag { font-size: 34px; white-space: nowrap; }
+.btl-mode--wide .btl-mode-line { font-size: 15px; letter-spacing: 1.6px; }
+.btl-mode--wide .btl-mode-txt { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 7px; }
 
 .btl-acts { display: flex; flex-direction: column; gap: 8px; }
 .btl-opts { display: flex; flex-direction: column; gap: 8px; }
@@ -449,6 +454,9 @@ html:is(.is-app, .app-look) .bt-av.is-bot.bt-av--t1 { --tc: var(--bt-t1); }
   .btl-mode-tag { font-size: 52px; }
   .btl-mode-line { font-size: 20px; }
   .btl-mode-n { font-size: 14px; }
+  .btl-mode--wide { grid-template-columns: minmax(0, 1fr); }
+  .btl-mode--wide .btl-mode-tag { font-size: 44px; }
+  .btl-mode--wide .btl-mode-line { font-size: 17px; }
   .btl-courts-row { margin: 0; padding: 3px 3px 4px; flex-wrap: wrap; overflow: visible; }
   .btl-court { flex: 0 0 calc((100% - 20px) / 3); }
   .btl-lobby :is(.btl-top, .btl-body) { max-width: 860px; }

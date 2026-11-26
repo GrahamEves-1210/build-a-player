@@ -22,13 +22,15 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         <OnlineTierLadder />
         {!p.signedIn && <p className="ol-note">Playing as a guest — <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>sign in</button> and your record follows your account.</p>}
         {o.played === 0 && (
-          <div className="ag-pop"><EmptyState kind="duo" mid="vs" title="No online games yet">Every online game is against real players: the Trait Auction, Blacktop 1v1, 2v2 and 3v3.</EmptyState></div>
+          <div className="ag-pop"><EmptyState kind="duo" mid="vs" title="No online games yet">Every online game is against real players: the Trait Auction, Blacktop 1v1, 2v2 and King of the Hill.</EmptyState></div>
         )}
         <NextGoals limit={3} />
         <ModeStats mode="compete" full />
-        <ModeStats mode="bt2" full />
-        <ModeStats mode="bt" full />
         <ModeStats mode="bt1" full />
+        <ModeStats mode="bt2" full />
+        <ModeStats mode="btk" full />
+        {/* 3v3 is gone (11-26): its record shows only for someone who has games on it */}
+        {(p.stats?.btGames ?? 0) > 0 && <ModeStats mode="bt" full />}
         <ModeStats mode="h2hB" full />
         {/* football 1v1 has no way in from the new Home: its record shows only for someone who has games on it */}
         {(p.stats?.h2hN?.played ?? 0) > 0 && <ModeStats mode="h2hN" full />}
@@ -36,7 +38,8 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
           <span className="ag-eyebrow">WHAT MOVES YOUR RATING</span>
           <ul>
             <li><b>Trait Auction</b> · 3 bidders: 1st +18 · 2nd +9 · 3rd +3 · 2 bidders: 1st +15 · 2nd +8</li>
-            <li><b>Blacktop 2v2 / 3v3</b> · win +20 · loss −12 · MVP +5</li>
+            <li><b>Blacktop 2v2</b> · win +20 · loss −12 · MVP +5</li>
+            <li><b>King of the Hill</b> · win +20 · loss −12</li>
             <li><b>Blacktop 1v1</b> · win +25 · loss −15 · forfeit −20</li>
           </ul>
         </div>

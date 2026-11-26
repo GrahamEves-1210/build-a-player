@@ -431,7 +431,7 @@ const PromosOnce = memo(function Promos() {
 // Where the player was on home: a mode unmounts it, so this outlives the visit (a reload starts at the top)
 let homeScroll = 0
 
-// `soon`: modes this sport shows locked as COMING SOON ({ career, compete, salary, squad }: soccer's
+// `soon`: modes this sport shows locked as COMING SOON ({ career, salary, squad }: soccer's
 // SOCCER_MODES). `faces`: soccer's strikers on its two pool cards ({ current, alltime }, headshot ids)
 export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onAuction, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null, onFranchise = null, onNbaFranchise = null }) {
   const prog = useProgress()
@@ -576,8 +576,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : career.phase === 'retired' ? `Retired after ${career.seasons.length}`
     : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`
   const auLine = '2–3 bidders · $20 each'
-  const btStatus = !btLive ? null : blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'Building' : 'Game on'
-  const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, 3v3')
+  const btStatus = !btLive ? null : blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/${blacktop.of ?? 4}` : blacktop.phase === 'build' ? 'Building' : 'Game on'
+  const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, King of the Hill')
   const sqLine = !squad ? (isBaseball ? 'Build the lineup' : isSoccer ? 'Build the front line' : 'Build your whole team')
     : squad.phase === 'build' ? `Building · ${sqBuilt} of ${squad.slots.length}`
     : sqLast && squad.phase === 'result' ? (isSoccer
@@ -638,12 +638,12 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               : <Art src="fig-qb" cls="ag-art--hero" />)}
           </ModeArt>
         )}
-        {/* Basketball: Blacktop is the online hub, 2v2 / 3v3 lobbies and 1v1 from inside it */}
+        {/* Basketball: Blacktop is the online hub, its 1v1 / 2v2 lobbies and King of the Hill from inside it */}
         {isBucket
           ? (onBlacktop && (
             <ModeArt online kind="blacktop" tone="blacktop" title="BLACKTOP" line={btLine} live={btLive ? 0 : here.blacktop} onClick={onBlacktop}>
               <img className="ag-mc-court" src="/courts/thumbs/ct-blacktop.webp" alt="" loading="lazy" decoding="async" draggable={false} />
-              <span className="ag-paint" aria-hidden="true"><b>1V1</b><b>2V2</b><b>3V3</b></span>
+              <span className="ag-paint" aria-hidden="true"><b>1V1</b><b>2V2</b><b>KOTH</b></span>
             </ModeArt>
           ))
           : hasFranchise && hasCFB ? <CFBCard small onClick={() => cfbRef.current?.()} />

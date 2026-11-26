@@ -22,7 +22,7 @@ const TIER_COLOR = { Rookie: '#9aa7a0', Starter: '#86ECBA', Pro: '#60a5fa', 'All
 // what gets a player onto a board they aren't on yet
 // the Cup's days left, today counted: it ends with Sunday
 const cupLeft = () => { const n = dayIndex(weekEnds()) - dayIndex(dayKey()) + 1; return n <= 1 ? 'LAST DAY' : `${n} DAYS LEFT` }
-const PLAY = { rating: ['PLAY ONLINE', 'online'], played: ['PLAY ONLINE', 'online'], bt: ['PLAY ONLINE', 'online'], bt1: ['PLAY ONLINE', 'online'], bt2: ['PLAY ONLINE', 'online'], bt3: ['PLAY ONLINE', 'online'], daily: ['PLAY DAILY PUZZLE', 'daily'], cup: ['PLAY DAILY PUZZLE', 'daily'], grid: ['PLAY DAILY GRID', 'salarycap'] }
+const PLAY = { rating: ['PLAY ONLINE', 'online'], played: ['PLAY ONLINE', 'online'], bt: ['PLAY ONLINE', 'online'], bt1: ['PLAY ONLINE', 'online'], bt2: ['PLAY ONLINE', 'online'], bt3: ['PLAY ONLINE', 'online'], btk: ['PLAY ONLINE', 'online'], daily: ['PLAY DAILY PUZZLE', 'daily'], cup: ['PLAY DAILY PUZZLE', 'daily'], grid: ['PLAY DAILY GRID', 'salarycap'] }
 // Football and Basketball, and Soccer once it's live (SOCCER_LIVE): the records' sports. The Daily Grid's are the ones with one
 const SPORTS = boardSports()
 const GRID_SPORTS = SPORTS.filter(s => hasGrid(s.id))

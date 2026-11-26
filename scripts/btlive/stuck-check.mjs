@@ -97,7 +97,7 @@ function run(mode, g) {
       if ((osc && !mirror) || pinned) {
         if (!open[p.i]) open[p.i] = { mode, g, pid: p.i, from: s.tick - WIN, kind: osc ? 'osc' : 'pinned', edge, x: +p.x.toFixed(1), y: +p.y.toFixed(1), team: p.team, poss: s.poss,
           role: s.ball.st === 'held' && s.ball.holder === p.i ? 'ball' : p.team === s.poss ? 'off' : 'def', ball: s.ball.st, plan: m.plan, flips,
-          manRim: p.man >= 0 ? +Math.hypot(s.players[p.man].x - 28, s.players[p.man].y - COURT.rim.y).toFixed(1) : null, manPlan: p.man >= 0 ? s.cpu[p.man]?.plan : null,
+          manRim: p.man >= 0 ? +Math.hypot(s.players[p.man].x - 28, s.players[p.man].y - COURT.rim.y).toFixed(1) : null, mySt: `${p.act}${p.post ? " post" : ""}${p.pick ? " pick" : ""} sta${(p.sta ?? 1).toFixed(2)}`, manPlan: p.man >= 0 ? s.cpu[p.man]?.plan : null, manSt: p.man >= 0 ? `${s.players[p.man].act}${s.players[p.man].post ? " post" : ""}${s.players[p.man].pick ? " pick" : ""}` : null,
           myRim: +Math.hypot(p.x - 28, p.y - COURT.rim.y).toFixed(1), box: +box.toFixed(1) }
         else open[p.i].flips = Math.max(open[p.i].flips, flips)
       } else close(p.i, s.tick)

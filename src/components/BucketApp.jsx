@@ -67,6 +67,9 @@ const BlacktopLook = import.meta.env.DEV ? lazy(() => import('./app/BlacktopLook
 // Blacktop's PRACTICE: Blacktop Live against CPUs (/bucket?btlive=1: lib/btLive.js, components/btlive; owner 11-26)
 import { BT_LIVE_OPEN } from '../lib/btLive'
 const BtLive = lazy(() => import('./btlive/BtLive'))
+// Blacktop's KING OF THE HILL online (/bucket?btlive=1&koth=1: components/btlive/KothOnline.jsx, live/src/koth.js)
+const KothOnline = lazy(() => import('./btlive/KothOnline'))
+const KOTH_OPEN = BT_LIVE_OPEN && /[?&]koth=1\b/.test(window.location.search)
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
 // A 1v1 player's match id starts with their account id when signed in (VersusLobby myId)
 const uidFromVsId = id => (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i.test(id) ? id.slice(0, 36) : null)
@@ -2194,6 +2197,7 @@ export default function BucketApp() {
   )
   const withGame = el => (IS_APP && gameMode && gameMode !== 'salarycap' && KEEP_GAME_ON.has(page) ? shell(el) : el)
 
+  if (KOTH_OPEN) return <Suspense fallback={null}><KothOnline pools={LIVE_POOLS} user={user} /></Suspense>
   if (BT_LIVE_OPEN) return <Suspense fallback={null}><BtLive pools={LIVE_POOLS} user={user} /></Suspense>
   if (import.meta.env.DEV && BT_LOOK) return <Suspense fallback={null}><BlacktopLook look={BT_LOOK} pools={LIVE_POOLS} types={LIVE_TYPES} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} /></Suspense>
   if (page === 'splash') {
@@ -2209,7 +2213,7 @@ export default function BucketApp() {
               onStart={handleStart}
               onVersus={onVersus}
               onBlacktop={() => setPage(btPageFor(bt.phase))}
-              blacktop={{ phase: bt.phase, queue: bt.seated }}
+              blacktop={{ phase: bt.phase, queue: bt.seated, of: bt.roomSize }}
               onSquad={openSquad}
               squad={squad}
               onCareer={openCareer}
@@ -2244,14 +2248,16 @@ export default function BucketApp() {
     )
   }
 
-  // Blacktop: the hub (3v3 · 1v1); JOIN LOBBY puts you in the 3v3 lobby on this same page
+  // Blacktop: the hub (1v1 · 2v2 · King of the Hill); JOIN LOBBY puts you in that lobby on this same page (King of
+  // the Hill is Blacktop Live's own page: KothOnline)
   if (page === 'blacktop') {
     if (bt.phase === 'idle') {
       if (btWatch) return <BlacktopWatch code={btWatch} pools={LIVE_POOLS} types={LIVE_TYPES} onClose={() => setBtWatch(null)} />
-      return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => { bt.clearKicked(); bt.join(false, 3) }}
+      return <BlacktopHub onBack={() => setPage('splash')}
         onWatch={bt.server ? g => { setBtWatch(g.code); window.scrollTo({ top: 0, behavior: 'instant' }) } : null}
         onJoin2v2={bt.server ? () => { bt.clearKicked(); bt.join(false, 2) } : null}
         onJoin1v1={bt.server ? () => { bt.clearKicked(); bt.join(false, 1) } : null}
+        onJoinKoth={bt.server ? () => { window.location.href = '/bucket?btlive=1&koth=1' } : null}
         notice={bt.kicked ? 'The build clock ran out before you finished. A CPU took your spot, and it counts as leaving the game.' : null} onNotice={bt.clearKicked}
         onPractice={() => { window.location.href = '/bucket?btlive=1' }}
         onPickup={() => startVersus(position, { kind: 'pickup' })} onFriend={() => startVersus(position, { kind: 'friend' })}

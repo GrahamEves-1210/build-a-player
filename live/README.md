@@ -1,4 +1,4 @@
-# bap-live: the Blacktop 3v3 server
+# bap-live: the Blacktop server (lobbies, Blacktop Live rooms, King of the Hill)
 
 A Cloudflare Worker with two Durable Objects: `Lobby` (the six spots, lobby chat,
 practice rooms) and `Room` (one per match: the build clock, build progress, the

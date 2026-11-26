@@ -65,7 +65,7 @@ export function createEngine({ setup, els, on, net = null }) {
   const EVLOG = [], PFN = SNAP_ACT                 // (PFN: where a snapshot row keeps the act: proto.js snapOf)
   // the men as they're drawn: each one's look (his side's colour, his skin and number) and his pose (pose.js)
   const poser = createPoser(N)
-  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS' }
+  const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS', drop: 'DROP STEP' }
 
   // The court is a window onto the half court: its height shows the whole depth (baseline to half court); on a
   // narrow screen (a phone held upright) it shows about 31 of the 56 feet across and pans with the play, and it's a
@@ -155,6 +155,11 @@ export function createEngine({ setup, els, on, net = null }) {
         // his own move, named as he makes it (how the small stick is learned)
         if (e.pid === me && !levels[me] && !e.ankles && MOVE_WORD[e.kind]) { for (const f of fx) if (f.mv) f.dur = 0; fx.push({ text: MOVE_WORD[e.kind], x: p.x, y: p.y < 9 ? p.y + 4.6 : p.y - 4.6, t0: clockNow, dur: 750, color: 'rgba(255,255,255,.92)', big: false, small: true, mv: true }) }
       }
+      // the pump fake (his own, named like a move), his man going up for it, the post
+      else if (e.e === 'fake') { if (e.pid === me && !levels[me]) { for (const f of fx) if (f.mv) f.dur = 0; fx.push({ text: 'PUMP FAKE', x: p.x, y: p.y < 9 ? p.y + 4.6 : p.y - 4.6, t0: clockNow, dur: 700, color: 'rgba(255,255,255,.92)', big: false, small: true, mv: true }); haptic('light') } }
+      else if (e.e === 'bite') { say('IN THE AIR', p.x, wordY(p.y), FLOOD, false, 900); if (e.on === me || e.pid === me) haptic('medium') }
+      else if (e.e === 'post') { if (e.pid === me) haptic('light') }
+      else if (e.e === 'bump') { if (e.pid === me || e.on === me) haptic('light') }
       else if (e.e === 'swipe') { if (e.pid === me) { haptic('light'); if (e.reach) say('REACH', p.x, wordY(p.y), 'rgba(255,255,255,.8)') } }
       else if (e.e === 'oob') { sfx('whistle'); say('OUT OF BOUNDS', COURT.rim.x, 22, '#fff') }
       else if (e.e === 'clock') { sfx('whistle'); say('SHOT CLOCK', COURT.rim.x, 22, '#fff') }
@@ -193,10 +198,12 @@ export function createEngine({ setup, els, on, net = null }) {
     const st = H.ts, jp = H.tj
     H.ta = H.tb = H.ts = H.tj = false
     const fl = H.dq.shift()                                     // a flick of the right stick with the ball: a dribble move, this tick
-    const inp = { mx: H.mx, my: H.my, shoot: A, steal: st, pass: B, jump: jp, dx: fl ? fl[0] : 0, dy: fl ? fl[1] : 0, q: null, t: s.tick }
+    const inp = { mx: H.mx, my: H.my, shoot: A, steal: st, pass: B, jump: jp, dx: fl ? fl[0] : 0, dy: fl ? fl[1] : 0, sp: fl ? fl[2] || 0 : 0, q: null, t: s.tick }
     if (p.act === 'gather' && meter.on) {
-      // the release goes out with the quality this device judged; until then the button counts as held
-      if (meter.q != null) { inp.shoot = false; inp.q = meter.q; meter.q = null } else inp.shoot = true
+      // the release goes out with the quality this device judged; until then the button counts as held. A tap: the
+      // pump fake
+      if (meter.fake) { inp.shoot = false; inp.fake = true; meter.fake = false }
+      else if (meter.q != null) { inp.shoot = false; inp.q = meter.q; meter.q = null } else inp.shoot = true
     }
     return inp
   }
@@ -215,12 +222,14 @@ export function createEngine({ setup, els, on, net = null }) {
   function meterWatch() {
     const p = s.players[me]
     if (p.act === 'gather' && !meter.on && !levels[me]) {
-      meter.on = true; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0; meter.dy = 0
+      meter.on = true; meter.fake = false; meter.spec = p.shot.spec; meter.read = p.shot.read; meter.q = null; meter.grade = null; meter.rel = null; meter.side = 0; meter.dy = 0
       meter.base = null                                          // (the window moves with the shot now: sim.js shotWindow)
       meter.t0 = clockNow - H.aT0 < 220 ? H.aT0 : clockNow - STEP
       if (!H.a && H.aUp >= H.aT0) letGo(H.aUp)                    // pressed and let go inside one tick
     } else if (p.act !== 'gather' && meter.on) {
       meter.on = false
+      // a pump fake: no shot went up, and no word on the meter
+      if (p.act === 'fake' || s.events.some(e => e.e === 'fake' && e.pid === me)) { meter.grade = null; meter.rel = null; meter.fake = false; return }
       // did the shot go up? (practice: the step's word this tick. A gather ended by the shot clock, a steal or a
       // turnover is no shot at all, whatever the button did; the physics may say so itself: a 'noshot' event)
       const ev = s.events
@@ -236,8 +245,18 @@ export function createEngine({ setup, els, on, net = null }) {
     }
   }
   function letGo(at) {
-    if (!meter.on || meter.grade) return
+    if (!meter.on || meter.grade || meter.fake) return
     const held = clamp(at - meter.t0, 0, meter.spec.total)
+    // let go before the meter is under way: a pump fake, not a shot
+    if (held < T.fakeMs) {
+      meter.fake = true
+      if (online && NB.local?.act === 'gather') {
+        NB.rel = relMsg(NB.local.sn, -1); NB.edge = true
+        NB.local = null; meter.on = false; meter.fake = false
+        const p = s.players[me]; p.act = 'free'; p.shot = null
+      }
+      return
+    }
     meter.q = meterQuality(meter.spec, held); meter.grade = meterGrade(meter.spec, held); meter.gradeGood = meter.q >= 1; meter.gradeAt = at
     meter.rel = { held, at }
     // the ball leaving his hand, and a cue of its own for a green release
@@ -278,7 +297,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const fl = H.dq.shift()
     if (p.moveCd > 0) p.moveCd--
     if (has && p.act === 'free' && p.noAct <= 0) {
-      if (fl) { moveInput(p, { x: fl[0], y: fl[1] }, NB.lt); NB.lastMv = NB.lt }
+      if (fl && !p.pick && !p.post) { moveInput(p, { x: fl[0], y: fl[1] }, NB.lt, fl[2] || 0); NB.lastMv = NB.lt }
       else moveQueued(p, NB.lt)
     }
     if (NB.local?.act === 'gather') p.actT++
@@ -438,19 +457,23 @@ export function createEngine({ setup, els, on, net = null }) {
       const A = { ball: ['SHOOT', 'HOLD, LET GO'], clear: ['SHOOT', 'TAKE IT BACK'], def: ['BLOCK', 'HAND UP'], dboard: ['REBOUND', 'GO UP'], board: ['REBOUND', 'GO UP'], off: ['SHOOT', 'ON THE CATCH'], sit: ['SHOOT', ''], none: ['SHOOT', ''] }[mode]
       els.btn.a.classList.toggle('is-dim', mode === 'none' || mode === 'sit' || mode === 'off')
       els.btn.a.classList.toggle('is-warn', mode === 'clear')
-      els.btn.a.classList.toggle('is-def', mode === 'def' || mode === 'dboard' || mode === 'board')
+      els.btn.a.classList.toggle('is-def', !ONE && (mode === 'def' || mode === 'dboard' || mode === 'board'))
       els.lab.a.textContent = A[0]
       if (els.lab.sa) els.lab.sa.textContent = A[1]
-      // PASS (a team game): to a teammate with the ball, a call for it without
-      const bl = ball ? 'PASS' : mode === 'off' || mode === 'board' ? 'CALL\nFOR IT' : 'PASS'
+      // the second button. On a phone (the owner, 11-26: "there should only be 2 buttons"): PASS with the ball (a team
+      // game), CALL FOR IT off it, STEAL on defense; with the ball in 1v1 it has nothing to do (dimmed, blank). Always
+      // there, always the same size and place. (On a second stick, as it was: PASS and CALL, STEAL on the pad)
+      const st = mode === 'def' || mode === 'dboard'
+      const bl = ONE && st ? 'STEAL' : ball ? (team ? 'PASS' : ONE ? '' : 'PASS') : mode === 'off' || mode === 'board' ? 'CALL\nFOR IT' : ONE ? '' : 'PASS'
       els.lab.b.textContent = bl
-      els.btn.b.classList.toggle('is-off', !team)
-      els.btn.b.classList.toggle('is-dim', !(ball || mode === 'off' || mode === 'board'))
-      els.btn.b.classList.toggle('is-two', bl !== 'PASS')
+      els.btn.b.classList.toggle('is-off', !ONE && !team)
+      els.btn.b.classList.toggle('is-dim', ONE ? !(st || (team && (ball || mode === 'off' || mode === 'board'))) || mode === 'dboard' : !(ball || mode === 'off' || mode === 'board'))
+      els.btn.b.classList.toggle('is-two', bl.includes('\n'))
+      els.btn.b.dataset.k = st && ONE ? 'steal' : ''
       // the right pad: a plain stick for the dribble moves with the ball; on defense it's the STEAL button; else idle
       // (the dribble moves on the move stick: no pad with the ball, SHOOT and PASS take the right side)
-      const k = ball ? (ONE ? 'hide' : 'ball') : mode === 'def' || mode === 'dboard' ? 'steal' : 'none'
-      if (els.base) els.base.dataset.l = ball && ONE ? 'MOVE\nSNAP FOR A MOVE' : 'MOVE'
+      const k = ONE ? 'hide' : ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'steal' : 'none'
+      if (els.base) els.base.dataset.l = ball && ONE ? 'MOVE\nFLICK FOR A MOVE' : 'MOVE'
       if (els.ds) { els.ds.dataset.k = k; els.ds.classList.toggle('is-dim', mode === 'dboard') }
       if (els.steal) els.steal.textContent = k === 'steal' ? 'STEAL' : ''
       if (els.root) { els.root.dataset.mode = ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'def' : mode === 'none' || mode === 'sit' ? 'none' : 'off'; els.root.dataset.clear = mode === 'clear' ? '1' : '' }
@@ -478,6 +501,7 @@ export function createEngine({ setup, els, on, net = null }) {
     // STEAL waits out its cooldown
     const cdS = mode === 'def' && p.stealCd > 0
     if (els.ds && els.ds.classList.contains('is-cd') !== cdS) els.ds.classList.toggle('is-cd', cdS)
+    if (ONE && els.btn.b.classList.contains('is-cd') !== cdS) els.btn.b.classList.toggle('is-cd', cdS)
     if (els.keys?.stealRow && els.keys.stealRow.classList.contains('is-cd') !== cdS) els.keys.stealRow.classList.toggle('is-cd', cdS)
     // his dribble legs (the stamina: a move costs some, simple dribbling gives it back): drawn by his ring (draw)
   }
@@ -485,9 +509,9 @@ export function createEngine({ setup, els, on, net = null }) {
   // the hand the ball is in decides the side: referee.moveOf), on the right pad's eight ways and the four arrow keys.
   // A new set waits a few ticks before it shows (so a name doesn't flicker on a line between two moves)
   const MV = { cand: '', n: 0, pad: '', keys: '' }
-  const NAME = { hesi: 'HESI', cross: 'CROSS', btl: 'BETWEEN\nLEGS', btb: 'BEHIND\nBACK', back: 'STEP-BACK', inout: 'IN & OUT', spin: 'SPIN' }
+  const NAME = { hesi: 'HESI', cross: 'CROSS', btl: 'BETWEEN\nLEGS', btb: 'BEHIND\nBACK', back: 'STEP-BACK', inout: 'IN & OUT', spin: 'SPIN', drop: 'DROP\nSTEP' }
   const NAME_SIDE = { back: 'STEP\nBACK', inout: 'IN &\nOUT' }
-  const NAME_KEY = { hesi: 'HESITATION', cross: 'CROSSOVER', btl: 'BETWEEN THE LEGS', btb: 'BEHIND THE BACK', back: 'STEP-BACK', inout: 'IN AND OUT', spin: 'SPIN' }
+  const NAME_KEY = { hesi: 'HESITATION', cross: 'CROSSOVER', btl: 'BETWEEN THE LEGS', btb: 'BEHIND THE BACK', back: 'STEP-BACK', inout: 'IN AND OUT', spin: 'SPIN', drop: 'DROP STEP' }
   const WAY = Array.from({ length: 8 }, (_, i) => ({ x: Math.sin(i * Math.PI / 4), y: -Math.cos(i * Math.PI / 4) }))
   const KEYWAY = [WAY[0], WAY[6], WAY[2], WAY[4]]
   // the keyboard's ways (WASD), in the panel's order (up, left, right, down); a key with the others held with it
@@ -791,11 +815,14 @@ export function createEngine({ setup, els, on, net = null }) {
     const spec = mine ? meter.spec : p.shot.spec
     if (!spec) return
     const held = rel ? rel.held : mine && meter.on ? (meter.grade ? meter.gradeAt : now) - meter.t0 : (p.actT + acc / STEP) * STEP
-    // the bar's top is a little past the green: it fills toward the window near its top (a late release runs it full)
-    const top = spec.ideal / 0.8
-    const f = clamp(held / top, 0, 1)
-    const bw = mine ? Math.round(clamp(tk * 0.34, 12, 16)) : Math.round(clamp(tk * 0.22, 7, 10))
-    const bh = mine ? Math.round(clamp(tk * 2.7, 96, 136)) : Math.round(clamp(tk * 1.6, 44, 72))
+    // ONE SWEEP (the owner, 11-26): the fill rises to the top of the bar as he holds it (spec.ideal) and comes back down
+    // (to the bottom at spec.total). The green is at the top: in it on the way up or on the way down is a make
+    const up = spec.ideal, down = Math.max(1, spec.total - spec.ideal)
+    const posAt = t => (t <= up ? clamp(t / up, 0, 1) : clamp(1 - (t - up) / down, 0, 1))
+    const f = posAt(held), falling = held > up
+    // (his own: the crescent's room, a little bigger than the old bar; anyone else's a thin bar)
+    const bw = mine ? Math.round(clamp(tk * 0.5, 18, 24)) : Math.round(clamp(tk * 0.22, 7, 10))
+    const bh = mine ? Math.round(clamp(tk * 3.1, 112, 150)) : Math.round(clamp(tk * 1.6, 44, 72))
     const L = camPx + 6, Rr = camPx + w - 6
     const fs = Math.round(clamp(tk * 0.42, 13, 18))
     const at = sd => x + sd * (tk * 0.5 + 16) - (sd < 0 ? bw : 0)
@@ -826,40 +853,61 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     if (mine) { meter.side = side; meter.dy = dy }
     const bx = clamp(at(side), L, Rr - bw), by = yOf(dy)
-    const yAt = v => by + bh * (1 - clamp(v / top, 0, 1))           // a time on the meter -> its height on the screen
+    const yAt = v => by + bh * (1 - clamp(v, 0, 1))                 // a height on the meter (0-1) -> on the screen
     ctx.globalAlpha = a
-    // the track
-    rr(bx - 2, by - 2, bw + 4, bh + 4, 3); ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fill()
-    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(243,246,248,.55)'; ctx.stroke()
     if (!mine) {
+      // (anyone else's: a plain thin bar, the fill only)
+      rr(bx - 2, by - 2, bw + 4, bh + 4, 3); ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fill()
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(243,246,248,.55)'; ctx.stroke()
       ctx.fillStyle = 'rgba(243,246,248,.85)'; ctx.fillRect(bx, by + bh * (1 - f), bw, bh * f)
       ctx.globalAlpha = 1
       return
     }
-    const lo = spec.ideal - spec.win, hi = spec.ideal + spec.win
+    // HIS OWN: a shallow crescent beside him, bowed out away from him, narrow at the bottom and widest at the top where
+    // the green is (the owner, 11-26: "curved slightly and wider at the top like the 2K meter"). v: 0 the bottom, 1 the top
+    const B = bw * 0.55, w0 = bw * 0.38, w1 = bw * 1.05, inner = side > 0 ? bx : bx + bw
+    const cx = v => inner + side * (B * (1 - (2 * v - 1) * (2 * v - 1)) + (w0 + (w1 - w0) * v) / 2)   // the arc's middle line
+    const wd = v => w0 + (w1 - w0) * v
+    const band = (v0, v1, fill, pad = 0) => {
+      if (v1 <= v0) return
+      const n = Math.max(2, Math.ceil((v1 - v0) * 22))
+      ctx.beginPath()
+      for (let k = 0; k <= n; k++) { const v = v0 + (v1 - v0) * k / n; ctx.lineTo(cx(v) - wd(v) / 2 - pad, yAt(v)) }
+      for (let k = n; k >= 0; k--) { const v = v0 + (v1 - v0) * k / n; ctx.lineTo(cx(v) + wd(v) / 2 + pad, yAt(v)) }
+      ctx.closePath()
+      if (fill) { ctx.fillStyle = fill; ctx.fill() }
+    }
+    const across = (v, col, lw, ext = 2) => { const x = cx(v), hw = wd(v) / 2 + ext; ctx.fillStyle = col; ctx.fillRect(x - hw, yAt(v) - lw / 2, hw * 2, lw) }
+    // the track, with a thin light edge
+    band(0, 1, 'rgba(5,7,10,.9)', 2.5)
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(243,246,248,.5)'; ctx.stroke()
+    const gv = clamp(1 - spec.win / up, 0, 0.97)                    // where the green starts (it runs to the top)
     // game point: the window it would be on any other play, as an outline, when the pressure (or his Clutch rating)
-    // has moved it by a few ms or more; CLUTCH over the bar when his rating has made it wider
+    // has moved it by a few ms or more; CLUTCH under the meter when his rating has made it wider
     const base = meter.base, clutch = base && Math.abs(base.win - spec.win) >= 3
-    // the fill: white on the way up, green in the window, red past it (the grade's colour once he let go)
-    const inWin = Math.abs(held - spec.ideal) <= spec.win, past = held > hi
+    // the fill: white sweeping up and back down, a pale green while it's in the window, red once it's come down past
+    // it; the grade's colour once he let go
+    const inWin = Math.abs(held - spec.ideal) <= spec.win, past = held > spec.ideal + spec.win
     const col = rel ? GRADE_COL[meter.grade] ?? '#fff' : inWin ? GREEN : past ? RED : '#f3f6f8'
-    const fy = by + bh * (1 - f)
-    // the green window first, inside the bar (never thinner than 5px), so the fill rising through it is drawn over
-    // it and seen passing through the green (the owner, 11-26: on a layup the white was behind the green)
-    const wy0 = yAt(hi), wy1 = yAt(lo), wc = (wy0 + wy1) / 2, wh = Math.max(5, wy1 - wy0), wt = wc - wh / 2
-    ctx.fillStyle = GREEN; ctx.fillRect(bx, wt, bw, wh)
-    // the fill over it: white on the way up, a pale green where it is inside the window (the window still reads under
-    // it), red past it; the grade's colour once he let go
-    ctx.fillStyle = col === GREEN ? '#c8f7dc' : col; ctx.fillRect(bx, fy, bw, by + bh - fy)
-    if (!rel && !past && fy < wt + wh) { ctx.fillStyle = '#c8f7dc'; ctx.fillRect(bx, Math.max(fy, wt), bw, wt + wh - Math.max(fy, wt)) }
-    // the window's edges over everything (a dark line across the bar each end) and a white tick each side of it
-    ctx.fillStyle = 'rgba(5,7,10,.85)'; ctx.fillRect(bx, wt - 1, bw, 1.5); ctx.fillRect(bx, wt + wh - 0.5, bw, 1.5)
-    ctx.fillStyle = '#f3f6f8'; ctx.fillRect(bx - 5, wt - 1, 4, wh + 2); ctx.fillRect(bx + bw + 1, wt - 1, 4, wh + 2)
-    // the needle: the head of the fill, a bright line just past the bar's edges, on top of the window
-    if (!rel) { ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 2, fy - 2, bw + 4, 4); ctx.fillStyle = inWin ? GREEN : '#fff'; ctx.fillRect(bx - 1, fy - 1, bw + 2, 2) }
-    if (clutch) {                                                     // (dark dashes inside a wider window, light ones round a narrower)
-      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'
-      ctx.strokeRect(bx + 0.5, yAt(base.ideal + base.win), bw - 1, Math.max(4, yAt(base.ideal - base.win) - yAt(base.ideal + base.win))); ctx.setLineDash([])
+    const fy = yAt(f)
+    // the green first, then the fill over it (the owner, 11-26: the white seen passing through the green)
+    band(gv, 1, GREEN)
+    band(0, f, col === GREEN ? '#c8f7dc' : col)
+    if (!rel && f > gv) band(gv, f, '#c8f7dc')
+    across(gv, 'rgba(5,7,10,.85)', 1.5, 0)
+    if (clutch) { ctx.setLineDash([3, 3]); band(clamp(1 - base.win / up, 0, 0.97), 1, null); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'; ctx.stroke(); ctx.setLineDash([]) }
+    if (!rel) {
+      // the needle: a bright line across the fill's head, and which way it's going (a small arrowhead: up, then down)
+      across(f, 'rgba(5,7,10,.95)', 4, 2); across(f, inWin ? GREEN : '#fff', 2, 1)
+      const ax = cx(f) + side * (wd(f) / 2 + 8), ay = clamp(fy, by + 4, by + bh - 4), d = falling ? 1 : -1
+      ctx.beginPath(); ctx.moveTo(ax - 4, ay - 2.5 * d); ctx.lineTo(ax + 4, ay - 2.5 * d); ctx.lineTo(ax, ay + 3.5 * d); ctx.closePath()
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(5,7,10,.9)'; ctx.stroke(); ctx.fillStyle = past ? RED : '#f3f6f8'; ctx.fill()
+    } else {
+      // the release: where he stopped it, a white line across; a quick flash of the whole meter (green in the window),
+      // fading in a fifth of a second
+      across(f, 'rgba(5,7,10,.95)', 5, 4); across(f, '#fff', 2, 3)
+      const t = now - rel.at
+      if (t >= 0 && t < 220) { ctx.globalAlpha = a * 0.55 * (1 - t / 220); band(0, 1, meter.gradeGood ? GREEN : '#f3f6f8', 2.5); ctx.globalAlpha = a }
     }
     ctx.font = `${fs}px ${FONT}`; ctx.textBaseline = 'middle'
     const chip = (text, cx, cy, color) => {
@@ -872,9 +920,6 @@ export function createEngine({ setup, els, on, net = null }) {
     // the words go over the bar (never beside it, over a man's name)
     const overY = by - fs * 0.95
     if (rel) {
-      // where he stopped it: a white line across, just past the bar's edges
-      ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 4, fy - 2.5, bw + 8, 5)
-      ctx.fillStyle = '#fff'; ctx.fillRect(bx - 3, fy - 1, bw + 6, 2)
       chip(meter.grade, bx + bw / 2, overY, col)
     } else {
       // how open he is (as well as his IQ reads it)
@@ -1206,6 +1251,17 @@ export function createEngine({ setup, els, on, net = null }) {
       drawTag(rc, 'TAKE IT BACK', fs, AMBER, true, false)
       marks.push(rc)
     }
+    // the man with the ball in the post (POST) or with his dribble picked up (PIVOT: he can only shoot, pass or pivot)
+    if (holder >= 0 && live && !clearTag && !cut(holder) && (P[holder].post || P[holder].pick) && P[holder].act !== 'gather') {
+      const word = P[holder].pick ? 'PIVOT' : 'POST'
+      const cx = FIG[holder].x, cy = FIG[holder].cy - FIG[holder].hs - 2
+      const fs = Math.max(13, Math.round(tk * 0.36)); ctx.font = `${fs}px ${FONT}`
+      const tw = ctx.measureText(word).width + 10, th = Math.round(fs * 1.2)
+      const x0 = clamp(cx - tw / 2, L + 2, Rr - 2 - tw), y0 = Math.max(1, cy - th)
+      const rc = [x0, y0, x0 + tw, y0 + th]
+      drawTag(rc, word, fs, word === 'PIVOT' ? AMBER : '#f3f6f8', true, false)
+      marks.push(rc)
+    }
     // the men cut by the edge of the screen
     // (at his height, or the nearest height that isn't on a man near the edge, another name or another tab)
     const tfs = Math.max(13, Math.round(tk * 0.36))
@@ -1337,13 +1393,21 @@ export function createEngine({ setup, els, on, net = null }) {
   const GLOG = []                                   // DEV: the move stick as the gesture reader saw it
   const hasBall = () => s.phase === 'live' && s.ball.st === 'held' && s.ball.holder === me
   let gT = 0
-  function gesture() { if (ONE && stick.id != null) feedG(performance.now(), H.mx, H.my) }
+  function gesture() {
+    if (!ONE) return
+    // (the way to the basket on the stick: the back half, for a back-and-around roll)
+    const p = s.players[me]; G.aim(COURT.rim.x - p.x, COURT.rim.y - p.y)
+    if (stick.id != null) feedG(performance.now(), H.mx, H.my)
+  }
   function feedG(t, x, y) {
     gT = Math.max(gT, t)
-    const g = G.feed(gT, x, y)
+    useG(G.feed(gT, x, y), x, y)
+  }
+  // a move off the stick: a tap or a snap the way it went, a roll the spin, rolled that way
+  function useG(g, x, y) {
     if (import.meta.env.DEV) { GLOG.push([Math.round(gT), +x.toFixed(2), +y.toFixed(2), g ? g.kind + (hasBall() ? '' : ' (no ball)') : '']); if (GLOG.length > 600) GLOG.shift() }
     if (!g || !hasBall()) return
-    flick(g.dir[0], g.dir[1])
+    flick(g.dir[0], g.dir[1], g.kind === 'roll' ? Math.sign(g.turn) || 1 : 0)
   }
   // where the stick rests: the layout's marker for it (btlive.css .btlv-stick-home), else a quarter across
   const rest = () => {
@@ -1353,7 +1417,9 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   const padUp = e => {
     if (e.pointerId !== stick.id) return
-    stick.id = null; H.mx = H.my = 0; G.reset()
+    stick.id = null; H.mx = H.my = 0
+    // (a tap let go out there is still the tap)
+    if (ONE) useG(G.release(Math.max(gT, performance.now())), 0, 0); else G.reset()
     rest()                                                           // back to its resting place
   }
   // the moment of a press, on the game's clock but to the millisecond (not to the frame): the meter is timed with it
@@ -1374,7 +1440,8 @@ export function createEngine({ setup, els, on, net = null }) {
   const btnHandlers = []
   for (const key of ['a', 'b']) {
     const el = els.btn[key]
-    const d = e => { e.preventDefault(); el.setPointerCapture?.(e.pointerId); press(key, true) }
+    // (on a phone the second button is STEAL on defense)
+    const d = e => { e.preventDefault(); el.setPointerCapture?.(e.pointerId); if (key === 'b' && ONE && onDef()) { stealKey(); el.classList.add('is-down'); clearTimeout(el._ht); el._ht = setTimeout(() => el.classList.remove('is-down'), 140); return } press(key, true) }
     const u = e => { e.preventDefault(); press(key, false) }
     el.addEventListener('pointerdown', d); el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u)
     btnHandlers.push([el, d, u])
@@ -1386,9 +1453,10 @@ export function createEngine({ setup, els, on, net = null }) {
   // screen only sends the way it pointed. Without the ball: down is a swipe at it (on defense), up a jump.
   const DS = { id: null, ox: 0, oy: 0, r: 26, sc: 1, on: false, fx: 0, fy: 0, kt: 0 }
   const SPIN_COS = Math.cos(T.spinTurn * Math.PI / 180)
-  const flick = (x, y) => {
-    H.dq.push([x, y]); if (H.dq.length > MOVE_KEEP) H.dq.shift()
-    if (online) { NB.n[2]++; NB.d.push([r2(x), r2(y)]); if (NB.d.length > MOVE_KEEP) NB.d.shift(); NB.edge = true }
+  // (sp: the stick rolled round that way: the spin)
+  const flick = (x, y, sp = 0) => {
+    H.dq.push([x, y, sp]); if (H.dq.length > MOVE_KEEP) H.dq.shift()
+    if (online) { NB.n[2]++; NB.d.push(sp ? [r2(x), r2(y), sp] : [r2(x), r2(y)]); if (NB.d.length > MOVE_KEEP) NB.d.shift(); NB.edge = true }
   }
   const tap = steal => {
     if (steal) H.ts = true; else H.tj = true
@@ -1407,7 +1475,10 @@ export function createEngine({ setup, els, on, net = null }) {
     if (m < T.moveAt + 0.08) return
     const ux = x / m, uy = y / m
     if (DS.on && ux * DS.fx + uy * DS.fy > SPIN_COS) return
+    // (already out and rolled round from there: the roll, the spin)
+    const roll = DS.on ? (DS.fx * uy - DS.fy * ux >= 0 ? 1 : -1) : 0
     DS.on = true; DS.fx = ux; DS.fy = uy
+    if (roll && hasBall()) { flick(ux, uy, roll); return }
     rightFlick(ux, uy)
   }
   const dsMove = e => {
@@ -1460,7 +1531,8 @@ export function createEngine({ setup, els, on, net = null }) {
     const d = ref.rimDist(p), fx = d > 0.5 ? (COURT.rim.x - p.x) / d : 0, fy = d > 0.5 ? (COURT.rim.y - p.y) / d : -1
     const hs = p.hand || 1, side = v => (v[0] * -fy + v[1] * fx) * hs
     const a = [-ey, ex], b = [ey, -ex], via = side(a) >= side(b) ? a : b
-    flick(via[0], via[1]); flick(ex, ey)
+    // (round from there to the way he's going: the way it rolls)
+    flick(ex, ey, via[0] * ey - via[1] * ex >= 0 ? 1 : -1)
   }
   // E on defense: STEAL (the STEAL row beside the court lights as it goes)
   const onDef = () => shown.mode === 'def' || shown.mode === 'dboard'

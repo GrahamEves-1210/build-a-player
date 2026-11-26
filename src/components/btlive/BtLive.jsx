@@ -28,7 +28,7 @@ import './btlive.css'
 
 // the practice builds: real players' ratings, a spread of games to try (a shooter, a slasher, a stopper, bigs)
 // (more players, owner 11-26: a name the pool doesn't have is just left out)
-const PRESETS = [
+export const PRESETS = [
   ...['Stephen Curry', 'Shai Gilgeous-Alexander', 'Luka Doncic', 'Anthony Edwards', 'Jayson Tatum', 'LeBron James', 'Kevin Durant',
     'Jalen Brunson', 'Tyrese Haliburton', 'Ja Morant', 'Donovan Mitchell', 'Devin Booker', 'Kyrie Irving', 'Cade Cunningham',
     'Tyrese Maxey', 'Jaylen Brown', 'Kawhi Leonard', 'Jalen Williams', 'LaMelo Ball', 'Trae Young', "De'Aaron Fox", 'Dyson Daniels'].map(n => ['guard', n]),
@@ -41,9 +41,9 @@ const KEEP = 'bap_btlive_practice'
 const STICK = 'bap_btlive_stick'
 const readStick = () => { try { return localStorage.getItem(STICK) === 'two' ? 'two' : 'one' } catch { return 'one' } }
 const keysFor = pos => (pos === 'big' ? BIG_KEYS : GUARD_KEYS)
-const ovrOf = (p, pos) => calcBucketOVR(buildFromPlayer(p, keysFor(pos)), keysFor(pos), pos)
+export const ovrOf = (p, pos) => calcBucketOVR(buildFromPlayer(p, keysFor(pos)), keysFor(pos), pos)
 // his three best ratings, as the build screens name them
-const best3 = (p, pos) => keysFor(pos).map(k => [k, p.attrs?.[k] ?? 0]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${BUCKET_ATTR[k]?.shortLabel ?? k} ${v}`)
+export const best3 = (p, pos) => keysFor(pos).map(k => [k, p.attrs?.[k] ?? 0]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${BUCKET_ATTR[k]?.shortLabel ?? k} ${v}`)
 
 // the arrow keys (up, left, right, down)
 const ARROWS = ['\u2191', '\u2190', '\u2192', '\u2193']
@@ -53,7 +53,7 @@ const WASD1 = ['W', 'A', 'D', 'S']
 const Key = ({ children, wide = false }) => <kbd className={`btlv-key${wide ? ' is-wide' : ''}`}>{children}</kbd>
 const Wasd = () => <span className="btlv-wasd"><Key>W</Key><span><Key>A</Key><Key>S</Key><Key>D</Key></span></span>
 
-function Face({ p, size = 38 }) {
+export function Face({ p, size = 38 }) {
   const fc = p.faceCenter
   return <span className="btlv-face" style={{ width: size, height: size }}>{p.photo && <img src={p.photo} alt="" draggable={false} style={fc ? { objectPosition: `${fc[0]}% ${fc[1]}%` } : undefined} />}</span>
 }
@@ -188,13 +188,21 @@ function Controls({ onBack }) {
           <h2>WITH THE BALL</h2>
           <Row c={K ? <Wasd /> : pill('LEFT STICK')} t="MOVE" />
           <Row c={K ? <span className="btlv-ctl-pill">TAP</span> : pill('FLICK IT')} t={K ? 'TAP A KEY: DRIBBLE MOVE THAT WAY' : 'DRIBBLE MOVE THAT WAY'} />
-          <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="SHOOT: HOLD, LET GO IN THE GREEN" />
+          <Row c={K ? <span className="btlv-ctl-pill">SHIFT</span> : pill('ROLL IT ROUND')} t="SPIN MOVE" />
+          <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="SHOOT: HOLD, LET GO IN THE GREEN AT THE TOP (GOING UP OR COMING DOWN)" />
+          <Row c={K ? <Key wide>TAP SPACE</Key> : pill('TAP SHOOT')} t="PUMP FAKE (AFTER DRIBBLING: PIVOT, THEN SHOOT OR PASS)" />
           <Row c={K ? <Key>E</Key> : pill('PASS')} t="PASS (2V2)" />
         </section>
         <section>
+          <h2>IN THE POST (BIGS)</h2>
+          <Row c={pill(K ? 'W AT THE RIM' : 'STICK AT THE RIM')} t="BACK HIM DOWN" />
+          <Row c={pill(K ? 'TAP A SIDE' : 'FLICK A SIDE')} t="DROP STEP OR SPIN" />
+          <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="HOOK (STICK AWAY: FADEAWAY)" />
+        </section>
+        <section>
           <h2>ON DEFENSE</h2>
-          <Row c={K ? <Key>E</Key> : pill('STEAL')} t="STEAL" />
-          <Row c={K ? <Key wide>SPACE</Key> : pill('BLOCK')} t="BLOCK, OR JUMP FOR THE BOARD" />
+          <Row c={K ? <Key>E</Key> : pill('STEAL')} t={K ? 'STEAL' : 'STEAL (THE PASS BUTTON)'} />
+          <Row c={K ? <Key wide>SPACE</Key> : pill('BLOCK')} t={K ? 'BLOCK, OR JUMP FOR THE BOARD' : 'BLOCK, OR JUMP FOR THE BOARD (THE SHOOT BUTTON)'} />
         </section>
       </div>
     </div>
@@ -269,7 +277,8 @@ function Online({ cfg, q, mine, pools, mode, name, stick }) {
   return <Game key={setup.seed} setup={setup} name={name} link={link.current} again={again} onMenu={() => { window.location.href = '/bucket?btlive=1' }} onRematch={() => { link.current?.net.send({ t: 'again' }); setAgain(a => a ?? { have: 1, need: 0 }) }} />
 }
 
-function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
+// (exported: King of the Hill online plays in it too, KothOnline.jsx; onFinal hears the final as it comes)
+export function Game({ setup, name, onMenu, onRematch, link = null, again = null, onFinal = null }) {
   const court = useCourt()
   const refs = useRef({})
   const set = k => el => { refs.current[k] = el }
@@ -284,7 +293,7 @@ function Game({ setup, name, onMenu, onRematch, link = null, again = null }) {
         steal: r.stl, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb, sa: r.sa },
         keys: { pass: r.kpass, passRow: r.kpassRow, shoot: r.kshoot, shootRow: r.kshootRow, shootSub: r.ksub, title: r.ktitle, box: r.kbox, stealRow: r.kstealRow, spinRow: r.kspinRow,
           arrows: ARROWS.map((_, i) => r[`ka${i}`]), subs: ARROWS.map((_, i) => r[`ks${i}`]), rows: ARROWS.map((_, i) => r[`kr${i}`]) } },
-      on: { final: res => setTimeout(() => { setAsk(false); setFinal(res) }, 900) },
+      on: { final: res => { onFinal?.(res); setTimeout(() => { setAsk(false); setFinal(res) }, 900) } },
     })
     link?.attach(eng)
     if (import.meta.env.DEV) window.__btlive = eng
