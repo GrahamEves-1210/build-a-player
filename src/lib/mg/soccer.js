@@ -625,10 +625,12 @@ export function runPose(phase, k = 1, base = null, o = null) {
   // the left arm forward while the right leg comes through (over the left foot), and back as the left leg does
   const fL = (1 + c) / 2, fR = 1 - fL, a = Math.min(1, 0.35 + k)
   // forward: the hand up by the chest and in; back: the hand by the hip, out past his side, the elbow up behind him
-  const arm = (f, sd) => ({ x: sd * lerp(lerp(15, 13.5, a), lerp(15.5, 5, a), f), y: lerp(lerp(-50, -59, a), lerp(-56, -77, a), f), el: (1 - f) * 0.22 * a })
+  // (both arms swing toward and away from the camera, so they're foreshortened: the one coming back is a short bent
+  // arm by his side with the elbow out behind him, the one going forward mostly hidden by his body)
+  const arm = (f, sd) => ({ x: sd * lerp(lerp(15, 14, a), lerp(15, 6.5, a), f), y: lerp(lerp(-52, -61, a), lerp(-58, -73, a), f), el: (1 - f) * 0.12 * a })
   const AL = arm(fL, -1), AR = arm(fR, 1)
   out.hlx = AL.x; out.hly = AL.y; out.hrx = AR.x; out.hry = AR.y; out.el = AL.el; out.er = AR.el
-  out.elbow = 0; out.fore = 0.7
+  out.elbow = 0; out.fore = lerp(0.6, 0.9, a)
   const s = Math.sin(phase * Math.PI * 2)
   if (arms === 'out') { out.hlx = -46; out.hly = -86 + s * 3; out.hrx = 46; out.hry = -86 - s * 3; out.elbow = 0; out.el = out.er = 0; out.fore = 0; out.face = 1; out.tilt = 0.2 }
   if (arms === 'wide') { out.hlx = -42; out.hly = -94; out.hrx = 42; out.hry = -94; out.elbow = 0; out.el = out.er = 0; out.fore = 0; out.face = 1; out.tilt = 0.3 }
@@ -712,7 +714,7 @@ function kneeOf(hx, hy, ax, ay, k, out) {
 // a hair colour that goes with the skin, and a cut, from who he is (the same man always looks the same)
 const HAIRS_DARK = ['#120e0b', '#17110d', '#1d1510']
 const HAIRS = ['#15110e', '#2c1f16', '#4a3220', '#6b4a2c', '#a07a48', '#c9a86a']
-const CUTS = ['crop', 'fade', 'curly', 'crop', 'long', 'fade', 'bun', 'buzz', 'crop', 'curly']
+const CUTS = ['crop', 'fade', 'curly', 'crop', 'fade', 'crop', 'bun', 'buzz', 'crop', 'curly']   // ('long' only when a look asks for it)
 const hashOf = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 100003; return h }
 function hairFor(L) {
   const h = hashOf(`${L.number ?? ''}|${L.skin ?? ''}|${L.name ?? ''}`)
@@ -1017,7 +1019,7 @@ function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, 
   // the ink: the skull and jaw, the ears, the hair
   x.fillStyle = INK; x.strokeStyle = INK; x.lineWidth = OL * 2
   x.beginPath(); skull(x, hx, hy); crown(x, hx, hy, cut); x.fill(); x.stroke()
-  if (cut === 'long') { x.beginPath(); if (front) { x.roundRect(hx - SK - 0.9 - OL, hy - 3, 2.6 + OL * 2, 9 + OL, 1.3); x.roundRect(hx + SK - 1.7 - OL, hy - 3, 2.6 + OL * 2, 9 + OL, 1.3) } else x.roundRect(hx - SK - 0.6 - OL, hy - 3, (SK + 0.6 + OL) * 2, 9.6 + OL, 3.4); x.fill() }
+  if (cut === 'long') { x.beginPath(); if (front) { x.roundRect(hx - SK - 1.2 - OL, hy - 2, 2.2 + OL * 2, 6.6 + OL, 1.1); x.roundRect(hx + SK - 1.0 - OL, hy - 2, 2.2 + OL * 2, 6.6 + OL, 1.1) } else x.roundRect(hx - SK - 0.4 - OL, hy - 3, (SK + 0.4 + OL) * 2, 8.4 + OL, 3.4); x.fill() }
   for (const sd of [-1, 1]) { const [ax, ay] = ears(sd); x.beginPath(); x.ellipse(ax, ay, 1.6 + OL, 2.2 + OL, 0, 0, 6.2832); x.fill() }
   // (long hair from behind falls over the ears)
   for (const sd of [-1, 1]) { const [ax, ay] = ears(sd); x.fillStyle = skinD; x.beginPath(); x.ellipse(ax, ay, 1.6, 2.2, 0, 0, 6.2832); x.fill(); x.fillStyle = tone(skin, 0.68); x.beginPath(); x.ellipse(ax + sd * 0.3, ay + 0.2, 0.6, 1.1, 0, 0, 6.2832); x.fill() }
@@ -1051,7 +1053,7 @@ function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, 
   x.beginPath(); crown(x, hx, hy, cut); x.fill()
   if (cut === 'long') {
     x.beginPath()
-    if (front) { x.roundRect(hx - SK - 0.9, hy - 3, 2.6, 9, 1.3); x.roundRect(hx + SK - 1.7, hy - 3, 2.6, 9, 1.3) } else x.roundRect(hx - SK - 0.6, hy - 3, (SK + 0.6) * 2, 9.6, 3.4)
+    if (front) { x.roundRect(hx - SK - 1.2, hy - 2, 2.2, 6.6, 1.1); x.roundRect(hx + SK - 1.0, hy - 2, 2.2, 6.6, 1.1) } else x.roundRect(hx - SK - 0.4, hy - 3, (SK + 0.4) * 2, 8.4, 3.4)
     x.fill()
   }
   x.globalAlpha = 1
@@ -1474,7 +1476,10 @@ export function keeperRoar(age, base = POSE.stand) {
   const fist = { ...POSE.fist, hry: lerp(-86, -116, pump), hrx: 18, face: 1, tilt: 0.4 }
   // (the arm comes up into the first pump: no jump from his side to over his head)
   if (age < 400) return mix(POSE.stand, fist, ease(prog(age, 280, 400)))
-  return age < 1300 ? fist : mix(POSE.fist, POSE.roar, ease(prog(age, 1300, 1550)))
+  if (age < 1300) return fist
+  // (the other arm swings up out to his side to join it, not folded up past his chest)
+  const f2 = ease(prog(age, 1300, 1550)), p = mix(POSE.fist, POSE.roar, f2)
+  return { ...p, hlx: p.hlx - Math.sin(f2 * Math.PI) * 24, hly: p.hly + Math.sin(f2 * Math.PI) * 6 }
 }
 // the striker who didn't score: 'save' hands on his head, 'miss' his head drops, 'tackle' arms out at the referee
 export function strikerDenied(kind, age, base = POSE.stand) {
