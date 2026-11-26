@@ -34,7 +34,7 @@ export function createPoser(N) {
     // what is drawn: eased toward each frame's pose
     lh: null, rh: null, lf: null, rf: null,
   }))
-  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0], rh: [0, 0, 0], lf: [0, 0], rf: [0, 0], air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0 }))
+  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0], rh: [0, 0, 0], lf: [0, 0], rf: [0, 0], air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], bside: 1, two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0 }))
   const TL = [0, 0, 0], TR = [0, 0, 0]
 
   // what happened: the things a pose can't read off the state
@@ -250,6 +250,7 @@ export function createPoser(N) {
     if (M && mv?.swap) a.side = a.from + (hand - a.from) * ease(c01(f / 0.62))
     else a.side += (hand - a.side) * (1 - Math.exp(-env.dt / 90))
     const side = a.side, mid = 1 - Math.min(1, Math.abs(side)), sg = side >= 0 ? 1 : -1
+    z.bside = sg
     // the bounce (a move works the ball low and quick)
     const per = (DRIB + (DRIB_RUN - DRIB) * amp) * (M ? 0.7 : 1)
     const was = Math.floor(a.drib)

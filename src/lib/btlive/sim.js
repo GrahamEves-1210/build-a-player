@@ -120,7 +120,7 @@ function pointOf(s, team) {
 function setSpots(s, team, carrier) {
   const C = COURT.check
   let wing = 0
-  const WINGS = [{ x: 44.5, y: 26.5 }, { x: 11.5, y: 26.5 }], POSTS = [{ x: 35.6, y: 11.5 }, { x: 20.4, y: 11.5 }]
+  const WINGS = [{ x: 44.5, y: 26.5 }, { x: 11.5, y: 26.5 }], POSTS = [{ x: 35.6, y: 12.5 }, { x: 20.4, y: 12.5 }]
   for (const p of s.players) {
     if (p.team !== team) continue
     if (p.i === carrier) { p.sx = C.x; p.sy = C.y; continue }
@@ -601,6 +601,12 @@ function move(s, p, inp) {
       }
       if (p.boost > 0 && p.act === 'free') top *= 1 + T.boost
       move2(p, mx * top, my * top, top, (def ? p.R.accelDef : p.R.accel) / T.accel)
+      // the ball in the hand on the side he's going (his right as he faces the basket): across to the other hand when
+      // he turns that way; straight at the basket or back keeps the hand it's in
+      if (has && p.act === 'free') {
+        const d = ref.rimDist(p) || 1, lat = p.vx * -(RIM.y - p.y) / d + p.vy * (RIM.x - p.x) / d
+        if (Math.abs(lat) > T.handSwitch && Math.sign(lat) !== (p.hand || 1)) { p.hand = Math.sign(lat); s.events.push({ e: 'hand', pid: p.i, hand: p.hand }) }
+      }
     }
   }
   p.x += p.vx * DT; p.y += p.vy * DT

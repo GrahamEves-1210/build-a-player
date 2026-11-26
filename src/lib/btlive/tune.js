@@ -19,18 +19,25 @@ export const DT = 1 / GHZ            // the game's seconds in one tick
 export const gticks = sec => Math.max(1, Math.round(sec * GHZ))
 export const rticks = sec => Math.max(1, Math.round(sec * HZ))
 
-// The half court, in feet, laid over the court picture (public/court-*.webp, 4:3, 56 x 42 ft edge to edge;
-// the same lines on every court in the shop). x runs left to right, y from the baseline wall down to half court.
+// The half court, in feet, at its real size (an NBA half court: 50 ft wide, 47 ft from the baseline to half court).
+// x runs left to right, y from the top of the picture (behind the baseline) down past half court. The lines are drawn
+// from these same numbers (engine.js courtLines), so what the game counts is what the floor shows.
+const BASE = 2.3, RIMY = BASE + 5.25
 export const COURT = {
-  W: 56, H: 42,                      // the whole picture
-  minX: 3.0, maxX: 53.2,             // sidelines
-  minY: 2.3, maxY: 39.7,             // baseline, half-court line
-  rim: { x: 28, y: 4.5 },
-  arcSideX: 20.8,                    // the three-point line runs straight up the sides this far from the rim's x...
-  arcSideY: 15.5,                    // ...down to this y, then curves
-  arcC: { x: 28, y: 8.6 }, arcR: 21.9,   // the curve: a circle through the two side lines' ends and the top (28, 30.5)
-  paint: { x0: 21.2, x1: 34.6, y1: 18.7 },
-  check: { x: 28, y: 34 },           // where the ball is checked
+  W: 56, H: 51.6,                    // the whole picture (the court and the apron round it)
+  minX: 3.0, maxX: 53.0,             // sidelines (50 ft apart)
+  minY: BASE, maxY: BASE + 47,       // baseline, half-court line
+  board: { y: BASE + 4, w: 6 },      // the backboard's face: 4 ft in from the baseline, 6 ft wide
+  rim: { x: 28, y: RIMY },           // the rim's middle: 15 in out from the board (5 ft 3 in from the baseline)
+  rimR: 0.75,                        // the rim, 18 in across
+  arcSideX: 22,                      // the three-point line: straight up each corner 22 ft from the rim's x...
+  arcSideY: RIMY + Math.sqrt(23.75 * 23.75 - 22 * 22),   // ...to where it meets the arc (about 14 ft up from the baseline)...
+  arcC: { x: 28, y: RIMY }, arcR: 23.75,   // ...then 23 ft 9 in round the rim
+  paint: { x0: 20, x1: 36, y1: BASE + 19 },   // the lane: 16 ft wide, the free-throw line 15 ft from the board
+  ftR: 6,                            // the free-throw circle
+  ra: 4,                             // the restricted area: 4 ft round the rim
+  centerR: 6, centerR2: 2,           // the centre circle at half court (and the small one inside it)
+  check: { x: 28, y: RIMY + 23.75 + 2.6 },   // where the ball is checked: the top of the key, just behind the arc
 }
 
 export const RULES = {
@@ -193,6 +200,7 @@ export const T = {
   // ── Dribble moves (the right stick, or the arrow keys: a flick picks the move; MOVES below) ──────
   // NBA 2K's pro stick, read from the basket and the hand the ball is in (referee.moveOf). Every move is a burst that
   // may freeze his man (referee.judgeMove); moves chain, a short recovery apart, and his man can be frozen once a while.
+  handSwitch: 3.2,                   // going this fast (ft/s) to one side, the ball goes to the hand on that side
   moveAt: 0.5,                       // the stick pushed this far is a flick (the screen and the CPU send it once)
   // which move: the angle between the flick and the way to the basket, in degrees, and which hand it's toward
   hesiTo: 22.5, crossTo: 67.5, btlTo: 112.5, btbTo: 157.5,

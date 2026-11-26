@@ -116,9 +116,9 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-bug-note > span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .btlv-bug-goal { flex: none; color: var(--muted); }
 .btlv-stage { flex: 1; min-height: 0; display: grid; place-items: center; background: #000; }
-/* the court is a window: its height shows the whole depth; a narrow screen pans it across with the play (it shows at
+/* the court is a window: its height shows the whole depth (56 x 51.6 ft: tune.js COURT); a narrow screen pans it across with the play (it shows at
    least 26 of the 56 feet across). On a phone it takes every pixel between the scorebug and the controls */
-.btlv-court { --vw: calc(100vw - var(--sal) - var(--sar)); --ch: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--pad-h) - var(--rail)), calc(var(--vw) * 42 / 26)); position: relative; height: var(--ch); width: min(var(--vw), calc(var(--ch) * 4 / 3)); overflow: hidden; }
+.btlv-court { --vw: calc(100vw - var(--sal) - var(--sar)); --ch: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--pad-h) - var(--rail)), calc(var(--vw) * 51.6 / 26)); position: relative; height: var(--ch); width: min(var(--vw), calc(var(--ch) * 56 / 51.6)); overflow: hidden; }
 .btlv-world { position: absolute; left: 0; top: 0; will-change: transform; }
 .btlv-world img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 .btlv-court canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -183,11 +183,11 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 /* with a keyboard: no thumbs on the screen. Beside the court, the left hand's keys on the left (WASD, SPACE, E) and
    the arrows on the right, each as it looks on a keyboard; only what does something right now shows */
 .btlv-keys { display: none; }
-.btlv-game.has-keys { --chk: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--rail) - 16px), calc((100vw - 380px) * 3 / 4)); }
-.btlv-game.has-keys .btlv-court { --ch: var(--chk); width: calc(var(--chk) * 4 / 3); }
+.btlv-game.has-keys { --chk: min(calc(100dvh - var(--sat) - var(--bug) - var(--note) - var(--rail) - 16px), calc((100vw - 380px) * 51.6 / 56)); }
+.btlv-game.has-keys .btlv-court { --ch: var(--chk); width: calc(var(--chk) * 56 / 51.6); }
 .btlv-game.has-keys .btlv-pad { position: absolute; inset: auto 0 var(--rail) 0; height: auto; background: none; border: 0; pointer-events: none; overflow: visible; }
 .btlv-game.has-keys .btlv-stick-home, .btlv-game.has-keys .btlv-stick-base, .btlv-game.has-keys .btlv-stick-knob, .btlv-game.has-keys .btlv-btns { display: none; }
-.btlv-game.has-keys .btlv-keys-col { display: flex; flex-direction: column; gap: 10px; position: absolute; left: 16px; bottom: 16px; width: min(250px, calc((100vw - var(--chk) * 4 / 3) / 2 - 28px)); }
+.btlv-game.has-keys .btlv-keys-col { display: flex; flex-direction: column; gap: 10px; position: absolute; left: 16px; bottom: 16px; width: min(250px, calc((100vw - var(--chk) * 56 / 51.6) / 2 - 28px)); }
 .btlv-game.has-keys .btlv-keys { display: grid; align-content: start; gap: 11px; margin: 0; padding: 13px 13px 14px;
   background: rgba(12, 16, 22, .9); border: 1px solid var(--line); border-radius: 8px; transition: opacity .15s; }
 .btlv-game.has-keys .btlv-keys.is-empty { display: none; }
@@ -227,7 +227,7 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 /* a phone on its side: the court as tall as the screen; the scorebug and the stick in the left margin, the right
    stick, SHOOT and PASS in the right one */
 @media (orientation: landscape) and (pointer: coarse) {
-  .btlv-game { --pad-h: 0px; --chl: min(calc(100dvh - var(--sat) - var(--rail)), calc((100vw - var(--sal) - var(--sar) - 360px) * 3 / 4)); --cwl: calc(var(--chl) * 4 / 3); }
+  .btlv-game { --pad-h: 0px; --chl: min(calc(100dvh - var(--sat) - var(--rail)), calc((100vw - var(--sal) - var(--sar) - 360px) * 51.6 / 56)); --cwl: calc(var(--chl) * 56 / 51.6); }
   .btlv-game .btlv-court { --ch: var(--chl); width: var(--cwl); }
   .btlv-stage { flex: 1; padding-top: var(--sat); }
   .btlv-bug { position: absolute; top: calc(var(--sat) + 6px); left: calc(var(--sal) + 6px); width: calc((100% - var(--cwl)) / 2 - var(--sal) - 12px);

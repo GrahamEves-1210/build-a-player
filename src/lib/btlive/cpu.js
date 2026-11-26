@@ -110,9 +110,9 @@ function laneOpen(s, a, b, team) {
 }
 
 // a step behind the line: the corners, the wings, the slots, the top
-const ARC = [{ x: 5.6, y: 7 }, { x: 50.4, y: 7 }, { x: 13.2, y: 26.3 }, { x: 42.8, y: 26.3 }, { x: 20.1, y: 30.3 }, { x: 35.9, y: 30.3 }, { x: 28, y: 31.6 }]
-const MID = [{ x: 19.5, y: 18 }, { x: 36.5, y: 18 }, { x: 28, y: 20.5 }, { x: 14.5, y: 11 }, { x: 41.5, y: 11 }]
-const LOW = [{ x: 21.5, y: 7.5 }, { x: 34.5, y: 7.5 }, { x: 22.5, y: 12 }, { x: 33.5, y: 12 }]
+const ARC = [{ x: 5.0, y: 7.5 }, { x: 51.0, y: 7.5 }, { x: 10.7, y: 24.9 }, { x: 45.3, y: 24.9 }, { x: 18.6, y: 30.2 }, { x: 37.4, y: 30.2 }, { x: 28, y: 32.1 }]
+const MID = [{ x: 19.5, y: 20 }, { x: 36.5, y: 20 }, { x: 28, y: 22.5 }, { x: 14.5, y: 11 }, { x: 41.5, y: 11 }]
+const LOW = [{ x: 21.5, y: 9 }, { x: 34.5, y: 9 }, { x: 22.5, y: 13.5 }, { x: 33.5, y: 13.5 }]
 
 function nearestDef(s, p) {
   let best = null, bd = 99
