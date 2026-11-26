@@ -84,5 +84,34 @@ ok(Math.abs(out[0] - 4) < 1e-6, '...for 3 ticks at most')
 o = lerpAt(buf, 10.5, out, ball, 3)
 ok(Math.abs(out[0] - 0.5) < 1e-6 && o < 0, 'between two: eased')
 
+// King of the Hill: two men QUIT between ticks and it's over. The last man's device sees the final (phase over, the
+// final event), whether it's a new one or an old app: the end goes out as a tick of its own, newer than the last
+for (const lastWire of [WIRE, null]) {
+  const r = new BtLiveRoom(null, { SUPABASE_URL: 'http://sb', SUPABASE_SERVICE_ROLE_KEY: 'k' })
+  globalThis.fetch = async () => ({ ok: true, json: async () => [] })
+  r.setUp({ code: 'QUIT01', mode: 'koth', at: Date.now(), keys: { v0: 'k0', v1: 'k1', v2: 'k2' },
+    players: [0, 1, 2].map(i => ({ vid: `v${i}`, name: `P${i}`, uid: null, pick: { name: 'Stephen Curry', pos: 'guard' } })) })
+  clearTimeout(r.showTimer)
+  const ws = [fakeWs(), fakeWs(), fakeWs()]
+  const wires = [WIRE, WIRE, lastWire]
+  ws.forEach((w, i) => r.onMessage(w, JSON.stringify({ t: 'hello', ...(wires[i] ? { v: wires[i] } : {}), vid: `v${i}`, key: `k${i}` })))
+  r.stop()
+  // each device as the screen takes snapshots: only a newer tick than its last
+  const dev = ws.map(() => ({ lastK: -1, hist: new Map(), m: null, final: false }))
+  const take = () => ws.forEach((w, i) => {
+    for (const d of w.got.splice(0)) {
+      const m0 = JSON.parse(d); if (m0.t !== 's' || m0.k <= dev[i].lastK) continue
+      const m = snapIn(m0, dev[i].hist); if (!m) continue
+      dev[i].lastK = m.k; dev[i].m = m
+      if (m.e.some(e => e.e === 'final')) dev[i].final = true
+    }
+  })
+  for (let t = 0; t < 36 * 5; t++) { r.tickOnce(Date.now()); take() }
+  r.onMessage(ws[0], JSON.stringify({ t: 'quit' })); r.stop(); take()
+  ok(r.g.phase !== 'over' && dev[2].m.gn?.[r.seats.findIndex(x => x.vid === 'v0')], `${lastWire ? 'new' : 'old'} app: one QUIT, the game goes on and the others see him gone at once`)
+  r.onMessage(ws[1], JSON.stringify({ t: 'quit' })); r.stop(); take()
+  ok(r.g.phase === 'over' && dev[2].m.ph === 'over' && dev[2].final, `${lastWire ? 'new' : 'old'} app: the second QUIT ends it between ticks, and the last man's screen gets the final`)
+}
+
 console.log(fails ? `\n${fails} FAILED` : '\nall ok')
 process.exit(fails ? 1 : 0)

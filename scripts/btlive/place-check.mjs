@@ -2,7 +2,9 @@
 // most: the region whose farthest player is nearest), the continent when a line has no city on it, and the King of the
 // Hill queue (koth.js): it makes each room with the hint, on the /init call that creates it, and while that call is
 // out the three in it are in no other match.
-// Run from the repo root:  node scripts/btlive/place-check.mjs
+// Bundle and run from the repo root (koth.js reads the app's code, which plain node can't load):
+//   node_modules/.bin/esbuild scripts/btlive/place-check.mjs --bundle --platform=node --format=esm --outfile=/tmp/pc.mjs \
+//     --define:import.meta.env='{"DEV":false}' --loader:.json=json && node /tmp/pc.mjs
 import { hintFor, geoOf, km, HINTS } from '../../live/src/place.js'
 import { KothQueue } from '../../live/src/koth.js'
 

@@ -285,7 +285,12 @@ export class BtLiveRoom {
     if (!g || g.mode !== 'koth' || g.gone?.[i]) return
     const n = g.events.length
     if (!kothLeave(g, i)) return
-    if (log) for (const e of g.events.slice(n)) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
+    if (!log) return
+    // (between ticks: it goes out as a tick of its own. A device takes a snapshot only with a newer tick than the last
+    // one it has, so the same tick again, the final most of all, would never reach a screen. The clock moves with it,
+    // so the ticks still due stay the same)
+    g.tick++; this.t0 -= STEP_MS
+    for (const e of g.events.slice(n)) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
   }
   run() {
     this.stop()
