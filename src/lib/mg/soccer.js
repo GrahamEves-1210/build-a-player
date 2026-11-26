@@ -845,12 +845,14 @@ export function paintMan(x, o, L) {
   const lK = knee(lH, lA, o.lk ?? 0, -1, zL), rK = knee(rH, rA, o.rk ?? 0, 1, zR)
   // (on his knees (kn): the knees on the grass, the shins flat on it behind him: from behind they come at us, the
   // soles up; from the front they go away behind his thighs, out of sight)
-  const kn = clamp(o.kn ?? 0, 0, 1)
-  if (kn > 0) for (const [H, K, A, out] of [[lH, lK, lA, -1], [rH, rK, rA, 1]]) {
+  // (knl / knr: one knee down and the other not, a man getting up off them one foot at a time)
+  const kn = clamp(o.kn ?? 0, 0, 1), knL = clamp(o.knl ?? kn, 0, 1), knR = clamp(o.knr ?? kn, 0, 1)
+  for (const [H, K, A, out, kn] of [[lH, lK, lA, -1, knL], [rH, rK, rA, 1, knR]]) {
+    if (kn <= 0) continue
     const gx = lerp(K[0], H[0] + out * 2.4, kn), gy = lerp(K[1], -2.2, kn)
     const tx = gx - H[0], ty = gy - H[1], tl = Math.hypot(tx, ty), kx = tl > TH ? H[0] + tx / tl * TH : gx, ky = tl > TH ? H[1] + ty / tl * TH : gy
     K[0] = kx; K[1] = ky
-    A[0] = lerp(A[0], kx + out * (front ? -0.3 : 1.6), kn); A[1] = lerp(A[1], ky + (front ? -5.5 : 6.2), kn)
+    A[0] = lerp(A[0], kx + out * (front ? -0.3 : 1.6), kn); A[1] = lerp(A[1], -2.2 + (front ? -5.5 : 6.2), kn)   // (the feet stay on the grass behind him as the knees come up off it)
   }
   const elL = clamp((o.elbow ?? 0) + (o.el ?? 0), 0, 1), elR = clamp((o.elbow ?? 0) + (o.er ?? 0), 0, 1)
   const pole = (S, hy, out, el) => { const up = clamp((S[1] - hy) / 28, 0, 1); return [out * lerp(0.3 + 0.5 * up, 1, el), lerp(0.95 - 0.55 * up, 0.1, el)] }
@@ -873,9 +875,9 @@ export function paintMan(x, o, L) {
   for (const r of arms) if (r.at === 'back') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'bare')
   // the legs: the far one first (from behind, the one swinging through; from the front, the one going back)
   const boot = L.boot ?? BOOTS[hashOf(`${L.number}|${L.skin}`) % BOOTS.length]
-  const legs = [[lH, lK, lA, -1, o.lk ?? 0, zL], [rH, rK, rA, 1, o.rk ?? 0, zR]].sort((p, q) => (front ? p[4] + p[5] * 2 - q[4] - q[5] * 2 : q[4] - p[4]))
+  const legs = [[lH, lK, lA, -1, o.lk ?? 0, zL, knL], [rH, rK, rA, 1, o.rk ?? 0, zR, knR]].sort((p, q) => (front ? p[4] + p[5] * 2 - p[6] * 3 - q[4] - q[5] * 2 + q[6] * 3 : q[4] - p[4]))
   const later = []
-  for (const g of legs) { if (front && ((g[4] > 0.45 && g[2][1] < -7) || g[5] > 0.3) && kn < 0.3) later.push(g); else paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], kn) }
+  for (const g of legs) { if (front && ((g[4] > 0.45 && g[2][1] < -7) || g[5] > 0.3) && g[6] < 0.3) later.push(g); else paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], g[6]) }
   // the body: the shorts, the shirt and the sleeves, inked as one
   // (a thigh driven at us or away from us is short on the screen; the shorts still hang off it, so the leg of them goes
   // on down over the top of it and isn't balled up at his hip)
@@ -959,7 +961,7 @@ export function paintMan(x, o, L) {
   }
   x.restore()
   // a knee coming up toward us, from the front, over the shorts
-  for (const g of later) paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], kn)
+  for (const g of later) paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], g[6])
   // the arms across his front, the head, then any hand up at the head
   for (const r of arms) if (r.at === 'front') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
   const collar = () => {
@@ -1405,7 +1407,7 @@ export function keeperBeaten(c, age, at) {
   if (a < 1150) {
     if (c.keeper === 'sit') {
       const f = ease(prog(a, 520, 900))
-      return { x: at.x, z: at.z, pose: a < 520 ? flat(r0, ease(prog(a, 220, 520))) : mix(flat(r0, 1), POSE.sit, f), lift: lie * (1 - f), front: true }
+      return { x: at.x, z: at.z, pose: a < 520 ? flat(r0, ease(prog(a, 220, 520))) : feetDown(mix(flat(r0, 1), POSE.sit, f), flat(r0, 1), POSE.sit, f), lift: lie * (1 - f), front: true }
     }
     // face-down: rolled over on to his front
     return { x: at.x, z: at.z, pose: { ...flat(lerp(r0, side * 1.52, ease(prog(a, 0, 260))), ease(prog(a, 260, 700)) * 0.12), tilt: -1 }, lift: lie, front: a < 300, holds: false }
@@ -1415,7 +1417,7 @@ export function keeperBeaten(c, age, at) {
     // up off the grass: his hands under his shoulders and a push up, his knees staying on the grass (he comes up round
     // them, never swung up off his feet), up on to his knees, then his feet, his hands on his hips
     const u = ease(prog(a, 1420, 1550))
-    if (u > 0) return { x: at.x + upDx, z: at.z, pose: { ...mix(KNEEL_UP, POSE.hips, u), kn: 1 - smoothS(clamp(u / 0.4, 0, 1)) }, lift: 0, front: true }   // (a foot under him first: off the knees early)
+    if (u > 0) return { x: at.x + upDx, z: at.z, pose: offKnees(KNEEL_UP, POSE.hips, u), lift: 0, front: true }
     const pu = smoothS(prog(a, 1150, 1270)), k = smoothS(prog(a, 1240, 1420)), r = side * 1.52 * (1 - k)
     const pose = mix(flat(side * 1.52, 0.12), KNEEL_UP, k)
     pose.rot = r; pose.tilt = lerp(-1, KNEEL_UP.tilt, k)
@@ -1451,6 +1453,16 @@ export function defenderBeaten(i, age, base = POSE.stand) {
 const ARM_M = (121 - 53) * RIG_M, HIP_M = 53 * RIG_M
 export const KEEPER_DOWN = -(HIP_M - 0.17)
 const KNEEL = { ...POSE.knees, hy: 27, ly: 2, ry: 2, lk: -1, rk: -1, face: 2 }, KNEEL_D = 25
+// Up off his knees the way a man gets up: one foot brought through and planted under him (that knee up in front of
+// him), then the push up off it, the other knee coming up off the grass as he rises. f: 0 on his knees, 1 stood (to)
+function offKnees(from, to, f) {
+  const a = smoothS(clamp(f / 0.45, 0, 1)), b = smoothS(clamp((f - 0.4) / 0.6, 0, 1))
+  // (half up: the right foot flat under him, the knee up toward us, the left knee still down)
+  const half = { ...from, hy: 30, rx: 9, ry: 0, rk: 0.85, lean: -0.04, hx: -1 }
+  const p = mix(mix(from, half, a), to, b)
+  p.knr = (1 - a) * (1 - b); p.knl = 1 - b; p.kn = 0
+  return p
+}
 // (a beaten keeper up on his knees off his front: knees on the grass, shins flat behind, hands on his thighs, head down)
 const KNEEL_UP = pz({ hy: 27, bow: 0.15, lx: -10, ly: 0, rx: 10, ry: 0, lk: -1, rk: -1, kn: 1, hlx: -9, hly: -30, hrx: 9, hry: -30, elbow: 0.3, tilt: -0.7, face: 2 })
 // (for a game's own keeper: on his knees with it, and up with it held to his chest)
@@ -1475,6 +1487,17 @@ export function keeperReady(t, set = 0, lean = 0) {
 // bottom leg long, the top one bent at the knee, the hands together over his head, the top one reaching further
 // a man on the grass bringing his arms in from over his head: in close past his head and down his front, never
 // swung out through the air beside him
+// a man coming up off his side to sitting (or the other way), the pose mixed from a to b at f: his feet kept where they
+// are on the screen's grass, so the legs swing round on the ground and never up into the air as his body turns
+function feetDown(p, a, b, f) {
+  const at = (q, x, y) => { const r = q.rot ?? 0, dx = x - (q.hx ?? 0), dy = y - 2.6 + (q.hy ?? 53); return [dx * Math.cos(r) - dy * Math.sin(r), dx * Math.sin(r) + dy * Math.cos(r)] }
+  const r = -(p.rot ?? 0), o = { ...p }
+  for (const [kx, ky] of [['lx', 'ly'], ['rx', 'ry']]) {
+    const A = at(a, a[kx] ?? DEF[kx], a[ky] ?? 0), B = at(b, b[kx] ?? DEF[kx], b[ky] ?? 0), T = [lerp(A[0], B[0], f), lerp(A[1], B[1], f)]
+    o[kx] = (p.hx ?? 0) + T[0] * Math.cos(r) - T[1] * Math.sin(r); o[ky] = -(p.hy ?? 53) + 2.6 + T[0] * Math.sin(r) + T[1] * Math.cos(r)
+  }
+  return o
+}
 function armsIn(a, b, f) {
   const mid = { ...a, hlx: -3, hrx: 3, hly: -96, hry: -96, elbow: 0.5, fore: 0.6 }
   return f < 0.5 ? mix(a, mid, smoothS(f * 2)) : mix(mid, b, smoothS(f * 2 - 1))
@@ -1535,7 +1558,7 @@ export function keeperUp(age, from = {}, roar = true, held = false) {
   if (age < 640) {
     // (rolling up to sitting: the hands stay down by his hips the whole way (or on the ball at his chest), never
     // swinging up past his head as the body turns under them)
-    const f = smoothS(prog(age, 380, 640)), p = mix(lying, sitUp, f)
+    const f = smoothS(prog(age, 380, 640)), p = feetDown(mix(lying, sitUp, f), lying, sitUp, f)
     const up = hc ? lerp(22, 27, f) : lerp(-1, 13, f * f * f), out = hc ? 6 : lerp(11, 15, f)
     return { pose: { ...p, hly: -(p.hy + up), hry: -(p.hy + up), hlx: -out, hrx: out, elbow: hc ? 0.6 : 0, el: 0, er: 0 }, lift: l0 * (1 - f) }
   }

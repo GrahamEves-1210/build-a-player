@@ -627,14 +627,14 @@ export function draw(ctx, g, view) {
   if (g.res === 'goal' && g.cel) {
     const sc = scorerAt(g.cel, age)
     const scorerLook = g.scorer === 'mate' ? mtLook : meLook
-    list.push({ z: sc.z, fn: () => man(ctx, C, sc.x, sc.z, sc.pose, scorerLook, { lift: sc.lift, turn: sc.turn, name: g.scorer === 'me' ? g.who.me?.name : null }) })
+    list.push({ z: sc.z, fn: () => man(ctx, C, sc.x, sc.z, sc.pose, scorerLook, { lift: sc.lift, turn: sc.turn }) })
     g.cel.mates.forEach((m, i) => {
       // (the two arriving never wear a number that's already on the pitch)
       const free = [10, 8, 7, 6, 14].filter(n => n !== meLook.number && n !== mtLook.number)
       const at = mateAt(g.cel, i, age, sc), look = i === 0 ? (g.scorer === 'mate' ? meLook : mtLook) : dress(K.us, { number: free[i - 1], skin: ['#5e3c22', '#c09060', '#8d5a3b'][i] })
       if (i > 0 && age < m.delay) return
       if (i === 0 && !g.mt && g.scorer === 'me') return
-      list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, look, { lift: at.lift, turn: at.turn, name: i === 0 && g.scorer === 'mate' ? g.who.me?.name : null }) })
+      list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, look, { lift: at.lift, turn: at.turn }) })
     })
   } else {
     const mp = strikerPose(g)
