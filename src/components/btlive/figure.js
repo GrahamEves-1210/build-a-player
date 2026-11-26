@@ -74,10 +74,11 @@ function frame(f) {
   const lift = (f.air || 0) * f.s * 0.2
   FR.sc = f.s * BODY * (f.look?.sz ?? 1) * (f.scale ?? 1) * (1 + 0.16 * (f.air || 0)); FR.ca = Math.cos(f.ang); FR.sa = Math.sin(f.ang)
   FR.x = f.x; FR.y = f.y - lift; FR.ang = f.ang
-  BW = f.look?.bw ?? 1; SH = SH0 * BW
+  // (owner 11-26: the shoulders a touch narrower than the build's own number, for everyone)
+  BW = (f.look?.bw ?? 1) * 0.91; SH = SH0 * BW
   // a big's arms and legs are thicker in the same measure as his shoulders are broader (the owner, 11-26: a big's arms
   // read as thin sticks off broad shoulders)
-  AW = 1 + 0.15 * (BW - 1)
+  AW = 1 + 0.15 * (BW / 0.91 - 1)
   TW = clamp(f.tw || 0, -0.3, 0.3); TWc = Math.cos(TW); TWs = Math.sin(TW); HIP = clamp(f.hip || 0, -0.3, 0.3)
 }
 // a point in his frame on the screen: out = [px, py, the same point on the floor's py] (the ball in his hand, its shadow)
@@ -167,30 +168,63 @@ export function armPts(side, hand) {
   if (h > cap) { dx *= cap / h; dy *= cap / h }
   return [sx, sy, sx, sy, sx + dx, sy + dy]
 }
-// One arm, in one outline: the deltoid's round cap at the shoulder, the arm tapering from it to the wrist, a small
-// neat hand. Every measure goes with his build (AW), so a big's arm is in proportion to his shoulders. An arm hanging
-// at his side shows from above as no more than the deltoid and the top of the arm: one smooth teardrop, no stub
-// (hi: an arm raised over his head and shoulders, drawn after him: its deltoid stays under the jersey)
-const R_DELT = 0.047, R_ARM = 0.033, R_WRIST = 0.024, R_HAND = 0.027
-function arm(ctx, side, hand, L, ink, hi = false, deltOnly = false) {
-  const [sx, sy, , , hx, hy] = armPts(side, hand)
-  const z = clamp(hand[2] || 0, 0, 1.2), len = Math.hypot(hx - sx, hy - sy)
-  const rd = R_DELT * AW, ra = R_ARM * AW, rw = R_WRIST * AW * (1 + 0.08 * z), rh = R_HAND * AW * (1 + 0.1 * z)
-  // (a short arm: the taper runs over what shows of it, so it never ends in a knob)
-  const k = clamp((len - 0.04) / 0.14, 0, 1), rEnd = rw + (ra - rw) * (1 - k), rH = rEnd + (rh - rEnd) * k
-  if (!hi) ovalS(ctx, sx - 0.004, sy, rd * 1.05, rd, L.skin, L.skinD, ink, TW)
-  if (deltOnly) return
-  // the arm itself: from just out of the deltoid (inside its cap) to the hand, one taper, the hand its rounded end
-  const ux = (hx - sx) / (len || 1), uy = (hy - sy) / (len || 1), o = Math.min(len * 0.5, rd * 0.4)
-  if (len > 0.01) seg(ctx, sx + ux * o, sy + uy * o, hi ? ra * 1.05 : ra, hx, hy, Math.max(rEnd, rH * 0.92), L.skin, L.skinD, ink)
+// One arm, in one outline: the deltoid's round cap at the shoulder, the upper arm a little fuller near the shoulder and
+// the forearm slimmer to the wrist (no elbow: from overhead the elbow sits under the line), and a hand on the end that
+// reads as a hand (handShape), not a ball. Every measure goes with his build a little (AW). An arm hanging at his side
+// shows from above as little more than the deltoid, the top of the arm and the back of the hand
+const R_DELT = 0.047, R_ARM = 0.034, R_FORE = 0.027, R_WRIST = 0.021, R_HAND = 0.026
+function armGeo(side, hnd) {
+  const [sx, sy, , , hx, hy] = armPts(side, hnd)
+  const z = clamp(hnd[2] || 0, 0, 1.2), len = Math.hypot(hx - sx, hy - sy) || 0.001
+  const ux = (hx - sx) / len, uy = (hy - sy) / len
+  // (how much of the arm shows: a short one is mostly foreshortened, its hand too)
+  const k = clamp((len - 0.03) / 0.14, 0, 1), rh = R_HAND * AW * (1 + 0.06 * z)
+  // the hand, foreshortened when it points at the camera or the floor (hanging, or straight up)
+  const fh = hnd[3] ? 1 : 0.55 + 0.45 * k * (z > 0.85 ? 0.7 : 1)
+  const wx = hx - ux * rh * 0.55 * fh, wy = hy - uy * rh * 0.55 * fh
+  return { sx, sy, hx, hy, ux, uy, len, k, z, rh, fh, wx, wy }
+}
+function arm(ctx, side, hand, L, ink) {
+  const G = armGeo(side, hand), rd = R_DELT * AW, ra = R_ARM * AW, rf = R_FORE * AW, rw = R_WRIST * AW
+  ovalS(ctx, G.sx - 0.004, G.sy, rd * 1.05, rd, L.skin, L.skinD, ink, TW)
+  const o = Math.min(G.len * 0.5, rd * 0.4), ax = G.sx + G.ux * o, ay = G.sy + G.uy * o
+  const wl = Math.hypot(G.wx - ax, G.wy - ay)
+  if (wl > 0.012) {
+    // upper arm to the middle, then the forearm to the wrist (a short arm: one gentle taper)
+    const mx = ax + (G.wx - ax) * 0.5, my = ay + (G.wy - ay) * 0.5, rm = rf + (ra - rf) * (1 - G.k) * 0.5
+    seg(ctx, ax, ay, ra, mx, my, rm, L.skin, L.skinD, ink)
+    seg(ctx, mx, my, rm, G.wx, G.wy, rw + (rm - rw) * (1 - G.k), L.skin, L.skinD, ink)
+  }
+  handShape(ctx, side, G, L, ink)
+}
+// A hand from above: the back of the hand (a flattened palm along the forearm), the fingers together past it, a little
+// slimmer, and the thumb off the inside edge. Tiny at true size; enough to read as a hand
+function handShape(ctx, side, G, L, ink) {
+  const r = G.rh, f = G.fh, ux = G.ux, uy = G.uy, px = -uy * -side, py = ux * -side   // (p: toward his thumb, the inside)
+  const hx = G.hx - ux * r * 0.2 * f, hy = G.hy - uy * r * 0.2 * f
+  const ang = Math.atan2(uy, ux)
+  oval(ctx, hx, hy, r * 0.95 * f, r * 0.82, L.skin, ink, ang)
+  seg(ctx, hx + ux * r * 0.35 * f - px * r * 0.06, hy + uy * r * 0.35 * f - py * r * 0.06, r * 0.62, hx + ux * r * 1.15 * f - px * r * 0.08, hy + uy * r * 1.15 * f - py * r * 0.08, r * 0.5, L.skin, null, ink)
+  seg(ctx, hx + px * r * 0.42 - ux * r * 0.1 * f, hy + py * r * 0.42 - uy * r * 0.1 * f, r * 0.3, hx + px * r * 0.8 + ux * r * 0.38 * f, hy + py * r * 0.8 + uy * r * 0.38 * f, r * 0.26, L.skin, null, ink)
+  if (PASS === 1 && FR.sc * r > 3.2) {
+    // (big enough to see: a soft shade down the outside edge of the hand, away from the light)
+    ctx.globalAlpha = 0.35; oval(ctx, hx - px * r * 0.3, hy - py * r * 0.3, r * 0.7 * f, r * 0.42, L.skinD, 0, ang); ctx.globalAlpha = 1
+  }
 }
 
-// a raised hand, over his head and shoulders: small and round, its own outline
-function hand(ctx, side, hnd, L, ink, all = false) {
-  const [, , , , hx, hy] = armPts(side, hnd)
-  // (only a hand over his jersey or head: one out past them already shows on the end of its arm)
-  if (!all && !(hx < 0.11 && hx > -0.13 && Math.abs(hy) < 0.23 * BW)) return
-  ovalS(ctx, hx, hy, R_HAND * AW * 0.98, R_HAND * AW * 0.9, L.skin, L.skinD, ink)
+// a raised hand, over his head and shoulders (only one over his jersey or head: one out past them already shows on the
+// end of its arm). fore: the forearm with it (a hand up over the rim brings its forearm over the rim and net too)
+function hand(ctx, side, hnd, L, ink, all = false, fore = false) {
+  const G = armGeo(side, hnd)
+  if (!all && !(G.hx < 0.11 && G.hx > -0.13 && Math.abs(G.hy) < 0.23 * BW)) return
+  if (fore && G.len > 0.1) {
+    // (its fill starts a little further back than its outline, so the outline has no end across the arm: the
+    // forearm comes up out of the arm under the hoop with no seam)
+    const t = hnd[3] ? 0.55 : 0.6, t0 = PASS === 0 ? t : t - 0.12
+    const mx = G.sx + (G.wx - G.sx) * t0, my = G.sy + (G.wy - G.sy) * t0
+    seg(ctx, mx, my, R_FORE * AW * 0.95, G.wx, G.wy, R_WRIST * AW, L.skin, L.skinD, ink)
+  }
+  handShape(ctx, side, G, L, ink)
 }
 
 // ── the legs: a leg in a stride, from his hip under the shorts to his shoe. The shorts' leg down his thigh, then his
@@ -340,6 +374,6 @@ export function drawFigure(ctx, f) {
 export function drawHands(ctx, f) {
   frame(f)
   const L = f.look, ink = Math.max(1, FR.sc * 0.026)
-  for (PASS = 0; PASS < 2; PASS++) for (const [sd, h] of [[-1, f.lh], [1, f.rh]]) if ((h[2] || 0) >= 0.8 || h[3]) hand(ctx, sd, h, L, ink, true)
+  for (PASS = 0; PASS < 2; PASS++) for (const [sd, h] of [[-1, f.lh], [1, f.rh]]) if ((h[2] || 0) >= 0.8 || h[3]) hand(ctx, sd, h, L, ink, true, true)
 }
 export { clamp }
