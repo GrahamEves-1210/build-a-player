@@ -50,7 +50,7 @@ const NBA_FRANCHISE_DEV = (() => {
     return localStorage.getItem('bap_frnba_dev') !== '0'
   } catch { return true }
 })()
-export const NBA_FRANCHISE_LIVE = false || NBA_FRANCHISE_DEV
+export const NBA_FRANCHISE_LIVE = true || NBA_FRANCHISE_DEV   // live 2026-11-26 (Thanksgiving update)
 // Home's card note, the same shape as football's (components/franchise2/nba/NbaFranchise.jsx leaveNote)
 export const NBA_FRANCHISE_CARD_KEY = 'bap_frnba_card'
 export const nbaFranchiseCard = () => { try { const c = JSON.parse(localStorage.getItem(NBA_FRANCHISE_CARD_KEY)); return c && typeof c.line === 'string' && c.line ? c : null } catch { return null } }

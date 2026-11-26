@@ -15,7 +15,7 @@ const SOCCER_DEV = (() => {
     return localStorage.getItem('bap_soccer_dev') !== '0'
   } catch { return true }
 })()
-export const SOCCER_LIVE = false || SOCCER_DEV   // off again, shown as COMING SOON (the owner, 2026-11-17: "disable soccer for now (coming soon)")
+export const SOCCER_LIVE = true || SOCCER_DEV   // live 2026-11-26 (Thanksgiving update)
 // While it's off, soccer still sits on Home's sport switch: /soccer opens its Home as it is, under a COMING SOON
 // board (components/SoccerComingSoon.jsx), and nothing on it can be played. (The owner, 11-08: "show soccer as it
 // is now but with a coming soon over it")
