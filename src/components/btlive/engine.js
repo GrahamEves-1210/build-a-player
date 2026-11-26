@@ -67,16 +67,21 @@ export function createEngine({ setup, els, on, net = null }) {
   const poser = createPoser(N)
   const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS' }
 
-  // The court is a window onto the half court: its height always shows the whole depth (baseline to half court);
-  // on a narrow screen (a phone held upright) it shows about 34 of the 56 feet across and pans with the play.
-  let cam = null, camPx = 0, worldW = 0
+  // The court is a window onto the half court: its height shows the whole depth (baseline to half court); on a
+  // narrow screen (a phone held upright) it shows about 31 of the 56 feet across and pans with the play, and it's a
+  // touch closer in (the owner, 11-26: PHONE_ZOOM), framed a little up the floor toward the hoop (the fence over the
+  // baseline and the far end past half court go off the edges; it eases down when the play goes deep)
+  const PHONE_ZOOM = 1.09, PHONE_TOP = 1.5         // (ft of the picture's top off the screen on a phone)
+  let cam = null, camY = null, camPx = 0, camPy = 0, worldW = 0, worldH = 0
   function resize() {
     const r = els.court.getBoundingClientRect()
     dpr = Math.min(3, window.devicePixelRatio || 1)
-    w = r.width; h = r.height; k = h / COURT.H; worldW = COURT.W * k
+    w = r.width; h = r.height; k = h / COURT.H
+    if (COURT.W * k > w + 1) k *= PHONE_ZOOM
+    worldW = COURT.W * k; worldH = COURT.H * k
     els.canvas.width = Math.round(w * dpr); els.canvas.height = Math.round(h * dpr)
-    if (els.world) { els.world.style.width = `${worldW}px`; els.world.style.height = `${h}px` }
-    cam = null
+    if (els.world) { els.world.style.width = `${worldW}px`; els.world.style.height = `${worldH}px` }
+    cam = null; camY = null
   }
   // where the camera looks: mostly the ball, some of the player being controlled; eased, never past the court's edges
   function camera(dt) {
@@ -90,7 +95,16 @@ export function createEngine({ setup, els, on, net = null }) {
       cam = cam == null ? tx : cam + (tx - cam) * (1 - Math.exp(-dt / 260))
       camPx = clamp(cam, 0, worldW - w)
     }
-    if (els.world && Math.abs((els.world._x ?? 1e9) - camPx) > 0.2) { els.world._x = camPx; els.world.style.transform = `translate3d(${-camPx}px,0,0)` }
+    if (worldH <= h + 1) camPy = 0
+    else {
+      // (up and down: the top of the picture a little off; the play deep toward half court brings it down)
+      const b = s.ball, P = s.players, by = b.st === 'held' ? P[b.holder].y : b.y
+      const fy = s.phase === 'live' ? by * 0.6 + P[me].y * 0.4 : COURT.check.y
+      const ty = (PHONE_TOP + Math.max(0, fy - 34) * 0.5) * k
+      camY = camY == null ? ty : camY + (ty - camY) * (1 - Math.exp(-dt / 320))
+      camPy = clamp(camY, 0, worldH - h)
+    }
+    if (els.world && (Math.abs((els.world._x ?? 1e9) - camPx) > 0.2 || Math.abs((els.world._y ?? 1e9) - camPy) > 0.2)) { els.world._x = camPx; els.world._y = camPy; els.world.style.transform = `translate3d(${-camPx}px,${-camPy}px,0)` }
   }
 
   // ── what happened this tick: sound, haptics, the words and the rare animations ──────────────────
@@ -758,7 +772,7 @@ export function createEngine({ setup, els, on, net = null }) {
     let best = null, bc = Infinity
     for (const dy of [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5]) {
       for (const dx of [0, -1, 1]) {
-        const x = clamp(ax + dx * (tw * 0.5 + tk0 * 0.9), L + tw / 2 + 8, Rr - tw / 2 - 8), y = clamp(ay + dy * step, fs, h - fs)
+        const x = clamp(ax + dx * (tw * 0.5 + tk0 * 0.9), L + tw / 2 + 8, Rr - tw / 2 - 8), y = clamp(ay + dy * step, camPy + fs, camPy + h - fs)
         const rc = [x - tw / 2 - 3, y - fs * 0.55 - 8, x + tw / 2 + 3, y + fs * 0.55]
         let c = 0
         for (const o of obs) c += ovl(rc, o)
@@ -789,7 +803,7 @@ export function createEngine({ setup, els, on, net = null }) {
     // the side (and a nudge up or down) where it covers nobody: no other man, no name tag (BARS, DOTS: this frame's);
     // his own is kept while it stays as clear as the other (so it doesn't hop about), the other side when that one
     // hasn't the room on the screen
-    const yOf = dy => clamp(y - bh * 0.7 + dy * bh, fs * 1.6 + 4, h - bh - 4)
+    const yOf = dy => clamp(y - bh * 0.7 + dy * bh, camPy + fs * 1.6 + 4, camPy + h - bh - 4)
     const mineBar = BAR_OF[i]
     const costOf = (sd, dy) => {
       if (!fits(sd)) return 1e6
@@ -850,7 +864,7 @@ export function createEngine({ setup, els, on, net = null }) {
     ctx.font = `${fs}px ${FONT}`; ctx.textBaseline = 'middle'
     const chip = (text, cx, cy, color) => {
       const tw = ctx.measureText(text).width, pw = tw + 12, ph = Math.round(fs * 1.3)
-      const x0 = clamp(cx - pw / 2, L, Rr - pw), y0 = clamp(cy - ph / 2, 2, h - ph - 2)
+      const x0 = clamp(cx - pw / 2, L, Rr - pw), y0 = clamp(cy - ph / 2, camPy + 2, camPy + h - ph - 2)
       ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fillRect(x0, y0, pw, ph)
       ctx.fillStyle = color; ctx.fillRect(x0, y0, 3, ph)
       ctx.textAlign = 'left'; ctx.fillText(text, x0 + 7, y0 + ph / 2 + 0.5)
@@ -948,14 +962,14 @@ export function createEngine({ setup, els, on, net = null }) {
     const dt = clamp(now - lastDraw, 0, 100); lastDraw = now
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
-    ctx.translate(-camPx, 0)                                         // world coordinates from here (the camera)
+    ctx.translate(-camPx, -camPy)                                    // world coordinates from here (the camera)
     const L = camPx, Rr = camPx + w                                  // the screen's edges, in them
     // a dot fits inside the body the game collides (its rings too), so two men touching don't overlap on the screen
     const tk = clamp(k * T.radius * 2 - 7, 18, 50); tk0 = tk
     places(a)
     if (s.phase !== 'over') relax(tk)
     figures(now, dt, a, tk)
-    if (import.meta.env.DEV) { LAY.dots.length = LAY.bars.length = LAY.words.length = LAY.tabs.length = 0; LAY.ball = null; LAY.k = k; LAY.tk = tk; LAY.L = L; LAY.R = Rr; LAY.h = h }
+    if (import.meta.env.DEV) { LAY.dots.length = LAY.bars.length = LAY.words.length = LAY.tabs.length = 0; LAY.ball = null; LAY.k = k; LAY.tk = tk; LAY.L = L; LAY.R = Rr; LAY.h = h; LAY.T = camPy }
     const X = i => FIG[i].x, Y = i => FIG[i].cy
     const b = s.ball, live = s.phase === 'live'
     const holder = b.st === 'held' ? b.holder : -1
@@ -973,36 +987,20 @@ export function createEngine({ setup, els, on, net = null }) {
     // every man's shadow first (no shadow lies on a man)
     for (let i = 0; i < N; i++) if (!cut(i)) drawShadow(ctx, FIG[i])
     drawFans(now)
-    // under the player this device controls: a white ring on the floor (his jersey is his side's colour, so the ring
-    // isn't), a faint fill of his colour inside it; under the teammate the stick points at, a dashed one
-    const ringR = FIGK * k * 0.62
+    // under the player this device controls: a small flat disc of his side's colour on the floor, mostly under him
+    // (the owner, 11-26: no big circles over the men; his name tag says who he is). The teammate the stick points a
+    // pass at, and a teammate calling for the ball, get the same small disc, fainter (the call's pulses)
+    const disc = (i, a, r = 0.4) => { const f = FIG[i]; ctx.globalAlpha = a; ctx.fillStyle = colOf(i); ctx.beginPath(); ctx.ellipse(f.x, f.y + FIGK * k * 0.03, FIGK * k * r, FIGK * k * r * 0.92, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1 }
     if (s.phase !== 'over' && !cut(me)) {
-      const mx = FIG[me].x, my = FIG[me].y, col = colOf(me)
-      ctx.beginPath(); ctx.arc(mx, my, ringR, 0, 6.283); ctx.globalAlpha = 0.16; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1
-      ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(5,7,10,.7)'; ctx.stroke()
-      ctx.lineWidth = 2.5; ctx.strokeStyle = '#f3f6f8'
-      ctx.beginPath(); ctx.arc(mx, my, ringR, 0, 6.283); ctx.stroke()
+      disc(me, 0.38, 0.34)
       if (s.size > 1 && !koth() && holder === me && live && !levels[me]) {
         const to = passTarget(s, me, H.mx, H.my)
-        if (to >= 0 && !cut(to)) {
-          ctx.setLineDash([5, 4]); ctx.strokeStyle = '#f3f6f8'; ctx.lineWidth = 2
-          ctx.beginPath(); ctx.arc(FIG[to].x, FIG[to].y, ringR, 0, 6.283); ctx.stroke(); ctx.setLineDash([])
-        }
+        if (to >= 0 && !cut(to)) disc(to, 0.26, 0.34)
       }
     }
-    // the dribble legs (stamina) of the man with the ball, while they aren't full: a thin arc up the left of his spot on
-    // the floor (clear of his name under him and the tags over him), white, amber when they're low
-    if (holder >= 0 && live && !cut(holder) && (P[holder].sta ?? 1) < 0.985) {
-      const f = FIG[holder], st = clamp(P[holder].sta ?? 1, 0, 1), rr0 = ringR + 4, a0 = Math.PI + 0.95, span = 1.9
-      ctx.lineCap = 'butt'
-      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(5,7,10,.7)'; ctx.beginPath(); ctx.arc(f.x, f.y, rr0, a0 - span, a0); ctx.stroke()
-      ctx.lineWidth = 2.5; ctx.strokeStyle = st < 0.35 ? AMBER : 'rgba(243,246,248,.9)'; ctx.beginPath(); ctx.arc(f.x, f.y, rr0, a0 - span * st, a0); ctx.stroke()
-    }
-    // a teammate calling for the ball: a ring on his man, on every screen, for as long as the call is fresh
     if (s.call && s.phase === 'live' && s.tick - s.call.tick < 45 && P[s.call.pid] && !cut(s.call.pid)) {
       const ci = s.call.pid, f = clamp((s.tick - s.call.tick) / 45, 0, 1)
-      ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,255,255,${0.95 - 0.5 * f})`
-      ctx.beginPath(); ctx.arc(FIG[ci].x, FIG[ci].y, FIGK * k * (0.64 + 0.2 * ((s.tick - s.call.tick) % 15) / 15), 0, 6.283); ctx.stroke()
+      disc(ci, (0.45 - 0.3 * f) * (0.6 + 0.4 * Math.cos((s.tick - s.call.tick) / 15 * 6.283)), 0.46)
     }
     // players, the far ones first, by where their feet are (and a man in the air over the men on the floor)
     const depth = i => DY[i] + FIG[i].air * 30
@@ -1169,7 +1167,7 @@ export function createEngine({ setup, els, on, net = null }) {
       ]
       let pick = 0, bc = Infinity
       for (let c = 0; c < C.length; c++) {
-        const x0 = clamp(C[c][0], L + 2, Rr - 2 - bw), y0 = clamp(C[c][1], 1, h - bh - 1)
+        const x0 = clamp(C[c][0], L + 2, Rr - 2 - bw), y0 = clamp(C[c][1], camPy + 1, camPy + h - bh - 1)
         const rc = [x0, y0, x0 + bw, y0 + bh]
         let cost = (c === 0 ? 0 : c === 1 ? 30 : c < 4 ? 90 : 60) - (CHOICE[i] === c ? 70 : 0)
         for (const d of DOTS) if (d[4] !== i) cost += ovl(rc, d) * 2
@@ -1181,10 +1179,17 @@ export function createEngine({ setup, els, on, net = null }) {
         if (cost < bc) { bc = cost; pick = c }
       }
       CHOICE[i] = pick
-      const x0 = clamp(C[pick][0], L + 2, Rr - 2 - bw), y0 = clamp(C[pick][1], 1, h - bh - 1)
+      const x0 = clamp(C[pick][0], L + 2, Rr - 2 - bw), y0 = clamp(C[pick][1], camPy + 1, camPy + h - bh - 1)
       const rc = [x0, y0, x0 + bw, y0 + bh]
       BARS.push(rc); BAR_OF[i] = rc
       drawTag(rc, nm, fsN, colOf(i), i === me, i === me, face)
+      // the dribble legs (stamina) of the man with the ball, while they aren't full: a thin bar under his name tag,
+      // white, amber when they're low
+      if (i === holder && live && (P[i].sta ?? 1) < 0.985) {
+        const st = clamp(P[i].sta ?? 1, 0, 1), y = rc[3] + 2
+        ctx.fillStyle = 'rgba(5,7,10,.75)'; ctx.fillRect(rc[0], y, rc[2] - rc[0], 4)
+        ctx.fillStyle = st < 0.35 ? AMBER : 'rgba(243,246,248,.9)'; ctx.fillRect(rc[0] + 1, y + 1, (rc[2] - rc[0] - 2) * st, 2)
+      }
       if (import.meta.env.DEV) LAY.bars[i] = rc
     }
     if (clearTag) {
@@ -1204,10 +1209,10 @@ export function createEngine({ setup, els, on, net = null }) {
       if (!off) continue
       ctx.font = `${tfs}px ${FONT}`
       const tw = 30 + ctx.measureText(setup.looks[i].label.toUpperCase().slice(0, 9) + (P[i].out ? ' · NEXT' : '')).width + (i === holder ? 20 : 0)
-      const ex = off < 0 ? L : Rr, y0 = clamp(Y(i), 14, h - 14)
+      const ex = off < 0 ? L : Rr, y0 = clamp(Y(i), camPy + 14, camPy + h - 14)
       let best = y0, bc = Infinity
       for (const st of [0, -1, 1, -2, 2, -3, 3, -4, 4]) {
-        const y = clamp(y0 + st * 30, 14, h - 14), rc = off < 0 ? [ex, y - 14, ex + tw, y + 14] : [ex - tw, y - 14, ex, y + 14]
+        const y = clamp(y0 + st * 30, camPy + 14, camPy + h - 14), rc = off < 0 ? [ex, y - 14, ex + tw, y + 14] : [ex - tw, y - 14, ex, y + 14]
         let c = Math.abs(st) * 40 + (TABY[i] === st ? -30 : 0)
         for (const d of DOTS) c += ovl(rc, d) * 2
         for (const o of BARS) c += ovl(rc, o) * 2
@@ -1233,7 +1238,7 @@ export function createEngine({ setup, els, on, net = null }) {
       ctx.globalAlpha = t > 0.7 ? (1 - t) / 0.3 : 1
       // beside him, where his meter was (not on the man guarding him)
       const tw = ctx.measureText('NO SHOT').width, sd = meter.side || 1
-      const gx = clamp(X(me) + sd * (tk * 0.5 + 14 + tw / 2), L + tw / 2 + 10, Rr - tw / 2 - 10), gy = clamp(Y(me), fs, h - fs)
+      const gx = clamp(X(me) + sd * (tk * 0.5 + 14 + tw / 2), L + tw / 2 + 10, Rr - tw / 2 - 10), gy = clamp(Y(me), camPy + fs, camPy + h - fs)
       ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fillRect(gx - tw / 2 - 6, gy - fs * 0.65, tw + 12, fs * 1.3)
       ctx.fillStyle = GRADE_COL['NO SHOT']; ctx.fillText('NO SHOT', gx, gy + 0.5)
       ctx.globalAlpha = 1
@@ -1546,7 +1551,7 @@ export function createEngine({ setup, els, on, net = null }) {
     // DEV: the game's clock (ms) as the poses read it, and the people watching
     get clock() { return clockNow }, get fans() { return FANS },
     // DEV: where a man is on the page (px)
-    screenOf(i) { const r = els.court.getBoundingClientRect(); return [r.left + FIG[i].x - camPx, r.top + FIG[i].y] },
+    screenOf(i) { const r = els.court.getBoundingClientRect(); return [r.left + FIG[i].x - camPx, r.top + FIG[i].y - camPy] },
     // DEV: let time pass with the game stopped (the meter runs on this device's clock)
     wait(ms) { clockNow += ms; draw(clockNow) },
     draw() { camera(1e6); draw(clockNow) },

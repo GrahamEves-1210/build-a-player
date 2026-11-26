@@ -5,12 +5,15 @@
 // in-and-out, the hesitation, the step-back, the spin), the jumper and its follow-through, the layup, the dunk,
 // a defensive stance, a swipe, a contest, a man frozen by a move or sat down by one. Only the picture.
 //
-// Arms move only as a real player's do, elbows in by his sides (figure.js bends them): the dribbling hand at his side
+// Every stride is a real cycle (gait): a cadence and a stride length by his speed, the feet planted and pushing back,
+// hips and shoulders turning against each other, the dribble in time with his feet; stops, starts and landings settle.
+// Arms move only as a real player's do, slim and close (figure.js draws them straight, no elbows): the dribbling hand at his side
 // working the ball, the off arm a little out in front to protect it, a small swing running without it, both hands out
 // and active in front guarding, both up only on a shot, a
 // contest or a block, a quick reach on a steal. Every pose is a target the drawn hands and feet ease to (no snaps).
 import { COURT, T, MOVES, MOVE_KEYS, HZ, gticks } from '../../lib/btlive/index.js'
 import { HOOP_LIFT } from './court.js'
+import { BODY } from './figure.js'
 
 const RIM = COURT.rim, STEP = 1000 / HZ, TAU = Math.PI * 2
 const c01 = v => (v < 0 ? 0 : v > 1 ? 1 : v)
@@ -21,23 +24,23 @@ const wrap = a => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU;
 const set3 = (h, x, y, z) => { h[0] = x; h[1] = y; h[2] = z }
 const mix3 = (h, x, y, z, w) => { h[0] += (x - h[0]) * w; h[1] += (y - h[1]) * w; h[2] += (z - h[2]) * w }
 
-const STRIDE = 5.6                    // feet of floor to one full stride (two steps)
 const DRIB = 440, DRIB_RUN = 340      // ms a bounce, standing and at a run
 export const DUNK = { hang: 230, drop: 190, land: 120 }   // ms: on the rim, coming down, the knees taking it
 const FOLLOW = 560                    // ms a shooter holds his follow-through
-const EASE_HAND = 70, EASE_FAST = 24, EASE_FOOT = 45      // ms: how quickly the drawn hands and feet reach the pose
+const EASE_HAND = 70, EASE_FAST = 24, EASE_FOOT = 34      // ms: how quickly the drawn hands and feet reach the pose
+const FOOT_V = 3.6                    // the quickest a drawn foot moves (his size units a second)
 
 export function createPoser(N) {
   const A = Array.from({ length: N }, () => ({
-    ang: -Math.PI / 2, x: null, y: 0, run: 0, sp: 0, lx: 1, ly: 0, side: 1, from: 1, drib: 0,
+    ang: -Math.PI / 2, x: null, y: 0, sp: 0, gp: 0, gR: 0, gS: 0, gL: 0, gRr: 0, mdx: 1, mdy: 0, acc: 0, spP: 0, stopT: -1e9, goT: -1e9, landT: -1e9, pAir: 0, bsd: 0, lfW: null, rfW: null, GL: [0, 0], GR: [0, 0], lx: 1, ly: 0, side: 1, from: 1, drib: 0,
     inMv: 0, mvT0: 0, gT0: -1, gKind: null, gSide: 1, gAir: 0,
     rel: null, swipe: null, pass: null, hit: null, wob: 1, cheer: false, land: 0, gOx: 0, gOy: 0,
     swat: null, cele: null, sad: 0, dvx: 0, dvy: 0, cutAt: 0,
     // what is drawn: eased toward each frame's pose
     lh: null, rh: null, lf: null, rf: null,
   }))
-  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0], rh: [0, 0, 0], lf: [0, 0], rf: [0, 0], air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], bside: 1, two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0, cut: false }))
-  const TL = [0, 0, 0], TR = [0, 0, 0]
+  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0], rh: [0, 0, 0], lf: [0, 0, 0], rf: [0, 0, 0], tw: 0, hip: 0, air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], bside: 1, two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0, cut: false }))
+  const TL = [0, 0, 0], TR = [0, 0, 0], CL = [0, 0], CR = [0, 0], FW = [0, 0, 0]
   let lastMiss = null
 
   // what happened: the things a pose can't read off the state
@@ -85,7 +88,6 @@ export function createPoser(N) {
     a.x = env.x; a.y = env.y
     const sp = dt > 0 ? Math.min(30, dist / dt * 1000) : 0                 // ft a real second
     if (dt > 0) a.sp += (sp - a.sp) * (1 - Math.exp(-dt / 90))
-    if (dist < 3) a.run += dist / STRIDE * TAU
     const amp = c01(a.sp / 9)
     let fast = false
     // a hard cut: going fast and the way he goes swings round sharply, or a hard stop (a scuff on the floor: the screen
@@ -95,7 +97,7 @@ export function createPoser(N) {
       const ux = mvx / dist, uy = mvy / dist
       // (or a hard stop: from a run to half that in a moment, the plant foot taking it)
       a.pk = Math.max(sp, (a.pk || 0) * Math.exp(-dt / 220))
-      if (now - a.cutAt > 300 && ((a.sp > 6.5 && (a.dvx || a.dvy) && ux * a.dvx + uy * a.dvy < 0.8) || (a.pk > 8.5 && sp < a.pk * 0.45))) { z.cut = true; a.cutAt = now; a.pk = 0 }
+      if (now - a.cutAt > 300 && ((a.sp > 6.5 && (a.dvx || a.dvy) && ux * a.dvx + uy * a.dvy < 0.8) || (a.pk > 8.5 && sp < a.pk * 0.45))) { z.cut = true; a.cutAt = now; if (sp < a.pk * 0.45) { a.stopT = now; a.stopF = (a.GL[0] * a.lx > a.GR[0] * a.lx) ? -1 : 1; a.stopX = a.mdx; a.stopY = a.mdy } a.pk = 0 }
       const kd = 1 - Math.exp(-dt / 260); a.dvx += (ux - a.dvx) * kd; a.dvy += (uy - a.dvy) * kd
       const l = Math.hypot(a.dvx, a.dvy) || 1; a.dvx /= l; a.dvy /= l
     }
@@ -148,34 +150,22 @@ export function createPoser(N) {
     const lx = a.lx, ly = a.ly
 
     // ── standing and running ──
-    const sw = Math.sin(a.run)
     z.air = 0; z.scale = 1; z.lean = 0.04 * amp * Math.max(0, lx); z.down = 0; z.ox = 0; z.oy = 0; z.ball = false; z.two = false; z.bounce = false; z.thud = false; z.under = false; z.toeL = 0; z.toeR = 0
-    // (a stride: from above a runner's front foot shows past his chest, his back one behind him)
-    const stx = lx * 0.42 * amp, sty = ly * 0.18 * amp, rest = 0.02 * (1 - amp)
-    z.lf[0] = rest + stx * sw; z.lf[1] = -0.15 + sty * sw
-    z.rf[0] = rest - stx * sw; z.rf[1] = 0.15 - sty * sw
-    // the arms: at his sides, a small swing against his stride when he runs
-    const swing = 0.1 * amp * sw * (lx >= -0.2 ? 1 : -1)
-    set3(TL, 0.04 + swing, -0.47, 0.18); set3(TR, 0.04 - swing, 0.47, 0.18)
+    // his stride (gait, below): squared up on his man it's the defensive slide, else a run
+    const dm0 = guarding && p.act === 'free' ? Math.hypot(man.x - env.x, man.y - env.y) : 99
+    const wide = c01((10 - dm0) / 4) * (1 - c01((a.sp - 8) / 3))
+    gait(a, z, dt, now, wide, env)
+    // the arms: at his sides, a small swing against his stride when he runs (each hand with the shoulder over it,
+    // forward as the other side's foot goes forward), the hands coming up a little as they swing through
+    const sw = a.gS * (lx >= -0.2 ? 1 : -0.5)
+    set3(TL, 0.08 - 0.075 * sw, -0.45, 0.2 + 0.06 * Math.max(0, -sw)); set3(TR, 0.08 + 0.075 * sw, 0.45, 0.2 + 0.06 * Math.max(0, sw))
 
     // ── a man on defense: low, wide, both arms out and steady ──
     if (guarding && p.act === 'free') {
       const dm = Math.hypot(man.x - env.x, man.y - env.y), onBall = b.st === 'held' && b.holder === man.i
-      const wide = c01((10 - dm) / 4) * (1 - c01((a.sp - 8) / 3))              // squared up on him; running when he chases
-      z.lf[1] -= 0.1 * wide; z.rf[1] += 0.1 * wide; z.lf[0] *= 1 - 0.5 * wide; z.rf[0] *= 1 - 0.5 * wide
-      z.toeL = -0.25 * wide; z.toeR = 0.25 * wide
-      mix3(TL, 0.24, -0.36, 0.3, wide); mix3(TR, 0.24, 0.36, 0.3, wide)
+      // (the stance and the slide are in his stride: gait)
+      mix3(TL, 0.05, -0.5, 0.3, wide); mix3(TR, 0.05, 0.5, 0.3, wide)
       z.lean = Math.max(z.lean, 0.03 * wide)
-      // sliding with him: the feet never cross, the lead foot steps out and the trail foot closes to it (a shuffle);
-      // giving ground: short quick steps back, the weight on his heels
-      const lat = Math.abs(ly) * c01((a.sp - 1.5) / 3) * wide
-      if (lat > 0.05) {
-        const sh = 0.07 * Math.sin(a.run * 1.3)
-        z.lf[0] += (0.02 - z.lf[0]) * lat; z.rf[0] += (0.02 - z.rf[0]) * lat
-        z.lf[1] += (-(0.25 + sh) - z.lf[1]) * lat; z.rf[1] += ((0.25 + sh) - z.rf[1]) * lat
-        z.toeL = -0.35 * lat; z.toeR = 0.35 * lat
-      }
-      if (lx < -0.45 && a.sp > 1.5) { const bk = c01(-lx - 0.45) * wide; z.lf[0] *= 1 - 0.45 * bk; z.rf[0] *= 1 - 0.45 * bk; z.lean = -0.03 * bk }
       // his man rising for a shot: a hand up at it (no jump: that's the button)
       if (P[man.i].act === 'gather') {
         const w = c01((8.5 - dm) / 3), toS = wrap(Math.atan2(man.y - env.y, man.x - env.x) - a.ang), sd = Math.sin(toS) >= 0 ? 1 : -1
@@ -183,9 +173,11 @@ export function createPoser(N) {
       }
       if (onBall && dm < 8) {
         // the hand on the ball's side a little out in front of it, low (where a swipe comes from)
-        const ballSide = (P[man.i].hand || 1) * (Math.cos(a.ang - A[man.i].ang) < 0 ? -1 : 1)
+        // (which side that is, held until it's clearly the other: no flicking across when he's square to him)
+        const cf = Math.cos(a.ang - A[man.i].ang); if (Math.abs(cf) > 0.3 || !a.bsd) a.bsd = cf < 0 ? -1 : 1
+        const ballSide = (P[man.i].hand || 1) * a.bsd
         const w = c01((8 - dm) / 2)
-        mix3(ballSide > 0 ? TR : TL, 0.32, ballSide > 0 ? 0.38 : -0.38, 0.34, w)
+        mix3(ballSide > 0 ? TR : TL, 0.15, ballSide > 0 ? 0.47 : -0.47, 0.34, w)
         // the hands working, a little (a quick small in-and-out, never a wave)
         const hw = 0.03 * w * Math.sin(now / 115)
         TL[0] += hw; TR[0] -= hw
@@ -200,11 +192,11 @@ export function createPoser(N) {
     }
     // off the ball, on offense: hands ready for a pass on its way; one arm up, held, when he calls for it
     if (live && !has && p.team === s.poss && p.act === 'free') {
-      if (b.st === 'pass' && b.to === i) { set3(TL, 0.42, -0.17, 0.5); set3(TR, 0.42, 0.17, 0.5) }
+      if (b.st === 'pass' && b.to === i) { set3(TL, 0.23, -0.2, 0.5); set3(TR, 0.23, 0.2, 0.5) }
       else if (s.call && s.call.pid === i && s.tick - s.call.tick < 40) set3(TR, 0.1, 0.42, 1)
     }
     // the check coming to him: both hands out for it
-    if (b.st === 'check' && b.to === i) { set3(TL, 0.42, -0.17, 0.5); set3(TR, 0.42, 0.17, 0.5) }
+    if (b.st === 'check' && b.to === i) { set3(TL, 0.23, -0.2, 0.5); set3(TR, 0.23, 0.2, 0.5) }
 
     // ── the ball in his hands ──
     if (has && p.act !== 'gather') {
@@ -214,7 +206,7 @@ export function createPoser(N) {
         // back (his pivot foot forward); while he's walking it up, at his belt
         const hd = p.hand || 1, tt = c01(1 - (a.sp - 1) / 3)
         set3(TL, 0.3, -0.12, 0.4); set3(TR, 0.3, 0.12, 0.4); set3(z.bl, 0.33, 0, 3.2)
-        mix3(hd > 0 ? TR : TL, 0.1, hd * 0.44, 0.36, tt); mix3(hd > 0 ? TL : TR, 0.2, hd * 0.2, 0.36, tt)
+        mix3(hd > 0 ? TR : TL, 0.13, hd * 0.42, 0.36, tt); mix3(hd > 0 ? TL : TR, 0.2, hd * 0.26, 0.38, tt)
         z.bl[0] += (0.16 - z.bl[0]) * tt; z.bl[1] += (hd * 0.36 - z.bl[1]) * tt; z.bl[2] += (3.0 - z.bl[2]) * tt
         if (tt > 0.5) { const back = hd > 0 ? z.rf : z.lf, fr = hd > 0 ? z.lf : z.rf; back[0] = -0.08; fr[0] = 0.12; z.lf[1] = -0.19; z.rf[1] = 0.19; z.scale = 0.97 }
         z.two = true
@@ -233,7 +225,7 @@ export function createPoser(N) {
       if (t < dur) {
         const w = t < 90 ? out3(t / 90) : 1 - ease((t - 90) / (dur - 90))
         const la = wrap(a.swipe.a - a.ang), sd = Math.sin(la) >= 0 ? 1 : -1
-        mix3(sd > 0 ? TR : TL, 0.04 + Math.cos(la) * 0.36, sd * 0.34 + Math.sin(la) * 0.28, 0.4, w)
+        mix3(sd > 0 ? TR : TL, 0.06 + Math.cos(la) * 0.28, sd * 0.36 + Math.sin(la) * 0.24, 0.4, w)
         z.lean = Math.max(z.lean, 0.08 * w)
         fast = true
       } else a.swipe = null
@@ -319,18 +311,129 @@ export function createPoser(N) {
       set3(TL, 0.08, -0.44, 1); set3(TR, 0.08, 0.44, 1); z.air = 0.2 * hop
     }
 
+    // ── coming down: the knees take it (a dip, then back up), the feet a touch wider ──
+    if (a.pAir > 0.2 && z.air < 0.05) a.landT = now
+    a.pAir = z.air
+    const lt = now - a.landT
+    if (lt >= 0 && lt < 260 && z.air < 0.05 && !z.down) {
+      const k = Math.sin(Math.PI * Math.pow(lt / 260, 0.7))
+      z.scale = Math.min(z.scale, 1 - 0.045 * k); z.lf[1] -= 0.035 * k; z.rf[1] += 0.035 * k
+    }
+    // a foot the pose put somewhere else than his stride (a shot, a move, a stance): flat on the floor, or tucked up
+    // under him in the air
+    const offL = Math.abs(z.lf[0] - a.GL[0]) + Math.abs(z.lf[1] - a.GL[1]) > 0.015, offR = Math.abs(z.rf[0] - a.GR[0]) + Math.abs(z.rf[1] - a.GR[1]) > 0.015
+    const tuck = c01(z.air / 0.4) * 0.5
+    z.lf[2] = offL || z.air > 0.05 ? tuck : a.gL; z.rf[2] = offR || z.air > 0.05 ? tuck : a.gRr
+    if ((offL && offR) || z.air > 0.05 || z.down) { z.tw = 0; z.hip = 0 }
+
     // ── ease what is drawn to the pose (the ball hand while dribbling stays with the ball) ──
-    if (!a.lh) { a.lh = [...TL]; a.rh = [...TR]; a.lf = [...z.lf]; a.rf = [...z.rf] }
+    // The feet ease in the floor's directions, not his: when he turns, a planted foot stays where it is on the floor
+    // and catches up a step later (no feet swinging round with his shoulders)
+    const ca2 = Math.cos(z.ang), sa2 = Math.sin(z.ang)
+    const toW = (f, o) => { o[0] = f[0] * ca2 - f[1] * sa2; o[1] = f[0] * sa2 + f[1] * ca2; o[2] = f[2]; return o }
+    if (!a.lh) { a.lh = [...TL]; a.rh = [...TR]; a.lfW = toW(z.lf, [0, 0, 0]); a.rfW = toW(z.rf, [0, 0, 0]); a.tw = 0; a.hip = 0 }
     const kh = 1 - Math.exp(-dt / (fast ? EASE_FAST : EASE_HAND)), kb = 1 - Math.exp(-dt / EASE_FAST), kf = 1 - Math.exp(-dt / EASE_FOOT)
     const ballHand = z.ball && z.bounce ? (a.side >= 0 ? 1 : -1) : 0
     for (let j = 0; j < 3; j++) {
       a.lh[j] += (TL[j] - a.lh[j]) * (ballHand < 0 ? kb : kh)
       a.rh[j] += (TR[j] - a.rh[j]) * (ballHand > 0 ? kb : kh)
     }
-    for (let j = 0; j < 2; j++) { a.lf[j] += (z.lf[j] - a.lf[j]) * kf; a.rf[j] += (z.rf[j] - a.rf[j]) * kf }
+    // (and no faster than a quick real step: a pose that puts a foot somewhere new sends it there in a step, it
+    // doesn't jump)
+    const vmax = FOOT_V * dt / 1000
+    const stepTo = (W) => {
+      let ex = (FW[0] - W[0]) * kf, ey = (FW[1] - W[1]) * kf
+      const l = Math.hypot(ex, ey); if (l > vmax) { ex *= vmax / l; ey *= vmax / l }
+      W[0] += ex; W[1] += ey; W[2] += (FW[2] - W[2]) * kf
+    }
+    toW(z.lf, FW); stepTo(a.lfW)
+    toW(z.rf, FW); stepTo(a.rfW)
+    a.tw += (z.tw - a.tw) * kf; a.hip += (z.hip - a.hip) * kf
     set3(z.lh, a.lh[0], a.lh[1], a.lh[2]); set3(z.rh, a.rh[0], a.rh[1], a.rh[2])
-    z.lf[0] = a.lf[0]; z.lf[1] = a.lf[1]; z.rf[0] = a.rf[0]; z.rf[1] = a.rf[1]
+    z.lf[0] = a.lfW[0] * ca2 + a.lfW[1] * sa2; z.lf[1] = -a.lfW[0] * sa2 + a.lfW[1] * ca2; z.lf[2] = a.lfW[2]
+    z.rf[0] = a.rfW[0] * ca2 + a.rfW[1] * sa2; z.rf[1] = -a.rfW[0] * sa2 + a.rfW[1] * ca2; z.rf[2] = a.rfW[2]
+    z.tw = a.tw; z.hip = a.hip
     return z
+  }
+
+  // His stride, worked out the way a real one goes: a cadence (steps a second) and a stride length by how fast he's
+  // going, each foot flat on the floor and pushing back under him for part of the cycle (the stance: longer walking,
+  // short at a sprint) and swinging through in the air for the rest, eased. The stride is as long as the floor he
+  // covers while a foot is down, so a planted foot stays planted, but never long: from overhead a runner's legs are
+  // mostly under his shorts and chest, and only his feet show, out in front and behind (the owner, 11-26: the legs
+  // looked silly and exaggerated). Every number eases with his speed, so standing, a jog, a sprint and a stop blend
+  // with no pops. His hips turn with his legs and his shoulders a little against them; his body rises and falls with
+  // each step. Squared up on a man (wide: 0-1) it's the defensive slide: a wide stance, short quick steps, the feet
+  // never crossing; backing up, short quick steps back
+  function gait(a, z, dt, now, wide, env) {
+    const v = a.sp, uFt = (env.sFt || 3.6) * BODY
+    // his way across the floor in his own frame, smoothed (a frame's wobble doesn't turn his feet)
+    const km = 1 - Math.exp(-dt / 70)
+    a.mdx += (a.lx - a.mdx) * km; a.mdy += (a.ly - a.mdy) * km
+    // (not renormalized: turning back the way he came it shrinks through nothing instead of flipping his feet over)
+    const ml = Math.hypot(a.mdx, a.mdy), dx = ml > 1 ? a.mdx / ml : a.mdx, dy = ml > 1 ? a.mdy / ml : a.mdy
+    // speeding up and slowing down (ft/s²), smoothed
+    if (dt > 0) a.acc += ((v - a.spP) / dt * 1000 - a.acc) * (1 - Math.exp(-dt / 120))
+    a.spP = v
+    const moving = c01((v - 0.5) / 1.5), runK = c01((v - 3) / 6)
+    const back = c01((-dx - 0.35) / 0.4), lat = Math.abs(dy)
+    // the stance's share of a stride, the strides a second (a slide and a backpedal are quicker and shorter)
+    const D = 0.6 - 0.3 * c01((v - 2) / 8) + 0.12 * wide
+    const cad = (1.0 + 0.075 * Math.min(v, 12)) * (1 + 0.18 * wide + 0.12 * back)
+    let R = (v / uFt) * D / (2 * cad) * 0.95
+    R = Math.min(0.19 - 0.05 * back - 0.06 * wide, R) * moving
+    // the feet under his hips: closer in at a run (a runner's feet land near his middle line), wide in a stance, a touch
+    // wider going sideways
+    const W = (0.13 - 0.05 * runK) * (1 - wide) + 0.24 * wide + 0.05 * lat * (1 - wide)
+    // (going sideways the feet step out and close, never across)
+    if (lat > 0.01) R = Math.min(R, 0.75 * W / lat)
+    a.gR += (R - a.gR) * (1 - Math.exp(-dt / (R > a.gR ? 90 : 130)))
+    // the cycle runs on while there's a stride left to finish (a stop finishes its step rather than freezing mid-air)
+    a.cad = cad
+    if (moving > 0.02 || a.gR > 0.008) a.gp += Math.max(cad, 1.5) * dt / 1000
+    const u = a.gp - Math.floor(a.gp)
+    const cyc = (q, o) => {
+      q = q - Math.floor(q)
+      if (q < D) { o[0] = 1 - 2 * q / D; o[1] = 0 } else { const w = (q - D) / (1 - D); o[0] = -1 + 2 * ease(w); o[1] = Math.sin(Math.PI * w) }
+      return o
+    }
+    cyc(u, CL); cyc(u + 0.5, CR)
+    const Rd = a.gR, lift = c01(Rd / 0.07) * (1 - 0.6 * wide)
+    const x0 = -0.015 * (1 - moving) * (1 - wide) + 0.01 * wide + 0.035 * runK * (1 - back)
+    z.lf[0] = x0 + dx * Rd * CL[0]; z.lf[1] = -W + dy * Rd * CL[0]
+    z.rf[0] = x0 + dx * Rd * CR[0]; z.rf[1] = W + dy * Rd * CR[0]
+    a.gL = CL[1] * lift; a.gRr = CR[1] * lift
+    a.GL[0] = z.lf[0]; a.GL[1] = z.lf[1]; a.GR[0] = z.rf[0]; a.GR[1] = z.rf[1]
+    // the toes: the way he's going when he runs forward; square and turned out a little in a stance or backing up
+    const fwd = c01((dx + 0.2) / 0.6) * (1 - wide)
+    const toe = Math.atan2(dy, Math.max(0.05, dx)) * 0.55 * fwd * moving
+    z.toeL = toe - 0.12 - 0.22 * wide; z.toeR = toe + 0.12 + 0.22 * wide
+    // the hips and shoulders: the hips turn with the forward foot, the shoulders a little against them (a slide and a
+    // backpedal keep him square)
+    const st = (CL[0] - CR[0]) * 0.5 * c01(Rd / 0.12) * (1 - wide) * (1 - back) * fwd
+    a.gS = st
+    z.hip = 0.09 * st; z.tw = -0.11 * st
+    // the bounce of his stride (from overhead: a touch bigger at the top of each step, nearer the camera)
+    z.scale *= 1 + 0.012 * runK * Math.cos(4 * Math.PI * u + 0.6)
+    // leaning into it as he gets going, back as he puts the brakes on
+    z.lean += 0.022 * clamp(a.acc / 25, -1, 1) * (1 - wide)
+    // a first step from standing: a dip into it and the weight forward
+    if (v > 2.5 && a.goArm) { a.goT = now; a.goArm = false }
+    if (v < 1) a.goArm = true
+    const gt = now - a.goT
+    if (gt >= 0 && gt < 240) { const k = Math.sin(Math.PI * gt / 240); z.lean += 0.03 * k * (1 - wide); z.scale *= 1 - 0.018 * k }
+    // a hard stop (pose: z.cut, from a run to half that): the front foot plants out ahead, the weight back over it,
+    // knees down, and a settle
+    const stT = now - a.stopT
+    if (stT >= 0 && stT < 340 && v < 6) {
+      const k = stT < 70 ? out3(stT / 70) : 1 - ease((stT - 70) / 270)
+      const fl = a.stopF < 0 ? z.lf : z.rf, bk = a.stopF < 0 ? z.rf : z.lf
+      fl[0] += (a.stopX * 0.15 - fl[0]) * k; fl[1] += (a.stopY * 0.15 + (a.stopF < 0 ? -0.15 : 0.15) - fl[1]) * k
+      bk[0] += (-a.stopX * 0.05 - bk[0]) * k; bk[1] += ((a.stopF < 0 ? 0.15 : -0.15) - bk[1]) * k
+      a.GL[0] = z.lf[0]; a.GL[1] = z.lf[1]; a.GR[0] = z.rf[0]; a.GR[1] = z.rf[1]
+      a.gL *= 1 - k; a.gRr *= 1 - k
+      z.lean -= 0.05 * k; z.scale *= 1 - 0.03 * k
+    }
   }
 
   // on the floor: legs out in front of him, his hands back behind him (w: how far down, up: how far back up)
@@ -354,13 +457,21 @@ export function createPoser(N) {
     const side = a.side, mid = 1 - Math.min(1, Math.abs(side)), sg = side >= 0 ? 1 : -1
     z.bside = sg
     // the bounce (a move works the ball low and quick)
-    const per = (DRIB + (DRIB_RUN - DRIB) * amp) * (M ? 0.7 : 1)
+    const lock = M ? 0 : c01((a.sp - 3) / 3)
+    const per = (DRIB + (DRIB_RUN - DRIB) * amp) * (M ? 0.7 : 1) * (1 - lock) + lock * 1000 / (a.cad || 1.5)
     const was = Math.floor(a.drib)
     a.drib += env.dt / per
+    // on the move the bounce keeps time with his feet: one bounce a stride, the ball meeting the floor as the foot on
+    // its side comes down (pulled into step gently, never a jump)
+    if (lock > 0) {
+      let d = (a.gp + (side >= 0 ? 0.5 : 0)) - a.drib
+      d -= Math.round(d)
+      a.drib += d * lock * Math.min(1, env.dt / 160)
+    }
     const ph = a.drib % 1, up = Math.sin(Math.PI * ph)                            // 0 on the floor, 1 in his hand
     z.bounce = true; z.thud = Math.floor(a.drib) !== was
     // (at a run the ball is pushed out ahead of him and bounces a touch lower)
-    let bx = 0.34 + 0.12 * amp * (M ? 0 : 1), by = side * 0.5, bz = 0.35 + (2.0 - 0.35 * amp) * up, hz = 0.26 + 0.1 * up
+    let bx = 0.21 + 0.07 * amp * (M ? 0 : 1), by = side * 0.46, bz = 0.35 + (2.0 - 0.35 * amp) * up, hz = 0.26 + 0.1 * up
     if (key === 'cross') {
       // low and hard across in front of him, his shoulders dipping into it
       bx = 0.36 + 0.14 * mid; bz = 0.3 + 1.6 * up * (1 - 0.7 * mid); z.lean = 0.06
@@ -400,7 +511,7 @@ export function createPoser(N) {
     if (key === 'btb' && mid > 0.25) set3(bh, -0.12, sg * 0.42, 0.2)                       // reaching round behind him
     else if (key === 'btl' && mid > 0.25) set3(bh, 0.12, sg * 0.3, 0.12)                    // down through his legs
     if ((key === 'cross' || key === 'btl' || key === 'btb') && mid > 0.3) set3(oh, bx - 0.02, -sg * 0.34, 0.24)   // the other hand takes it
-    else set3(oh, 0.2, -sg * 0.38, 0.34)
+    else set3(oh, 0.07, -sg * 0.47, 0.28)
   }
 
   // rising for a shot: by its kind. g: 0 as he starts, 1 where the green is
