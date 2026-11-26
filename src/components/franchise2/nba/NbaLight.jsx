@@ -301,7 +301,7 @@ function LotteryLine({ F }) {
           )
         })}
       </ol>
-      {(F.sp ?? 0) === 0 && <p className="nbo-note">{`The ${nick(F.team)}' scouts spent the spring on the men projected around their first pick.`}</p>}
+      {(F.sp ?? 0) === 0 && <p className="nbo-note">{`The ${nick(F.team)}${/s$/.test(nick(F.team)) ? "'" : "'s"} scouts spent the spring on the men projected around their first pick.`}</p>}
     </section>
   )
 }
@@ -453,7 +453,7 @@ function MarketDone({ F, act, owner }) {
       <Chyron team={F.team} title="Free agency" tag="CLOSED" sub={`${mine.length} ${mine.length === 1 ? 'SIGNING' : 'SIGNINGS'} FOR THE ${nick(F.team).toUpperCase()} · SIX DAYS PLAYED`} />
       <ResignLines F={F} />
       <section className="lt-sec">
-        <h3 className="fh-h"><b>{`The ${nick(F.team)} offers`}</b><span>{res.length || 'None'}</span></h3>
+        <h3 className="fh-h"><b>{`The ${nick(F.team)}${/s$/.test(nick(F.team)) ? "'" : "'s"} offers`}</b><span>{res.length || 'None'}</span></h3>
         {res.length ? (
           <ol className="nbo-dev-list">
             {res.map(x => (

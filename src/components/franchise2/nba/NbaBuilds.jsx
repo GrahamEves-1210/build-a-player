@@ -89,7 +89,7 @@ export function NbaBuildsStep({ S, go, owner, onBuild, onNext }) {
           return (
             <div key={spot} className={`fsu-pos-row${on ? ' is-on' : ''}`}>
               <span className="fsu-pos-k"><b>{spot}</b><small>{SPOT_NAME[spot]}</small></span>
-              <span className="fsu-pos-st">{m && <><small>REPLACES</small><b>{replText(m)}</b></>}</span>
+              <span className="fsu-pos-st">{m && <><small>REPLACES</small><b className="nb-repl"><i>{lastName(m.n).toUpperCase()}</i> {m.o}</b></>}</span>
               <span className="fsu-step">
                 <button type="button" onClick={() => drop(spot)} disabled={!on} aria-label={`No ${SPOT_NAME[spot].toLowerCase()}`}>-</button>
                 <b>{on ? 1 : 0}</b>

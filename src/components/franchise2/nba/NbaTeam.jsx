@@ -151,7 +151,7 @@ function Trades({ F, act, onBack }) {
     if (!c || !CAP_SIM.checkTrade(F, c).ok) return
     const names = namesOf(c), gv = CAP_SIM.gauge(F, c)
     const r = act(X => CAP_SIM.doTrade(X, c))
-    setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}' terms`, line: lineOf(r) })
+    setAns({ ok: true, say: 'yes', text: `Deal done on the ${TEAM[them].nick}${/s$/.test(TEAM[them].nick) ? "'" : "'s"} terms`, line: lineOf(r) })
     done(r, names, gv)
   }
   const workFrom = () => { const c = ans?.counter; if (!c) return; setGa(c.ga ?? []); setGb(c.gb ?? []); setPa(c.pa ?? []); setPb(c.pb ?? []); setAns(null); sfx('tap') }
