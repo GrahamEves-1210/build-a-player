@@ -603,7 +603,7 @@ function defend(s, p, m, lvl, out) {
     if (h) { tx += (h.x - tx) * 0.1; ty += (h.y - ty) * 0.1 }
     // a big on the block, the ball out top: front him (a smaller man, between him and the ball) or play behind him,
     // a hand on him, a step to the ball side (three-quarters)
-    if (h && h.team !== p.team && man.pos === 'big' && dRimM < 11 && Math.hypot(h.x - mx, h.y - my) > 9) {
+    if (h && h.team !== p.team && man.pos === 'big' && dRimM < 11 && my > RIM.y + 2 && Math.hypot(h.x - mx, h.y - my) > 9) {
       if (m.frontN !== s.possN) { m.frontN = s.possN; m.fronts = (p.R.sizeRaw ?? p.R.size) < (man.R.sizeRaw ?? man.R.size) - 0.1 ? roll(s) < 0.7 : roll(s) < 0.25 }
       const bx = h.x - mx, by = h.y - my, bl = Math.hypot(bx, by) || 1
       // (a body's width off him: on him, not into him)
@@ -629,6 +629,8 @@ function defend(s, p, m, lvl, out) {
       }
     }
   }
+  // (never set up behind the backboard: a man down there is guarded from in front of it)
+  if (!onBall && ty < RIM.y + 0.5) ty = RIM.y + 0.5
   // (off the ball he doesn't chase every half step his man's feet make: what he sees of a man shuffling in place,
   // led a beat ahead, swings a foot either way, and stepping at each swing had him rocking side to side)
   steer(p, tx, ty, out, onBall ? 0.35 : 1.0)

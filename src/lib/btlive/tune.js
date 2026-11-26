@@ -77,8 +77,13 @@ export const T = {
                                      // (90% of it in 0.36 s for a quick guard, 0.58 s for a slow big: move-check.mjs)
   brake: 32,                         // ft/s²: slowing down or stopping (x the same rating factor): quicker than speeding up, not
                                      // instant (from a sprint that's about 2 ft of stopping: a man can overrun his spot)
-  backpedal: 0.88,                   // a defender's top speed going backwards (facing his man, giving ground)...
-  slide: 0.95,                       // ...and sliding sideways (forward, at his man: all of it)
+  backpedal: 0.78, backpedalPer: 0.08,   // a defender's top speed going backwards (facing his man, giving ground), + this at
+                                     // Perimeter D 11 (the plain grade)...
+  slide: 0.88, slidePer: 0.06,       // ...and sliding sideways (forward, at his man: all of it)
+  // with the ball, by the way he goes against the basket (the owner, 11-26: "speed is too constant with the ball"): at
+  // the rim all of it (and only a drive builds the sprint), across this share, backing out this share (+ this x Handles)
+  ballSide: 0.82, ballSideHnd: 0.06,
+  ballBack: 0.52, ballBackHnd: 0.1,
   boost: 0.09, boostTime: 0.45,      // out of a hesitation, a crossover, between the legs, an in-and-out: this much quicker for this long
   accelBase: 0.805, accelSpd: 0.54,   // ...x (0.85 + 0.45 x Speed, the plain grade): a quick first step
   accelSize: 0.3,                    // ...less this at Size 11

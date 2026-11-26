@@ -37,6 +37,7 @@ export function derive(build, pos = 'guard') {
   R.top = top                                               // ft/s without the ball
   R.topBall = top * (T.ballSpeed + T.ballSpeedHnd * R.hnd)  // with it
   const perRaw = raw(perD)
+  R.perRaw = perRaw
   R.topDef = top * (T.defSpeed + T.defSpeedPer * perRaw)    // guarding (Perimeter D on the plain grade: feet)
   R.accel = T.accel * (T.accelBase + T.accelSpd * spdRaw) * (1 - T.accelSize * sizeRaw)   // ft/s²
   R.accelDef = R.accel * (T.defAccel + T.defAccelPer * perRaw)                             // ...guarding
