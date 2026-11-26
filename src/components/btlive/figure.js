@@ -35,9 +35,18 @@ const hashOf = str => { let h = 2166136261; for (let i = 0; i < str.length; i++)
 const SKINS = ['#8d5a3b', '#6d4229', '#a9744f', '#5a3522', '#c09060']
 const STYLES = ['short', 'short', 'fade', 'fade', 'twists', 'waves', 'braids']
 // bw: how broad he is across the shoulders, by his Size rating (0-1) and his spot: a guard lean, a big broader
+// his skin as the court shows it (owner 11-26: white players looked too dark): the tones are sampled off studio photos,
+// so the light and medium ones read dark and red on the asphalt; they're lifted toward a natural light skin by how
+// light they are (a dark tone barely moves)
+const MIXC = (a, b, t) => { const p = x => parseInt(x.slice(1), 16), A = p(a), B = p(b), c = k => Math.round(((A >> k) & 255) * (1 - t) + ((B >> k) & 255) * t); return '#' + ((c(16) << 16) | (c(8) << 8) | c(0)).toString(16).padStart(6, '0') }
+function onCourt(hex) {
+  const l = lum(hex)
+  const t = l >= 0.55 ? 0.5 : l >= 0.45 ? 0.2 + (l - 0.45) * 3 : l >= 0.35 ? (l - 0.35) * 2 : 0
+  return MIXC(hex, '#f3d6c2', Math.min(0.55, t))
+}
 export function lookOf({ name = '', skin = null, col = '#4da3ff', size = 0.5, big = false }) {
   const h = hashOf(name || 'player')
-  const sk = /^#[0-9a-f]{6}$/i.test(skin || '') ? skin : SKINS[h % SKINS.length]
+  const sk = /^#[0-9a-f]{6}$/i.test(skin || '') ? onCourt(skin) : SKINS[h % SKINS.length]
   const light = lum(sk) > 0.62
   return {
     col, colD: tone(col, 0.7), colL: tone(col, 1.18),
@@ -45,7 +54,9 @@ export function lookOf({ name = '', skin = null, col = '#4da3ff', size = 0.5, bi
     hair: light ? ['#3a2a1c', '#4a3524', '#2a1e14'][(h >>> 3) % 3] : '#16110d',
     style: light ? ['short', 'short', 'fade', 'waves'][(h >>> 5) % 4] : STYLES[(h >>> 5) % STYLES.length],
     trim: lum(col) > 0.6 ? tone(col, 0.55) : '#f4efe6',               // the collar and armhole trim
-    bw: (big ? 1.02 : 0.9) + (big ? 0.1 : 0.08) * clamp(size, 0, 1),
+    bw: (big ? 1.02 : 0.88) + (big ? 0.14 : 0.1) * clamp(size, 0, 1),
+    // his whole frame by his Size (owner 11-26: a bigger gap between small men and big ones): a small guard 0.92, a 7-footer about 1.12
+    sz: 0.92 + 0.16 * clamp(size, 0, 1) + (big ? 0.04 : 0),
     shoe: ['#e4e6e0', '#e4e6e0', '#1d2228'][(h >>> 7) % 3], shoeD: ['#b9bcb4', '#b9bcb4', '#0f1317'][(h >>> 7) % 3],
   }
 }
@@ -56,7 +67,7 @@ const PX = (lx, ly) => FR.x + (lx * FR.ca - ly * FR.sa) * FR.sc
 const PY = (lx, ly) => FR.y + (lx * FR.sa + ly * FR.ca) * FR.sc
 function frame(f) {
   const lift = (f.air || 0) * f.s * 0.2
-  FR.sc = f.s * BODY * (f.scale ?? 1) * (1 + 0.16 * (f.air || 0)); FR.ca = Math.cos(f.ang); FR.sa = Math.sin(f.ang)
+  FR.sc = f.s * BODY * (f.look?.sz ?? 1) * (f.scale ?? 1) * (1 + 0.16 * (f.air || 0)); FR.ca = Math.cos(f.ang); FR.sa = Math.sin(f.ang)
   FR.x = f.x; FR.y = f.y - lift; FR.ang = f.ang
   BW = f.look?.bw ?? 1; SH = SH0 * BW
 }
@@ -86,7 +97,7 @@ export const ballHz = bz => clamp(0.36 + (bz - 3) / 5.3 * 0.64, 0, 1.2)
 // head on it, not a round blob. In his size units: the jersey about 0.43 across and 0.24 deep, the deltoids taking it
 // to about 0.6 (a guard a touch less, a big a touch more: bw), the head 0.2 long and 0.17 wide
 // (BODY: the whole man a touch bigger than his size unit, so the slimmer build still fills the spot he takes up)
-const BODY = 1.08
+const BODY = 1.45   // (owner 11-26: the slimmer men read too small: a size up)
 const SH0 = 0.26                                  // a shoulder joint: this far out from his middle (times bw)
 let SH = SH0, BW = 1
 // The poses (pose.js) place the hands and the ball across him for a broader man than this one (the shoulder at 0.33):
@@ -260,7 +271,7 @@ function head(ctx, f, L, ink) {
 // his shadow on the floor (drawn for everyone before any man, so no shadow lies on a man): soft, darkest under him
 // and fading out at its edge, smaller and lighter the higher he goes
 export function drawShadow(ctx, f) {
-  const air = Math.min(1.2, f.air || 0), s = f.s, bw = f.look?.bw ?? 1
+  const air = Math.min(1.2, f.air || 0), s = f.s * (BODY / 1.08) * (f.look?.sz ?? 1), bw = f.look?.bw ?? 1
   const a = 0.13 - 0.05 * Math.min(1, air)
   const cx = f.x + s * (0.04 + 0.07 * air), cy = f.y + s * (0.06 + 0.1 * air)
   const rx = s * (0.3 - 0.06 * air) * (f.down ? 1.3 : 1), ry = s * (0.36 - 0.07 * air) * bw
