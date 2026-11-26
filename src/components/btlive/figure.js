@@ -56,7 +56,7 @@ export function lookOf({ name = '', skin = null, col = '#4da3ff', size = 0.5, bi
     trim: lum(col) > 0.6 ? tone(col, 0.55) : '#f4efe6',               // the collar and armhole trim
     bw: (big ? 1.02 : 0.88) + (big ? 0.14 : 0.1) * clamp(size, 0, 1),
     // his whole frame by his Size (owner 11-26: a bigger gap between small men and big ones): a small guard 0.92, a 7-footer about 1.12
-    sz: 0.92 + 0.16 * clamp(size, 0, 1) + (big ? 0.04 : 0),
+    sz: 0.95 + 0.11 * clamp(size, 0, 1) + (big ? 0.02 : 0),   // (11-26: a touch less gap: about 0.95 to 1.08)
     shoe: ['#e4e6e0', '#e4e6e0', '#1d2228'][(h >>> 7) % 3], shoeD: ['#b9bcb4', '#b9bcb4', '#0f1317'][(h >>> 7) % 3],
   }
 }
