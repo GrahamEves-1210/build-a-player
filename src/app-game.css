@@ -5835,7 +5835,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 /* Squad Builder: the same, its caption at the foot of the card like Career's */
 .ag-mc--squad .ag-mc-head { bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; }
 .ag-mc--squad .ag-mc-head small { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ag-mc--auction { background: #4a1714; }   /* (the auction house: oxblood, the lot in brass; owner 11-26) */
+.ag-mc--auction { background: #13203a; }   /* (draft-night navy, the lot in gold; owner 11-26) */
 .ag-mc--salary { background: linear-gradient(150deg, #7c3aed, #2e1065 80%); }
 .ag-mc--squad { background: linear-gradient(150deg, #a57f1e, #3a2b08 80%); }
 .ag-mc--blacktop { background: #1c1c1e; }
@@ -8014,9 +8014,9 @@ html.is-soccer .bap-wm--img .wmi--soccer, [data-sport="soccer"] .bap-wm--img .wm
 .ag-gavel-head { transform-origin: 4.8% 47.6%; }
 .ag-gavel-block { transform-origin: 70% 92%; }
 .ag-gavel-lot { position: absolute; right: 108%; bottom: 4%; display: grid; place-items: center; align-content: center; gap: 2px; width: 46px; height: 64px; border-radius: 6px; transform: rotate(-6deg);
-  background: repeating-linear-gradient(45deg, rgba(240,208,138,.07) 0 2px, transparent 2px 8px), #2a0d0b; box-shadow: inset 0 0 0 1.5px #d4a956, 0 4px 10px rgba(0,0,0,.4); }
-.ag-gavel-lot b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; color: #f0d08a; }
-.ag-gavel-lot small { font-family: var(--ag-font); font-size: 10px; letter-spacing: 1.5px; color: rgba(242,228,200,.75); }
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 2px, transparent 2px 8px), #0b1222; box-shadow: inset 0 0 0 1.5px #f5b83d, 0 4px 10px rgba(0,0,0,.4); }
+.ag-gavel-lot b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; color: #ffd06b; }
+.ag-gavel-lot small { font-family: var(--ag-font); font-size: 10px; letter-spacing: 1.5px; color: rgba(214,224,243,.75); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   html:not(.bap-reduce-motion) .ag-mc--auction:hover .ag-gavel-head { animation: au-hammer 1.1s both; }
   html:not(.bap-reduce-motion) .ag-mc--auction:hover .ag-gavel-block { animation: au-block .3s .44s ease-out both; }
@@ -8036,44 +8036,44 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
   .ag-mc--auction .ag-gavel-lot b { font-size: 22px; }
 }
 
-/* ═══ TRAIT AUCTION: the room (AppTraitAuction, AppAuction), an auction house (owner 11-26: a new colour scheme) ═══
-   Walnut and oxblood, brass and cream. The lot is the hero: a real player card on the block, the high bid and who holds
+/* ═══ TRAIT AUCTION: the room (AppTraitAuction, AppAuction), a draft-night board (owner 11-26) ═══
+   Ink navy with one gold accent, white type; gold is the primary action too. The lot is the hero: a real player card on the block, the high bid and who holds
    it big on the board, the clock calling going once, going twice; one BID button at the thumb, the paddles in a row,
    the five slots as one strip. Every colour is a token here, so the shared pieces (queue, record, buttons) follow. */
 .au-screen {
-  --au-bg: #160c0a;
-  --au-wood: #231310;
-  --au-wood-2: #2d1813;
-  --au-ox: #5b1c19;
-  --au-ox-2: #3e1311;
-  --au-brass: #d4a956;
-  --au-brass-hi: #f0d08a;
-  --au-brass-lo: #94702f;
-  --au-cream: #f2e4c8;
-  --au-ink: #24130d;
-  --au-text: #f6ecd8;
-  --au-muted: rgba(242,228,200,.68);
-  --au-line: rgba(212,169,86,.2);
-  --au-line-hi: rgba(212,169,86,.5);
-  --au-hot: #e2573f;
-  --ag-a1: var(--au-brass); --ag-a2: var(--au-brass-lo); --ag-glow: transparent; --ag-accent: var(--au-brass);
-  --ag-bg: var(--au-bg); --ag-panel: var(--au-wood); --ag-panel-2: var(--au-wood-2);
+  --au-bg: #0a0f1c;
+  --au-panel: #111a2c;
+  --au-panel-2: #18233b;
+  --au-edge: #22314f;
+  --au-deep: #0d1426;
+  --au-amber: #f5b83d;
+  --au-amber-hi: #ffd06b;
+  --au-amber-lo: #b9821c;
+  --au-white: #f4f7fc;
+  --au-ink: #0b0f1a;
+  --au-text: #eef2fa;
+  --au-muted: rgba(214,224,243,.68);
+  --au-line: rgba(150,175,225,.16);
+  --au-line-hi: rgba(245,184,61,.55);
+  --au-hot: #ff5a4f;
+  --ag-a1: var(--au-amber); --ag-a2: var(--au-amber-lo); --ag-glow: transparent; --ag-accent: var(--au-amber);
+  --ag-bg: var(--au-bg); --ag-panel: var(--au-panel); --ag-panel-2: var(--au-panel-2);
   --ag-line: var(--au-line); --ag-line-hi: var(--au-line-hi);
-  --ag-text: var(--au-text); --ag-text-2: var(--au-brass); --ag-muted: var(--au-muted);
-  --ag-gold-hi: var(--au-brass-hi);
+  --ag-text: var(--au-text); --ag-text-2: var(--au-amber); --ag-muted: var(--au-muted);
+  --ag-gold-hi: var(--au-amber-hi);
   background: var(--au-bg);
 }
-.au-screen .ag-h1 { color: var(--au-cream); }
-.au-screen .ag-screen-head .ag-eyebrow { color: var(--au-brass); }
-.au-screen .ag-round-btn { border-color: var(--au-line-hi); background: var(--au-wood); color: var(--au-cream); }
+.au-screen .ag-h1 { color: var(--au-white); }
+.au-screen .ag-screen-head .ag-eyebrow { color: var(--au-amber); }
+.au-screen .ag-round-btn { border-color: var(--au-line-hi); background: var(--au-panel); color: var(--au-white); }
 .au-screen.is-live .ag-screen-head { padding-top: 4px; padding-bottom: 4px; }
 .au-screen.is-live .ag-screen-head .ag-h1 { font-size: 28px; }
 .au-screen.is-live .ag-screen-head .ag-eyebrow { margin-bottom: 3px; }
-.au-lbl { font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; line-height: 1.1; color: var(--au-brass); text-transform: uppercase; }
+.au-lbl { font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; line-height: 1.1; color: var(--au-amber); text-transform: uppercase; }
 
-/* ── the lobby: the catalogue ── */
-.au-intro { display: grid; grid-template-columns: 68px minmax(0, 1fr); align-items: start; gap: 14px; padding: 16px 16px 16px 12px; border-radius: 6px; background: var(--au-cream); color: var(--au-ink); box-shadow: inset 0 0 0 1px rgba(36,19,13,.18), inset 0 0 0 5px var(--au-cream), inset 0 0 0 6px rgba(91,28,25,.35); }
-.au-mark { position: relative; display: block; width: 68px; aspect-ratio: 180 / 234; margin-top: 2px; }
+/* ── the lobby: the gavel beside three short lines ── */
+.au-intro { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 14px; padding: 14px 16px 14px 12px; border-radius: 14px; background: var(--au-panel); border: 1px solid var(--au-line); }
+.au-mark { position: relative; display: block; width: 64px; aspect-ratio: 180 / 234; }
 .au-mark img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .au-mark-head { transform-origin: 4.8% 47.6%; }
 .au-mark-block { transform-origin: 70% 92%; }
@@ -8081,20 +8081,16 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
   html:not(.bap-reduce-motion) .au-intro.ag-pop .au-mark-head { animation: au-hammer 1.1s .35s both; }
   html:not(.bap-reduce-motion) .au-intro.ag-pop .au-mark-block { animation: au-block .3s .79s ease-out both; }
 }
-.au-intro-txt { display: grid; gap: 10px; min-width: 0; }
-.au-intro-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding-bottom: 8px; border-bottom: 1.5px solid rgba(91,28,25,.35); }
-.au-intro-head b { font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; letter-spacing: .3px; color: var(--au-ox); }
-.au-intro-head span { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.6px; color: rgba(36,19,13,.7); }
-.au-intro .ag-live-badge { color: var(--au-ox); }
-.au-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: au; }
-.au-rules li { position: relative; padding-left: 26px; font-family: var(--ag-body); font-size: 14px; line-height: 1.4; color: rgba(36,19,13,.86); counter-increment: au; }
-.au-rules li::before { content: counter(au); position: absolute; left: 0; top: 0; font-family: var(--ag-display); font-size: 19px; line-height: 1; color: var(--au-ox); }
-.au-rules b { color: var(--au-ink); font-weight: 700; }
-.au-screen .ag-pos { background: var(--au-wood); border-color: var(--au-line); }
-.au-screen .ag-pos--on { background: var(--au-ox-2); border-color: var(--au-brass); box-shadow: none; }
-.au-screen .ag-pos--on .ag-pos-label { color: var(--au-brass-hi); }
-.au-screen .cp-rewards, .au-screen .cp-finding, .au-screen .cp-seat { background: var(--au-wood); border-color: var(--au-line); }
-.au-screen .cp-seat.is-me { background: var(--au-wood-2); border-color: var(--au-line-hi); }
+.au-intro-txt { display: grid; gap: 8px; min-width: 0; }
+.au-intro-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.au-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+.au-rules li { display: flex; align-items: baseline; gap: 10px; font-family: var(--ag-font); font-size: 19px; letter-spacing: 1.2px; line-height: 1.15; color: var(--au-white); text-transform: uppercase; }
+.au-rules li b { flex: none; width: 14px; font-family: var(--ag-display); font-weight: 400; font-size: 17px; color: var(--au-amber); }
+.au-screen .ag-pos { background: var(--au-panel); border-color: var(--au-line); }
+.au-screen .ag-pos--on { background: var(--au-deep); border-color: var(--au-amber); box-shadow: none; }
+.au-screen .ag-pos--on .ag-pos-label { color: var(--au-amber-hi); }
+.au-screen .cp-rewards, .au-screen .cp-finding, .au-screen .cp-seat { background: var(--au-panel); border-color: var(--au-line); }
+.au-screen .cp-seat.is-me { background: var(--au-panel-2); border-color: var(--au-line-hi); }
 .au-seats { display: grid; grid-template-columns: 1fr; gap: 6px; }
 
 /* ── the floor: one column on a phone (paddles, the block, the strip, BID at the thumb), two on a wide screen ── */
@@ -8114,41 +8110,41 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-paddle {
   position: relative; flex: 1 1 0; min-width: 0;
   display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: center; gap: 8px;
-  padding: 7px 9px; border-radius: 10px; border: 1px solid var(--au-line); background: var(--au-wood);
+  padding: 7px 9px; border-radius: 10px; border: 1px solid var(--au-line); background: var(--au-panel);
   transition: background .2s, border-color .2s, color .2s;
 }
 .au-paddle.is-me { border-color: var(--au-line-hi); }
-.au-paddle.is-high { background: var(--au-brass); border-color: var(--au-brass-hi); color: var(--au-ink); }
+.au-paddle.is-high { background: var(--au-amber); border-color: var(--au-amber-hi); color: var(--au-ink); }
 .au-paddle.is-away { opacity: .45; }
 .au-paddle-txt { display: grid; gap: 2px; min-width: 0; }
 .au-paddle-name { font-family: var(--ag-font); font-size: 16px; letter-spacing: 1px; line-height: 1.05; color: var(--au-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .au-paddle-name .ntag { font: inherit; }
 .au-paddle-sub { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.au-paddle-cash { font-family: var(--ag-display); font-weight: 400; font-size: 17px; line-height: 1; color: var(--au-cream); font-variant-numeric: tabular-nums; }
+.au-paddle-cash { font-family: var(--ag-display); font-weight: 400; font-size: 17px; line-height: 1; color: var(--au-white); font-variant-numeric: tabular-nums; }
 .au-paddle em { font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; line-height: 1; color: var(--au-muted); }
 .au-pips { display: flex; gap: 3px; }
-.au-pips i { width: 6px; height: 6px; border-radius: 50%; background: rgba(242,228,200,.18); }
-.au-pips i.is-in { background: var(--au-brass); }
+.au-pips i { width: 6px; height: 6px; border-radius: 50%; background: rgba(214,224,243,.18); }
+.au-pips i.is-in { background: var(--au-amber); }
 .au-paddle.is-high :is(.au-paddle-name, .au-paddle-cash, em) { color: var(--au-ink); }
-.au-paddle.is-high .au-pips i { background: rgba(36,19,13,.25); }
+.au-paddle.is-high .au-pips i { background: rgba(11,15,26,.25); }
 .au-paddle.is-high .au-pips i.is-in { background: var(--au-ink); }
 
 /* the block: the lot card, what he's up for, the grade face down; the board under it */
 .au-block {
   position: relative; display: grid; gap: 12px; padding: 12px;
   border-radius: 14px; border: 1px solid var(--au-line-hi);
-  background: var(--au-wood);
-  box-shadow: inset 0 3px 0 var(--au-ox), 0 10px 28px rgba(0,0,0,.35);
+  background: var(--au-panel);
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
   transition: border-color .25s;
 }
-.au-block.is-once { border-color: var(--au-brass-hi); }
+.au-block.is-once { border-color: var(--au-amber-hi); }
 .au-block.is-twice { border-color: var(--au-hot); }
-.au-block.is-sold { border-color: var(--au-brass); }
+.au-block.is-sold { border-color: var(--au-amber); }
 .au-lot { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 14px; align-items: stretch; }
 .au-lot-card { position: relative; width: 128px; height: 176px; }
-.au-lot-n { position: absolute; z-index: 12; top: -6px; left: -6px; padding: 3px 7px 2px; border-radius: 4px; background: var(--au-ox); color: var(--au-brass-hi); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.4px; line-height: 1.1; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.au-lot-n { position: absolute; z-index: 12; top: -6px; left: -6px; padding: 3px 7px 2px; border-radius: 4px; background: var(--au-edge); color: var(--au-amber-hi); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.4px; line-height: 1.1; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
 .au-lot-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding-top: 2px; }
-.au-lot-trait { font-family: var(--ag-display); font-weight: 400; font-size: 38px; line-height: .95; letter-spacing: .3px; color: var(--au-cream); text-transform: uppercase; text-wrap: balance; overflow-wrap: anywhere; }
+.au-lot-trait { font-family: var(--ag-display); font-weight: 400; font-size: 38px; line-height: .95; letter-spacing: .3px; color: var(--au-white); text-transform: uppercase; text-wrap: balance; overflow-wrap: anywhere; }
 .au-lot-covers { font-family: var(--ag-body); font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--au-muted); }
 .au-lot-foot { margin-top: auto; width: 100%; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
 .au-lot-team { display: flex; align-items: center; gap: 6px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.4px; color: var(--au-muted); }
@@ -8157,27 +8153,27 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-lot--wait { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 4px; }
 .au-wait-line { font-family: var(--ag-body); font-size: 14px; line-height: 1.4; color: var(--au-muted); }
 
-/* a card: oxblood back with a brass frame, a cream-framed player card on the face */
+/* a card: a navy back with a gold edge; the face is the player card */
 .au-card { position: relative; width: 128px; height: 176px; perspective: 800px; }
 .au-card-in { position: absolute; inset: 0; transform-style: preserve-3d; }
 .au-card-back, .au-card-face { position: absolute; inset: 0; border-radius: 10px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .au-card-back, .au-dcard-back {
   display: grid; place-items: center;
-  background: repeating-linear-gradient(45deg, rgba(240,208,138,.07) 0 2px, transparent 2px 9px), var(--au-ox);
-  box-shadow: inset 0 0 0 4px var(--au-ox), inset 0 0 0 5.5px var(--au-brass), 0 6px 14px rgba(0,0,0,.45);
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 2px, transparent 2px 9px), var(--au-edge);
+  box-shadow: inset 0 0 0 1.5px var(--au-amber), 0 6px 14px rgba(0,0,0,.45);
 }
-.au-card-back span, .au-dcard-back span { font-family: var(--ag-display); font-size: 26px; letter-spacing: 1px; color: var(--au-brass-hi); }
+.au-card-back span, .au-dcard-back span { font-family: var(--ag-display); font-size: 26px; letter-spacing: 1px; color: var(--au-amber); }
 .au-card-face { transform: rotateY(180deg); }
 .au-card--lot .au-card-face { transform: none; animation: au-card-land .4s cubic-bezier(.2,.9,.25,1.2) both; }
 @keyframes au-card-land { from { transform: translateY(-6px) scale(1.05); } to { transform: none; } }
-/* the player card itself: Salary Cap's card (team colour, faded logo, headshot), framed in cream like a trading card */
-.au-screen .sc-card.au-lc { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 5px; border: 0; border-radius: 10px; background: var(--au-cream); cursor: default; box-shadow: 0 8px 18px rgba(0,0,0,.5); transform: none; }
-.au-screen .sc-card.au-lc .sc-card-visual { flex: 1; min-height: 0; border-radius: 6px; }
+/* the player card itself: Salary Cap's card (team colour, faded logo, headshot) with his name under it */
+.au-screen .sc-card.au-lc { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 0; border: 1.5px solid rgba(255,255,255,.16); border-radius: 10px; overflow: hidden; background: var(--au-panel-2); cursor: default; box-shadow: 0 8px 18px rgba(0,0,0,.5); transform: none; }
+.au-screen .sc-card.au-lc .sc-card-visual { flex: 1; min-height: 0; border-radius: 0; }
 .au-screen .sc-card.au-lc .sc-card-logo-bg { opacity: .22; }
 .au-screen .sc-card.au-lc .sc-card-no-photo img { width: 62% !important; opacity: .9 !important; }
-.au-screen .sc-card.au-lc .sc-card-name-wrap { padding: 5px 2px 1px; background: none; }
-.au-screen .sc-card.au-lc .sc-card-first { font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1px; line-height: 1; color: rgba(36,19,13,.62); }
-.au-screen .sc-card.au-lc .sc-card-last { font-family: var(--ag-display); font-weight: 400; font-size: 19px; letter-spacing: .3px; line-height: 1.05; color: var(--au-ink); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-screen .sc-card.au-lc .sc-card-name-wrap { padding: 6px 4px 6px; background: var(--au-deep); border-top: 2px solid var(--au-amber); }
+.au-screen .sc-card.au-lc .sc-card-first { font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1px; line-height: 1; color: var(--au-muted); }
+.au-screen .sc-card.au-lc .sc-card-last { font-family: var(--ag-display); font-weight: 400; font-size: 19px; letter-spacing: .3px; line-height: 1.05; color: var(--au-white); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* the shuffle: the deck splits left and right twice, then the lot's card is pulled and turns over */
 .au-deck { position: relative; width: 128px; height: 176px; }
@@ -8201,38 +8197,38 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-grade.is-known .au-grade-in { transition: none; }
 .au-grade-back, .au-grade-face { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 1px; border-radius: 8px; backface-visibility: hidden; -webkit-backface-visibility: hidden; font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; }
 .au-grade-back small, .au-grade-face small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; line-height: 1; }
-.au-grade-back { color: var(--au-brass-hi); background: var(--au-ox-2); box-shadow: inset 0 0 0 1.5px var(--au-line-hi); }
+.au-grade-back { color: var(--au-amber-hi); background: var(--au-deep); box-shadow: inset 0 0 0 1.5px var(--au-line-hi); }
 .au-grade-back small { color: var(--au-muted); }
-.au-grade-face { transform: rotateY(180deg); color: #fff; background: color-mix(in srgb, var(--g) 30%, #1a0d0a); box-shadow: inset 0 0 0 2px var(--g); }
+.au-grade-face { transform: rotateY(180deg); color: #fff; background: color-mix(in srgb, var(--g) 30%, #0b1222); box-shadow: inset 0 0 0 2px var(--g); }
 .au-grade-face small { color: rgba(255,255,255,.75); }
 
 /* the stamp: SOLD lands on the card with the gavel's hit */
-.au-stamp { position: absolute; z-index: 11; left: 50%; top: 44%; translate: -50% -50%; rotate: -12deg; padding: 4px 12px 2px; border: 3px solid #c93a2b; border-radius: 6px; color: #c93a2b; background: rgba(242,228,200,.88); font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: 2px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
-.au-stamp.is-pass { font-size: 24px; color: #5d4a3c; border-color: #5d4a3c; }
+.au-stamp { position: absolute; z-index: 11; left: -6px; right: -6px; top: 40%; translate: 0 -50%; rotate: -6deg; padding: 6px 0 4px; text-align: center; color: var(--au-ink); background: var(--au-amber); font-family: var(--ag-display); font-weight: 400; font-size: 36px; line-height: 1; letter-spacing: 3px; white-space: nowrap; box-shadow: 0 6px 16px rgba(0,0,0,.45); }
+.au-stamp.is-pass { font-size: 26px; color: var(--au-white); background: #4b5568; }
 
 /* the board: the bid, who holds it, the clock */
 .au-board { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px 12px; padding-top: 12px; border-top: 1px solid var(--au-line); }
 .au-board-bid { display: grid; gap: 2px; min-width: 0; }
-.au-amt { font-family: var(--ag-display); font-weight: 400; font-size: 54px; line-height: .9; color: var(--au-brass-hi); font-variant-numeric: tabular-nums; }
+.au-amt { font-family: var(--ag-display); font-weight: 400; font-size: 54px; line-height: .9; color: var(--au-amber-hi); font-variant-numeric: tabular-nums; }
 .au-holder { display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 22px; font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.2px; line-height: 1; color: var(--au-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .au-holder .ntag { font: inherit; }
 .au-board-clock { display: grid; justify-items: end; align-content: end; gap: 2px; min-width: 92px; }
-.au-call { font-family: var(--ag-display); font-weight: 400; font-size: 46px; line-height: .9; color: var(--au-cream); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.au-call.is-once { color: var(--au-brass-hi); }
+.au-call { font-family: var(--ag-display); font-weight: 400; font-size: 46px; line-height: .9; color: var(--au-white); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.au-call.is-once { color: var(--au-amber-hi); }
 .au-call.is-twice { color: var(--au-hot); }
-.au-call.is-sold { color: var(--au-brass-hi); }
+.au-call.is-sold { color: var(--au-amber-hi); }
 .au-call.is-pass { font-size: 34px; color: var(--au-muted); }
 .au-board-clock:has(.au-hammer) { grid-template-columns: auto auto; align-items: end; column-gap: 4px; }
 .au-block.is-wait .au-amt { color: var(--au-muted); }
 .au-bar { position: relative; grid-column: 1 / -1; height: 8px; border-radius: 4px; background: rgba(0,0,0,.4); overflow: hidden; }
-.au-bar i { display: block; height: 100%; background: var(--au-brass); transform-origin: left; transform: scaleX(1); transition: background .2s; }
+.au-bar i { display: block; height: 100%; background: var(--au-amber); transform-origin: left; transform: scaleX(1); transition: background .2s; }
 .au-bar i.is-run { animation: au-drain var(--ms) linear both; }
 .au-bar i.is-out { transform: scaleX(0); }
-.au-block.is-wait .au-bar i { background: rgba(242,228,200,.2); }
+.au-block.is-wait .au-bar i { background: rgba(214,224,243,.2); }
 .au-bar::before, .au-bar::after { content: ''; position: absolute; z-index: 1; top: 0; bottom: 0; width: 2px; background: var(--au-bg); }
 .au-bar::before { left: var(--once); }
 .au-bar::after { left: var(--twice); }
-.au-block.is-once .au-bar i { background: var(--au-brass-hi); }
+.au-block.is-once .au-bar i { background: var(--au-amber-hi); }
 .au-block.is-twice .au-bar i { background: var(--au-hot); }
 @keyframes au-drain { from { transform: scaleX(var(--from, 1)); } to { transform: scaleX(0); } }
 
@@ -8242,7 +8238,7 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-hammer-head { transform-origin: 4.8% 47.6%; }
 .au-hammer-block { transform-origin: 70% 92%; }
 .au-hammer-hit { position: absolute; left: 70%; top: 84%; width: 0; height: 0; opacity: 0; }
-.au-hammer-hit::before, .au-hammer-hit::after { content: ''; position: absolute; width: 34px; height: 2px; left: -17px; top: -1px; border-radius: 2px; background: linear-gradient(90deg, var(--au-brass-hi) 0 30%, transparent 30% 70%, var(--au-brass-hi) 70%); }
+.au-hammer-hit::before, .au-hammer-hit::after { content: ''; position: absolute; width: 34px; height: 2px; left: -17px; top: -1px; border-radius: 2px; background: linear-gradient(90deg, var(--au-amber-hi) 0 30%, transparent 30% 70%, var(--au-amber-hi) 70%); }
 .au-hammer-hit::after { width: 26px; left: -13px; top: -9px; }
 
 /* the calls and the sale: one-shot moves, none of them loop */
@@ -8260,7 +8256,7 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 }
 @keyframes au-call { from { transform: scale(1.5); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes au-shake { 25% { translate: -3px 0; } 50% { translate: 3px 0; } 75% { translate: -2px 0; } }
-@keyframes au-slam { from { opacity: 0; scale: 2.2; } 70% { opacity: 1; scale: .94; } to { opacity: 1; scale: 1; } }
+@keyframes au-slam { from { opacity: 0; scale: 1.6 1; } 60% { opacity: 1; scale: .97 1; } to { opacity: 1; scale: 1; } }
 @keyframes au-raise { 40% { transform: translateY(-4px); } }
 
 /* the controls: PASS, BID (the one big button), +3 */
@@ -8270,56 +8266,56 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-bid {
   height: 64px; border-radius: 12px; cursor: pointer; border: 0;
   display: flex; align-items: baseline; justify-content: center; gap: 10px;
-  color: var(--btn-txt, #04130c);
-  background: linear-gradient(180deg, var(--btn-start, #86ECBA), var(--btn-end, #2FCB7E));
-  box-shadow: 0 6px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.45), inset 0 -3px 0 rgba(0,0,0,.14);
+  color: var(--au-ink);
+  background: var(--au-amber);
+  box-shadow: 0 6px 16px rgba(0,0,0,.4), inset 0 -3px 0 rgba(0,0,0,.16);
   transition: transform var(--press);
 }
 .au-bid small { font-family: var(--ag-font); font-size: 20px; letter-spacing: 2px; }
 .au-bid b { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; }
-.au-bid--jump { flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--au-brass-hi); background: var(--au-wood-2); box-shadow: inset 0 0 0 1.5px var(--au-brass); }
+.au-bid--jump { flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--au-amber-hi); background: var(--au-panel-2); box-shadow: inset 0 0 0 1.5px var(--au-amber); }
 .au-bid--jump small { font-size: 13px; letter-spacing: 1.5px; color: var(--au-muted); }
 .au-bid--jump b { font-size: 26px; }
-.au-pass { height: 64px; border-radius: 12px; cursor: pointer; border: 1.5px solid rgba(242,228,200,.28); background: var(--au-wood); color: var(--au-text); font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.8px; transition: transform var(--press); }
+.au-pass { height: 64px; border-radius: 12px; cursor: pointer; border: 1.5px solid rgba(214,224,243,.28); background: var(--au-panel); color: var(--au-text); font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.8px; transition: transform var(--press); }
 .au-bid:not(:disabled):active, .au-pass:not(:disabled):active { transform: scale(.96); }
-.au-bid:focus-visible, .au-pass:focus-visible { outline: 2px solid var(--au-cream); outline-offset: 2px; }
-.au-act--note { display: grid; place-items: center; padding: 0 12px; border-radius: 12px; background: var(--au-wood); border: 1px solid var(--au-line); text-align: center; }
+.au-bid:focus-visible, .au-pass:focus-visible { outline: 2px solid var(--au-white); outline-offset: 2px; }
+.au-act--note { display: grid; place-items: center; padding: 0 12px; border-radius: 12px; background: var(--au-panel); border: 1px solid var(--au-line); text-align: center; }
 .au-act--note span { font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.5px; color: var(--au-muted); text-transform: uppercase; }
-.au-act--lead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-radius: 12px; background: var(--au-ox-2); border: 1.5px solid var(--au-brass); }
-.au-act-lead { display: grid; gap: 3px; min-width: 0; font-family: var(--ag-font); font-size: 20px; letter-spacing: 1.2px; line-height: 1; color: var(--au-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.au-act-lead small { font-size: 13px; letter-spacing: 2px; color: var(--au-brass); }
+.au-act--lead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-radius: 12px; background: var(--au-deep); border: 1.5px solid var(--au-amber); }
+.au-act-lead { display: grid; gap: 3px; min-width: 0; font-family: var(--ag-font); font-size: 20px; letter-spacing: 1.2px; line-height: 1; color: var(--au-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-act-lead small { font-size: 13px; letter-spacing: 2px; color: var(--au-amber); }
 .au-act-lead .ntag { font: inherit; }
-.au-act--lead > b { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; color: var(--au-brass-hi); }
+.au-act--lead > b { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; color: var(--au-amber-hi); }
 
 /* the build strip */
-.au-mine { display: grid; gap: 8px; padding: 10px 10px 10px; border-radius: 12px; background: var(--au-wood); border: 1px solid var(--au-line); }
+.au-mine { display: grid; gap: 8px; padding: 10px 10px 10px; border-radius: 12px; background: var(--au-panel); border: 1px solid var(--au-line); }
 .au-mine-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 2px; }
-.au-mine-who { min-width: 0; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.2px; color: var(--au-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-mine-who { min-width: 0; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.2px; color: var(--au-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .au-mine-who .ntag { font: inherit; }
 .au-mine-cash { flex: none; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.3px; color: var(--au-muted); }
-.au-mine-cash b { font-family: var(--ag-display); font-weight: 400; font-size: 17px; letter-spacing: 0; color: var(--au-cream); }
+.au-mine-cash b { font-family: var(--ag-display); font-weight: 400; font-size: 17px; letter-spacing: 0; color: var(--au-white); }
 .au-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
-.au-cell { display: grid; justify-items: center; gap: 2px; min-width: 0; padding: 7px 3px 6px; border-radius: 8px; background: rgba(0,0,0,.28); border: 1px solid rgba(242,228,200,.08); text-align: center; }
+.au-cell { display: grid; justify-items: center; gap: 2px; min-width: 0; padding: 7px 3px 6px; border-radius: 8px; background: rgba(0,0,0,.28); border: 1px solid rgba(214,224,243,.08); text-align: center; }
 .au-cell-t { max-width: 100%; font-family: var(--ag-font); font-size: 13px; letter-spacing: .6px; line-height: 1; color: var(--au-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.au-cell-g { font-family: var(--ag-display); font-weight: 400; font-size: 25px; line-height: 1.05; color: rgba(242,228,200,.3); }
-.au-cell-n { max-width: 100%; font-family: var(--ag-body); font-size: 13px; font-weight: 600; line-height: 1.15; color: rgba(242,228,200,.42); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.au-cell-p { min-height: 13px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1; color: var(--au-brass); }
+.au-cell-g { font-family: var(--ag-display); font-weight: 400; font-size: 25px; line-height: 1.05; color: rgba(214,224,243,.3); }
+.au-cell-n { max-width: 100%; font-family: var(--ag-body); font-size: 13px; font-weight: 600; line-height: 1.15; color: rgba(214,224,243,.42); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-cell-p { min-height: 13px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1; color: var(--au-amber); }
 .au-cell.is-in { background: color-mix(in srgb, var(--g) 14%, rgba(0,0,0,.3)); border-color: color-mix(in srgb, var(--g) 55%, transparent); }
 .au-cell.is-in .au-cell-g { color: #fff; }
 .au-cell.is-in .au-cell-n { color: var(--au-text); }
 .au-cell.is-drawn { border-style: dashed; }
-.au-cell.is-up { border-color: var(--au-brass); background: var(--au-ox-2); }
-.au-cell.is-up :is(.au-cell-g, .au-cell-n) { color: var(--au-brass-hi); }
+.au-cell.is-up { border-color: var(--au-amber); background: var(--au-deep); }
+.au-cell.is-up :is(.au-cell-g, .au-cell-n) { color: var(--au-amber-hi); }
 @media (prefers-reduced-motion: no-preference) { html:not(.bap-reduce-motion) .au-cell.is-in { animation: au-cell-in .4s cubic-bezier(.2,.9,.3,1.3) both; } }
 @keyframes au-cell-in { from { transform: scale(1.12); } }
 
 /* back in the deck, face up; the book */
 .au-back { display: grid; gap: 7px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--au-line); background: rgba(0,0,0,.2); }
 .au-back-cards { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-.au-back-card { flex: 0 0 auto; display: grid; grid-template-columns: auto minmax(0, auto); align-items: center; column-gap: 7px; max-width: 160px; padding: 6px 10px 6px 8px; border-radius: 6px; background: var(--au-cream); color: var(--au-ink); }
-.au-back-card b { grid-row: span 2; min-width: 30px; padding: 3px 0 1px; border-radius: 4px; text-align: center; font-family: var(--ag-display); font-weight: 400; font-size: 20px; line-height: 1; color: #fff; background: color-mix(in srgb, var(--g) 70%, #1a0d0a); }
-.au-back-card small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; line-height: 1.1; color: var(--au-ox); }
-.au-back-card i { font-style: normal; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: rgba(36,19,13,.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-back-card { flex: 0 0 auto; display: grid; grid-template-columns: auto minmax(0, auto); align-items: center; column-gap: 8px; max-width: 170px; padding: 6px 10px 6px 7px; border-radius: 8px; background: var(--au-panel-2); border: 1px solid var(--au-line); color: var(--au-text); }
+.au-back-card b { grid-row: span 2; min-width: 30px; padding: 3px 0 1px; border-radius: 4px; text-align: center; font-family: var(--ag-display); font-weight: 400; font-size: 20px; line-height: 1; color: #fff; background: color-mix(in srgb, var(--g) 70%, #0b1222); }
+.au-back-card small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; line-height: 1.1; color: var(--au-muted); }
+.au-back-card i { font-style: normal; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--au-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .au-log { display: grid; gap: 5px; padding: 2px 2px 0; }
 .au-log-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-family: var(--ag-body); font-size: 13px; color: var(--au-muted); }
 .au-log-row b { font-family: var(--ag-display); font-weight: 400; font-size: 17px; line-height: 1; color: var(--g); text-align: center; }
@@ -8328,8 +8324,8 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-log-to .ntag { font: inherit; }
 
 /* ── the draw: a bidder's filled his build; every open slot left in the room gets a card off the deck ── */
-.au-draw { display: grid; gap: 6px; padding: 14px 12px 14px; border-radius: 14px; border: 1px solid var(--au-line-hi); background: var(--au-wood); box-shadow: inset 0 3px 0 var(--au-ox); }
-.au-draw-head { font-family: var(--ag-display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--au-cream); text-transform: uppercase; }
+.au-draw { display: grid; gap: 6px; padding: 14px 12px 14px; border-radius: 14px; border: 1px solid var(--au-line-hi); background: var(--au-panel); }
+.au-draw-head { font-family: var(--ag-display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--au-white); text-transform: uppercase; }
 .au-draw-head * { font: inherit !important; text-transform: uppercase !important; }
 .au-draw-sub { font-family: var(--ag-body); font-size: 14px; color: var(--au-muted); }
 .au-draw-rows { display: grid; gap: 12px; margin-top: 8px; }
@@ -8340,48 +8336,48 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-dcard { display: block; aspect-ratio: 5 / 7.4; perspective: 600px; }
 .au-dcard-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; animation: au-dturn .55s var(--at) cubic-bezier(.3,.7,.3,1.15) both; }
 .au-dcard-back, .au-dcard-face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.au-dcard-back { box-shadow: inset 0 0 0 3px var(--au-ox), inset 0 0 0 4px var(--au-brass), 0 4px 10px rgba(0,0,0,.4); }
+.au-dcard-back { box-shadow: inset 0 0 0 1.5px var(--au-amber), 0 4px 10px rgba(0,0,0,.4); }
 .au-dcard-back span { font-size: 17px; }
-.au-dcard-face { transform: rotateY(180deg); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 3px; padding: 4px; background: var(--au-cream); color: var(--au-ink); box-shadow: 0 4px 10px rgba(0,0,0,.4); text-align: center; }
-.au-dcard-face small { font-family: var(--ag-font); font-size: 13px; letter-spacing: .5px; line-height: 1; color: var(--au-ox); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-dcard-face { transform: rotateY(180deg); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 3px; padding: 4px; background: var(--au-panel-2); color: var(--au-text); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 4px 10px rgba(0,0,0,.4); text-align: center; }
+.au-dcard-face small { font-family: var(--ag-font); font-size: 13px; letter-spacing: .5px; line-height: 1; color: var(--au-amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .au-dcard-pic { position: relative; display: block; overflow: hidden; border-radius: 4px; background: color-mix(in srgb, var(--tc, #444) 60%, #000); }
 .au-dcard-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 .au-dcard-pic img.is-logo { object-fit: contain; padding: 14%; box-sizing: border-box; }
-.au-dcard-face b { position: absolute; right: 4px; top: 21px; min-width: 26px; padding: 3px 3px 1px; border-radius: 4px; font-family: var(--ag-display); font-weight: 400; font-size: 19px; line-height: 1; color: #fff; background: color-mix(in srgb, var(--g) 80%, #1a0d0a); box-shadow: 0 2px 6px rgba(0,0,0,.4); }
-.au-dcard-face i { font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: .3px; line-height: 1; color: var(--au-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-dcard-face b { position: absolute; right: 4px; top: 21px; min-width: 26px; padding: 3px 3px 1px; border-radius: 4px; font-family: var(--ag-display); font-weight: 400; font-size: 19px; line-height: 1; color: #fff; background: color-mix(in srgb, var(--g) 80%, #0b1222); box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.au-dcard-face i { font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: .3px; line-height: 1; color: var(--au-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes au-dturn { 0% { transform: rotateY(0); } 50% { transform: translateY(-8px) rotateY(90deg); } 100% { transform: rotateY(180deg); } }
 
 /* ── the results ── */
-.au-podium { display: grid; gap: 8px; padding: 16px; border-radius: 14px; border: 1px solid var(--au-line-hi); background: var(--au-wood); box-shadow: inset 0 3px 0 var(--au-ox); }
-.au-podium.is-win { border-color: var(--au-brass); background: var(--au-ox-2); }
+.au-podium { display: grid; gap: 8px; padding: 16px; border-radius: 14px; border: 1px solid var(--au-line-hi); background: var(--au-panel); }
+.au-podium.is-win { border-color: var(--au-amber); background: var(--au-deep); }
 .au-podium-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.au-podium-place { font-family: var(--ag-display); font-weight: 400; font-size: 76px; line-height: .85; color: var(--au-cream); }
-.au-podium.is-win .au-podium-place { color: var(--au-brass-hi); }
+.au-podium-place { font-family: var(--ag-display); font-weight: 400; font-size: 76px; line-height: .85; color: var(--au-white); }
+.au-podium.is-win .au-podium-place { color: var(--au-amber-hi); }
 .au-podium-who { display: grid; gap: 4px; min-width: 0; }
-.au-podium-name { font-family: var(--ag-font); font-size: 24px; letter-spacing: 1.2px; line-height: 1; color: var(--au-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-podium-name { font-family: var(--ag-font); font-size: 24px; letter-spacing: 1.2px; line-height: 1; color: var(--au-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .au-podium-name .ntag { font: inherit; }
 .au-podium-ovr { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.2px; line-height: 1.2; color: var(--au-muted); }
-.au-podium-ovr b { font-family: var(--ag-display); font-weight: 400; font-size: 19px; letter-spacing: 0; color: var(--au-cream); }
+.au-podium-ovr b { font-family: var(--ag-display); font-weight: 400; font-size: 19px; letter-spacing: 0; color: var(--au-white); }
 .au-podium-pay { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid var(--au-line); width: 100%; font-family: var(--ag-body); font-size: 15px; font-weight: 700; color: var(--au-text); }
 .au-final { display: flex; flex-direction: column; gap: 6px; }
-.au-final-row { display: grid; grid-template-columns: 24px 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--au-line); background: var(--au-wood); }
+.au-final-row { display: grid; grid-template-columns: 24px 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--au-line); background: var(--au-panel); }
 .au-final-row.is-me { border-color: var(--au-line-hi); }
-.au-final-row.is-first { box-shadow: inset 3px 0 0 var(--au-brass); }
+.au-final-row.is-first { box-shadow: inset 3px 0 0 var(--au-amber); }
 .au-final-rank { font-family: var(--ag-display); font-size: 22px; line-height: 1; color: var(--au-muted); text-align: center; }
-.au-final-row.is-first .au-final-rank { color: var(--au-brass-hi); }
+.au-final-row.is-first .au-final-rank { color: var(--au-amber-hi); }
 .au-final-who { display: grid; gap: 5px; min-width: 0; }
 .au-final-name { font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.2px; line-height: 1; color: var(--au-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .au-final-name .ntag { font: inherit; }
 .au-final-traits { display: flex; flex-wrap: wrap; gap: 4px; }
 .au-final-traits i { font-style: normal; padding: 2px 6px 1px; border-radius: 4px; font-family: var(--ag-font); font-size: 13px; letter-spacing: .8px; color: var(--au-muted); background: rgba(0,0,0,.3); box-shadow: inset 0 -2px 0 var(--g); }
-.au-final-traits i.is-drawn { outline: 1px dashed rgba(242,228,200,.35); outline-offset: -1px; }
+.au-final-traits i.is-drawn { outline: 1px dashed rgba(214,224,243,.35); outline-offset: -1px; }
 .au-final-traits b { font-weight: 400; color: #fff; }
 .au-final-ovr { display: grid; justify-items: end; gap: 2px; }
-.au-final-ovr b { font-family: var(--ag-display); font-weight: 400; font-size: 28px; line-height: 1; color: var(--au-cream); }
-.au-final-row.is-first .au-final-ovr b { color: var(--au-brass-hi); }
+.au-final-ovr b { font-family: var(--ag-display); font-weight: 400; font-size: 28px; line-height: 1; color: var(--au-white); }
+.au-final-row.is-first .au-final-ovr b { color: var(--au-amber-hi); }
 .au-final-ovr b.is-left { font-size: 18px; color: var(--au-muted); }
 .au-final-ovr small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--au-muted); }
-.au-tag { display: inline-block; margin-left: 8px; padding: 2px 5px 1px; border-radius: 3px; background: var(--au-brass); color: var(--au-ink); font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1.1; vertical-align: 1px; }
+.au-tag { display: inline-block; margin-left: 8px; padding: 2px 5px 1px; border-radius: 3px; background: var(--au-amber); color: var(--au-ink); font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1.1; vertical-align: 1px; }
 .au-fine { font-family: var(--ag-body); font-size: 13px; color: var(--au-muted); }
 .au-fine .ntag { font: inherit; font-weight: 700; }
 
@@ -8423,24 +8419,20 @@ html.bap-reduce-motion :is(.au-dcard-in, .au-deck .au-card) { animation-duration
 /* (the controls stick to the foot of the scroll area, which already clears the dock and the rail) */
 .au-act { bottom: 0; }
 .au-amt.is-none { color: var(--au-muted); }
-.au-call.is-idle { color: rgba(242,228,200,.35); }
+.au-call.is-idle { color: rgba(214,224,243,.35); }
 .au-podium-place { text-transform: uppercase; }
-.au-screen .cp-finding { background: var(--au-wood); }
+.au-screen .cp-finding { background: var(--au-panel); }
 .au-screen .cp-finding::before, .au-screen .cp-finding::after { display: none; }
-/* the catalogue: the gavel on an oxblood spine (its rim light is drawn for a dark ground) */
-.au-intro { grid-template-columns: 80px minmax(0, 1fr); padding: 0; overflow: hidden; gap: 0; }
-.au-intro .au-mark { align-self: stretch; width: auto; aspect-ratio: auto; margin: 0; background: var(--au-ox); box-shadow: inset -1px 0 0 rgba(36,19,13,.4); }
-.au-intro .au-mark img { inset: 14px 8px auto 8px; width: calc(100% - 16px); height: auto; aspect-ratio: 180 / 234; }
-.au-intro-txt { padding: 14px 14px 16px; }
 /* the draw: a slot it deals in my strip turns up with its card */
 @media (prefers-reduced-motion: no-preference) {
   html:not(.bap-reduce-motion) .au-cell.is-dealt { animation: au-dealt .35s var(--at) cubic-bezier(.2,.9,.3,1.3) both; }
   html:not(.bap-reduce-motion) .au-cell.is-dealt > :not(.au-cell-t) { animation: au-dealt-in .25s var(--at) both; }
 }
-@keyframes au-dealt { from { background: rgba(0,0,0,.28); border-color: rgba(242,228,200,.08); transform: scale(1); } 40% { transform: scale(1.1); } }
+@keyframes au-dealt { from { background: rgba(0,0,0,.28); border-color: rgba(214,224,243,.08); transform: scale(1); } 40% { transform: scale(1.1); } }
 @keyframes au-dealt-in { from { opacity: 0; } }
-/* one auction look in every sport: the primary buttons are the app's green (soccer's white and basketball's orange
-   stay on their own screens) */
-.au-screen { --btn-start: #86ECBA; --btn-end: #2FCB7E; --btn-txt: #04130c; --ag-on: #04130c; --ag-grad: linear-gradient(135deg, #86ECBA 0%, #2FCB7E 100%); }
+/* one look in every sport: gold is the primary action (FIND AN AUCTION, PLAY AGAIN, BID; owner 11-26) */
+.au-screen { --btn-start: #ffd06b; --btn-end: #f5b83d; --btn-txt: #0b0f1a; --ag-on: #0b0f1a; --ag-grad: #f5b83d; }
 .au-bid { align-items: center; }
 .au-bid b { margin-top: 2px; }
+/* the sale: the gavel alone on the board (SOLD flashes on the card) */
+.au-board-clock .au-hammer { width: 62px; height: 80px; margin: -12px 0 -6px; }

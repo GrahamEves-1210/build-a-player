@@ -306,7 +306,7 @@ function Rafters({ career, sport = null }) {
 // the hammer up over the block, and the lot on the block: a card, its grade face down
 const GavelArt = () => (
   <span className="ag-gavel" aria-hidden="true">
-    <span className="ag-gavel-lot"><b>?</b><small>LOT</small></span>
+    <span className="ag-gavel-lot"><b>?</b><small>GRADE</small></span>
     <img className="ag-gavel-block" src="/fx/gavel-block.webp" alt="" loading="lazy" decoding="async" draggable={false} />
     <img className="ag-gavel-head" src="/fx/gavel-hammer.webp" alt="" loading="lazy" decoding="async" draggable={false} />
   </span>

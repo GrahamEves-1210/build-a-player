@@ -5,7 +5,7 @@ import { XpIco } from './GainIcons'
 import { COMPETE_REWARDS } from '../../lib/progress'
 import { IconClose, IconArrow } from './icons'
 import OnlineRecord from './OnlineRecord'
-import { AUCTION_SIZE, BUDGET, RESET_SECS } from '../../lib/auction'
+import { AUCTION_SIZE, BUDGET } from '../../lib/auction'
 import { guardLeave } from '../../lib/liveLock'
 const AppAuction = lazy(() => import('./AppAuction'))
 
@@ -52,14 +52,13 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
           <GavelMark />
           <div className="au-intro-txt">
             <div className="au-intro-head">
-              <b>Conditions of sale</b>
-              <span>ONLINE · 2–3 BIDDERS · ${BUDGET} EACH</span>
+              <span className="ag-eyebrow">ONLINE · 2–3 PLAYERS · ${BUDGET} EACH</span>
               {here > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(here)}<small>PLAYING</small></span>}
             </div>
             <ol className="au-rules">
-              <li><b>Five slots, ${BUDGET} to fill them.</b> A card is pulled for one slot and lands on a real player. His grade stays face down until the gavel.</li>
-              <li><b>Bid $1 at a time.</b> Every bid puts the clock back to {RESET_SECS} seconds. Nobody bids, it goes back in the deck face up.</li>
-              <li><b>Fill your build first.</b> Everyone else's open slots go to the draw. Best OVR wins the room.</li>
+              <li><b>1</b>5 slots · ${BUDGET} to fill them</li>
+              <li><b>2</b>Highest bid wins the card</li>
+              <li><b>3</b>Fill first, the rest get random cards</li>
             </ol>
           </div>
         </div>

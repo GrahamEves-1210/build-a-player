@@ -173,7 +173,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
     return (
       <>
         <div className={`au-podium ag-pop${meR?.place === 1 ? ' is-win' : ''}`}>
-          <span className="au-lbl">AUCTION {m.code} · FINAL</span>
+          <span className="au-lbl">FINAL · ROOM {m.code}</span>
           <div className="au-podium-row">
             <b className="au-podium-place">{meR ? ord(meR.place) : '—'}</b>
             <span className="au-podium-who">
@@ -280,12 +280,12 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
     let k = 0
     return (
       <div className="au-floor is-draw">
-        {top(`AUCTION ${m.code} · THE DRAW`)}
+        {top(`ROOM ${m.code} · ${m.players.length} PLAYERS`)}
         <div className="au-main">
           <div className="au-draw ag-pop">
-            <span className="au-lbl">AUCTION CLOSED</span>
+            <span className="au-lbl">THE DRAW</span>
             <b className="au-draw-head">{by ? <Name p={by} me={mine} /> : 'A bidder'} filled his build</b>
-            <span className="au-draw-sub">Every open slot left gets one card off the deck</span>
+            <span className="au-draw-sub">Every open slot left gets a random card</span>
             <div className="au-draw-rows">
               {m.players.filter(p => st.draw.cards[p.vid]).map(p => (
                 <div key={p.vid} className={`au-draw-row${p.vid === mine ? ' is-me' : ''}`}>
@@ -345,7 +345,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   let act
   const note = (txt, cls = '') => <div className={`au-act au-act--note${cls}`}><span>{txt}</span></div>
   if (!lot || st.stage === 'wait') act = note('Shuffling the deck')
-  else if (sold) act = note(myDone ? 'Build done' : st.sold ? 'Next lot coming up' : 'Back in the deck · next lot coming up')
+  else if (sold) act = note(myDone ? 'Build done' : st.sold ? 'Next card coming up' : 'Back in the deck · next card coming up')
   else if (!mayBid) act = note(L.won[mine]?.[lot.trait] ? `${kit.attrLabel(lot.trait)} filled · watching this one` : 'Out of money for this one')
   else if (spinning) act = note(lot.known ? 'Back up, grade showing · bidding opens' : 'Bidding opens when the card turns')
   else if (high?.vid === mine) act = (
@@ -372,17 +372,17 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
 
   return (
     <div className={`au-floor is-${state}`} data-lot={st.n || 0}>
-      {top(`AUCTION ${m.code} · ${m.players.length} BIDDERS`)}
+      {top(`ROOM ${m.code} · ${m.players.length} PLAYERS`)}
       <div className="au-main">
         <div className={`au-block is-${state}`}>
           {lot ? (
             <div className={`au-lot${spinning && !lot.known ? ' is-pulling' : ''}`} key={lot.n} style={{ '--deck': `${DECK_MS}ms` }}>
               <div className="au-lot-card">
-                <span className="au-lot-n">LOT {st.n || 1}</span>
+                <span className="au-lot-n">CARD {st.n || 1}</span>
                 {spinning && !lot.known
                   ? <Deck kit={kit} lot={lot} seed={m.seed} />
                   : <div className="au-card au-card--lot"><div className="au-card-face"><LotCard kit={kit} lot={lot} /></div></div>}
-                {sold && <span className={`au-stamp${st.sold ? '' : ' is-pass'}`} key={`s${st.n}`}>{st.sold ? 'SOLD' : 'NO SALE'}</span>}
+                {sold && <span className={`au-stamp${st.sold ? '' : ' is-pass'}`} key={`s${st.n}`}>{st.sold ? 'SOLD' : 'NO BIDS'}</span>}
               </div>
               <div className="au-lot-info">
                 <span className="au-lbl">{lot.known && st.stage === 'lot' ? 'BACK FROM THE DECK' : 'UP FOR'}</span>
@@ -400,7 +400,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
               </div>
             </div>
           ) : (
-            <div className="au-lot au-lot--wait"><span className="au-lbl">THE FLOOR</span><span className="au-wait-line">Everyone has ${BUDGET} and {m.types.length} slots. New cards come up face down; the grade turns over at the gavel.</span></div>
+            <div className="au-lot au-lot--wait"><span className="au-lbl">GET READY</span><span className="au-wait-line">Everyone has ${BUDGET} and {m.types.length} slots. New cards come up face down; the grade turns over at the gavel.</span></div>
           )}
           {(st.stage === 'lot' || sold) && (
             <div className="au-board">
@@ -408,12 +408,12 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
                 <span className="au-lbl">{sold ? (st.sold ? 'SOLD FOR' : 'NO BIDS') : high ? 'HIGH BID' : 'OPENING BID'}</span>
                 <b className={`au-amt${sold && !st.sold ? ' is-none' : ''}`}>{sold && !st.sold ? '—' : <>${sold ? <RollingNumber value={st.sold.amount} /> : high ? <RollingNumber value={high.amount} /> : 1}</>}</b>
                 <span className="au-holder">{sold
-                  ? (st.sold ? (soldTo ? <><Pic p={soldTo} me={mine} size={20} /><Name p={soldTo} me={mine} /></> : '—') : 'Back in the deck, face up')
+                  ? (st.sold ? (soldTo ? <><Pic p={soldTo} me={mine} size={20} /><Name p={soldTo} me={mine} /></> : '—') : 'Back in the deck')
                   : highP ? <><Pic p={highP} me={mine} size={20} /><Name p={highP} me={mine} /></> : 'No bids yet'}</span>
               </div>
               <div className="au-board-clock" key={sold ? `g${st.n}` : call ?? 'clock'}>
                 {sold
-                  ? (st.sold ? <><Gavel key={st.n} /><b className="au-call is-sold">SOLD</b></> : <b className="au-call is-pass">PASSED</b>)
+                  ? (st.sold ? <Gavel key={st.n} /> : null)
                   : call
                     ? <><span className="au-lbl">GOING</span><b className={`au-call is-${call}`}>{call === 'once' ? 'ONCE' : 'TWICE'}</b></>
                     : <><span className="au-lbl">CLOCK</span><b className={`au-call${bidding ? '' : ' is-idle'}`}>{bidding ? Math.ceil(left / 1000) : m.bidSecs}</b></>}
@@ -432,7 +432,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
         {mySlots}
         {back.length > 0 && (
           <div className="au-back" aria-label="Back in the deck">
-            <span className="au-lbl">BACK IN THE DECK · FACE UP</span>
+            <span className="au-lbl">BACK IN THE DECK</span>
             <div className="au-back-cards">
               {back.map(c => (
                 <span key={`${c.trait}:${c.name}`} className="au-back-card" style={{ '--g': gradeColor(c.val) }}>
@@ -444,14 +444,14 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
         )}
         {L.log.length > 0 && (
           <div className="au-log" aria-label="Recent lots">
-            <span className="au-lbl">THE BOOK</span>
+            <span className="au-lbl">RECENT</span>
             {L.log.slice(0, 4).map(e => {
               const who = e.vid && nameOf(e.vid)
               return (
                 <span key={e.n} className="au-log-row" style={{ '--g': gradeColor(e.val) }}>
                   <b>{valToGrade(e.val)}</b>
                   <span className="au-log-what">{shortLabel(kit.attrLabel(e.trait))} · {e.name}</span>
-                  <span className="au-log-to">{who ? <><Name p={who} me={mine} /> ${e.amount}</> : 'NO SALE'}</span>
+                  <span className="au-log-to">{who ? <><Name p={who} me={mine} /> ${e.amount}</> : 'NO BIDS'}</span>
                 </span>
               )
             })}
