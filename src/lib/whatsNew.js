@@ -46,13 +46,12 @@ const NOV_26 = {
       ],
     },
     {
-      name: 'New Mode: Trait Auction',
+      name: 'Trait Auction Overhaul',
       items: [
-        'Its own card on football\'s and basketball\'s Home, in Compete\'s place: Compete is retired',
-        'Two or three bidders, $20 each: QB, RB or WR in football, guard or big in basketball',
-        'A card nobody bids on turns over anyway and goes back in the deck, its grade showing',
-        'No waiting out the clock when nobody left can bid on a lot',
-        'Fill your five slots first and the auction ends: everyone else\'s open slots go to a random draw',
+        'Its own card on Home in football, basketball and soccer; Compete is retired',
+        'The room draws the position when it fills: QB, RB or WR in football, guard or big in basketball, striker in soccer',
+        'Better cards come up more often, and a card nobody bids on goes back in the deck with its grade showing',
+        'Fill your five slots first and everyone else\'s open slots go to a random draw',
       ],
     },
     {
