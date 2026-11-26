@@ -17,7 +17,7 @@ import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, kickPose, runP
 import { tip, promptY } from './soccerPads.js'
 
 export const how = {
-  finishing: 'Five balls from five spots, a target lit in the goal for each. Draw a line from the ball to the target; bend it to curl it. Three of five in the target. On a keyboard: arrows to aim, hold SPACE and let go to strike it, tap again at contact; hold E to curl it.',
+  finishing: 'Five balls from five spots, a target lit in the goal for each. Hold SHOOT and aim at the target with the stick, let go to strike it, tap SHOOT again at contact. Hold CURL for a placed, curled finish. Three of five in the target.',
 }
 
 const N = 5, NEED = 3, GAP = 900, JOG = 600   // (the gap between balls; its last JOG ms he's jogging to the next one)
@@ -62,7 +62,6 @@ export function make({ v, seed }) {
     },
     input(a) {
       if (skipOutro(g, a)) return
-      if (drawIn(a)) return
       padInput(g.ctl, a, g.vh, {
         down: id => { if (g.phase !== 'aim') return; if (k.phase === 'strike' && id === 'S') { if (k.tap(g.t)) g.fx.push('h:light'); return } if (k.phase === 'idle') k.press(g.t, id === 'P' ? 'finesse' : padStick(g.ctl).y < -0.6 ? 'low' : 'driven') },
         up: id => { if (k.phase === 'power' && ((id === 'P') === (k.type === 'finesse'))) k.release(g.t) },
@@ -210,10 +209,9 @@ export function draw(ctx, g, view) {
   // the first ball: a stroke drawn off the ball to the lit target, and the line under it
   if (g.phase === 'aim' && g.i === 0 && g.k.phase === 'idle' && !g.st.on) {
     const bp = P(C, sh.spot.x, 0.11, sh.spot.z), [tx, ty] = TARGETS[sh.k], to = P(C, tx, ty, 0)
-    if (drawnSoFar() < 2) ghostStroke(ctx, { x: bp.x, y: bp.y }, { x: to.x, y: to.y }, 0, g.t - g.at - 200)
-    tip(ctx, view, view.keys ? 'DRAW IT TO THE TARGET WITH THE MOUSE' : 'DRAW IT FROM THE BALL TO THE TARGET', view.keys ? undefined : view.h - 96, 14)
+    tip(ctx, view, 'HOLD SHOOT, AIM AT THE TARGET, LET GO', view.keys ? undefined : view.h - 210, 14)
   }
-  shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 104 })
-  drawPads(ctx, view, g.ctl, view.keys ? { move: 'AIM', S: 'SHOOT', P: 'CURL' } : { stick: false, S: null, P: null }, !g.done)
+  shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
+  drawPads(ctx, view, g.ctl, { move: 'AIM', S: 'SHOOT', P: 'CURL' }, !g.done)
   placeStamp(g.stamp, view)
 }

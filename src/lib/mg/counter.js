@@ -21,7 +21,7 @@ import {
 import { newCtl, control, stickOf, drawControls, tip, padsOf } from './soccerPads.js'
 
 export const how = {
-  'two-on-one': 'A break, the runner up the wing, one man back. Watch him: he steps up to you, PASS and square it for the tap-in; he drops off to the runner, draw your shot. Go before he commits and he reads it; leave it too long and he’s back.',
+  'two-on-one': 'A break, the runner up the wing, one man back. Watch him: he steps up to you, PASS and square it for the tap-in; he drops off to the runner, keep it and shoot: hold SHOOT, aim, let go. Go before he commits and he reads it; leave it too long and he’s back.',
 }
 
 const START_Z = -42
@@ -94,7 +94,6 @@ export function make({ v, seed, cast = null, situation = null }) {
     },
     input(a) {
       if (g.done) { skipOutro(g, a); return }
-      if (drawIn(a)) return
       control(g.ctl, a, g.vh, g.t, { a: down => shootPress(down), b: down => { if (down) passPress() } })
     },
   }
@@ -347,7 +346,7 @@ export function draw(ctx, g, view) {
   strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, origin: P(C, g.me.x + 0.25, 0.11, g.me.z + 0.75) })
   shotHud(ctx, view, g.k, { t: g.t, y: view.h - (view.keys ? 64 : 186) })
   // (on a phone the shot's drawn: PASS is the one button)
-  drawControls(ctx, view, g.ctl, view.keys ? { stick: 'AIM', a: 'SHOOT', b: 'PASS' } : { stick: false, a: null, b: 'PASS' }, !g.done, g.t)
+  drawControls(ctx, view, g.ctl, { stick: 'AIM', a: 'SHOOT', b: 'PASS' }, !g.done, g.t)
   // his commit, said over him the moment he makes it (the coach on the touchline): stepping up to you, or off to the runner
   if (g.commitAt != null && !g.act && !g.res) {
     const p = P(C, g.cb.x, 2.35, g.cb.z)
@@ -356,8 +355,7 @@ export function draw(ctx, g, view) {
   if (!g.act && !g.res && g.t < 2600) tip(ctx, view, 'HE STEPS UP: PASS · HE DROPS OFF: SHOOT', undefined, 13)
   else if (!g.act && !g.res && !g.k.drawing && g.t < 4600) {
     // the first one: the stroke that's a shot, and the line under it
-    if (drawnSoFar() < 2) { const from = view.keys ? P(C, g.me.x + 0.25, 0.11, g.me.z + 0.75) : { x: 250, y: view.h - 170 }; ghostStroke(ctx, from, { x: from.x - g.rs * 30, y: from.y - 120 }, 0.1, g.t - 1900) }
-    tip(ctx, view, view.keys ? 'DRAW YOUR SHOT WITH THE MOUSE · E TO PASS' : 'DRAW YOUR SHOT · PASS TO SQUARE IT', undefined, 14)
+    tip(ctx, view, 'SHOOT IT OR PASS TO SQUARE IT', undefined, 14)
   }
   placeStamp(g.stamp, view)
 }

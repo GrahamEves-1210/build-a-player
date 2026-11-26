@@ -22,7 +22,7 @@ import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, keeperReady, 
 import { tip } from './soccerPads.js'
 
 export const how = {
-  penalty: 'Draw a line from the ball to your spot: where it ends is where it goes, a quicker line is a harder shot, a bend in it curls it. STUTTER in the run-up and a keeper who’s guessing goes early: draw it again the other way. On a keyboard: arrows to aim, hold SPACE to run up, let go to set the power, tap SPACE again as he strikes it.',
+  penalty: 'Aim with the stick. Hold SHOOT to start the run-up, let go to set the power: too much and it’s over the bar. STUTTER in the run-up to make the keeper go early, then put it the other way. Tap SHOOT at the strike for a perfect penalty.',
 }
 
 const WHISTLE = 900
@@ -93,7 +93,6 @@ export function make({ v, seed, cast = null, situation = null }) {
     },
     input(a) {
       if (skipOutro(g, a)) return
-      if (drawIn(a)) return
       padInput(g.ctl, a, g.vh, { down: id => (id === 'S' ? sDown() : stutter()), up: id => { if (id === 'S') sUp() } })
     },
   }
@@ -338,10 +337,9 @@ export function draw(ctx, g, view) {
   // the first one: how it's done, a stroke drawn off the ball into the top corner, and the line under it
   if (g.phase === 'wait' && !g.st.on && !dr && g.k.phase === 'idle') {
     const b = P(C, BALL_X, 0.11, SPOT_Z), to = P(C, 2.75, 1.75, 0)
-    if (drawnSoFar() < 2) ghostStroke(ctx, { x: b.x, y: b.y }, { x: to.x, y: to.y }, 0.1, g.t - g.readyAt - 300)
-    tip(ctx, view, g.say && g.t - g.sayAt < 1600 ? g.say : view.keys ? 'DRAW IT WITH THE MOUSE · OR AIM AND SPACE' : 'DRAW IT FROM THE BALL TO YOUR SPOT', tipY, 14)
+    tip(ctx, view, g.say && g.t - g.sayAt < 1600 ? g.say : 'AIM, THEN HOLD SHOOT TO RUN UP', tipY, 14)
   } else if (g.phase === 'set' && g.say) tip(ctx, view, g.say, tipY, 14)
   shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
-  drawPads(ctx, view, g.ctl, view.keys ? { move: 'AIM', S: 'SHOOT', P: 'STUTTER' } : { stick: false, S: null, P: 'STUTTER' }, !g.done)
+  drawPads(ctx, view, g.ctl, { move: 'AIM', S: 'SHOOT', P: 'STUTTER' }, !g.done)
   placeStamp(g.stamp, view)
 }

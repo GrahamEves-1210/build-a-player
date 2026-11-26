@@ -29,7 +29,7 @@ import { camOf, P, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribb
 import { tip, promptY } from './soccerPads.js'
 
 export const how = {
-  'one-on-one': 'Through on goal. Steer with the stick on the left and draw your shot on the right: where the line points is where it’s going, bend it to curl it, soft and high to dink it. Take it too close and he’ll come out and smother it. With a man arriving, draw it back across for the cut-back. On a keyboard: arrows to run, hold SPACE and aim, let go to shoot; E to chip or curl.',
+  'one-on-one': 'Through on goal. Run at him with the stick (up to sprint: the touches get heavier). Hold SHOOT and aim, let go to strike it, tap again at contact for a perfect finish. Tap CHIP to dink a keeper who’s off his line, hold it to curl one. Take it too close and he’ll come out and smother it.',
 }
 
 const FRICTION = 10.5        // m/s²: how fast a touched ball slows on the grass (a touch is a push, not a pass)
@@ -100,7 +100,6 @@ export function make({ v, seed, cast = null, situation = null }) {
   // ── the controls: a thumbstick on the left of the screen, SHOOT and CHIP on the right; the arrows, SPACE and E ──
   function control(a) {
     const c = g.ctl
-    if (drawIn(a)) return
     if (a.kind === 'stick') { c.ax = clamp(a.x, -1, 1); c.ay = clamp(a.y, -1, 1); c.ext = true; return }
     if (a.kind === 'key') {
       if (a.zone === 'S') return shootDown('key')
@@ -659,11 +658,9 @@ export function draw(ctx, g, view) {
   }
   strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, origin: P(C, g.bl.x, 0.11, g.bl.z) })
   // the first chance: how it's drawn, off to the right of the screen, and the line under it
-  if (!g.res && !g.shot && !g.pass && g.phase === 'live' && g.k.phase === 'idle' && !g.k.drawn && drawnSoFar() < 2) {
+  if (!g.res && !g.shot && !g.pass && g.phase === 'live' && g.k.phase === 'idle') {
     g.ghostAt ??= g.t
-    const from = view.keys ? P(C, g.bl.x, 0.11, g.bl.z) : { x: 284, y: view.h - 116 }, to = { x: from.x - 24, y: from.y - 112 }
-    ghostStroke(ctx, from, to, 0.12, g.t - g.ghostAt)
-    if (g.t - g.ghostAt < 5200) tip(ctx, view, view.keys ? 'DRAW YOUR SHOT WITH THE MOUSE' : 'STEER ON THE LEFT · DRAW YOUR SHOT ON THE RIGHT', view.keys ? view.h - 100 : view.h - 232, 14)
+    if (g.t - g.ghostAt < 5200) tip(ctx, view, 'RUN AT HIM · HOLD SHOOT, AIM, LET GO', view.keys ? view.h - 100 : view.h - 232, 14)
   }
   shotHud(ctx, view, g.k, { t: g.t, y: view.keys ? view.h - 70 : view.h - 186 })
   drawControls(ctx, view, g)
@@ -691,10 +688,13 @@ function drawControls(ctx, view, g) {
   ctx.strokeStyle = 'rgba(242,242,238,.28)'; ctx.lineWidth = 2; circle(ctx, ax, ay, R + 6); ctx.stroke()
   ctx.fillStyle = c.tid != null || Math.hypot(s.x, s.y) > 0.1 ? '#f2f2ee' : 'rgba(242,242,238,.7)'
   circle(ctx, ax + s.x * R, ay - s.y * R, 19); ctx.fill()
-  // (the right of the screen is where the shot's drawn: a word there, no buttons)
-  if (!g.st.on && !g.shot && !g.res) {
-    ctx.fillStyle = 'rgba(6,8,10,.55)'; rr(ctx, 360 - 148, B.shoot.y - 15, 136, 30, 4); ctx.fill()
-    text(ctx, 'DRAW YOUR SHOT', 360 - 80, B.shoot.y + 1, { size: 14, track: 1.2, color: 'rgba(242,242,238,.9)' })
-  }
+  const lit = c.sid != null && live
+  ctx.fillStyle = lit ? '#f2f2ee' : 'rgba(26,27,30,.92)'; circle(ctx, B.shoot.x, B.shoot.y, B.shoot.r); ctx.fill()
+  ctx.strokeStyle = 'rgba(242,242,238,.25)'; ctx.lineWidth = 2; ctx.stroke()
+  text(ctx, 'SHOOT', B.shoot.x, B.shoot.y + 1, { font: DISPLAY, size: 18, color: lit ? '#0b0c0e' : '#f2f2ee' })
+  const cl = c.cid != null && live
+  ctx.fillStyle = cl ? '#f2f2ee' : 'rgba(26,27,30,.92)'; circle(ctx, B.chip.x, B.chip.y, B.chip.r); ctx.fill()
+  ctx.strokeStyle = 'rgba(242,242,238,.25)'; ctx.lineWidth = 2; ctx.stroke()
+  text(ctx, 'CHIP', B.chip.x, B.chip.y + 1, { font: DISPLAY, size: 15, color: cl ? '#0b0c0e' : '#f2f2ee' })
   ctx.globalAlpha = 1
 }
