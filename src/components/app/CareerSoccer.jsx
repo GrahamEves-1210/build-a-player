@@ -101,7 +101,7 @@ export function SoccerRecap({ c, last, card, shareSeason }) {
     <div className={`ag-card cr-wrap ag-pop${won ? ' is-ring' : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow"><span className="cr-nb">{seasonOf(last.season)}</span> · {ordinalOf(last.pos).toUpperCase()} IN {inLeague(last.league).toUpperCase()} · <span className="cr-nb">{last.wins}–{last.draws}–{last.losses}</span></span>{won > 0 && <span className="cr-ring"><IconTrophy size={13} /> {won === 1 ? 'TROPHY' : `${won} TROPHIES`}</span>}</div>
       <div className="cr-wrap-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        {[[st.goals, 'GOALS'], [st.assists, 'ASSISTS'], [st.apps, 'APPS'], [st.lgGoals, 'LEAGUE G'], [st.xg, 'LEAGUE xG'], [st.avgRating ? st.avgRating.toFixed(2) : '—', 'RATING']].map(([v, k]) => <span key={k}><b>{typeof v === 'number' ? fmt(v) : v}</b><small>{k}</small></span>)}
+        {[[st.goals, 'GOALS'], [st.assists, 'ASSISTS'], [st.apps, 'APPS'], [st.lgGoals, 'LEAGUE G'], [st.lgXg ?? st.xg, 'LEAGUE xG'], [st.avgRating ? st.avgRating.toFixed(2) : '—', 'RATING']].map(([v, k]) => <span key={k}><b>{typeof v === 'number' ? fmt(v) : v}</b><small>{k}</small></span>)}
       </div>
       <div className="cr-badges">
         {(last.trophies ?? []).map(t => <span key={t} className="cr-badge is-gold"><IconTrophy size={12} /> {t.toUpperCase()}</span>)}

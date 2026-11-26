@@ -1053,7 +1053,11 @@ function soccerSeason(c, f, po) {
   const apps = lg.apps + sum(cupLegs, 'app') + sum(euroLegs, 'app') + sum(played, 'apps') + (pre?.apps ?? 0)
   const goals = lg.goals + cupGoals + euroGoals
   const assists = lg.assists + sum(cupLegs, 'assists') + sum(euroLegs, 'assists') + sum(played, 'assists') + (pre?.assists ?? 0)
-  const stats = { ...lg, apps, goals, assists, cupGoals, euroGoals, lgAssists: lg.assists, lgApps: lg.apps }
+  // shots, on target, xG and minutes over every competition, like his goals and apps (they were the league's only,
+  // so his season read ~40% conversion; owner 2026-11-26: a No. 9's shots should look like a No. 9's)
+  const all = k => (lg[k] ?? 0) + sum(cupLegs, k) + sum(euroLegs, k) + sum(played, k) + (pre?.[k] ?? 0)
+  const stats = { ...lg, apps, goals, assists, cupGoals, euroGoals, lgAssists: lg.assists, lgApps: lg.apps, lgShots: lg.shots, lgSot: lg.sot, lgXg: lg.xg,
+    shots: all('shots'), sot: all('sot'), xg: r10(all('xg')) }
   // the trophies: the league from the table, the cup final and the European final from the big nights
   // (a season in the second tier: no title in it counts as a league title, no place in it is a European one)
   const tier2 = f.league?.tier === 2
@@ -1504,7 +1508,7 @@ function soccerMovedLine(c, k, D) {
   const mine = g => (g.wk ?? 0) <= wk && !sat.has(Math.max(1, Math.round((g.wk ?? 0) * 38 / 39)))
   const cup = (f?.cup?.rounds ?? []).flatMap(t => t.legs ?? []).filter(mine), euro = [...(f?.europe?.games ?? []), ...(f?.europe?.rounds ?? []).flatMap(t => t.legs ?? [])].filter(mine)
   const sum = (list, key) => list.reduce((a, g) => a + (g[key] ?? 0), 0)
-  return { wk, before: { cupGoals: sum(cup, 'goals'), euroGoals: sum(euro, 'goals'), assists: sum(cup, 'assists') + sum(euro, 'assists'), apps: sum(cup, 'app') + sum(euro, 'app') } }
+  return { wk, before: { cupGoals: sum(cup, 'goals'), euroGoals: sum(euro, 'goals'), assists: sum(cup, 'assists') + sum(euro, 'assists'), apps: sum(cup, 'app') + sum(euro, 'app'), ...Object.fromEntries(['shots', 'sot', 'xg'].map(k => [k, sum(cup, k) + sum(euro, k)])) } }
 }
 // Where an offer's club stands in its league as the January window opens. → { pos, league } or null
 // The table he would find there: a move plays the rest of the season as the new club's own run of it (lib/career.js

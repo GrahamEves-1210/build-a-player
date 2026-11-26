@@ -10,10 +10,10 @@ const int = v => Math.round(v).toLocaleString()
 const per90 = (n, s) => (s.adv.mins ? (n / s.adv.mins) * 90 : 0)
 export const SOCCER_DEFS = [
   { key: 'g90', label: 'GOALS / 90', get: s => per90(s.stats.lgGoals ?? s.stats.goals, s), fmt: f2, avg: 0.45, elite: 0.85, says: 'League goals for every full match he plays. The fairest way to compare a starter with a sub.' },
-  { key: 'xg90', label: 'xG / 90', get: s => per90(s.stats.xg, s), fmt: f2, avg: 0.4, elite: 0.75, says: 'Expected goals a match: how good his chances were, before he shot. It says most about his movement.' },
-  { key: 'gxg', label: 'GOALS − xG', get: s => (s.stats.lgGoals ?? s.stats.goals) - (s.stats.xg ?? 0), fmt: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`, avg: 0, elite: 6, says: 'Goals against the chances he had. Above zero is finishing better than an average player would.' },
-  { key: 'conv', label: 'SHOT CONVERSION', get: s => ((s.stats.lgGoals ?? s.stats.goals) / Math.max(1, s.stats.shots)) * 100, fmt: pct, avg: 13, elite: 21, says: 'Share of his shots that go in.' },
-  { key: 'sot', label: 'SHOTS ON TARGET', get: s => (s.stats.sot / Math.max(1, s.stats.shots)) * 100, fmt: pct, avg: 40, elite: 50, says: 'Share of his shots that make the keeper work.' },
+  { key: 'xg90', label: 'xG / 90', get: s => per90(s.stats.lgXg ?? s.stats.xg, s), fmt: f2, avg: 0.4, elite: 0.75, says: 'Expected goals a match: how good his chances were, before he shot. It says most about his movement.' },
+  { key: 'gxg', label: 'GOALS − xG', get: s => (s.stats.lgGoals ?? s.stats.goals) - (s.stats.lgXg ?? s.stats.xg ?? 0), fmt: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`, avg: 0, elite: 6, says: 'Goals against the chances he had. Above zero is finishing better than an average player would.' },
+  { key: 'conv', label: 'SHOT CONVERSION', get: s => ((s.stats.lgGoals ?? s.stats.goals) / Math.max(1, s.stats.lgShots ?? s.stats.shots)) * 100, fmt: pct, avg: 13, elite: 21, says: 'Share of his shots that go in.' },
+  { key: 'sot', label: 'SHOTS ON TARGET', get: s => ((s.stats.lgSot ?? s.stats.sot) / Math.max(1, s.stats.lgShots ?? s.stats.shots)) * 100, fmt: pct, avg: 40, elite: 50, says: 'Share of his shots that make the keeper work.' },
   { key: 'gi90', label: 'GOAL INVOLVEMENTS / 90', get: s => per90((s.stats.lgGoals ?? s.stats.goals) + (s.stats.lgAssists ?? s.stats.assists), s), fmt: f2, avg: 0.6, elite: 1.1, says: 'Goals and assists for every full match.' },
   { key: 'rating', label: 'MATCH RATING', get: s => s.stats.avgRating, fmt: f2, avg: 6.9, elite: 7.6, says: 'His average match rating out of 10, the way the stats sites score a game.' },
   { key: 'mins', label: 'MINUTES', get: s => s.adv.mins, fmt: int, says: 'League minutes. A regular No. 9 plays about 2,600.' },
