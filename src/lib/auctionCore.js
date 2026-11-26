@@ -19,8 +19,6 @@ export const AUCTION_MIN = 2         // real players only: two start when the co
 export const AUCTION_FILL_SECS = 30   // the countdown: starts over every time someone joins
 export const BUDGET = 20            // every dollar counts: you always keep $1 for each other empty slot
 const BETTER_ODDS = 0.6           // how often a lot is the better of two players drawn (pickLot)
-const BACK_ODDS = 0.35            // how often a card that went unsold comes back up (face up: its grade is known)
-const BACK_MAX = 6                // the most unsold cards kept for coming back
 export const BID_SECS = 8           // the clock when a lot opens, before anyone bids
 export const RESET_SECS = 6         // every bid puts the clock back up to this: going once at 4, twice at 2
 export const SPIN_MS = 3400         // the card shuffle + the reel, before bidding opens
@@ -113,6 +111,7 @@ export const freshLedger = players => ({
   out: [],
   log: [],
   back: [],
+  seen: [],
   closer: null,
 })
 export const openSlots = (L, vid, types) => types.filter(t => !L.won[vid]?.[t])
@@ -173,23 +172,22 @@ export function pickLot(m, L, kit, n) {
   for (const p of live) for (const t of openSlots(L, p.vid, m.types)) need[t] = (need[t] || 0) + 1
   const bag = m.types.filter(t => need[t]).flatMap(t => Array(need[t]).fill(t))
   if (!bag.length) return null
-  const back = (L.back ?? []).filter(c => need[c.trait])
-  if (back.length && r() < BACK_ODDS) return { n, ...back[Math.floor(r() * back.length)], known: true }
   const trait = bag[Math.floor(r() * bag.length)]
+  // no repeats (owner 11-26): a player who has already come up, sold or not, never comes up again
+  const seen = new Set(L.seen ?? [])
+  const fresh = x => { for (let i = 0; i < 40; i++) { const pl = pickFor(kit, trait, i ? r() : x); if (!seen.has(seenKey(pl.name))) return pl } return null }
   // a slightly better field than pure chance: a second player is drawn, and
   // the better of the two at this slot is the lot most of the time (each drawn by the grade-leaning odds above)
-  const one = pickFor(kit, trait, r()), two = pickFor(kit, trait, r())
-  const a = kit.lotOf(one, trait), b = kit.lotOf(two, trait)
+  const one = fresh(r()), two = fresh(r())
+  if (!one) return null
+  const a = kit.lotOf(one, trait), b = two ? kit.lotOf(two, trait) : a
   return { n, ...(r() < BETTER_ODDS && b.val > a.val ? b : a) }
 }
-// a lot up: if it was a card back from the deck, it's out of the deck again
-export const takeLot = (L, lot) => (lot?.known ? { ...L, back: (L.back ?? []).filter(c => !sameCard(c, lot)) } : L)
-// no bids: the card goes back into the deck, face up, while somebody still needs its slot
-export function returnLot(L, lot, m) {
-  const needed = m.players.some(p => !L.out.includes(p.vid) && !L.won[p.vid]?.[lot.trait])
-  const rest = (L.back ?? []).filter(c => !sameCard(c, lot))
-  return { ...L, back: needed ? [lotCard(lot), ...rest].slice(0, BACK_MAX) : rest }
-}
+// a lot up: it's been seen, and never comes up again in this auction (owner 11-26: no repeats)
+export const seenKey = name => name   // a player, whatever the slot: like Salary Cap's board, nobody comes up twice
+export const takeLot = (L, lot) => (lot ? { ...L, seen: [...(L.seen ?? []), seenKey(lot.name)] } : L)
+// no bids: the card is gone (it never comes back; owner 11-26)
+export function returnLot(L) { return L }
 
 // Somebody has filled his build while others still have open slots: that's the
 // auction. Every other bidder's open slots are dealt a random card
@@ -197,14 +195,19 @@ export function returnLot(L, lot, m) {
 // the same on every phone and the server's word can be checked
 export const finishedEarly = (L, m, vid) => !!vid && !L.out.includes(vid) && openSlots(L, vid, m.types).length === 0
   && m.players.some(p => p.vid !== vid && !L.out.includes(p.vid) && openSlots(L, p.vid, m.types).length > 0)
-export function drawCard(m, kit, vid, t) {
-  return lotCard(kit.lotOf(pickFor(kit, t, seeded(`${m.seed}:draw:${vid}:${t}`)()), t))
+// (seen: the player-slots that already came up, or were dealt; the draw never repeats one)
+export function drawCard(m, kit, vid, t, seen = null) {
+  const r = seeded(`${m.seed}:draw:${vid}:${t}`)
+  let pl = pickFor(kit, t, r())
+  for (let i = 0; seen && seen.has(seenKey(pl.name)) && i < 40; i++) pl = pickFor(kit, t, r())
+  seen?.add(seenKey(pl.name))
+  return lotCard(kit.lotOf(pl, t))
 }
 export function drawFor(m, L, kit) {
-  const cards = {}
+  const cards = {}, seen = new Set(L.seen ?? [])
   for (const p of m.players) {
     if (L.out.includes(p.vid)) continue
-    for (const t of openSlots(L, p.vid, m.types)) (cards[p.vid] ??= {})[t] = drawCard(m, kit, p.vid, t)
+    for (const t of openSlots(L, p.vid, m.types)) (cards[p.vid] ??= {})[t] = drawCard(m, kit, p.vid, t, seen)
   }
   return cards
 }
@@ -254,6 +257,7 @@ export function ledgerOk(prev, next, m, kit) {
     if (!pl) return false
     return Math.abs(kit.lotOf(pl, t).val - Number(w.val)) < 0.01
   }
+  let dealt = null   // the draw, worked out from the ledger before it (it never repeats a card that came up)
   for (const { vid } of m.players) {
     const wNew = Number(next.wallets?.[vid]), wOld = Number(prev.wallets?.[vid])
     if (!(wNew >= 0) || wNew > wOld) return false
@@ -262,7 +266,7 @@ export function ledgerOk(prev, next, m, kit) {
     for (const [t, w] of Object.entries(won)) {
       if (!realLot(w, t)) return false
       // a drawn card: free, and exactly the seeded draw for this seat and slot
-      if (w.drawn && (Number(w.price) !== 0 || drawCard(m, kit, vid, t).name !== w.name)) return false
+      if (w.drawn && !had[t]) { dealt ??= drawFor(m, prev, kit); if (Number(w.price) !== 0 || dealt[vid]?.[t]?.name !== w.name) return false }
       spent += Number(w.price) || 0
     }
     for (const [t, w] of Object.entries(had)) if (!won[t] || won[t].name !== w.name) return false

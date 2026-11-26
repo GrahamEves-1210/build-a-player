@@ -32,7 +32,9 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
     const lot = pickLot(m, L, kit, k + 1)
     if (!lot) break
     k = lot.n
-    if (lot.known) { stats.backUp++; ok(L.back.some(c => c.trait === lot.trait && c.name === lot.name), 'a card back up was in the deck') }
+    ok(!lot.known, 'no card comes back from the deck')
+    ok(!(L.seen ?? []).includes(lot.name), `${sport} ${pos}: ${lot.name} came up twice`)
+    stats.lots = (stats.lots ?? 0) + 1
     L = takeLot(L, lot)
     // bids: each bidder who can top it bids with a chance, up to a random limit
     let high = null
@@ -55,6 +57,9 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
     for (const p of players) ok(L.wallets[p.vid] >= openSlots(L, p.vid, m.types).length, 'always $1 for every open slot')
     if (high && finishedEarly(L, m, high.vid)) {
       const cards = drawFor(m, L, kit)
+      { const names = Object.values(cards).flatMap(c => Object.values(c).map(x => x.name))
+        ok(new Set(names).size === names.length, 'the draw deals nobody twice')
+        ok(names.every(nm => !(L.seen ?? []).includes(nm)), 'the draw deals nobody who already came up') }
       const before = L
       L = applyDraw(L, cards, high.vid)
       ok(ledgerOk(before, L, m, kit), 'the draw passes the ledger check')

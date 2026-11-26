@@ -449,7 +449,6 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
                 {sold && <span className={`au-stamp${st.sold ? '' : ' is-pass'}`} key={`s${st.n}`}>{st.sold ? 'SOLD' : 'NO BIDS'}</span>}
               </div>
               <div className="au-lot-info">
-                {lot.known && st.stage === 'lot' && <span className="au-lbl">BACK FROM THE DECK</span>}
                 <b className="au-lot-trait">{kit.attrLabel(lot.trait)}</b>
                 {kit.slotTraits(lot.trait).length > 1 && <span className="au-lot-covers">{kit.slotTraits(lot.trait).join(' · ')}</span>}
                 <div className="au-lot-foot">
