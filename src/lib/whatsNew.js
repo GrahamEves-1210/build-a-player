@@ -42,14 +42,10 @@ const NOV_26 = {
         'Make your own cuts to 53, with each player\'s dead money shown',
         'League rules at setup and on the hub: salary cap, injuries and Sandbox, each on or off; the cap switch covers the whole league',
         'The cap screen shows where the money goes line by line, and unused room rolls over (up to a tenth of the cap)',
-        'Releasing a player shows the dead money and the room it saves or costs',
         'A page for every team from the standings, and team stats with league ranks',
         'Signed in, your franchises save to your account and come back on any device',
-        'Records spread like the NFL\'s: the best teams win 14 or 15 games, the worst 2 or 3',
         'Injuries now come at half the NFL\'s rate',
         'Key moments: a catch-and-run can score from anywhere on the field, and a back tackled in his own end zone is a safety',
-        'Scouting: a position filter shows the whole position, and college teams no longer play each other every week',
-        'Squad Builder is now in the Franchise menu, under the save slots',
         'Phones: more room at the sides, and the setup, draft room and game day screens fit',
       ],
     },
@@ -95,7 +91,7 @@ const NOV_26 = {
     {
       name: 'Rosters',
       items: [
-        'Ratings updated: 24 grades on 11 players, and size for Tyson Bagent, Trevor Lawrence, D.J. Uiagalelei, Carson Wentz and Tyler Shough, and Samaje Perine\'s strength and size',
+        'Football ratings updated: 24 grades across 11 players, plus sizes for five quarterbacks',
         'Kickers: every overall up 3 (99 at most), and the Colts get Adam Vinatieri\'s Indianapolis years as their All-Time kicker',
         'NBA jersey numbers, heights and weights checked against ESPN',
       ],
