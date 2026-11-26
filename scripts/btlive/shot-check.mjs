@@ -27,7 +27,7 @@ function shot(R, kind, x, y, def) {
   const past = ref.arcPast ? ref.arcPast(x, y) : 0
   if (NEW) {
     const p = ref.makeChance({ R, kind, d, past, c, run: 0, cs: null, rushed: false })
-    const w = M.windowFor(p)
+    const w = M.windowFor(p, kind)
     return { w, rate: M.greenOdds(w, SD) }
   }
   // before: a green went in (a layup unless walled up), anything else rolled its chance off the release
@@ -67,12 +67,12 @@ for (const [nm, g] of [['low (Bounce 3)', 3], ['low-mid (Bounce 5)', 5], ['mid (
 // blocks: the blocker 3 ft in front, going up a reaction after the shooter starts to rise (an average kid:
 // 250 ms, sd 90); the shooter lets go on his meter (an average kid too)
 console.log('\nblocks (the blocker 3 ft in front, up 250 ms after the rise, sd 90)       on a layup   on a jumper')
-const blocks = (B, S, kind) => {
+const blocks = (B, S, kind, d = 3) => {
   let n = 0
   const spec = M.meterSpec(kind, S, false)
   for (let i = 0; i < N; i++) {
     const rel = Math.max(T.minHoldMs, spec.ideal + gauss() * SD), up = 250 + gauss() * 90
-    const d = 3, sh = { id: 'a', x: RIM.x, y: RIM.y + (kind === 'layup' ? 3.5 : 16), vx: 0, vy: 0, fx: 0, fy: -1, act: 'gather', R: S }
+    const sh = { id: 'a', x: RIM.x, y: RIM.y + (kind === 'layup' ? 3.5 : 16), vx: 0, vy: 0, fx: 0, fy: -1, act: 'gather', R: S }
     const df = { id: 'b', x: sh.x, y: sh.y - d, vx: 0, vy: 0, act: 'jump', actT: 0, R: B }
     // (real ms -> the game's seconds: the jump is on the game's clock)
     const tAir = (rel - up) / 1000 * 1.2
@@ -85,3 +85,9 @@ const blocks = (B, S, kind) => {
 }
 const WEMBY = man('big', 9, { interiorDefense: 11, size: 11, bounce: 9 }), AVG = man('guard', 6), SMALL = man('guard', 6, { size: 2, bounce: 5 }), BIG = man('big', 7, { size: 10 })
 for (const [nm, B, S] of [['elite rim protector (Wemby-like) vs an 80 guard', WEMBY, AVG], ['average guard vs average guard', AVG, AVG], ['small guard vs a big', SMALL, BIG]]) console.log(nm.padEnd(74) + pct(blocks(B, S, 'layup')).padEnd(13) + pct(blocks(B, S, 'jumper')))
+
+// ...and by how close he is to the shooter: right on him (1.5 ft: bodies touching), 3 ft, 5 ft (owner 11-26: a man
+// right on the shooter, up with him, gets a real chance at it)
+console.log('\nblocks by distance (the same timing)                 layup: 1.5 ft   3 ft   5 ft      jumper: 1.5 ft   3 ft   5 ft')
+for (const [nm, B, S] of [['elite rim protector vs an 80 guard', WEMBY, AVG], ['average guard vs average guard', AVG, AVG], ['big vs a guard', BIG, AVG], ['small guard vs a big', SMALL, BIG]])
+  console.log(nm.padEnd(52) + [1.5, 3, 5].map(d => pct(blocks(B, S, 'layup', d))).join('   ').padEnd(30) + [1.5, 3, 5].map(d => pct(blocks(B, S, 'jumper', d))).join('   '))

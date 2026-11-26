@@ -42,11 +42,12 @@ export function dunkFrom(R, open = true) {
 // A shot from here by him: a layup or a dunk near the rim, a jumper anywhere else. roll: one roll (the dunk).
 // open: the lane to the rim is his (no one in it, going downhill). guarded: a man on him at the rim; under T.dunkHop
 // of the way up the Bounce scale that's a layup (he can't go up over him), above it he can dunk on him
-export function shotKind(R, d, roll, open = false, guarded = false) {
+// run: 0-1 of his top speed going in (a layup from a run starts farther out: T.layRun)
+export function shotKind(R, d, roll, open = false, guarded = false, run = 0) {
   const bnc = R.bncRaw ?? R.bnc, t = dunkLift(R)
   const able = bnc >= T.dunkBounce && !(guarded && t < T.dunkHop)
   if (able && d <= dunkFrom(R, open) && roll < (open ? 0.35 + 0.65 * t : (0.15 + 0.85 * t) * T.dunkChance * (0.7 + 0.6 * R.fin))) return 'dunk'
-  if (d > T.layRange) return 'jumper'
+  if (d > T.layRange + T.layRun * clamp(run, 0, 1)) return 'jumper'
   return 'layup'
 }
 // is a man on him at the rim: a defender (not beaten) within T.dunkGuard of him, nearer the rim than him or right at it
@@ -132,6 +133,9 @@ export function makeChance(s) {
   if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin - T.dunkLow * (1 - dunkLift(R)); pen = T.contestMaxD * s.c * (1 - T.dunkThrough * R.bnc) }
   else if (s.kind === 'layup') {
     base = T.layBase + T.layFin * R.fin - T.layFar * Math.max(0, s.d - 3)
+    // open, at the rim: the easiest shot there is (T.openLay)
+    const open = clamp(1 - (s.c ?? 0) / T.openLayC, 0, 1) * clamp((8 - s.d) / 2, 0, 1)
+    base += Math.max(0, T.openLay - base) * open
     pen = T.contestMaxL * s.c * (1 - T.finThrough * R.fin)
   } else {
     const close = T.closeBase + T.closeJs * R.js, arc = T.arcBase + T.arcJs * R.js
@@ -163,16 +167,21 @@ export function judgeShot(shooter, defenders, shot, rolls) {
     const roll = rolls.block[i++] ?? 1
     if (d.act !== 'jump') continue
     const dd = dist(d, shooter)
-    const reach = T.blockReach + T.blockReachBnc * d.R.bnc + T.blockReachSize * d.R.size
+    // (a running jump carries him farther: a chase-down from a full run reaches T.blockRun more)
+    const reach = T.blockReach + T.blockReachBnc * d.R.bnc + T.blockReachSize * d.R.size + T.blockRun * clamp(Math.hypot(d.vx || 0, d.vy || 0) / 10, 0, 1)
     if (dd > reach) continue
+    // right on him (inside T.blockClose, all the way at T.blockTight: bodies touching), up with him: a real chance,
+    // and his timing needn't be perfect to get a hand on it (the owner, 11-26: blocking close was too hard)
+    const close = clamp((T.blockClose - dd) / (T.blockClose - T.blockTight), 0, 1)
     const phase = d.after ? 0.5 : d.actT / T.jumpTime
-    const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : T.blockLate
-    const kind = shot.kind === 'jumper' ? T.blockJumper : shot.kind === 'dunk' ? T.blockDunk : 1
+    const onTime = phase >= T.blockIn && phase <= T.blockOut ? 1 : T.blockLate + (1 - T.blockLate) * T.blockCloseTime * close
+    // a short jumper is nearer a layup to get to than a three is
+    const kind = shot.kind === 'jumper' ? T.blockJumper + (1 - T.blockJumper) * T.blockShort * clamp((14 - (shot.d ?? 20)) / 8, 0, 1) : shot.kind === 'dunk' ? T.blockDunk : 1
     // (on the plain grades: a real rim protector, long and up there, against a smaller man gets plenty; a small guard
     // almost never gets a big)
     const ri = d.R.intRaw ?? d.R.int, rs = (d.R.sizeRaw ?? d.R.size) - (shooter.R.sizeRaw ?? shooter.R.size), rb = d.R.bncRaw ?? d.R.bnc
     const p = clamp(T.blockBase * onTime * (T.blockInt0 + T.blockInt * ri) * Math.max(T.blockSizeMin, 1 + T.blockSize * rs)
-      * (T.blockBnc0 + T.blockBnc * rb) * kind * (1 - T.blockFar * dd / reach), 0, T.blockMax)
+      * (T.blockBnc0 + T.blockBnc * rb) * kind * (1 - T.blockFar * dd / reach) * (1 + T.blockCloseK * close), 0, T.blockMax)
     if (roll < p) {
       const dot = sd > 2 && dd > 0.01 ? ((d.x - shooter.x) * (RIM.x - shooter.x) + (d.y - shooter.y) * (RIM.y - shooter.y)) / (dd * sd) : 1
       return { blocked: d.id, chase: dot < -T.chaseAngle && Math.hypot(shooter.vx, shooter.vy) > 3, made: false, pts: 0, c: 1, p: 0 }

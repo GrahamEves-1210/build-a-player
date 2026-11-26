@@ -63,7 +63,9 @@ export function pointAt(f, lx, ly, out) {
   return out
 }
 
-const SH = 0.39                                   // a shoulder: this far out from his middle
+// (an athlete's build, not a heavy one: the owner, 11-26 "players look fat". Narrow at the waist, the shoulders
+// a little broader than the hips, long thin arms)
+const SH = 0.33                                   // a shoulder: this far out from his middle
 const UARM = 0.27, FARM = 0.27, REACH = UARM + FARM - 0.01
 
 // ── the drawing pieces. A man is drawn in two passes, all of his ink first and then all of his fills on top
@@ -118,7 +120,7 @@ export function armPts(side, hand) {
 function arm(ctx, side, hand, L, ink) {
   const [sx, sy, ex, ey, hx, hy] = armPts(side, hand)
   const z = clamp(hand[2] || 0, 0, 1.2), sc = FR.sc, up = 1 + 0.22 * z
-  const ru = sc * 0.07, rf = sc * 0.062 * up, rh = sc * 0.072 * up
+  const ru = sc * 0.056, rf = sc * 0.049 * up, rh = sc * 0.062 * up
   capInk(ctx, PX(sx, sy), PY(sx, sy), PX(ex, ey), PY(ex, ey), ru, ink)
   capInk(ctx, PX(ex, ey), PY(ex, ey), PX(hx, hy), PY(hx, hy), rf, ink)
   dot2(ctx, PX(hx, hy), PY(hx, hy), rh, L.skin, ink)
@@ -128,26 +130,26 @@ function arm(ctx, side, hand, L, ink) {
 
 // a leg in a stride: from under his shorts to the shoe (only drawn when the foot is out from under him)
 function leg(ctx, side, foot, toe, L, ink) {
-  const hx = -0.04, hy = side * 0.14, sc = FR.sc
+  const hx = -0.04, hy = side * 0.11, sc = FR.sc
   const fx = foot[0], fy = foot[1]
   const out = Math.hypot(fx - hx, fy - hy)
   if (out > 0.16) {
-    const r = sc * 0.075
+    const r = sc * 0.06
     capInk(ctx, PX(hx, hy), PY(hx, hy), PX(fx, fy), PY(fx, fy), r, ink)
     cap2(ctx, PX(hx, hy), PY(hx, hy), PX(fx, fy), PY(fx, fy), r, L.skin)
   }
   // the shoe, toe the way it points
   const tx = Math.cos(toe), ty = Math.sin(toe)
-  const x0 = fx - tx * 0.07, y0 = fy - ty * 0.07, x1 = fx + tx * 0.1, y1 = fy + ty * 0.1, r = sc * 0.068
+  const x0 = fx - tx * 0.07, y0 = fy - ty * 0.07, x1 = fx + tx * 0.1, y1 = fy + ty * 0.1, r = sc * 0.058
   capInk(ctx, PX(x0, y0), PY(x0, y0), PX(x1, y1), PY(x1, y1), r, ink)
   cap2(ctx, PX(x0, y0), PY(x0, y0), PX(x1, y1), PY(x1, y1), r, L.shoe)
 }
 
 // his shorts: the part of them that shows round his hips from above (wider than his waist, below the jersey)
 function shorts(ctx, f, L, ink) {
-  const ln = f.lean || 0, cx = -0.06 - ln * 0.5
+  const ln = f.lean || 0, cx = -0.05 - ln * 0.5
   ctx.save(); ctx.translate(PX(cx, 0), PY(cx, 0)); ctx.rotate(f.ang)
-  const rx = FR.sc * 0.2, ry = FR.sc * 0.31
+  const rx = FR.sc * 0.16, ry = FR.sc * 0.24
   if (PASS === 0) { ctx.beginPath(); ctx.ellipse(0, 0, rx + ink, ry + ink, 0, 0, TAU); ctx.fillStyle = INK; ctx.fill() }
   else { ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.fillStyle = L.colD; ctx.fill() }
   ctx.restore()
@@ -160,7 +162,7 @@ function torso(ctx, f, L, ink) {
   const path = (g = 1) => {
     // (from above: a broad back curving into square shoulders, the chest a little narrower)
     ctx.beginPath()
-    const pts = [[-0.33, 0], [-0.31, -0.24 * g], [-0.18, -0.36 * g], [0.02, -0.37 * g], [0.15, -0.3 * g], [0.2, -0.14 * g], [0.21, 0], [0.2, 0.14 * g], [0.15, 0.3 * g], [0.02, 0.37 * g], [-0.18, 0.36 * g], [-0.31, 0.24 * g]]
+    const pts = [[-0.27, 0], [-0.255, -0.19 * g], [-0.15, -0.3 * g], [0.02, -0.315 * g], [0.13, -0.25 * g], [0.17, -0.11 * g], [0.18, 0], [0.17, 0.11 * g], [0.13, 0.25 * g], [0.02, 0.315 * g], [-0.15, 0.3 * g], [-0.255, 0.19 * g]]
     const m = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
     let s0 = m(pts[pts.length - 1], pts[0]); let q = P(s0[0], s0[1]); ctx.moveTo(q[0], q[1])
     for (let i = 0; i < pts.length; i++) { const c = P(pts[i][0], pts[i][1]), e0 = m(pts[i], pts[(i + 1) % pts.length]), e = P(e0[0], e0[1]); ctx.quadraticCurveTo(c[0], c[1], e[0], e[1]) }
@@ -170,14 +172,14 @@ function torso(ctx, f, L, ink) {
   // the one shade: a thin crescent of the darker tone down the side away from the light
   path(); ctx.fillStyle = L.colD; ctx.fill()
   ctx.save(); path(); ctx.clip()
-  const d = FR.sc * 0.045
+  const d = FR.sc * 0.04
   ctx.translate(-d, -d); path(0.95); ctx.fillStyle = L.col; ctx.fill()
   ctx.restore()
   // the bare shoulders (a singlet)
-  for (const sd of [-1, 1]) { const p = P(0.0, sd * SH); dot2(ctx, p[0], p[1], FR.sc * 0.07, L.skin, 0) }
+  for (const sd of [-1, 1]) { const p = P(0.0, sd * SH); dot2(ctx, p[0], p[1], FR.sc * 0.056, L.skin, 0) }
   // his number across his upper back (it reads from behind him)
   if (L.num) {
-    const c0 = P(-0.2, 0), fs = FR.sc * (L.num.length > 1 ? 0.22 : 0.25)
+    const c0 = P(-0.16, 0), fs = FR.sc * (L.num.length > 1 ? 0.19 : 0.22)
     ctx.save(); ctx.translate(c0[0], c0[1]); ctx.rotate(f.ang + Math.PI / 2)
     ctx.font = `${fs.toFixed(1)}px "BAP Anton", "Anton", "BAP Bebas", Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     ctx.fillStyle = L.ink; ctx.fillText(L.num, 0, fs * 0.04)
@@ -187,7 +189,7 @@ function torso(ctx, f, L, ink) {
 
 // his head from above: skin, his hair over all of it but his forehead, one outline
 function head(ctx, f, L, ink) {
-  const ln = (f.lean || 0) * 1.5, cx = 0.085 + ln, R = 0.16, sc = FR.sc
+  const ln = (f.lean || 0) * 1.5, cx = 0.07 + ln, R = 0.15, sc = FR.sc
   const hx = PX(cx, 0), hy = PY(cx, 0), r = R * sc
   if (PASS === 0) { ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(hx, hy, r + ink, 0, TAU); ctx.fill(); return }
   ctx.fillStyle = L.skin; ctx.beginPath(); ctx.arc(hx, hy, r, 0, TAU); ctx.fill()
@@ -203,7 +205,7 @@ function head(ctx, f, L, ink) {
 export function drawShadow(ctx, f) {
   const air = Math.min(1.2, f.air || 0), s = f.s
   ctx.fillStyle = `rgba(0,0,0,${(0.34 - 0.12 * Math.min(1, air)).toFixed(3)})`
-  ctx.beginPath(); ctx.ellipse(f.x + s * (0.05 + 0.07 * air), f.y + s * (0.08 + 0.1 * air), s * (0.48 - 0.08 * air) * (f.down ? 1.2 : 1), s * (0.42 - 0.08 * air), f.ang, 0, TAU); ctx.fill()
+  ctx.beginPath(); ctx.ellipse(f.x + s * (0.05 + 0.07 * air), f.y + s * (0.08 + 0.1 * air), s * (0.42 - 0.08 * air) * (f.down ? 1.2 : 1), s * (0.36 - 0.08 * air), f.ang, 0, TAU); ctx.fill()
 }
 
 export function drawFigure(ctx, f) {

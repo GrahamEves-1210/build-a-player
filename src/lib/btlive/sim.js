@@ -230,7 +230,7 @@ function kothNext(s, last) {
 // referee's word arrives (a dunk's green window is wider)
 export const dunkRoll = (s, i) => rollAt(s.seed ^ 0x0d0c, s.possN * 8 + i)
 // (an open lane, going at the rim: an able dunker takes off from farther out)
-export const shotKindAt = (s, i) => { const p = s.players[i], defs = s.players.filter(o => o.team !== p.team && on(o)); return ref.shotKind(p.R, ref.rimDist(p), dunkRoll(s, i), ref.laneOpen(p, defs), ref.dunkGuarded(p, defs)) }
+export const shotKindAt = (s, i) => { const p = s.players[i], defs = s.players.filter(o => o.team !== p.team && on(o)); return ref.shotKind(p.R, ref.rimDist(p), dunkRoll(s, i), ref.laneOpen(p, defs), ref.dunkGuarded(p, defs), clamp(Math.hypot(p.vx, p.vy) / (p.R.top || 9), 0, 1)) }
 
 // How hard his shot is right now, and so how wide its green window: his rating from there, how far behind the line,
 // the hand in his face as it is this tick (a man closing out shrinks it while he rises), on the move, his legs, a shot
@@ -243,7 +243,7 @@ export function shotWindow(s, p) {
   const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
   const pT = ref.makeChance({ R: p.R, kind: sh.kind, d: sh.d, past: sh.kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, c, run: sh.run, cs, rushed: s.clock <= T.rushAt * HZ, gp: s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom, sta: p.sta, fresh: freshOf(s, p) })
   sh.p = pT; sh.c = c
-  sh.spec.win = windowFor(pT) * (sh.spec.clutch ?? 1)
+  sh.spec.win = windowFor(pT, sh.kind) * (sh.spec.clutch ?? 1)
   sh.read = c < 0.2 ? 0 : c < 0.5 ? 1 : 2
 }
 // a shot straight off the check: 1 at the check, fading to 0 over T.checkRushS or at his first move
@@ -633,7 +633,19 @@ function move(s, p, inp) {
         }
       }
       if (p.boost > 0 && p.act === 'free') top *= 1 + T.boost
-      move2(p, mx * top, my * top, top, (def ? p.R.accelDef : p.R.accel) / T.accel)
+      // a beaten defender (his man between him and the rim) running to get back: a burst, on his legs
+      // (running back toward the rim, off the lines)
+      if (def && !has && p.act === 'free' && m > 0 && p.man >= 0 && beatenBy(p, s.players[p.man]) && ref.inBounds(p.x, p.y, -3)
+        && (mx * (RIM.x - p.x) + my * (RIM.y - p.y)) / (m * (ref.rimDist(p) || 1)) > 0.3) { top *= 1 + T.recover; p.sta = Math.max(0, (p.sta ?? 1) - T.recoverSta * DT) }
+      if (p.act === 'jump') {
+        // in the air: he goes where his jump was taking him (a running jump carries), the stick does nothing
+        p.vx *= 1 - T.airDrag * DT; p.vy *= 1 - T.airDrag * DT
+      } else {
+        // a sprint: built going one way, not in a defensive stance
+        const stance = def && !has && p.man >= 0 && Math.hypot(s.players[p.man].x - p.x, s.players[p.man].y - p.y) < 9 && !beatenBy(p, s.players[p.man])
+        if (!stance && p.act === 'free') top *= 1 + T.sprint * clamp((p.runT ?? 0) / T.sprintTime, 0, 1)
+        move2(p, mx * top, my * top, top, (def ? p.R.accelDef : p.R.accel) / T.accel, p.R.spdRaw ?? 0.5)
+      }
       // the ball in the hand on the side he's going (his right as he faces the basket): across to the other hand when
       // he turns that way; straight at the basket or back keeps the hand it's in
       if (has && p.act === 'free') {
@@ -644,6 +656,15 @@ function move(s, p, inp) {
   }
   p.x += p.vx * DT; p.y += p.vy * DT
   const sp = Math.hypot(p.vx, p.vy)
+  // the sprint's clock: on while he keeps going one way near full speed, cut back by a turn, gone when he slows
+  if (p.act !== 'jump') {
+    const hx = p.hx ?? 0, hy = p.hy ?? 0, full = sp > 0.6 * (p.R.top || 9)
+    if (full) {
+      const dot = (p.vx * hx + p.vy * hy) / sp
+      p.runT = dot >= 0.985 ? (p.runT ?? 0) + DT : (p.runT ?? 0) * clamp((dot - T.sprintKeep) / (0.985 - T.sprintKeep), 0, 1)
+    } else p.runT = (p.runT ?? 0) * 0.8
+    if (sp > 0.1) { p.hx = p.vx / sp; p.hy = p.vy / sp }
+  }
   // (a step-back goes backwards: he still faces the way he was going, his man in front of him)
   if (p.burst > 0 && p.mv === MOVES.back.n) { p.fx = -p.bdx; p.fy = -p.bdy }
   else if (def && !has && p.man >= 0 && p.act === 'free' && Math.hypot(s.players[p.man].x - p.x, s.players[p.man].y - p.y) < 14) {
@@ -657,12 +678,18 @@ function move(s, p, inp) {
   else if (p.act === 'gather') keepIn(p, 0)    // in the air with it: a shot that goes before he lands is good (step()), but he comes down on the court
 }
 
+// a defender beaten: his man nearer the rim than him by a step, and close enough to matter
+const beatenBy = (p, o) => !!o && !o.out && Math.hypot(o.x - p.x, o.y - p.y) < 16 && ref.rimDist(o) < ref.rimDist(p) - 1.5
+
 // Feet: from where he's going to where the stick wants him (tvx, tvy). Speeding up along the way he's going is
 // quickest on the first step and slows as he nears top speed; slowing down (or reversing) is a brake, quicker than
 // that but not instant; a turn at speed has its own limit, so cutting hard costs speed through the cut. rf: his rating's
 // share of the base push (Speed, Size; Perimeter D guarding)
-function move2(p, tvx, tvy, top, rf) {
+function move2(p, tvx, tvy, top, rf, spd = 0.5) {
   const sp = Math.hypot(p.vx, p.vy)
+  // a hard cut at speed (the stick over 50 degrees off the way he's going): he bleeds speed through it, a quick man less
+  const tv = Math.hypot(tvx, tvy)
+  if (sp > 0.6 * top && tv > 0.1 && (tvx * p.vx + tvy * p.vy) / (tv * sp) < 0.64) { const k = 1 - T.cutLoss * (1 - T.cutSpd * spd) * DT; p.vx *= k; p.vy *= k }
   const push = T.accel * rf * Math.max(0.4, T.firstStep - T.stepFade * clamp(sp / (top || 1), 0, 1)) * DT
   const dvx = tvx - p.vx, dvy = tvy - p.vy
   if (sp < 0.3) {

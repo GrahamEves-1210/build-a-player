@@ -2,7 +2,7 @@
 // display's rate with the positions eased between ticks, reads the stick and the buttons, times the shot meter on
 // this device, and turns what happened into sound, haptics and the rare animations. No React in here and no
 // React state per frame: it draws on a canvas and writes the few bits of the HUD that change straight to the DOM.
-import { paintCourt, drawHoop, drawHoopShadow } from './court.js'
+import { paintCourt, drawHoop, drawHoopShadow, VIEW_LIFT, HOOP_LIFT, RIM_DRAW } from './court.js'
 import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, shotWindow, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
 import { drawFigure, drawShadow, pointAt, lookOf } from './figure.js'
@@ -514,8 +514,9 @@ export function createEngine({ setup, els, on, net = null }) {
   // its size and its shadow; near the rim the lift is measured from the rim's height, so a shot meets the rim where
   // the rim is drawn, a make drops through the net and a miss leaves the rim and comes down on the floor.
   const RIM = COURT.rim
-  const LIFT = 0.27                                                  // feet up the screen per foot of height
+  const LIFT = VIEW_LIFT                                             // feet up the screen per foot of height (court.js)
   const TOPY = COURT.board.y                                          // the backboard's face: a ball is never drawn above it
+  const HUP = HOOP_LIFT                                              // (the hoop is drawn this far up the screen: court.js)
   const UP_AIR = 0.6                                                  // how far off the floor (pose.js air) a man is up at the rim's height
   const colOf = i => TEAM[s.players[i].team] ?? '#fff'           // (King of the Hill: each man is his own side)
   const idxOf = v => (v == null || v === false ? -1 : typeof v === 'number' ? (v >= 0 && v < N ? v : -1) : s.players.findIndex(p => p.id === v))
@@ -529,25 +530,39 @@ export function createEngine({ setup, els, on, net = null }) {
   function ballAt(x, y, z) {
     const d = Math.hypot(x - RIM.x, y - RIM.y)
     if (s.ball.st === 'dead' && d < 0.05) {
-      // a make: down through the net, and it stays under it
+      // a make: down through the net (from the rim, drawn HUP up the screen) to the floor just under it, and it stays
       const f = clamp(1 - z / 9, 0, 1)
-      BP[0] = x * k; BP[1] = (y + f * 1.6) * k; BP[2] = 1 - f * 0.22; BP[3] = 1
+      BP[0] = x * k; BP[1] = (y - HUP * (1 - f) + f * 1.6) * k; BP[2] = 1 - f * 0.22; BP[3] = 1
       return BP
     }
     let wr = clamp(1 - (d - 0.6) / 5, 0, 1); wr = wr * wr * (3 - 2 * wr)
     const ze = z * (1 - wr) + Math.max(0, z - 10) * wr               // height over what's under it (the floor, or the rim)
-    const lift = Math.min(LIFT * ze, Math.max(0, y - TOPY))
+    // (drawn up the screen by its height: the rim is too, by its own 10 ft, so a ball at the rim is drawn on it)
+    const lift = Math.min(LIFT * z, Math.max(0, y - TOPY + HUP))
     BP[0] = x * k; BP[1] = (y - lift) * k; BP[2] = 1 + ze * 0.028; BP[3] = 0
     return BP
   }
-  // The ball: a real basketball, seen from above. Its seams (two great circles at right angles and the two curved
-  // side seams) are drawn from how it's turned (ROT, a 3x3 rotation), and it turns the way the ball really does: it
-  // rolls forward on the dribble and on the floor, backspin on a jumper and a pass. A shadow on the floor under it,
-  // apart from it by its height (shadow: false, the ball and nothing else). r: its size
+  // The ball: a real basketball, seen from above. Its seams are drawn from how it's turned (ROT, a 3x3 rotation): the
+  // two great circles that cross at right angles (the cross: a '+' on the side where they meet) and the two curved side
+  // seams, one each side of the cross, each a loop round the ball that dips in toward the cross where it passes it
+  // and swings out wide between (a ')(' beside the '+', seen straight at the cross: the sport bar's ball, AppHome.jsx).
+  // It turns the way the ball really does: it rolls forward on the dribble and on the floor, backspin on a jumper and
+  // a pass. A shadow on the floor under it, apart from it by its height (shadow: false, the ball and nothing else)
   const SEAM = (() => {
-    const n = 40, c = [], k2 = 0.7, q = Math.sqrt(1 - k2 * k2)
-    const ring = f => { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n * 6.2832; pts.push(f(Math.cos(t), Math.sin(t))) } return pts }
-    c.push(ring((a, b) => [a, b, 0]), ring((a, b) => [a, 0, b]), ring((a, b) => [k2, q * a, q * b]), ring((a, b) => [-k2, q * a, q * b]))
+    const n = 48, c = []
+    const ring = f => { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n * 6.2832; pts.push(f(Math.cos(t), Math.sin(t), t)) } return pts }
+    // the cross: the great circles through the poles (+-z) in the x-z and y-z planes
+    c.push(ring((a, b) => [a, 0, b]), ring((a, b) => [0, a, b]))
+    // the side seams: round the +-x axis, x 0.27 in where they pass the poles (t = 90, 270 deg), 0.67 out at y = +-1
+    for (const sd of [1, -1]) c.push(ring((a, b, t) => { const x = 0.47 + 0.2 * Math.cos(2 * t), q = Math.sqrt(1 - x * x); return [sd * x, q * a, q * b] }))
+    return c
+  })()
+  // the leather's pebble grain: a faint speckle, the same every frame (in the ball's place on the screen: at its size
+  // a grain that turned with it would only shimmer)
+  const PEBBLE = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 48
+    const g = c.getContext('2d'), r = (s => () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296)(7)
+    for (let i = 0; i < 380; i++) { g.fillStyle = r() < 0.5 ? 'rgba(60,20,4,.55)' : 'rgba(255,200,150,.35)'; g.fillRect(r() * 48, r() * 48, 1, 1) }
     return c
   })()
   const ROT = [1, 0, 0, 0, 1, 0, 0, 0, 1], SPIN = { x: 0, y: 0, ax: 0, ay: 1, w: 0, t: 0 }
@@ -582,10 +597,11 @@ export function createEngine({ setup, els, on, net = null }) {
     const g = ctx.createRadialGradient(x - r * 0.38, y - r * 0.42, r * 0.1, x, y, r)
     g.addColorStop(0, '#f39552'); g.addColorStop(0.55, '#de6f2a'); g.addColorStop(1, '#a9491a')
     ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = g; ctx.fill()
-    // the seams: the parts of each one on the side facing up
+    // the grain, then the seams: the parts of each one on the side facing up
     if (r >= 3.5) {
       ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * 0.98, 0, 6.283); ctx.clip()
-      ctx.lineWidth = Math.max(0.9, r * 0.1); ctx.strokeStyle = '#2b1206'; ctx.lineCap = 'round'
+      if (r >= 6) { ctx.globalAlpha = 0.35; ctx.drawImage(PEBBLE, x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1 }
+      ctx.lineWidth = Math.max(0.8, r * 0.085); ctx.strokeStyle = '#2b1206'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
       ctx.beginPath()
       for (const c of SEAM) {
         let pen = false
@@ -595,7 +611,12 @@ export function createEngine({ setup, els, on, net = null }) {
           if (pen) ctx.lineTo(x + px * r, y + py * r); else { ctx.moveTo(x + px * r, y + py * r); pen = true }
         }
       }
-      ctx.stroke(); ctx.restore()
+      ctx.stroke()
+      // the light on it, up and to the left
+      const hl = ctx.createRadialGradient(x - r * 0.42, y - r * 0.46, 0, x - r * 0.42, y - r * 0.46, r * 0.62)
+      hl.addColorStop(0, 'rgba(255,235,210,.55)'); hl.addColorStop(1, 'rgba(255,235,210,0)')
+      ctx.fillStyle = hl; ctx.fillRect(x - r, y - r, r * 2, r * 2)
+      ctx.restore()
     }
     ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.lineWidth = Math.max(1, r * 0.09); ctx.strokeStyle = '#2a1004'; ctx.stroke()
   }
@@ -818,16 +839,16 @@ export function createEngine({ setup, els, on, net = null }) {
       if (f.rim !== 'make') continue
       const t = (now - f.t0) / f.dur
       if (t < 0 || t > 1) continue
-      const r0 = k * C_RIMR * 1.1
+      const r0 = k * C_RIMR * RIM_DRAW
       ctx.lineWidth = Math.max(2, k * 0.26); ctx.strokeStyle = `rgba(255,255,255,${0.9 * (1 - t)})`
-      ctx.beginPath(); ctx.arc(RIM.x * k, RIM.y * k, r0 * (1 - t * 0.45), 0, 6.283); ctx.stroke()
+      ctx.beginPath(); ctx.arc(RIM.x * k, (RIM.y - HUP) * k, r0 * (1 - t * 0.45), 0, 6.283); ctx.stroke()
     }
     // a dunk on the rim: the rim dragged his way and springing back, a ring thrown off it, the hit marked round it
     for (const f of fx) {
       if (f.rim !== 'dunk') continue
       const t = (now - f.t0) / f.dur
       if (t < 0 || t > 1) continue
-      const rx = RIM.x * k, ry = RIM.y * k, r0 = k * C_RIMR * 1.1, still = reduced()
+      const rx = RIM.x * k, ry = (RIM.y - HUP) * k, r0 = k * C_RIMR * RIM_DRAW, still = reduced()
       if (t < 0.5) { const u = t / 0.5; ctx.lineWidth = Math.max(1.5, k * 0.22) * (1 - u) + 0.5; ctx.strokeStyle = `rgba(255,255,255,${0.85 * (1 - u)})`; ctx.beginPath(); ctx.arc(rx, ry, r0 * (1 + 1.6 * u * (2 - u)), 0, 6.283); ctx.stroke() }
       if (t < 0.32 && !still) {
         const u = t / 0.32, n = f.big ? 10 : 8
@@ -995,7 +1016,7 @@ export function createEngine({ setup, els, on, net = null }) {
       if (ballK === 'net' && !ballDone) {
         drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true
         // in the net: the front strings over it
-        const rx = RIM.x * k + (sway?.[0] || 0), ry = RIM.y * k + (sway?.[1] || 0), r0 = k * C_RIMR * 1.05, nh = k * 0.95
+        const rx = RIM.x * k + (sway?.[0] || 0), ry = (RIM.y - HUP) * k + (sway?.[1] || 0), r0 = k * C_RIMR * RIM_DRAW * 0.95, nh = k * 0.95
         ctx.strokeStyle = 'rgba(245,245,240,.85)'; ctx.lineWidth = Math.max(1, k * 0.07)
         ctx.beginPath()
         for (let j = -3; j <= 3; j++) { const t = j / 3; ctx.moveTo(rx + t * r0, ry + r0 * 0.5); ctx.lineTo(rx + t * r0 * 0.55, ry + nh) }
