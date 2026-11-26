@@ -475,7 +475,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     k.phase = k.phase === 'idle' ? 'idle' : 'done'
     if (kind === 'goal') {
       const me = g.shot?.mate ? g.mt : g.me
-      const mates = [g.mt && !g.shot?.mate ? { x: g.mt.x, z: g.mt.z } : { x: g.me.x, z: g.me.z }, { x: me.x - 6, z: me.z - 9 }, { x: me.x + 5, z: me.z - 11 }]
+      const mates = [g.mt && !g.shot?.mate ? { x: g.mt.x, z: g.mt.z } : { x: g.me.x, z: g.me.z }, { x: me.x - 12, z: me.z - 3 }, { x: me.x + 11, z: me.z - 4.5 }]   // (the two arriving from the break come in from wide, never across the lens)
       g.cel = celebration(`${seed}|oo`, { sit: g.sit, from: { x: me.x, z: me.z }, side: me.x > 0 ? 1 : me.x < 0 ? -1 : (r() < 0.5 ? -1 : 1), athletic: v >= 8, mates })
       g.scorer = g.shot?.mate ? 'mate' : 'me'
       // (a keeper who'd gone to ground is beaten where he lies; one caught on his feet, where he stands)
@@ -629,7 +629,9 @@ export function draw(ctx, g, view) {
     const scorerLook = g.scorer === 'mate' ? mtLook : meLook
     list.push({ z: sc.z, fn: () => man(ctx, C, sc.x, sc.z, sc.pose, scorerLook, { lift: sc.lift, turn: sc.turn, name: g.scorer === 'me' ? g.who.me?.name : null }) })
     g.cel.mates.forEach((m, i) => {
-      const at = mateAt(g.cel, i, age, sc), look = i === 0 ? (g.scorer === 'mate' ? meLook : mtLook) : dress(K.us, { number: [7, 10, 8][i], skin: ['#5e3c22', '#c09060', '#8d5a3b'][i] })
+      // (the two arriving never wear a number that's already on the pitch)
+      const free = [10, 8, 7, 6, 14].filter(n => n !== meLook.number && n !== mtLook.number)
+      const at = mateAt(g.cel, i, age, sc), look = i === 0 ? (g.scorer === 'mate' ? meLook : mtLook) : dress(K.us, { number: free[i - 1], skin: ['#5e3c22', '#c09060', '#8d5a3b'][i] })
       if (i > 0 && age < m.delay) return
       if (i === 0 && !g.mt && g.scorer === 'me') return
       list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, look, { lift: at.lift, turn: at.turn, name: i === 0 && g.scorer === 'mate' ? g.who.me?.name : null }) })

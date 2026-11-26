@@ -293,7 +293,7 @@ export function draw(ctx, g, view) {
   if (g.res === 'goal' && g.cel) {
     const sc = scorerAt(g.cel, age)
     list.push({ z: sc.z, fn: () => man(ctx, C, sc.x, sc.z, sc.pose, meLook, { lift: sc.lift, turn: sc.turn, name: g.who.me?.name }) })
-    g.cel.mates.forEach((m, i) => { if (age < m.delay) return; const at = mateAt(g.cel, i, age, sc); list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, dress(K.us, { number: [5, 10, 6][i], skin: ['#f0c4a0', '#7a5030', '#c09060'][i] }), { lift: at.lift, turn: at.turn }) }) })
+    g.cel.mates.forEach((m, i) => { if (age < m.delay) return; const at = mateAt(g.cel, i, age, sc); list.push({ z: at.z, fn: () => man(ctx, C, at.x, at.z, at.pose, dress(K.us, { number: [5, 10, 6, 14].filter(n => n !== meLook.number)[i], skin: ['#f0c4a0', '#7a5030', '#c09060'][i] }), { lift: at.lift, turn: at.turn }) }) })
   } else {
     const me = meAt(g)
     list.push({ z: me.z, fn: () => man(ctx, C, me.x, me.z, me.pose, meLook, { name: g.who.me?.name }) })

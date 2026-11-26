@@ -776,10 +776,11 @@ function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k, z = 0, kn = 0) {
   // (kneeling, from behind: the shin comes at us along the grass and the sole's up, toward us)
   const up = -A[1] - 2.6, kneelB = !front && kn > 0.5, sole = !front && ((k < -0.25 && up > 7) || kneelB), atUs = z > 0.5
   const bx0 = A[0], by0 = A[1] + 0.4, bx1 = A[0] + out * (sole ? 0.4 : atUs ? 0.3 : 1.7), by1 = kneelB ? A[1] + 2.8 : sole ? A[1] - 2.6 : atUs ? A[1] + 1.6 : A[1] + lerp(3.3, -1.5, kn)
-  const bt = atUs ? [bx0, by0, 3.7 * bw, bx1, by1, 3.5 * bw] : [bx0, by0, 3.2, bx1, by1, 2.9]
   // (kneeling, from the front: the shin and the boot go back behind the knee, so they're painted first, and the thigh
-  // and the knee over them)
-  const behind = front && kn > 0.05
+  // and the knee over them: the shin's straight back along the grass away from us, so all of it, and the boot at the
+  // end of it, is out of sight behind the thigh)
+  const behind = front && kn > 0.35
+  const bt = atUs ? [bx0, by0, 3.7 * bw, bx1, by1, 3.5 * bw] : behind ? [A[0], A[1] + 0.3, 2.6, A[0] + out * 0.2, A[1] - 1, 2.3] : [bx0, by0, 3.2, bx1, by1, 2.9]
   if (behind) {
     inkT(x, [calf, shin, sock, sockC, bt]); fillT(x, [shin, calf], skin); fillT(x, [sock, sockC], L.socks)
     band(x, K[0], K[1], A[0], A[1], 0.235, 4.05 * bw, L.trim, 1.9); fillT(x, [bt], boot)
@@ -849,7 +850,7 @@ export function paintMan(x, o, L) {
     const gx = lerp(K[0], H[0] + out * 2.4, kn), gy = lerp(K[1], -2.2, kn)
     const tx = gx - H[0], ty = gy - H[1], tl = Math.hypot(tx, ty), kx = tl > TH ? H[0] + tx / tl * TH : gx, ky = tl > TH ? H[1] + ty / tl * TH : gy
     K[0] = kx; K[1] = ky
-    A[0] = lerp(A[0], kx + out * (front ? 1.2 : 1.6), kn); A[1] = lerp(A[1], ky + (front ? -4.5 : 6.2), kn)
+    A[0] = lerp(A[0], kx + out * (front ? -0.3 : 1.6), kn); A[1] = lerp(A[1], ky + (front ? -5.5 : 6.2), kn)
   }
   const elL = clamp((o.elbow ?? 0) + (o.el ?? 0), 0, 1), elR = clamp((o.elbow ?? 0) + (o.er ?? 0), 0, 1)
   const pole = (S, hy, out, el) => { const up = clamp((S[1] - hy) / 28, 0, 1); return [out * lerp(0.3 + 0.5 * up, 1, el), lerp(0.95 - 0.55 * up, 0.1, el)] }
@@ -868,7 +869,8 @@ export function paintMan(x, o, L) {
   const inside = a => Math.abs(a.ex - sxx) < 9 && a.ey > syy - (front ? 12 : -2) && a.ey < hipY + (front ? 14 : 4)
   const armOverHead = a => a.ey < hy + 4 && Math.abs(a.ex - hx) < 11
   const arms = [[lArm, -1], [rArm, 1]].map(([a, out]) => ({ a, out, at: !front && inside(a) ? 'back' : armOverHead(a) || (front && Math.abs(a.ex - hx) < 9 && Math.abs(a.ey - hy) < 12) ? 'late' : front && inside(a) ? 'front' : 'side' }))
-  for (const r of arms) if (r.at === 'back') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
+  // (an arm in front of him, from behind: from under its sleeve down; the sleeve's part of the shirt, below)
+  for (const r of arms) if (r.at === 'back') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'bare')
   // the legs: the far one first (from behind, the one swinging through; from the front, the one going back)
   const boot = L.boot ?? BOOTS[hashOf(`${L.number}|${L.skin}`) % BOOTS.length]
   const legs = [[lH, lK, lA, -1, o.lk ?? 0, zL], [rH, rK, rA, 1, o.rk ?? 0, zR]].sort((p, q) => (front ? p[4] + p[5] * 2 - q[4] - q[5] * 2 : q[4] - p[4]))
@@ -906,13 +908,16 @@ export function paintMan(x, o, L) {
   }
   const sleeve = a => { const m = [lerp(a.sx, a.jx, SLEEVE[2]), lerp(a.sy, a.jy, SLEEVE[2])]; return [a.sx, a.sy, SLEEVE[0], m[0], m[1], SLEEVE[1], m] }
   const sides = arms.filter(r => r.at === 'side'), sleeves = sides.map(r => sleeve(r.a))
+  // (and the sleeve of an arm swung across in front of him, from behind: inked with the shirt, so it's the shoulder
+  // going round and not a round sleeve stuck on it)
+  const backs = arms.filter(r => r.at === 'back'), sleevesB = backs.map(r => sleeve(r.a))
   // (the armpit: the shirt's side carried on up into the sleeve, so a sleeve grows out of the shirt and isn't a tube
   // stuck on its shoulder, and there's no notch of ink where they meet)
   const tp = (X, Y) => [sxx + cl * X - sl * Y, syy + sl * X + cl * Y]
   const webs = sides.map(r => { const S = r.out < 0 ? lS : rS, hang = clamp((r.a.jy - r.a.sy) / (Math.hypot(r.a.jx - r.a.sx, r.a.jy - r.a.sy) || 1), 0, 1), b = tp(r.out * (wa - 2.2), lerp(4.5, 12.5, smooth(hang * 1.15))), m = [lerp(r.a.sx, r.a.jx, 0.3), lerp(r.a.sy, r.a.jy, 0.3)]; return [[b[0], b[1], 3.2, m[0], m[1], 3.9], [b[0], b[1], 3.2, S[0], S[1], 4.2]] }).flat()
   x.fillStyle = INK
   x.beginPath(); waist(OL); x.fill()
-  inkT(x, shortsL.concat(sleeves, webs))
+  inkT(x, shortsL.concat(sleeves, webs, sleevesB))
   x.save(); x.translate(sxx, syy); x.rotate(lean); x.beginPath(); shirt(); x.strokeStyle = INK; x.lineWidth = OL * 2; x.stroke(); x.fill(); x.restore()
   // the arms at his sides, under the sleeves' edges
   for (const r of sides) paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'bare')
@@ -923,6 +928,8 @@ export function paintMan(x, o, L) {
   // the sleeves, under the shirt's own colour: the shirt goes over their tops (the far one in the shirt's shade), the
   // cuff in the trim (a keeper's runs on down to the glove)
   sides.forEach((r, i) => { const c = r.out > 0 ? tone(L.shirt, 0.8) : L.shirt; fillT(x, [sleeves[i]], c); fillT(x, webs.slice(i * 2, i * 2 + 2), c, false) })
+  backs.forEach((r, i) => fillT(x, [sleevesB[i]], r.out > 0 ? tone(L.shirt, 0.8) : L.shirt))
+  if (!L.sleeves) for (const s of sleevesB) band(x, s[0], s[1], s[3], s[4], 0.94, SLEEVE[1] - 0.2, L.trim, 1.3)
   if (!L.sleeves) for (const s of sleeves) band(x, s[0], s[1], s[3], s[4], 0.94, SLEEVE[1] - 0.2, L.trim, 1.3)
   // the shirt: fitted, in at the waist, hanging a touch loose over the shorts; the far side in shade
   x.save(); x.translate(sxx, syy); x.rotate(lean)
@@ -1387,6 +1394,8 @@ export function keeperBeaten(c, age, at) {
   // (at.lift: where his dive left him. keeperDive lays him on the grass, KEEPER_DOWN; a dive of a game's own ends at 0)
   const lie = at.lift ?? 0, r0 = at.rot ?? side * 1.4
   // his arms come down to his sides before he moves: a beaten keeper is never seen with his hands up
+  // (face-down, he gets up round his knees: he's up a little toward where his legs were)
+  const upDx = Math.abs(r0) < 0.6 || c.keeper === 'sit' ? 0 : -Math.sin(side * 1.52) * KNEEL_D * RIG_M
   const flat = (rot, f) => { const d = landedOf(Math.sign(rot) || 1, rot); return { ...armsIn(d, { ...d, hlx: -9.5, hrx: 9.5, hly: -50, hry: -50, elbow: 0, fore: 0 }, f), rot, tilt: -f, face: 2 } }
   // (still on his feet, beaten where he stood: his hands drop to his knees, then his hips)
   if (Math.abs(r0) < 0.6 && a < 1550) {
@@ -1403,14 +1412,27 @@ export function keeperBeaten(c, age, at) {
   }
   if (a < 1550) {
     if (c.keeper === 'sit') return { x: at.x, z: at.z, pose: mix(POSE.sit, POSE.hips, ease(prog(a, 1150, 1550))), lift: 0, front: true }
-    // up off the grass: on to his knees, then his feet, his hands on his hips
-    const k = ease(prog(a, 1150, 1380)), u = ease(prog(a, 1380, 1550))
-    return { x: at.x, z: at.z, pose: u > 0 ? mix(KNEEL, POSE.hips, u) : mix(flat(side * 1.52, 0.12), KNEEL, k), lift: lie * (1 - k), front: true }
+    // up off the grass: his hands under his shoulders and a push up, his knees staying on the grass (he comes up round
+    // them, never swung up off his feet), up on to his knees, then his feet, his hands on his hips
+    const u = ease(prog(a, 1420, 1550))
+    if (u > 0) return { x: at.x + upDx, z: at.z, pose: { ...mix(KNEEL_UP, POSE.hips, u), kn: 1 - smoothS(clamp(u / 0.4, 0, 1)) }, lift: 0, front: true }   // (a foot under him first: off the knees early)
+    const pu = smoothS(prog(a, 1150, 1270)), k = smoothS(prog(a, 1240, 1420)), r = side * 1.52 * (1 - k)
+    const pose = mix(flat(side * 1.52, 0.12), KNEEL_UP, k)
+    pose.rot = r; pose.tilt = lerp(-1, KNEEL_UP.tilt, k)
+    // (the push: the hands flat on the grass under his shoulders, going to his thighs once he's up on his knees)
+    const ground = (out) => [out * 6 + Math.sin(r) * 23, -(pose.hy + 26) + Math.cos(r) * 23]
+    const w = pu * (1 - smoothS(prog(k, 0.5, 1)))
+    const [lx, ly] = ground(-1), [rx, ry] = ground(1)
+    pose.hlx = lerp(pose.hlx, lx, w); pose.hly = lerp(pose.hly, ly, w); pose.hrx = lerp(pose.hrx, rx, w); pose.hry = lerp(pose.hry, ry, w)
+    pose.elbow = lerp(pose.elbow, 0.15, w); pose.fore = lerp(pose.fore, 0, w)
+    // (the hips' height as he comes up round his knees, never under where he lay)
+    const hipM = Math.max(HIP_M + lie, (2 + KNEEL_D * Math.cos(r)) * RIG_M)
+    return { x: at.x + (Math.sin(side * 1.52) - Math.sin(r)) * -KNEEL_D * RIG_M, z: at.z, pose, lift: hipM - pose.hy * RIG_M, front: Math.abs(r) < 0.95 }
   }
   // back into the net, slowly, his back to us now
   const ball = at.ball ?? { x: at.x * 0.6, z: 1.4 }
   const f = prog(a, 1550, 2300)
-  const x = lerp(at.x, ball.x, ease(f)), z = lerp(at.z, ball.z - 0.4, ease(f))
+  const x = lerp(at.x + upDx, ball.x, ease(f)), z = lerp(at.z, ball.z - 0.4, ease(f))
   if (f < 1) return { x, z, pose: { ...runPose(a / 420, 0.35), tilt: -0.6, hlx: -11, hly: -57, hrx: 11, hry: -57, elbow: 1 }, lift: 0, front: false }
   return { x, z, pose: mix(POSE.stand, POSE.pick, Math.sin(clamp((a - 2300) / 500, 0, 1) * Math.PI)), lift: 0, front: false, holds: a > 2550 }
 }
@@ -1428,7 +1450,9 @@ export function defenderBeaten(i, age, base = POSE.stand) {
 // lift that lays a man flat. handsOf(pose, lift): where a man's hands are (metres across from his feet, and up)
 const ARM_M = (121 - 53) * RIG_M, HIP_M = 53 * RIG_M
 export const KEEPER_DOWN = -(HIP_M - 0.17)
-const KNEEL = { ...POSE.knees, hy: 27, ly: 2, ry: 2, lk: -1, rk: -1, face: 2 }
+const KNEEL = { ...POSE.knees, hy: 27, ly: 2, ry: 2, lk: -1, rk: -1, face: 2 }, KNEEL_D = 25
+// (a beaten keeper up on his knees off his front: knees on the grass, shins flat behind, hands on his thighs, head down)
+const KNEEL_UP = pz({ hy: 27, bow: 0.15, lx: -10, ly: 0, rx: 10, ry: 0, lk: -1, rk: -1, kn: 1, hlx: -9, hly: -30, hrx: 9, hry: -30, elbow: 0.3, tilt: -0.7, face: 2 })
 // (for a game's own keeper: on his knees with it, and up with it held to his chest)
 POSE.kneel = { ...KNEEL, face: 0, tilt: 0.2, hlx: -6, hrx: 6, hly: -46, hry: -46 }
 const smoothS = f => f * f * (3 - 2 * f)
