@@ -33,8 +33,8 @@ export function createEngine({ setup, els, on, net = null }) {
   const ctx = els.canvas.getContext('2d')
   let s = createGame({ teams: setup.teams, seed: setup.seed, mode: setup.mode })
   const me = setup.me
-  // the dribble moves: on the move stick (the default: a snap, a pump or a half circle of it, gesture.js; on a keyboard a
-  // direction tapped twice, SHIFT the spin), or on a second stick (the right pad, the arrow keys) as before (setup.stick 'two')
+  // the dribble moves: on the move stick (the default: any quick flick of it, gesture.js; on a keyboard a direction
+  // tapped or a hard change of direction, SHIFT the spin), or on a second stick (the right pad, the arrow keys) as before (setup.stick 'two')
   const ONE = setup.stick !== 'two'
   const G = createGesture(), TP = createTaps()
   const levels = setup.levels.slice()

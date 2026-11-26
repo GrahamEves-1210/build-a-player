@@ -4,8 +4,9 @@
 //   /bucket?btlive=1                      the practice menu
 //   &mode=1v1|2v2|koth (King of the Hill)  &level=rookie|pro|allstar|legend  &pick=<player name>  &seed=abc
 //   &go=1 (straight into a game). An old &size=1|2 still works; &size=3 (3v3, gone) opens 1v1
-// Controls: the left stick (WASD) moves. With the ball it makes NBA 2K's pro stick moves too, only on purpose (a snap,
-// a pump or a half circle of it: lib/btlive/gesture.js; a WASD key tapped twice, SHIFT the spin), SHOOT (SPACE: hold,
+// Controls: the left stick (WASD) moves. With the ball any quick flick of it is a dribble move that way (NBA 2K's pro
+// stick moves, read from the basket and the ball hand: lib/btlive/gesture.js; a WASD key tapped, or a hard change of
+// direction on the keys, SHIFT the spin), SHOOT (SPACE: hold,
 // let go on the meter), PASS (E). CONTROLS can put the moves back on a second stick (the right pad, the arrow keys):
 // &stick=one|two. On defense: the right pad is STEAL (E), SHOOT is BLOCK (SPACE: a hand up, the only jump). Off the
 // ball: SHOOT is REBOUND with the ball up, PASS is CALL FOR IT
