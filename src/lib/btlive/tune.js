@@ -58,22 +58,36 @@ export const T = {
   spread: 0.24,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
-  speedMin: 9.5,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it; an 80 about 9.7)
-  speedBand: 0.06,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
-  sizeSlow: 0.03,                    // Size 11 is this much slower than Size 1
+  // REAL WEIGHT (the owner, 11-26: "players all seem the same speed and there's no acceleration aspect, or sprint"):
+  // a quick guard and a slow big are clearly different, a first step then a build to top speed, a sprint that builds
+  // the longer he goes one way, cuts that cost speed (less for a quick man), stopping that takes room, a beaten
+  // defender's burst to get back, and a running jump that carries. The CPU runs on the same feet
+  speedMin: 9.3,                     // top speed at Speed 1, ft/s (on the plain grade: spread doesn't squeeze it)
+  speedBand: 0.20,                   // the fastest (Speed 11) is this much quicker than the slowest (Speed 1)
+  sizeSlow: 0.07,                    // Size 11 is this much slower than Size 1
   ballSpeed: 0.92,                   // with the ball at Handles 1 (x top speed)...
   ballSpeedHnd: 0.05,                // ...plus this at Handles 11 (an 80 keeps 96%: slower with it than without, always)
   defSpeed: 1.02,                    // guarding, at Perimeter D 1 (x top speed)...
   defSpeedPer: 0.07,                 // ...plus this at Perimeter D 11 (on the plain grade: an 80 about 105%, a step quicker than the ball)
-  accel: 30,                         // ft/s² at a jog (the push he has with half his speed on)...
-  firstStep: 1.55,                   // ...x this from a standstill (the first step is the quickest)...
-  stepFade: 1.15,                    // ...falling by this x (his speed / top): x0.4 on the last bit of it, so top speed takes a run
-  brake: 40,                         // ft/s²: slowing down or stopping (x the same rating factor): quicker than speeding up, not instant
+  accel: 12,                         // ft/s²: his push (x his rating's share: accelBase..)...
+  firstStep: 3.0,                    // ...x this from a standstill (a quick first step: 36 ft/s²)...
+  stepFade: 2.8,                     // ...falling by this x (his speed / top), never under x0.4: top speed takes a run to build
+                                     // (90% of it in 0.36 s for a quick guard, 0.58 s for a slow big: move-check.mjs)
+  brake: 32,                         // ft/s²: slowing down or stopping (x the same rating factor): quicker than speeding up, not
+                                     // instant (from a sprint that's about 2 ft of stopping: a man can overrun his spot)
   backpedal: 0.88,                   // a defender's top speed going backwards (facing his man, giving ground)...
   slide: 0.95,                       // ...and sliding sideways (forward, at his man: all of it)
   boost: 0.09, boostTime: 0.45,      // out of a hesitation, a crossover, between the legs, an in-and-out: this much quicker for this long
-  accelBase: 0.97, accelSpd: 0.06,   // ...x (0.97 + 0.06 x Speed, the plain grade): a quick first step
-  accelSize: 0.06,                   // ...less this at Size 11
+  accelBase: 0.85, accelSpd: 0.45,   // ...x (0.85 + 0.45 x Speed, the plain grade): a quick first step
+  accelSize: 0.25,                   // ...less this at Size 11
+  sprint: 0.12, sprintTime: 1.1,     // a sprint: going one way he builds up to this much over top speed, all of it after this long
+                                     // (the game's seconds) going straight...
+  sprintKeep: 0.6,                   // ...a turn keeps the sprint while the way he's going stays within this (cos) of the way he was
+  cutLoss: 3.2, cutSpd: 0.55,        // a hard cut at speed (over 50 deg off the way he's going) bleeds this share of his speed a
+                                     // second, a Speed 11 this much less of it: a quick guard cuts sharper
+  recover: 0.10, recoverSta: 0.22,   // a beaten defender's burst back: this much quicker, his legs this much a second
+  airDrag: 0.8,                      // in the air he carries the way he went up, losing this share a second
+  layRun: 1.4,                       // a layup from a run: from this much farther out at top speed (a long gather step)
   defAccel: 0.92, defAccelPer: 0.24, // a defender's: x (0.92 + this * Perimeter D, the plain grade)
   walk: 0.25,                        // stick pushed less than this far: ignored (dead zone)
   radius: 1.55,                      // a body's radius (the dot on the screen is this big): nobody walks through anybody
@@ -203,6 +217,11 @@ export const T = {
   blockMax: 0.7,
   blockLate: 0.3,                    // off time (up too early, too late): this share of the chance
   blockFar: 0.25,                    // at the edge of his reach he gets this much less of it
+  blockClose: 4.0, blockTight: 1.8,  // right on the shooter: from this close, all of it this close (bodies touch at 3.1)...
+  blockCloseK: 1.3,                  // ...the chance x (1 + this)...
+  blockCloseTime: 0.5,               // ...and off time keeps this much more of it (a hand up with him gets there)
+  blockShort: 0.2,                   // a jumper from 6 ft has this much of a jumper's cut back (a three: none)
+  blockRun: 1.2,                     // a running jump (10 ft/s or more) reaches this much farther: a chase-down
 
   // ── Steals (a swipe with a cooldown; a miss costs a beat) ───────────────────────────────────────
   stealReach: 3.9,                   // the ball has to be this close

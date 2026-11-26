@@ -41,6 +41,7 @@ export function derive(build, pos = 'guard') {
   R.accel = T.accel * (T.accelBase + T.accelSpd * spdRaw) * (1 - T.accelSize * sizeRaw)   // ft/s²
   R.accelDef = R.accel * (T.defAccel + T.defAccelPer * perRaw)                             // ...guarding
   R.mass = 1 + T.massSize * sizeRaw
+  R.spdRaw = spdRaw                                         // (the plain grade: how sharp he cuts)
   R.clutchRaw = raw(clutch)
   R.bncRaw = raw(bnc)                                       // (the plain grade: who can dunk)
   R.intRaw = raw(intD); R.sizeRaw = sizeRaw                 // (the plain grades: who blocks shots, over whom)
