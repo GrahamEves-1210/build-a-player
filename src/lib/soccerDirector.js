@@ -37,8 +37,8 @@ export function soccerFinal(f, t, games, base = null) {
     playoffs: !tier2 && pos <= info.ucl, madePlayoffs: !tier2 && pos <= info.ucl,
     goals: t.seasonGoals, assists: t.seasonAssists, shots: t.seasonShots, sot: t.seasonSOT, xg: r10(t.seasonXG ?? 0), mins: t.seasonMins, apps: t.seasonApps, starts: t.seasonStarts,
   }
-  // (the second tier: promoted from the table as played: the top two, or the play-offs the run played for third to sixth)
-  if (tier2) { out.promoted = pos <= (f.league.up ?? 2) || (pos <= (f.league.playoffTo ?? 6) && !!f.playoffWon); out.promotedHow = pos <= (f.league.up ?? 2) ? 'auto' : out.promoted ? 'playoff' : null }
+  // (the second tier: promoted from the table as played, the top two; the play-offs are Career's to play, lib/careerSoccer.js)
+  if (tier2) { out.promoted = pos <= (f.league.up ?? 2); out.promotedHow = out.promoted ? 'auto' : null }
   // (a move from another league in January: the league's awards go by his goals in this league)
   const mine = base?.moved?.cross ? games.slice(from).filter(g => !g.sat) : null
   const sum = k => mine.reduce((a, g) => a + (g[k] ?? 0), 0)

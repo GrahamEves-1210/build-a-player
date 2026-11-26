@@ -214,7 +214,7 @@ function takerAt(g) {
   const t = g.t
   if (g.phase === 'set' || g.phase === 'wait') {
     const breathe = Math.sin(t / 380) * 0.6
-    return { x: START.x, z: START.z, pose: { ...POSE.ready, hy: 49 + breathe, tilt: 0.3, hlx: -18, hrx: 18 } }
+    return { x: START.x, z: START.z, pose: { ...POSE.wait, hy: POSE.wait.hy + breathe * 0.4, hly: POSE.wait.hly - breathe * 0.5, hry: POSE.wait.hry - breathe * 0.5 } }
   }
   if (g.res === 'goal' && g.cel) return null
   if (g.struckAt == null) {
