@@ -28,8 +28,7 @@
 //   (2023-24's width, indexed to the cap since): $1.50, $1.75, $2.50, $3.25 for each dollar, then +$0.50 a bracket. A repeater (a taxpayer in three of
 //   the previous four seasons) pays $2.50, $2.75, $3.50, $4.25, then +$0.50.
 //
-// F.noCap: the GM's team plays with no cap or tax (its sheet reads as room to spare); the league's teams still run
-// their books.
+// F.noCap: the whole league plays with no cap or tax (owner 11-25): every sheet reads as room to spare.
 import { r1 } from '../rng'
 
 // ── The numbers ──────────────────────────────────────────────────────────────
@@ -219,7 +218,7 @@ export function capSheet(F, short = F?.team, year = capYear(F)) {
   const capPay = capPayroll(F, short, year)
   const cap = capOf(year), tax = taxOf(year), a1 = apron1Of(year), a2 = apron2Of(year)
   const rep = isRepeater(team, year)
-  const free = F?.noCap && short === F.team
+  const free = !!F?.noCap
   const o = overOf(pay, year)
   const over = free ? 'under' : o === 'under' && capPay > exact(year, 0) ? 'cap' : o
   const bill = free ? 0 : taxBill(pay - exact(year, 1), year, rep)
@@ -231,7 +230,7 @@ export function capSheet(F, short = F?.team, year = capYear(F)) {
   }
 }
 // the line a team would sit at with `add` more payroll
-export const overAfter = (F, short, add, year = capYear(F)) => (F?.noCap && short === F.team ? 'under' : overOf(payroll(F, short, year) + add, year))
+export const overAfter = (F, short, add, year = capYear(F)) => (F?.noCap ? 'under' : overOf(payroll(F, short, year) + add, year))
 // the hard cap a team has triggered this league year (team.exc.hc), as a payroll ceiling
 export function hardCapOf(F, short, year = capYear(F)) {
   const e = F?.teams?.[short]?.exc
@@ -250,7 +249,7 @@ export const floorOf = year => r1(exact(year, 0) * 0.9)
 export function assessTax(F, year = F.year) {
   const out = []
   for (const s of Object.keys(F.teams ?? {})) {
-    if (F.noCap && s === F.team) continue
+    if (F.noCap) continue
     const team = F.teams[s]
     const pay = payroll(F, s, year)
     const over = r1(pay - exact(year, 1))

@@ -12,7 +12,7 @@ const SANDBOX_WHAT = { on: 'Builds into the draft', off: 'The real league' }
 export function LeagueRules({ value, onChange, nick, className = '', capWhat = CAP_WHAT }) {
   return (
     <div className={`fr-rules ${className}`}>
-      <Switch mode={value.cap ? 'on' : 'off'} modes={ONOFF} what={capWhat} title="Salary cap" sub={nick ? `the ${nick} only` : null}
+      <Switch mode={value.cap ? 'on' : 'off'} modes={ONOFF} what={capWhat} title="Salary cap" sub="across the league"
         onPick={m => onChange({ cap: m === 'on' })} cls={CLS} />
       <Switch mode={value.inj ? 'on' : 'off'} modes={ONOFF} what={INJ_WHAT} title="Injuries" sub="across the league"
         onPick={m => onChange({ inj: m === 'on' })} cls={CLS} />

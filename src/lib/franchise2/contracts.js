@@ -352,7 +352,7 @@ export function setCarry(F) {
     // (the season just played, F.year: called before the deals tick; the player's team with no salary cap carries
     // nothing, there's no cap to carry)
     const yr = F.year, room = capOf(yr) + carryOf(t, yr) - payrollOf(t) - deadOf(t) - restOf53(t.r.filter(p => p.y > 0).length, yr)
-    t.co = F.noCap && s === F.team ? null : [yr + 1, r1(clamp(0, capOf(yr + 1) * CARRY_MAX, room))]
+    t.co = F.noCap ? null : [yr + 1, r1(clamp(0, capOf(yr + 1) * CARRY_MAX, room))]
     if (!t.co?.[1]) delete t.co
   }
 }
@@ -360,8 +360,8 @@ export function capSheet(F, short = F.team) {
   const t = F.teams[short], yr = capYear(F), base = capOf(yr), carry = carryOf(t, yr), cap = r1(base + carry)
   const pay = payrollOf(t), dead = deadOf(t), rest = restOf53(t.r.filter(p => p.y > 0).length, yr)
   const used = r1(pay + dead + rest)
-  // (the league rule NO SALARY CAP, rules.js: the player's team signs whoever it likes; the league's teams keep theirs)
-  if (F.noCap && short === F.team) return { cap: base, base, carry: 0, pay, dead, rest, used, room: NO_CAP_ROOM, year: yr, nocap: true }
+  // (the league rule NO SALARY CAP, rules.js: every team in the league signs whoever it likes)
+  if (F.noCap) return { cap: base, base, carry: 0, pay, dead, rest, used, room: NO_CAP_ROOM, year: yr, nocap: true }
   return { cap, base, carry, pay, dead, rest, used, room: r1(cap - used), year: yr }
 }
 export const capRoom = (F, short = F.team) => capSheet(F, short).room
@@ -369,7 +369,7 @@ export const NO_CAP_ROOM = 999
 // the room k league years past this one, on the deals already signed (the men under contract then, the rest of the
 // 53 around them): what a front office looks at before it extends a man
 export function roomAhead(F, short, k = 1) {
-  if (F.noCap && short === F.team) return NO_CAP_ROOM
+  if (F.noCap) return NO_CAP_ROOM
   const t = F.teams[short], yr = capYear(F) + k
   const men = t.r.filter(p => (p.y ?? 0) > k)
   const pay = men.reduce((a, p) => a + (hitIn(p, k) ?? 0), 0)

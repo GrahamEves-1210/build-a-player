@@ -482,7 +482,7 @@ export function nowStrength(F, s, outIds = new Set(), inMen = []) {
 }
 // the tax a payroll change saves (or costs) team s this season and the next, in value points (1 point per $2M)
 function taxSwing(F, s, outMen, inMen) {
-  if (F.noCap && s === F.team) return 0
+  if (F.noCap) return 0
   const y = capYear(F)
   let pts = 0
   for (const k of [0, 1]) {
@@ -552,7 +552,7 @@ function mleLeft(F, s, year) {
 function sideRules(F, s, outMen, inMen, outPk, inPk, cuts = 0) {
   const year = capYear(F)
   const team = F.teams[s]
-  const free = F.noCap && s === F.team
+  const free = !!F.noCap
   const O = outMen.reduce((a, p) => a + hitOf(p, year, year), 0)
   const I = inMen.reduce((a, p) => a + hitOf(p, year, year), 0)
   const pay = payroll(F, s, year)
@@ -893,7 +893,7 @@ export function doTrade(F, deal, { user = null, kind = null } = {}) {
   // the cap, makes a trade exception for the difference (good for a year)
   const year = capYear(F), now = calDay(F)
   for (const [s, out, inn] of [[a, am, bm], [b, bm, am]]) {
-    if (F.noCap && s === F.team) continue
+    if (F.noCap) continue
     const sr = sideRules(F, s, out, inn, [], [], deal.cut?.[s] ?? wv[s]?.length ?? 0)
     const team = F.teams[s]
     if (sr.agg || sr.hc1) {

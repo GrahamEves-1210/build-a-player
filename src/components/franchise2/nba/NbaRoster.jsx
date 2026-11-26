@@ -383,7 +383,7 @@ export function TeamPage({ F, s, onBack, onMan, backLabel = 'League' }) {
       <TeamSlab s={s} size="m" sub={R[s].g ? `${recText(R[s])} · ${ORD(seed)} IN THE ${c === 'E' ? 'EAST' : 'WEST'}` : `${c === 'E' ? 'EASTERN' : 'WESTERN'} CONFERENCE`} />
       <div className="nb-tfacts">
         <Fact v={teamOvr(F, s)} label={`TEAM OVR · ${ORD(rank)}`} size={30} />
-        <Fact v={money(cap.pay)} label={(s === F.team && F.noCap ? 'NO SALARY CAP' : OVER[cap.over] ?? '').toUpperCase()} size={30} />
+        <Fact v={money(cap.pay)} label={(F.noCap ? 'NO SALARY CAP' : OVER[cap.over] ?? '').toUpperCase()} size={30} />
       </div>
       <Chyron team={s} title="Rotation" sub={`${T.r.filter(p => !p.tw).length} STANDARD · ${tw.length} TWO-WAY`} />
       <div className="nb-rot">

@@ -60,7 +60,7 @@ export function legalRoster(F, short, { min = ROSTER_MIN, season = F?.phase !== 
   }
   // (the hard cap, less the minimum deals that brought the roster to 14: the roster minimum comes first, canSign)
   const hc = hardCapOf(F, short)
-  if (payroll(F, short) - fillSlack(F, team) > hc + 0.05 && !(F.noCap && short === F.team)) return { ok: false, why: 'Over its hard cap', st, tw }
+  if (payroll(F, short) - fillSlack(F, team) > hc + 0.05 && !F.noCap) return { ok: false, why: 'Over its hard cap', st, tw }
   return { ok: true, st, tw }
 }
 // the cap hits of the minimum deals a roster needed to reach 14 (its two cheapest, when it carries no more than 14)
@@ -449,7 +449,7 @@ function canSignOf(F, short, p, d) {
   if (!team || !p || !d) return { ok: false, why: 'Nothing to sign' }
   const year = capYear(F)
   const ys = p.ys ?? 0
-  const free = F.noCap && short === F.team
+  const free = !!F.noCap
   const st = standardOf(team).filter(x => x.i !== p.i).length, tw = twoWaysOf(team).filter(x => x.i !== p.i).length
   if (waivedBy(F, short, p)) return { ok: false, why: `The ${short} waived him: they can't sign him again until a year has passed` }
   const sh = d.sheet ? null : sheetOf(F, p)
@@ -548,7 +548,7 @@ export function signMan(F, short, p, d, { check = true } = {}) {
   const e = excFor(F, short, year)
   // (only a deal that needed the room uses it: a team that goes under the cap gives up the mid-level for the room
   // exception)
-  if (c.via === 'room' && !own && sc[0] > minOf(p.ys ?? 0, year) + 0.01 && !(F.noCap && short === F.team)) e.room = 1
+  if (c.via === 'room' && !own && sc[0] > minOf(p.ys ?? 0, year) + 0.01 && !F.noCap) e.room = 1
   if (c.via === 'mle' || c.via === 'tmle' || c.via === 'rmle') {
     const k = c.via === 'mle' ? 'nt' : c.via === 'tmle' ? 'tp' : 'room'
     if (!e.mk) { e.mk = k; e.mle = excOf(k, year) }

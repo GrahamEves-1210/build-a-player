@@ -393,7 +393,7 @@ export function decide(F, s, give, get, { user = true } = {}) {
   if (cut == null) return { ok: false, why: 'cap' }
   // (NO SALARY CAP: a deal with the player's team isn't stopped by money, either side's; the league's own trades are)
   const cap = capAfter(F, s, tm, gm, cut)
-  if (!(user && F.noCap) && !capOk(cap)) return { ok: false, why: 'cap' }
+  if (!F.noCap && !capOk(cap)) return { ok: false, why: 'cap' }
   const side = teamSide(F, s, { pl: gm, pk: gk }, { pl: tm, pk: tk })
   if (side.in <= 1) return { ok: false, why: 'nothing', side, short: Infinity }
   // a front-line player goes only for a real piece back: one player or pick worth at least half of him, never a pile
