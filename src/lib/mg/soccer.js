@@ -809,6 +809,8 @@ function inkP(x, list, g = OL) { x.fillStyle = INK; x.beginPath(); for (const d 
 // the colour in two flat tones, the way the art layer does it: the part in its shade, then the lit side over most of it
 // (a dark kit the other way about: the part, and an edge of light down its lit side, so it still reads on the ink)
 const KD = 0.32
+// the small creases, seams and studs only on a man big enough on the screen to show them (a far man is a few flat shapes)
+let FINE = true
 function fillP(x, list, col, shade = true) {
   if (!shade) { x.fillStyle = col; x.beginPath(); for (const d of list) part(x, d); x.fill(); return }
   const dark = lumOf(col) < DARK
@@ -881,7 +883,7 @@ function bootUp(x, A, out, bt, front, bw, ink) {
   x.fillStyle = plate; x.beginPath(); sole(); x.fill()
   // the studs under it
   x.fillStyle = tone(plate, 0.7)
-  for (const sx of front ? [-2.4, 2.4] : [-2.0, 2.0, 4.3]) x.fillRect(sx - 0.45, -0.05, 0.9, 0.45)
+  if (FINE) for (const sx of front ? [-2.4, 2.4] : [-2.0, 2.0, 4.3]) x.fillRect(sx - 0.45, -0.05, 0.9, 0.45)
   x.restore()
 }
 // One leg, hip to boot. From behind, a heel kicked up shows the sole and its studs.
@@ -914,13 +916,13 @@ function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k, z = 0, kn = 0) {
   const socks = () => {
     fillP(x, [sock], L.socks)
     // the calf's two heads under the sock from behind; the shin pad's ridge from the front
-    if (front) alongP(x, sock, out, 0.05, 0.3, 0.7, tone(L.socks, lumOf(L.socks) < DARK ? 1.35 : 1.06), 1.2)
+    if (!FINE) {} else if (front) alongP(x, sock, out, 0.05, 0.3, 0.7, tone(L.socks, lumOf(L.socks) < DARK ? 1.35 : 1.06), 1.2)
     else alongP(x, sock, 1, 0.08, 0.27, 0.5, 'rgba(0,0,0,.16)', 0.6)
     // the turned-over top: its own band, a little proud of the sock, the club's hoops round it
     x.fillStyle = INK; x.beginPath(); part(x, fold, OL * 0.8); x.fill()
     fillP(x, [fold], L.socks)
     acrossP(x, fold, (FOLD_T[0] + FOLD_T[1]) / 2, L.trim, 1.25, 1.0)
-    acrossP(x, fold, FOLD_T[1] - 0.004, 'rgba(0,0,0,.32)', 0.55, 0.96)
+    if (FINE) acrossP(x, fold, FOLD_T[1] - 0.004, 'rgba(0,0,0,.32)', 0.55, 0.96)
   }
   if (behind) {
     inkP(x, [shin, sock]); bootUp(x, A, out, bt, true, bw, true)
@@ -932,7 +934,7 @@ function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k, z = 0, kn = 0) {
   if (flat) bootUp(x, A, out, bt, front, bw, true)
   inkP(x, flat ? [thigh, shin, sock] : [thigh, shin, sock, atUs ? atD : soleD])
   fillP(x, [thigh, shin], skin)
-  knee()
+  if (FINE) knee()
   socks()
   if (flat) { bootUp(x, A, out, bt, front, bw, false); return }
   const [upc, , plate] = bt
@@ -1090,7 +1092,7 @@ export function paintMan(x, o, L) {
   x.restore()
   for (const s of shortsL) { acrossP(x, s, 0.9, stripe, 1.15, 1.0); acrossP(x, s, 0.985, 'rgba(0,0,0,.28)', 0.5, 1.0) }
   const fold = 'rgba(0,0,0,.2)'
-  if (!front && bow < 0.5) {
+  if (!FINE) {} else if (!front && bow < 0.5) {
     // from behind: the seam down the seat, and the gluteal fold across each leg of them
     x.strokeStyle = fold; x.lineWidth = 0.6; x.beginPath(); x.moveTo(hipX - sl * -4, hipY - 4); x.lineTo(hipX + sl * 3, hipY + 3.4); x.stroke()
     for (const s of shortsL) { const t = 0.5, d = s, ox = (d.b[0] - d.a[0]), oy = (d.b[1] - d.a[1]), px = d.a[0] + ox * t, py = d.a[1] + oy * t; x.beginPath(); x.moveTo(px - 3.6, py - 0.6); x.quadraticCurveTo(px, py + 1.2, px + 3.6, py - 0.6); x.stroke() }
@@ -1122,7 +1124,7 @@ export function paintMan(x, o, L) {
   x.beginPath(); x.moveTo(-3.6, -2.0); x.quadraticCurveTo(-W * 0.62, -1.7, -W + 1.1, 0.1); x.quadraticCurveTo(-W - 0.8, 1.6, -W - 0.4, 4.6); x.quadraticCurveTo(-W + 1.6, 1.6, -3.2, 0.2); x.closePath(); x.fill()
   const ln = (w, c) => { x.lineWidth = w; x.strokeStyle = c }
   x.lineCap = 'round'
-  if (!front) {
+  if (!FINE) {} else if (!front) {
     // the shoulder blades under the cloth: their inside edges and their points
     ln(0.6, 'rgba(0,0,0,.13)'); x.beginPath()
     x.moveTo(-2.4, 4.4); x.quadraticCurveTo(-2.6, 9.4, -5.4, 11.8); x.moveTo(2.4, 4.4); x.quadraticCurveTo(2.6, 9.4, 5.4, 11.8); x.stroke()
@@ -1134,10 +1136,12 @@ export function paintMan(x, o, L) {
     x.moveTo(-1.0, 11.4); x.quadraticCurveTo(-4.6, 13.0, -8.0, 10.6); x.moveTo(1.0, 11.4); x.quadraticCurveTo(4.6, 13.0, 8.0, 10.6); x.stroke()
   }
   // the folds: from under each arm in toward the waist, and where it gathers over the shorts
-  ln(0.55, 'rgba(0,0,0,.12)'); x.beginPath()
-  x.moveTo(-wa + 0.4, 12.2); x.quadraticCurveTo(-6.6, 14.6, -5.2, 17.4)
-  x.moveTo(wa - 0.4, 12.2); x.quadraticCurveTo(6.6, 14.6, 5.2, 17.4)
-  x.stroke()
+  if (FINE) {
+    ln(0.55, 'rgba(0,0,0,.12)'); x.beginPath()
+    x.moveTo(-wa + 0.4, 12.2); x.quadraticCurveTo(-6.6, 14.6, -5.2, 17.4)
+    x.moveTo(wa - 0.4, 12.2); x.quadraticCurveTo(6.6, 14.6, 5.2, 17.4)
+    x.stroke()
+  }
   // the hem's band
   x.fillStyle = 'rgba(0,0,0,.12)'; x.beginPath(); x.moveTo(-wh - 1, T2 + 1.2); x.quadraticCurveTo(0, T2 + 2.4, wh + 1, T2 + 1.2); x.lineTo(wh + 1, T2 + 5); x.lineTo(-wh - 1, T2 + 5); x.closePath(); x.fill()
   x.restore()
@@ -1167,7 +1171,12 @@ export function paintMan(x, o, L) {
   }
   x.restore()
   // a knee coming up toward us, from the front, over the shorts
-  for (const g of later) paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], g[6])
+  // (and the leg of the shorts goes over the top of that thigh again)
+  for (const g of later) {
+    paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], g[6])
+    const sp = shortsL[g[3] > 0 ? 1 : 0]
+    if (g[5] < 0.3) { inkP(x, [sp]); fillP(x, [sp], L.shorts); acrossP(x, sp, 0.9, String(L.shorts).toLowerCase() === String(L.trim).toLowerCase() ? L.shirt : L.trim, 1.15) }
+  }
   // the arms across his front, the head, then any hand up at the head
   for (const r of arms) if (r.at === 'front') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
   paintHead(x, sxx, syy, hx, hy, skin, skinD, hairC, cut, front, o, tilt, turnH)
@@ -1225,7 +1234,7 @@ function paintArm(x, a, out, L, skin, handR, gk, o, front, seg = 'full') {
   const body = seg !== 'hand', withHand = seg !== 'arm'
   inkP(x, (body ? (seg === 'full' ? [top, upper, fore] : [upper, fore]) : []).concat(withHand ? hand : [], withHand && thumb ? [thumb] : []))
   if (body) fillP(x, [upper, fore], col)
-  if (body && !L.sleeves) {
+  if (body && !L.sleeves && FINE) {
     // the elbow: from behind its point, from the front the crease inside it
     x.strokeStyle = tone(skin, 0.76); x.lineWidth = 0.5
     x.beginPath(); x.arc(a.jx, a.jy, 1.5, Math.atan2(uy, ux) + (front ? 1.3 : -2.3), Math.atan2(uy, ux) + (front ? 2.3 : -1.1)); x.stroke()
@@ -1251,7 +1260,7 @@ function paintArm(x, a, out, L, skin, handR, gk, o, front, seg = 'full') {
     fillP(x, hand, skin)
     // the knuckles' line; a fist's fingers folded over
     const h = hand[hand.length - 1]
-    if (fist) { acrossP(x, h, 0.72, tone(skin, 0.7), 0.5, 0.8); alongP(x, h, inS, 0.45, 0.5, 0.95, tone(skin, 0.7), 0.45) }
+    if (!FINE) {} else if (fist) { acrossP(x, h, 0.72, tone(skin, 0.7), 0.5, 0.8); alongP(x, h, inS, 0.45, 0.5, 0.95, tone(skin, 0.7), 0.45) }
     else acrossP(x, hand[0], 0.97, tone(skin, 0.76), 0.45, 0.8)
   }
   if (thumb) { fillP(x, [thumb], skin, false); x.strokeStyle = tone(skin, 0.58); x.lineWidth = 0.45; x.beginPath(); part(x, thumb); x.stroke() }
@@ -1279,7 +1288,7 @@ function skull(x, hx, hy, back = false) {
   }
   x.closePath()
 }
-const VOL = { crop: 0.7, fade: 1.3, curly: 1.9, long: 0.8, bun: 0.35, buzz: 0.2 }
+const VOL = { crop: 0.7, fade: 1.3, curly: 1.6, long: 0.8, bun: 0.35, buzz: 0.2 }
 // the hair's outer shape over the crown (its volume); g grows it (for the ink)
 function crown(x, hx, hy, cut, g = 0) {
   const v = VOL[cut] ?? 0.7
@@ -1298,7 +1307,7 @@ function crown(x, hx, hy, cut, g = 0) {
   if (cut === 'bun') { x.moveTo(hx + 2.9 + g, hy - SKY - 1.9); x.arc(hx, hy - SKY - 1.9, 2.9 + g, 0, 6.2832) }
 }
 // (the head a touch big, the way a game draws a man so his head reads at a glance: grown up and out from his neck)
-const HS = 1.13
+const HS = 1.08
 function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar = null) {
   x.save(); x.translate(hx, hy + 6); x.scale(HS, HS); x.translate(-hx, -(hy + 6))
   headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, turnH, collar)
@@ -1357,7 +1366,7 @@ function headOf(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, tur
   // the hair's own shade, down its right side, and a parting's line through a crop
   x.save(); x.beginPath(); crown(x, hx, hy, cut); x.clip(); x.fillStyle = tone(hair, 0.7); x.beginPath(); x.ellipse(hx + SK + 0.4, hy - 2.5, 3.2, 8, 0, 0, 6.2832); x.fill(); x.restore()
   // the light on the hair: a sheen over the crown on its lit side; a curly top's curls catching it
-  {
+  if (FINE) {
     x.save(); x.beginPath(); crown(x, hx, hy, cut); if (!front) skull(x, hx, hy, !front); x.clip()
     const sheen = tone(hair, lumOf(hair) < 0.12 ? 1.2 : 1.14)
     if (cut === 'curly') {
@@ -1414,7 +1423,9 @@ export function man(ctx, C, X, Z, pose, look, o = {}) {
   const turn = o.turn ?? 0, sxk = Math.max(0.3, Math.abs(Math.cos(turn * Math.PI)))
   const L = turn > 0.5 ? { ...look, front: !look.front } : look
   ctx.save(); ctx.translate(p.x, p.y - lift * p.s); ctx.scale(k * sxk, k)
+  FINE = k * 110 > 64
   paintMan(ctx, o.still ? pose : idlePose(o.t ?? now(), pose, X * 3.1 + Z * 1.7, lift), L)
+  FINE = true
   ctx.restore()
   if (o.name) nameTag(ctx, null, p.x, p.y, o.name, clamp(k * 1.4, 0.7, 1.15))
   return p
