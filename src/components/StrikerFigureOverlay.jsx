@@ -1,11 +1,11 @@
 import svgRaw from '../assets/st-figure-color.svg?raw'
 import { useId } from 'react'
-import { curlyHair } from '../lib/soccerHair'
+import { curlyHair, hairOf, HAIR } from '../lib/soccerHair'
 
 // The striker's figure (public/st-silhouette.webp), through the ball: the kit and the skin laid over the art from
 // src/assets/st-figure-color.svg (one path a part, traced on the art's own seams; "left" is the left of the picture,
 // so the left leg is his trailing leg and the right leg is the one on the ball). The ball is the art's, lifted to a
-// white ball (BALL); the hair is the art's, except on a player with tight-curled hair (below).
+// white ball (BALL); the hair is the art's, in the colour of the player's own hair (below).
 // The build arrives under the basketball keys (lib/soccerUi.js SOCCER_AS_BUCKET), like the figure it replaced:
 //   basketballIQ  HEADING      his face and neck (the skin of the player the trait came from, with the art's own
 //                              shading and the face's features drawn on), and his hair
@@ -60,11 +60,18 @@ export function soccerSkin(hex) {
 // so the lash line darkens the skin in its own hue (a neutral near-black read grey-green over a light tone)
 const shadeOf = (tone, k) => { const c = hexRgb(tone); return rgbHex([c[0] * k * 1.3, c[1] * k, c[2] * k * 0.8]) }   // (warmed: a shadow on skin is warmer than its tone)
 
-// Hair. The art's hair is a combed quiff, its comb lines drawn in. On a player with tight-curled hair (whose:
-// lib/soccerHair.js, from the players' photos) those lines look wrong, so his hair is drawn over the art's: solid,
-// with a short, tight-curl grain (the curl filter below), the sideburn by the ear included. Everyone else keeps the
-// art's hair.
+// Hair. The art's hair is a combed quiff, its comb lines drawn in, near-black. It takes the colour of the HEADING
+// player's own hair (lib/soccerHair.js hairOf, read off his photo; owner 11-25): the colour goes on flat and the art's
+// own hair, in grey, is laid back over it like the skin's shading (HAIR_SHADE: the art's dark hair lifted on a curve so
+// its middle leaves the tone as it is, then soft-lit, and its deepest shadows, between the strands, multiplied back in:
+// HAIR_DARK), the sideburn included. Black hair, and a player with no photo, keep the art's own hair.
+// On a player with tight-curled hair (lib/soccerHair.js curlyHair) the comb lines look wrong, so his hair is drawn over
+// the art's: solid, with a short, tight-curl grain (the curl filter below) in his hair's colour.
+// A bald or shaved player: the hair's shape in his skin (the face's shading over it), with a faint stubble.
 const CURL_BASE = '#17110e', CURL_HI = '#33271f'
+const HAIR_SHADE = [2.4, 0.5]   // [amplitude, exponent] of the gamma lift (the art's hair: 10th pct grey 0.008, middle 0.04, 90th 0.145)
+const HAIR_DARK = '0.3 0.72 1 1 1'
+const mixHex = (a, b, t) => { const x = hexRgb(a), y = hexRgb(b); return rgbHex(x.map((v, i) => v + (y[i] - v) * t)) }
 // the ball's white panels up to white, its black panels left black (the grey ramp, as SHADE)
 const BALL = [4.2, 0.08]
 
@@ -176,7 +183,13 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
   const id = n => `st${uid}${n}`
   const url = n => `url(#${id(n)})`
   const face = head ? soccerSkin(head.skinColor) : null
-  const curl = head ? curlyHair(head) : false
+  const hairName = head ? hairOf(head) : null
+  const bald = hairName === 'bald'
+  const curl = head && !bald ? curlyHair(head) : false
+  // his hair's tone (null: the art's own near-black hair)
+  const hairTone = hairName && !bald && hairName !== 'black' ? HAIR[hairName] : null
+  const curlBase = hairTone ? mixHex(hairTone, '#000000', 0.2) : CURL_BASE
+  const curlHi = hairTone ? mixHex(hairTone, '#000000', 0.02) : CURL_HI
   const skins = [
     head && { ids: ['face', 'neck'], tone: face },
     size && { ids: ['hand'], tone: soccerSkin(size.skinColor) },
@@ -226,11 +239,35 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           <filter id={id('curl')} x="0" y="0" width="1" height="1" colorInterpolationFilters="sRGB">
             <feTurbulence type="fractalNoise" baseFrequency="0.42" numOctaves="2" seed="4" result="n" />
             <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3.2 0 0 0 -1.45" result="speck" />
-            <feFlood floodColor={CURL_HI} />
+            <feFlood floodColor={curlHi} />
             <feComposite in2="speck" operator="in" result="hi" />
-            <feFlood floodColor={CURL_BASE} />
+            <feFlood floodColor={curlBase} />
             <feMerge><feMergeNode /><feMergeNode in="hi" /></feMerge>
           </filter>
+          {/* his hair's colour with the art's own hair laid over it (HAIR_SHADE, HAIR_DARK) */}
+          {hairTone && !curl && (
+            <filter id={id('f-hair')} colorInterpolationFilters="sRGB" x="0" y="0" width="1" height="1">
+              <feColorMatrix type="saturate" values="0" />
+              {/* (the lift would bring up the picture's compression blocks in the near-black: softened first) */}
+              <feGaussianBlur stdDeviation="1" />
+              <feComponentTransfer result="shade">{['R', 'G', 'B'].map(c => { const F = `feFunc${c}`; return <F key={c} type="gamma" amplitude={HAIR_SHADE[0]} exponent={HAIR_SHADE[1]} offset="0" /> })}<feFuncA type="identity" /></feComponentTransfer>
+              <feFlood floodColor={hairTone} result="tone" />
+              <feBlend in="shade" in2="tone" mode="soft-light" result="lit1" />
+              <feBlend in="shade" in2="lit1" mode="soft-light" result="lit" />
+              <feComponentTransfer in="shade" result="dark">{['R', 'G', 'B'].map(c => { const F = `feFunc${c}`; return <F key={c} type="table" tableValues={HAIR_DARK} /> })}</feComponentTransfer>
+              <feBlend in="dark" in2="lit" mode="multiply" result="lit" />
+              <feComposite in="lit" in2="SourceAlpha" operator="in" />
+            </filter>
+          )}
+          {/* a shaved head's stubble: a fine grain of dark specks */}
+          {bald && (
+            <filter id={id('stubble')} x="0" y="0" width="1" height="1" colorInterpolationFilters="sRGB">
+              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="7" result="n" />
+              <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -1.15" result="speck" />
+              <feFlood floodColor={shadeOf(face, 0.35)} />
+              <feComposite in2="speck" operator="in" />
+            </filter>
+          )}
         </defs>
         <g mask={url('art')}>
           {skins.filter(s => s.ids[0] !== 'face').map(({ ids, tone }) => <g key={ids[0]}>{ids.map(i => <path key={i} d={D[i]} fill={tone} />)}</g>)}
@@ -241,6 +278,9 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
           </g>
           {/* the head (face, neck, features, hair) as one layer, 10% see-through (owner 11-25) */}
           <g opacity="0.9">
+          {/* the hair's (or a bald head's scalp's) flat tone first, stroked a little past the hairline under the face
+              (EDGE), so the seam between the two can't show the art's black as a line */}
+          {(hairTone && !curl || bald) && [D.hair, SIDEBURN].map((d, i) => <path key={i} d={d} fill={bald ? face : hairTone} stroke={bald ? face : hairTone} strokeWidth={EDGE * 1.2} strokeLinejoin="round" />)}
           {head && <g>{['face', 'neck'].map(i => <path key={i} d={D[i]} fill={face} />)}</g>}
           {/* the jaw: the face stroked a hair over its seam with the neck (only there), so the hairline gap between the
               two can't show the art's black through it as a line round the jaw (EDGE) */}
@@ -275,13 +315,35 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
                 ))}
               </g>
               {/* (only the eyes are drawn: no brows, nose or mouth lines, owner 11-25) */}
-              {/* the sideburn is hair: the art's own, or the curls below */}
-              {!curl && <g clipPath={url('c-burn')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} /></g>}
+              {/* the sideburn is hair: the art's own, or the curls or his hair's colour below (a bald head's: skin) */}
+              {!curl && !hairTone && !bald && <g clipPath={url('c-burn')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} /></g>}
             </g>
           )}
           {curl && (
             <g clipPath={url('c-hair')}>
-              <rect x="600" y="90" width="230" height="160" fill={CURL_BASE} filter={url('curl')} />
+              <rect x="600" y="90" width="230" height="160" fill={curlBase} filter={url('curl')} />
+            </g>
+          )}
+          {/* his hair in its own colour: flat (all html.low-power keeps), then the art's hair laid over it */}
+          {hairTone && !curl && (
+            <g>
+              <g className="st-fx" clipPath={url('c-hair')}><image href={ART} width={ST_FIG_W} height={ST_FIG_H} filter={url('f-hair')} /></g>
+            </g>
+          )}
+          {/* bald or shaved: his skin where the hair was, shaded as the face is (lit from his left), with stubble */}
+          {bald && (
+            <g>
+              <g clipPath={url('c-hair')}>
+                {/* the crown in the light (his left, as the face), the back of the head turning into shadow */}
+                <radialGradient id={id('scalp')} cx="690" cy="128" r="120" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#ffffff" stopOpacity="0.16" />
+                  <stop offset="0.5" stopColor="#ffffff" stopOpacity="0" />
+                  <stop offset="1" stopColor={shadeOf(face, 0.3)} stopOpacity="0.45" />
+                </radialGradient>
+                <rect x="600" y="90" width="230" height="160" fill={url('scalp')} />
+                <rect x="600" y="90" width="230" height="160" fill={url('fshade')} opacity="0.7" />
+                <rect className="st-fx" x="600" y="90" width="230" height="160" fill={face} filter={url('stubble')} opacity="0.3" />
+              </g>
             </g>
           )}
           </g>
