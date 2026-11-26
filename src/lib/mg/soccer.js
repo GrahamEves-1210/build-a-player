@@ -541,10 +541,10 @@ export const mix = (a, b, f) => {
 export const POSE = {
   // stood: his weight on his right leg (that hip up, the shoulders the other way), the left knee easy, the arms
   // hanging loose with a little bend at the elbow and the hands turned in at his thighs
-  stand: pz({ hx: 1.6, hip: 0.26, lean: -0.04, lx: -10, ly: -0.6, lk: 0.34, rx: 5.6, hlx: -15.0, hly: -45.8, hrx: 13.8, hry: -45.4, el: 0, er: 0, fore: 0.95, head: 0.15 }),
+  stand: pz({ hx: 1.0, hip: 0.15, lean: -0.03, lx: -10, ly: -0.6, lk: 0.34, rx: 5.6, hlx: -15.0, hly: -45.8, hrx: 13.8, hry: -45.4, el: 0, er: 0, fore: 0.95, head: 0.15 }),
   // a penalty taker waiting on the whistle: loose, the shoulders down, his weight on his right leg, the arms hanging
   // easy a touch in front of him, his eyes on the keeper
-  wait: pz({ hx: 2.2, hip: 0.32, lean: -0.045, lx: -11.5, ly: -0.3, lk: 0.42, rx: 4.6, hlx: -15.6, hly: -45.6, hrx: 13.9, hry: -45.2, el: 0, er: 0, fore: 0.95, tilt: 0.12, head: 0.35 }),
+  wait: pz({ hx: 1.3, hip: 0.18, lean: -0.03, lx: -11.5, ly: -0.3, lk: 0.42, rx: 4.6, hlx: -15.6, hly: -45.6, hrx: 13.9, hry: -45.2, el: 0, er: 0, fore: 0.95, tilt: 0.12, head: 0.35 }),
   // on his toes, knees soft, arms loose and a little out from his sides
   ready: pz({ hy: 50, bow: 0.1, lx: -11, rx: 11, lk: 0.2, rk: 0.2, hlx: -15.8, hly: -51, hrx: 15.8, hry: -51, el: 0.08, er: 0.08, fore: 0.75 }),
   // a keeper set: feet a bit wider than his shoulders, knees bent, his weight forward on the balls of his feet, the
@@ -673,7 +673,7 @@ export function kickPose(f, foot = 1, o = null) {
   return { ...p, lx: -p.rx, ly: p.ry, lk: p.rk, rx: -p.lx, ry: p.ly, rk: p.lk, hlx: -p.hrx, hly: p.hry, hrx: -p.hlx, hry: p.hly, el: p.er, er: p.el, lean: -p.lean, hx: -p.hx, zl: p.zr, zr: p.zl }
 }
 
-const TH = 27, SH = 26, UA = 19, FA = 17.8, TORSO = 33, HR = 7.4, SHW = 9.7, HIPW = 5
+const TH = 27, SH = 26, UA = 19, FA = 17.8, TORSO = 33, HR = 7.4, SHW = 10.0, HIPW = 4.4
 const OL = 1.4   // the ink round every part, in rig units
 // a limb: two circles joined by their tangents (a cone with round ends)
 function taper(x, ax, ay, ra, bx, by, rb) {
@@ -843,12 +843,12 @@ const add = (pr, g) => pr.map(([t, r]) => [t, r + g])
 
 // The leg: the thigh full at the top and swelling on its outside, the inside (the teardrop) low by the knee; a real knee;
 // the calf high and fuller on the inside, in to a slim ankle
-const THIGH_O = [[0, 6.0], [0.3, 6.3], [0.6, 5.5], [0.85, 4.4], [1, 3.9]]
-const THIGH_I = [[0, 5.6], [0.2, 5.7], [0.5, 4.9], [0.78, 4.2], [0.9, 4.3], [1, 3.75]]
+const THIGH_O = [[0, 5.5], [0.3, 5.6], [0.6, 5.05], [0.85, 4.3], [1, 3.9]]
+const THIGH_I = [[0, 5.2], [0.2, 5.2], [0.5, 4.7], [0.78, 4.15], [0.9, 4.25], [1, 3.75]]
 const SHIN_O = [[0, 3.8], [0.1, 3.75], [0.27, 4.6], [0.5, 3.75], [0.78, 2.35], [0.93, 2.0], [1, 2.15]]
 const SHIN_I = [[0, 3.7], [0.1, 3.7], [0.31, 5.0], [0.53, 3.95], [0.78, 2.45], [0.93, 2.1], [1, 2.25]]
 const SOCK_O = add(SHIN_O, 0.4), SOCK_I = add(SHIN_I, 0.4), FOLD_O = add(SHIN_O, 0.95), FOLD_I = add(SHIN_I, 0.95)
-const SHORT_O = [[0, 5.9], [0.5, 6.25], [1, 6.05]], SHORT_I = [[0, 5.4], [0.6, 5.6], [1, 5.35]]
+const SHORT_O = [[0, 5.4], [0.5, 5.55], [1, 5.6]], SHORT_I = [[0, 5.0], [1, 5.0]]
 const NECK = [[0, 4.4], [0.35, 3.8], [1, 3.4]]
 const SOCK_T = 0.15, FOLD_T = [0.11, 0.21]
 // boots: [the upper, its flash, the soleplate]
@@ -1059,7 +1059,7 @@ export function paintMan(x, o, L) {
   })
   // the seat and the waistband: from the hips across, down to the fork
   const waist = d => {
-    const w0 = 7.4 * bw + d, w1 = HIPW + 5.6 * bw + d, nx = -sl, ny = cl
+    const w0 = 7.4 * bw + d, w1 = HIPW + 5.1 * bw + d, nx = -sl, ny = cl
     // (wound the same way as the legs of them, so the two fill as one)
     x.moveTo(hipX - cl * w0 - nx * (5.6 + d), hipY - sl * w0 - ny * (5.6 + d)); x.lineTo(hipX - cl * w1 + nx * (2 + d), hipY - sl * w1 + ny * (2 + d))
     x.lineTo(hipX + nx * (3.4 + d), hipY + ny * (3.4 + d)); x.lineTo(hipX + cl * w1 + nx * (2 + d), hipY + sl * w1 + ny * (2 + d)); x.lineTo(hipX + cl * w0 - nx * (5.6 + d), hipY + sl * w0 - ny * (5.6 + d)); x.closePath()
@@ -1067,7 +1067,7 @@ export function paintMan(x, o, L) {
   // The shirt, in its own frame (0, 0 the middle of his shoulders, y down to the hem): the neckline, the trapezius
   // sloping down to the shoulders (not a box), round over the deltoid into the sleeve; under the arm the lats, in to a
   // narrow waist, and out a touch over the hips where it hangs over the shorts
-  const wa = W - 0.9, wl = W - 0.2, ww = 8.7 * bw, wh = 10.0 * bw, T2 = T - 2.6   // (T2: the hem, over the top of the shorts)
+  const wa = W - 0.6, wl = W + 0.2, ww = 9.2 * bw, wh = 9.6 * bw, T2 = T - 2.6   // (T2: the hem, over the top of the shorts)
   const shirt = () => {
     x.moveTo(-3.7, -2.6)
     x.quadraticCurveTo(-W * 0.55, -2.0, -W + 1.2, 0.3)
@@ -1115,7 +1115,7 @@ export function paintMan(x, o, L) {
   if (!FINE) {} else if (!front && bow < 0.5) {
     // from behind: the seam down the seat, and the gluteal fold across each leg of them
     x.strokeStyle = fold; x.lineWidth = 0.6; x.beginPath(); x.moveTo(hipX - sl * -4, hipY - 4); x.lineTo(hipX + sl * 3, hipY + 3.4); x.stroke()
-    for (const s of shortsL) { const t = 0.5, d = s, ox = (d.b[0] - d.a[0]), oy = (d.b[1] - d.a[1]), px = d.a[0] + ox * t, py = d.a[1] + oy * t; x.beginPath(); x.moveTo(px - 3.6, py - 0.6); x.quadraticCurveTo(px, py + 1.2, px + 3.6, py - 0.6); x.stroke() }
+    // (no folds drawn across the seat: they round it)
   } else if (front) {
     // from the front: the creases from the fork, and the number small on his left leg
     x.strokeStyle = fold; x.lineWidth = 0.55; x.beginPath(); x.moveTo(hipX - 1, hipY + 2.6); x.lineTo(hipX - 3.6, hipY - 0.4); x.moveTo(hipX + 1, hipY + 2.6); x.lineTo(hipX + 3.6, hipY - 0.4); x.stroke()
