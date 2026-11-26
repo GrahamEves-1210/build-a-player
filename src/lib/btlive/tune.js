@@ -110,7 +110,11 @@ export const T = {
   shootBuffer: 0.5,                  // a SHOOT press this recent starts the shot the moment he can (a catch, a board)
 
   // ── The shot meter (judged on the shooter's own device: only the quality 0-1 is sent) ──────────
-  jTotalMs: 900,                     // a jumper's meter runs this long; held past it, the shot goes up late
+  // ONE SWEEP (the owner, 11-26): the fill rises to the top in the ideal's time (where the green is) and comes back down
+  // to the bottom at the total (twice the ideal): green on the way up or the way down; held to the bottom, it goes up
+  // late. The window in ms is what it was (an average kid's odds per situation unchanged); drawn, the green at the top
+  // is half the band it was, met twice
+  jTotalMs: 1000,                    // a jumper's meter runs this long; held past it, the shot goes up late
   jIdealMs: 500,                     // the middle of the green window
   jWinMs: 11, jWinJs: 31,            // green half-width: 11 + 31 x (plain Jump Shot)²: 42 ms at 11, 11 at a 1 (a green always goes in)
   jFallMs: 170,                      // past the green, quality runs down to 0 over this long (the meter's fill: a miss either way)
@@ -119,7 +123,7 @@ export const T = {
   // (the window, the fall, the most it can be, the error a kid's and a CPU's release are judged with: kidSd x lSlow),
   // so the odds are what they were and the time to see it coming is longer
   lSlow: 1.45,
-  lTotalMs: 900, lIdealMs: 435,
+  lTotalMs: 870, lIdealMs: 435,
   lWinMs: 35, lWinFin: 46,           // green half-width from Finishing: 35 + 46 x (plain Finishing)²: 81 ms at 11, 35 at a 1
   lFallMs: 275,
   greenWallL: 0.55,                  // a green layup or dunk goes in unless the contest on it is this much or more (walled up)
@@ -169,7 +173,8 @@ export const T = {
   pastK: 0.16, pastJs: 0.06,         // every foot behind the three-point line: the chance x e^-(0.16 - 0.06 x Jump Shot) (range)
   setFeet: 0.16,
   setFeet3: 0.07,                    // ...and a three on the move this much more on top (owner 11-26: a moving three is harder)
-  selfRebWait: 0.45,                 // s: the shooter, coming down, can't get to his own miss before this (owner 11-26)
+  selfRebWaitL: 0.8,                 // ...off his own layup or dunk (he's coming down under it), this long
+  selfRebWait: 0.6,                  // s: the shooter, coming down, can't get to his own miss before this (owner 11-26)
   selfRebW: 0.5,                     // ...and in a scramble for it he's this much less likely to come up with it                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
   runFrom: 0.2,                      // ...from this share of his top speed up (a drift is free)
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
@@ -213,6 +218,8 @@ export const T = {
   cpuBeat: 0.4, cpuBeatR: 0.8,       // ...how often he gets by his man: this, + this x (his Speed and Handles - the man's Speed and Perimeter D) / 2
   cpuDriveRisk: 0.74,                // ...and otherwise only more than the drive: a layup on his man walled up at the rim, x this (a strip, a block)
   cpuJumpEdge: 0.08,                 // ...by this much (a miss at the rim comes back more often than a long one)
+  cpuCrash: 0.3, cpuCrashReb: 0.35,  // a CPU follows his own shot this often (+ this x his Rebounding); else he lands and...
+  cpuHold: 0.5,                      // ...holds this long into the miss before he goes for it (the owner, 11-26)
   cpuSitV: 0.33,                     // an open look over a man sitting back at the rim: worth taking from this
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────

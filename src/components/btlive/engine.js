@@ -801,11 +801,14 @@ export function createEngine({ setup, els, on, net = null }) {
     const spec = mine ? meter.spec : p.shot.spec
     if (!spec) return
     const held = rel ? rel.held : mine && meter.on ? (meter.grade ? meter.gradeAt : now) - meter.t0 : (p.actT + acc / STEP) * STEP
-    // the bar's top is a little past the green: it fills toward the window near its top (a late release runs it full)
-    const top = spec.ideal / 0.8
-    const f = clamp(held / top, 0, 1)
-    const bw = mine ? Math.round(clamp(tk * 0.34, 12, 16)) : Math.round(clamp(tk * 0.22, 7, 10))
-    const bh = mine ? Math.round(clamp(tk * 2.7, 96, 136)) : Math.round(clamp(tk * 1.6, 44, 72))
+    // ONE SWEEP (the owner, 11-26): the fill rises to the top of the bar as he holds it (spec.ideal) and comes back down
+    // (to the bottom at spec.total). The green is at the top: in it on the way up or on the way down is a make
+    const up = spec.ideal, down = Math.max(1, spec.total - spec.ideal)
+    const posAt = t => (t <= up ? clamp(t / up, 0, 1) : clamp(1 - (t - up) / down, 0, 1))
+    const f = posAt(held), falling = held > up
+    // (his own: the crescent's room, a little bigger than the old bar; anyone else's a thin bar)
+    const bw = mine ? Math.round(clamp(tk * 0.5, 18, 24)) : Math.round(clamp(tk * 0.22, 7, 10))
+    const bh = mine ? Math.round(clamp(tk * 3.1, 112, 150)) : Math.round(clamp(tk * 1.6, 44, 72))
     const L = camPx + 6, Rr = camPx + w - 6
     const fs = Math.round(clamp(tk * 0.42, 13, 18))
     const at = sd => x + sd * (tk * 0.5 + 16) - (sd < 0 ? bw : 0)
@@ -836,40 +839,61 @@ export function createEngine({ setup, els, on, net = null }) {
     }
     if (mine) { meter.side = side; meter.dy = dy }
     const bx = clamp(at(side), L, Rr - bw), by = yOf(dy)
-    const yAt = v => by + bh * (1 - clamp(v / top, 0, 1))           // a time on the meter -> its height on the screen
+    const yAt = v => by + bh * (1 - clamp(v, 0, 1))                 // a height on the meter (0-1) -> on the screen
     ctx.globalAlpha = a
-    // the track
-    rr(bx - 2, by - 2, bw + 4, bh + 4, 3); ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fill()
-    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(243,246,248,.55)'; ctx.stroke()
     if (!mine) {
+      // (anyone else's: a plain thin bar, the fill only)
+      rr(bx - 2, by - 2, bw + 4, bh + 4, 3); ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fill()
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(243,246,248,.55)'; ctx.stroke()
       ctx.fillStyle = 'rgba(243,246,248,.85)'; ctx.fillRect(bx, by + bh * (1 - f), bw, bh * f)
       ctx.globalAlpha = 1
       return
     }
-    const lo = spec.ideal - spec.win, hi = spec.ideal + spec.win
+    // HIS OWN: a shallow crescent beside him, bowed out away from him, narrow at the bottom and widest at the top where
+    // the green is (the owner, 11-26: "curved slightly and wider at the top like the 2K meter"). v: 0 the bottom, 1 the top
+    const B = bw * 0.55, w0 = bw * 0.38, w1 = bw * 1.05, inner = side > 0 ? bx : bx + bw
+    const cx = v => inner + side * (B * (1 - (2 * v - 1) * (2 * v - 1)) + (w0 + (w1 - w0) * v) / 2)   // the arc's middle line
+    const wd = v => w0 + (w1 - w0) * v
+    const band = (v0, v1, fill, pad = 0) => {
+      if (v1 <= v0) return
+      const n = Math.max(2, Math.ceil((v1 - v0) * 22))
+      ctx.beginPath()
+      for (let k = 0; k <= n; k++) { const v = v0 + (v1 - v0) * k / n; ctx.lineTo(cx(v) - wd(v) / 2 - pad, yAt(v)) }
+      for (let k = n; k >= 0; k--) { const v = v0 + (v1 - v0) * k / n; ctx.lineTo(cx(v) + wd(v) / 2 + pad, yAt(v)) }
+      ctx.closePath()
+      if (fill) { ctx.fillStyle = fill; ctx.fill() }
+    }
+    const across = (v, col, lw, ext = 2) => { const x = cx(v), hw = wd(v) / 2 + ext; ctx.fillStyle = col; ctx.fillRect(x - hw, yAt(v) - lw / 2, hw * 2, lw) }
+    // the track, with a thin light edge
+    band(0, 1, 'rgba(5,7,10,.9)', 2.5)
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(243,246,248,.5)'; ctx.stroke()
+    const gv = clamp(1 - spec.win / up, 0, 0.97)                    // where the green starts (it runs to the top)
     // game point: the window it would be on any other play, as an outline, when the pressure (or his Clutch rating)
-    // has moved it by a few ms or more; CLUTCH over the bar when his rating has made it wider
+    // has moved it by a few ms or more; CLUTCH under the meter when his rating has made it wider
     const base = meter.base, clutch = base && Math.abs(base.win - spec.win) >= 3
-    // the fill: white on the way up, green in the window, red past it (the grade's colour once he let go)
-    const inWin = Math.abs(held - spec.ideal) <= spec.win, past = held > hi
+    // the fill: white sweeping up and back down, a pale green while it's in the window, red once it's come down past
+    // it; the grade's colour once he let go
+    const inWin = Math.abs(held - spec.ideal) <= spec.win, past = held > spec.ideal + spec.win
     const col = rel ? GRADE_COL[meter.grade] ?? '#fff' : inWin ? GREEN : past ? RED : '#f3f6f8'
-    const fy = by + bh * (1 - f)
-    // the green window first, inside the bar (never thinner than 5px), so the fill rising through it is drawn over
-    // it and seen passing through the green (the owner, 11-26: on a layup the white was behind the green)
-    const wy0 = yAt(hi), wy1 = yAt(lo), wc = (wy0 + wy1) / 2, wh = Math.max(5, wy1 - wy0), wt = wc - wh / 2
-    ctx.fillStyle = GREEN; ctx.fillRect(bx, wt, bw, wh)
-    // the fill over it: white on the way up, a pale green where it is inside the window (the window still reads under
-    // it), red past it; the grade's colour once he let go
-    ctx.fillStyle = col === GREEN ? '#c8f7dc' : col; ctx.fillRect(bx, fy, bw, by + bh - fy)
-    if (!rel && !past && fy < wt + wh) { ctx.fillStyle = '#c8f7dc'; ctx.fillRect(bx, Math.max(fy, wt), bw, wt + wh - Math.max(fy, wt)) }
-    // the window's edges over everything (a dark line across the bar each end) and a white tick each side of it
-    ctx.fillStyle = 'rgba(5,7,10,.85)'; ctx.fillRect(bx, wt - 1, bw, 1.5); ctx.fillRect(bx, wt + wh - 0.5, bw, 1.5)
-    ctx.fillStyle = '#f3f6f8'; ctx.fillRect(bx - 5, wt - 1, 4, wh + 2); ctx.fillRect(bx + bw + 1, wt - 1, 4, wh + 2)
-    // the needle: the head of the fill, a bright line just past the bar's edges, on top of the window
-    if (!rel) { ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 2, fy - 2, bw + 4, 4); ctx.fillStyle = inWin ? GREEN : '#fff'; ctx.fillRect(bx - 1, fy - 1, bw + 2, 2) }
-    if (clutch) {                                                     // (dark dashes inside a wider window, light ones round a narrower)
-      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'
-      ctx.strokeRect(bx + 0.5, yAt(base.ideal + base.win), bw - 1, Math.max(4, yAt(base.ideal - base.win) - yAt(base.ideal + base.win))); ctx.setLineDash([])
+    const fy = yAt(f)
+    // the green first, then the fill over it (the owner, 11-26: the white seen passing through the green)
+    band(gv, 1, GREEN)
+    band(0, f, col === GREEN ? '#c8f7dc' : col)
+    if (!rel && f > gv) band(gv, f, '#c8f7dc')
+    across(gv, 'rgba(5,7,10,.85)', 1.5, 0)
+    if (clutch) { ctx.setLineDash([3, 3]); band(clamp(1 - base.win / up, 0, 0.97), 1, null); ctx.lineWidth = 1.5; ctx.strokeStyle = spec.win > base.win ? 'rgba(5,7,10,.9)' : 'rgba(243,246,248,.8)'; ctx.stroke(); ctx.setLineDash([]) }
+    if (!rel) {
+      // the needle: a bright line across the fill's head, and which way it's going (a small arrowhead: up, then down)
+      across(f, 'rgba(5,7,10,.95)', 4, 2); across(f, inWin ? GREEN : '#fff', 2, 1)
+      const ax = cx(f) + side * (wd(f) / 2 + 8), ay = clamp(fy, by + 4, by + bh - 4), d = falling ? 1 : -1
+      ctx.beginPath(); ctx.moveTo(ax - 4, ay - 2.5 * d); ctx.lineTo(ax + 4, ay - 2.5 * d); ctx.lineTo(ax, ay + 3.5 * d); ctx.closePath()
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(5,7,10,.9)'; ctx.stroke(); ctx.fillStyle = past ? RED : '#f3f6f8'; ctx.fill()
+    } else {
+      // the release: where he stopped it, a white line across; a quick flash of the whole meter (green in the window),
+      // fading in a fifth of a second
+      across(f, 'rgba(5,7,10,.95)', 5, 4); across(f, '#fff', 2, 3)
+      const t = now - rel.at
+      if (t >= 0 && t < 220) { ctx.globalAlpha = a * 0.55 * (1 - t / 220); band(0, 1, meter.gradeGood ? GREEN : '#f3f6f8', 2.5); ctx.globalAlpha = a }
     }
     ctx.font = `${fs}px ${FONT}`; ctx.textBaseline = 'middle'
     const chip = (text, cx, cy, color) => {
@@ -882,9 +906,6 @@ export function createEngine({ setup, els, on, net = null }) {
     // the words go over the bar (never beside it, over a man's name)
     const overY = by - fs * 0.95
     if (rel) {
-      // where he stopped it: a white line across, just past the bar's edges
-      ctx.fillStyle = 'rgba(5,7,10,.95)'; ctx.fillRect(bx - 4, fy - 2.5, bw + 8, 5)
-      ctx.fillStyle = '#fff'; ctx.fillRect(bx - 3, fy - 1, bw + 6, 2)
       chip(meter.grade, bx + bw / 2, overY, col)
     } else {
       // how open he is (as well as his IQ reads it)

@@ -517,7 +517,7 @@ head(`The pace: the game ${PACE}x quicker, the things a person does in real time
   const t = toLive(createGame({ teams: [[man('a0')], [man('b0')]], seed: 'pace2' }))
   ok(t.clock === RULES.shotClock[0] * HZ, `the shot clock is real seconds: ${RULES.shotClock[0]} s is ${t.clock} ticks`)
   const j = meterSpec('jumper', R), l = meterSpec('layup', R)
-  ok(j.total === 900 && j.ideal === 500 && l.total === 900 && l.ideal === 435, `the shot meter is real milliseconds (the layup's slower since 11-26): jumper ${j.ideal} of ${j.total}, layup ${l.ideal} of ${l.total}, green +/- ${j.win.toFixed(0)} and ${l.win.toFixed(0)} at an 80`)
+  ok(j.total === 1000 && j.ideal === 500 && l.total === 870 && l.ideal === 435, `the shot meter is real milliseconds, one sweep up to the green and back down (the layup's slower since 11-26): jumper ${j.ideal} of ${j.total}, layup ${l.ideal} of ${l.total}, green +/- ${j.win.toFixed(0)} and ${l.win.toFixed(0)} at an 80`)
   // the meter in the step: a CPU release held 500 real ms is a release at tick 15
   const u = toLive(createGame({ teams: [[man('a0')], [man('b0')]], seed: 'pace3' })), uh = u.ball.holder
   put(u.players[uh], 28, 26); put(u.players[1 - uh], 45, 8)

@@ -1049,7 +1049,8 @@ function ballStep(s) {
     const own = b.reb && p.i === b.from
     const d = Math.hypot(p.x - b.x, p.y - b.y)
     // (his own miss: he's still landing, so his reach for it is shorter for a beat)
-    if (own && b.t < ticks(T.selfRebWait) && d > p.R.grab * 0.5) continue
+    // (off a layup or a dunk he's under it, coming down through it: longer)
+    if (own && b.t < ticks(b.kind === 'jumper' ? T.selfRebWait : T.selfRebWaitL) && d > p.R.grab * 0.5) continue
     if (d > p.R.grab) continue
     const up = p.act === 'jump' ? Math.sin(Math.PI * clamp(p.actT / ticks(T.jumpTime), 0, 1)) : 0
     if (b.z > p.R.standReach + (p.R.jumpReach - p.R.standReach) * up) continue

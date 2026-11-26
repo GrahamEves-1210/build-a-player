@@ -26,13 +26,16 @@ const JUMP_LEAD = 6                              // a hand goes up this many tic
 // a dribble move on a set defender. gap: extra feet he gives his man. jumpSd: ticks off on the timing of a hand up.
 // fake: how often he pump-fakes a man closing out on his shot. bite: how readily he goes up for a fake (x the sell)
 export const LEVELS = {
-  rookie:  { label: 'ROOKIE',   jumpSd: 5, meterSd: 130, react: 14, contest: 0.28, steal: 0.06, help: 0.10, ev: 0.24, move: 0.20, gap: 1.8, fake: 0.05, bite: 1.3 },
+  // (the owner, 11-26: "CPU too good on Rookie": a new kid has to be able to beat him: loose on his release, slow to
+  // see it, few hands up, rare swipes, late help, poor shots, a big cushion)
+  rookie:  { label: 'ROOKIE',   jumpSd: 6, meterSd: 144, react: 15, contest: 0.24, steal: 0.05, help: 0.08, ev: 0.28, move: 0.18, gap: 2.0, fake: 0.04, bite: 1.4 },
   pro:     { label: 'PRO',      jumpSd: 3.5, meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0, fake: 0.12, bite: 1.0 },
   allstar: { label: 'ALL-STAR', jumpSd: 2.5, meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4, fake: 0.18, bite: 0.75 },
   legend:  { label: 'LEGEND',   jumpSd: 1.5, meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1, fake: 0.22, bite: 0.55 },
 }
 
 const roll = s => rollAt(s.seed ^ 0x5bd1e995, s.cn++)
+const ticks = sec => Math.max(1, Math.round(sec * GHZ))
 // (counts for the balance scripts: pump fakes a CPU defender read, and how many he went up for)
 export const CPU_STATS = { fakes: 0, bites: 0 }
 // (left: seconds before a frozen or floored man is back on his feet)
@@ -445,9 +448,18 @@ function postUp(s, p, m, lvl, out) {
 // going after a ball that's up or loose; true if he's handling it
 function chaseBall(s, p, m, lvl, out) {
   const b = s.ball
+  // his own shot: he doesn't follow every one (the owner, 11-26: "CPU grabs its own rebound every time"). Decided once a
+  // shot: a crasher goes (more often the better rebounder he is); else he lands, holds a beat and only then goes for it
+  if ((b.st === 'shot' || (b.st === 'loose' && b.reb)) && b.from === p.i) {
+    const key = s.possN * 4096 + Math.round(b.sx * 37 + b.sy)
+    if (m.crashKey !== key) { m.crashKey = key; m.crash = roll(s) < T.cpuCrash + T.cpuCrashReb * p.R.reb }
+    if (!m.crash && (b.st === 'shot' || b.t < ticks(T.cpuHold))) { out.mx = 0; out.my = 0; return true }
+  }
   if (b.st === 'shot') {
     // get inside position: bigs under it, guards a step out; a defender boxes out, between his man and the rim
     const man = p.team !== s.poss && p.man >= 0 ? s.players[p.man] : null
+    // a shot at the rim: the defender turns and goes to where it comes off (he's between the shooter and the glass)
+    if (man && b.from === man.i && (b.kind !== 'jumper' || (b.verdict?.d ?? 20) < 10)) { steer(p, b.tx, b.ty, out, 0.4); return true }
     if (man) {
       const ax = man.x - RIM.x, ay = Math.max(1, man.y - RIM.y), a = Math.hypot(ax, ay) || 1
       const r = clamp(a - 2.6, 3.0, 7.5)
