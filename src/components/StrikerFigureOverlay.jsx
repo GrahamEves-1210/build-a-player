@@ -348,8 +348,8 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
                 {EYES.map(([lash, [ix, iy, rx, ry], a, [sx, sy, srx, sry], crease, lower], n) => (
                   <g key={n} opacity={a}>
                     <ellipse cx={sx} cy={sy} rx={srx} ry={sry} transform={`rotate(13 ${sx} ${sy})`} fill={shadeOf(face, 0.12)} opacity="0.25" />
-                    <path className="st-eyeline" d={crease} fill="none" stroke={shadeOf(face, 0.1)} strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
-                    <path className="st-eyeline" d={lower} fill="none" stroke={shadeOf(face, 0.12)} strokeWidth="0.6" strokeLinecap="round" opacity="0.4" />
+                    <path className="st-eyeline" d={crease} fill="none" stroke={shadeOf(face, 0.08)} strokeWidth="1" strokeLinecap="round" opacity="0.75" />
+                    <path className="st-eyeline" d={lower} fill="none" stroke={shadeOf(face, 0.1)} strokeWidth="0.8" strokeLinecap="round" opacity="0.6" />
                     <ellipse cx={ix} cy={iy} rx={rx} ry={ry} transform={`rotate(13 ${ix} ${iy})`} fill={shadeOf(face, 0.05)} opacity="0.7" />
                     <path d={lash} fill={shadeOf(face, 0.06)} />
                   </g>
