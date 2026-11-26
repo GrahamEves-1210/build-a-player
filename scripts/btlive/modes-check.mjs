@@ -447,7 +447,10 @@ head('Dribble legs: every move costs some, a chained one more; tired legs make a
   void bk2
   const tired = h.sta
   for (let n = 0; n < Math.round(3.2 * 30); n++) step(s, idle(s))
-  ok(h.sta > tired + 0.6, `...and they come back with simple dribbling (${tired.toFixed(2)} to ${h.sta.toFixed(2)} in about 3 s)`)
+  const mid = h.sta
+  for (let n = 0; n < Math.round(5 * 30); n++) step(s, idle(s))
+  // (slower since 11-26: about 8 s empty to full, so a spammed handle stays tired for a while)
+  ok(mid < tired + 0.6 && h.sta > tired + 0.85, `...and they come back slowly with simple dribbling (${tired.toFixed(2)} to ${mid.toFixed(2)} in 3 s, ${h.sta.toFixed(2)} in 8 s)`)
   const fz = sta => ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta }, { x: 28, y: 26, vx: 0, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, 0.12, 1).freeze
   let a = 0, b = 0
   for (let i = 0; i < 100; i++) { const r = i / 100; if (ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta: 1 }, { x: 28, y: 26, vx: d.R.topDef, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, r, 1).freeze) a++; if (ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta: 0 }, { x: 28, y: 26, vx: d.R.topDef, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, r, 1).freeze) b++ }

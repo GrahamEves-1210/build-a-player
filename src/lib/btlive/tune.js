@@ -153,9 +153,9 @@ export const T = {
   dunkLow: 0.14,                     // ...and goes down this much less often open
   dunkChance: 0.9,                   // how often an able dunker dunks: (plain Bounce - dunkBounce) x this (x a touch more with Finishing)
   dunkBase: 0.90, dunkFin: 0.08,     // a dunk goes down 94-98% open
-  closeBase: -0.58, closeJs: 1.30,   // a jumper from 8 ft: 41% at Jump Shot 1, 72% at 11 (steep: spread is small, a non-shooter still can't shoot)
+  closeBase: -0.53, closeJs: 1.30,   // a jumper from 8 ft: 41% at Jump Shot 1, 72% at 11 (steep: spread is small, a non-shooter still can't shoot)
   arcBase: -0.66, arcJs: 1.20,       // a jumper from the arc (25 ft): 25% at Jump Shot 1, 54% at 11 (an 80: 39%)
-  arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
+  arcRef: 25, curve: 1.55,            // the distance those are measured at, and how the chance bends between 8 ft and there
   pastK: 0.16, pastJs: 0.06,         // every foot behind the three-point line: the chance x e^-(0.16 - 0.06 x Jump Shot) (range)
   setFeet: 0.16,
   setFeet3: 0.07,                    // ...and a three on the move this much more on top (owner 11-26: a moving three is harder)
@@ -263,7 +263,7 @@ export const T = {
   // the legs for it (the owner, 11-25: "slight stamina when dribbling ... so you can't spam them"): 1 full
   staMove: 0.2, staChain: 0.12,      // a move costs this, one chained straight off the last this much more...
   staSpin: 0.1,                      // ...a spin rolled out of a move this
-  staBack: 0.32,                     // back this much a second once he's off his moves (empty to full in about 3 s)
+  staBack: 0.13,                     // back this much a second once he's off his moves (empty to full in about 8 s; owner 11-26: it came back too fast)
   staFloor: 0.55,                    // at empty a move has this share of its burst and of its chance to freeze his man
   staLoose: 0.8,                     // ...and a swipe at the ball in it has up to this much more chance
   ankleBase: 0.02,                   // of the frozen ones, this share (x Handles and the lean) sit down: the ankle-breaker
