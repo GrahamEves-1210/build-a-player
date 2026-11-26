@@ -309,7 +309,7 @@ head('2v2: the call for the ball, the pass to the teammate')
   ok(passTarget(s, h, mate.x - s.players[h].x, mate.y - s.players[h].y) === mate.i && passTarget(s, h, -(mate.x - s.players[h].x), 0) === mate.i, 'the pass goes to his teammate (the only one), wherever the stick is')
   // the teammate calls: a person's call is a signal (the event and s.call); a CPU holder answers it when the lane is open
   let calls = 0, answered = 0, open = 0, openAns = 0
-  for (let g = 0; g < 400; g++) {
+  for (let g = 0; g < 800; g++) {
     const t = toLive(createGame({ teams: [[man('a0'), man('a1', 80, 'big')], [man('b0'), man('b1', 80, 'big')]], seed: `call-${g}` }))
     for (let n = 0; n < 20; n++) step(t, t.players.map((_, i) => cpuInput(t, i, 'pro')))
     if (t.phase !== 'live' || t.ball.st !== 'held') continue

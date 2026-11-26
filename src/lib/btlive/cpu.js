@@ -24,12 +24,14 @@ const JUMP_LEAD = 6                              // a hand goes up this many tic
 // contest: how often he gets a hand up on a shot. steal: swipes a second with the ball in reach. help: how often
 // he comes over when a teammate is beaten. ev: how far off his judgment of a shot is. move: how often he uses
 // a dribble move on a set defender. gap: extra feet he gives his man. jumpSd: ticks off on the timing of a hand up.
-// fake: how often he pump-fakes a man closing out on his shot. bite: how readily he goes up for a fake (x the sell)
+// fake: how often he pump-fakes a man closing out on his shot. bite: how readily he goes up for a fake (x the sell).
+// late: how often (a possession) he's slow to read the first step, seeing it lateReact ticks late instead (a Rookie
+// gets beat off the dribble now and then, not every time: owner 11-26 "you can just kinda run by the CPU")
 export const LEVELS = {
   // (the owner, 11-26: "CPU too good on Rookie": a new kid has to be able to beat him: loose on his release, slow to
   // see it, few hands up, rare swipes, late help, poor shots, a big cushion)
-  rookie:  { label: 'ROOKIE',   jumpSd: 6, meterSd: 144, react: 15, contest: 0.24, steal: 0.05, help: 0.08, ev: 0.28, move: 0.18, gap: 2.0, fake: 0.04, bite: 1.4 },
-  pro:     { label: 'PRO',      jumpSd: 3.5, meterSd: 90,  react: 10, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0, fake: 0.12, bite: 1.0 },
+  rookie:  { label: 'ROOKIE',   jumpSd: 6, meterSd: 144, react: 15, late: 0.3, lateReact: 22, contest: 0.24, steal: 0.05, help: 0.08, ev: 0.28, move: 0.18, gap: 2.0, fake: 0.04, bite: 1.4 },
+  pro:     { label: 'PRO',      jumpSd: 3.5, meterSd: 90,  react: 7, contest: 0.50, steal: 0.11, help: 0.25, ev: 0.15, move: 0.45, gap: 1.0, fake: 0.12, bite: 1.0 },
   allstar: { label: 'ALL-STAR', jumpSd: 2.5, meterSd: 62,  react: 6,  contest: 0.75, steal: 0.17, help: 0.45, ev: 0.08, move: 0.75, gap: 0.4, fake: 0.18, bite: 0.75 },
   legend:  { label: 'LEGEND',   jumpSd: 1.5, meterSd: 42,  react: 4,  contest: 0.92, steal: 0.22, help: 0.60, ev: 0.04, move: 0.92, gap: 0.1, fake: 0.22, bite: 0.55 },
 }
@@ -531,7 +533,8 @@ function defend(s, p, m, lvl, out) {
   // ...and later against a man who can shoot: he has to respect the jumper, so the first step gets on him a beat late
   // (a man who can't shoot gets played for the drive)
   // (a good on-ball defender, Perimeter D, sees it sooner; a poor one later)
-  const react = Math.max(1, Math.round(lvl.react * (1.25 - 0.5 * (p.R.perRaw ?? 0.5))) + Math.round((man.R.js - 0.55) * T.cpuRespect))
+  if (m.lateN !== s.possN) { m.lateN = s.possN; m.late = roll(s) < (lvl.late ?? 0) }
+  const react = Math.max(1, Math.round((m.late ? lvl.lateReact : lvl.react) * (1.25 - 0.5 * (p.R.perRaw ?? 0.5))) + Math.round((man.R.js - 0.55) * T.cpuRespect))
   while (hist.length > react * 4 + 4) hist.splice(0, 4)
   // ...and he reads where the man is going from it: a steady run is tracked, a change of direction is seen late
   const lead = (hist.length / 4 - 1) * DT + 0.08
@@ -603,6 +606,10 @@ function defend(s, p, m, lvl, out) {
     if (dRimM > 19 && man.R.js > 0.92 && ref.isThree(man.x, man.y)) gap = Math.min(gap, 2.3 + lvl.gap * 0.5)
     // a man coming at him with it: a step of cushion (so a first step doesn't go by him)
     if (Math.hypot(man.vx, man.vy) > 3 && (man.vx * ux + man.vy * uy) > 2 && dRimM > 8) gap += T.cpuCushion
+    // ...and a man going across him (a curl, an angle, the baseline): a step back to keep the angle, so he has to go
+    // round, not just past (the owner, 11-26: "you can just kinda run by the CPU")
+    const across = Math.abs(man.vx * -uy + man.vy * ux)
+    if (across > 2 && dRimM > 8 && man.burst <= 0 && !(man.boost > 0)) gap += T.cpuAngle * clamp((across - 2) / 6, 0, 1)
     if (man.act === 'gather') gap = 2.5
     // in the post: bodied up on him, between him and the rim; picked up: all over him (he can't go anywhere)
     if (man.post) gap = 3.05
