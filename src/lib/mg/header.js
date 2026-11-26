@@ -295,7 +295,7 @@ export function draw(ctx, g, view) {
   list.push({ z: kp.z, fn: () => manB(ctx, C, kp.x, kp.z, kp.pose, kp.front === false ? { ...gkLook, front: false } : gkLook, { lift: kp.lift ?? 0 }) })
   if (g.res === 'goal' && g.cel) {
     const sc = scorerAt(g.cel, age)
-    list.push({ z: sc.z, fn: () => manB(ctx, C, sc.x, sc.z, sc.pose, meLook, { lift: sc.lift, turn: sc.turn, name: g.who.me?.name }) })
+    list.push({ z: sc.z, fn: () => manB(ctx, C, sc.x, sc.z, sc.pose, meLook, { lift: sc.lift, turn: sc.turn }) })
     g.cel.mates.forEach((m, i) => { if (age < m.delay) return; const at = mateAt(g.cel, i, age, sc); list.push({ z: at.z, fn: () => manB(ctx, C, at.x, at.z, at.pose, dress(K.us, { number: [11, 7, 8, 14].filter(n => n !== meLook.number)[i], skin: ['#c09060', '#5e3c22', '#f0c4a0'][i] }), { lift: at.lift, turn: at.turn }) }) })
   } else {
     const me = meNow(g)

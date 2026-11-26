@@ -156,7 +156,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (goal) {
       g.popAt = g.t; g.fx.push('h:success'); g.nudge.kick(g.t, 2.5, 0, 1, 180)
       // away from the wall and back toward the bench on his side, to slide in front of it; his teammates after him
-      g.cel = celebration(`${seed}-fk`, { sit: g.sit, from: { x: bx - g.foot * 0.4, z: bz - 0.3 }, side: sgn, toward: { x: bx + sgn * 3.4, z: bz - 2.2 }, mates: [{ x: bx + sgn * 3, z: bz + 4, who: g.who.mates[0] }, { x: bx - sgn * 4, z: bz + 2, who: g.who.mates[1] }] })
+      g.cel = celebration(`${seed}-fk`, { sit: g.sit, from: { x: bx - g.foot * 0.4, z: bz - 0.3 }, side: sgn, toward: { x: bx + sgn * 3.4, z: bz - 2.2 }, mates: [{ x: bx + sgn * 13, z: bz + 5, who: g.who.mates[0] }, { x: bx - sgn * 12, z: bz + 3, who: g.who.mates[1] }, { x: bx - sgn * 14, z: bz - 3 }] })   // (three in from out of the picture: two from the box, one from the edge of it)
     } else g.fx.push(s.kind === 'saved' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g
@@ -273,7 +273,7 @@ export function draw(ctx, g, view) {
   const men = [{ z: sp.z, fn: () => man(ctx, C, sp.x, sp.z, sp.pose, dress(K.us, g.who.me ?? { number: 10, skin: '#8d5a3b' }), { name: g.res ? null : g.who.me?.name, lift: sp.lift ?? 0, turn: sp.turn ?? 0 }) }]
   if (g.res === 'goal') for (let i = 0; i < g.cel.mates.length; i++) {
     const m = mateAt(g.cel, i, g.t - g.endAt)
-    men.push({ z: m.z, fn: () => man(ctx, C, m.x, m.z, m.pose, dress(K.us, g.cel.mates[i].who ?? { number: i ? 7 : 8, skin: i ? '#f0c4a0' : '#5e3c22' }), { lift: m.lift, turn: m.turn }) })
+    men.push({ z: m.z, fn: () => man(ctx, C, m.x, m.z, m.pose, dress(K.us, g.cel.mates[i].who ?? { number: [8, 7, 11, 14].filter(n => n !== (g.who.me?.number ?? 10) && !g.who.mates?.some(w => w?.number === n))[i], skin: ['#5e3c22', '#f0c4a0', '#c09060'][i] }), { lift: m.lift, turn: m.turn }) })
   }
   if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
   men.sort((p, q) => q.z - p.z); for (const m of men) m.fn()
