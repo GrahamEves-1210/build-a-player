@@ -83,10 +83,9 @@ const CardBack = () => <div className="au-card-back"><span>BAP</span></div>
 // it winds back, comes down on the block, bounces, and lifts away again
 function Gavel() {
   return (
-    <span className="au-hammer" aria-hidden="true">
-      <img className="au-hammer-block" src="/fx/gavel-block.webp" alt="" draggable={false} />
-      <img className="au-hammer-head" src="/fx/gavel-hammer.webp" alt="" draggable={false} />
-      <i className="au-hammer-hit" />
+    <span className="gv-swing au-hammer is-hit" aria-hidden="true">
+      <img className="gv-block" src="/fx/gavel-block.webp" alt="" draggable={false} />
+      <img className="gv-head" src="/fx/gavel-hammer.webp" alt="" draggable={false} />
     </span>
   )
 }
@@ -238,12 +237,6 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   )
 
   // the build strip: the five slots, what's in them and what it cost
-  // the draw: my slots it deals turn up with their cards, not before
-  const dealtAt = {}
-  if (st.stage === 'draw' && st.draw) {
-    let k = 0
-    for (const p of m.players) for (const t of Object.keys(st.draw.cards[p.vid] ?? {})) { if (p.vid === mine) dealtAt[t] = 700 + k * DRAW_STEP_MS; k++ }
-  }
   const mySlots = (
     <div className="au-mine">
       <div className="au-mine-head">
@@ -255,7 +248,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           const w = L.won[mine]?.[t]
           const up = !w && onBlock && lot.trait === t
           return (
-            <div key={t} className={`au-cell${w ? ' is-in' : ''}${w?.drawn ? ' is-drawn' : ''}${up ? ' is-up' : ''}${dealtAt[t] != null ? ' is-dealt' : ''}`} style={w ? { '--g': gradeColor(w.val), '--at': `${(dealtAt[t] ?? 0) + 550}ms` } : undefined} title={w ? `${kit.attrLabel(t)}: ${w.name}` : kit.attrLabel(t)}>
+            <div key={t} className={`au-cell${w ? ' is-in' : ''}${w?.drawn ? ' is-drawn' : ''}${up ? ' is-up' : ''}`} style={w ? { '--g': gradeColor(w.val) } : undefined} title={w ? `${kit.attrLabel(t)}: ${w.name}` : kit.attrLabel(t)}>
               <span className="au-cell-t">{shortLabel(kit.attrLabel(t))}</span>
               <b className="au-cell-g">{w ? valToGrade(w.val) : '—'}</b>
               <span className="au-cell-n">{w ? lastName(w.name) : up ? 'UP NOW' : 'OPEN'}</span>
@@ -274,47 +267,66 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
     </div>
   )
 
-  // ── the draw: one bidder filled his build, the rest of the room's open slots are dealt ──
+  // ── the draw: one bidder filled his build; every other bidder's open slots get a random card each. His build
+  // small up top; the rest of the room's builds are the show, their bought cards face up and the draw turning over ──
   if (st.stage === 'draw' && st.draw) {
     const by = nameOf(st.draw.by)
+    const face = (t, c, extra) => {
+      const src = kit.photo(c.name, c.team)
+      return (
+        <span className="au-dcard-face">
+          <small>{shortLabel(kit.attrLabel(t))}</small>
+          <span className="au-dcard-pic">{src ? <img src={src} alt="" draggable={false} /> : <img className="is-logo" src={kit.crest ? kit.crest(c.name, c.team) : kit.logo(c.team)} alt="" draggable={false} />}</span>
+          <b>{valToGrade(c.val)}</b>
+          <i>{lastName(c.name)}</i>
+          {extra}
+        </span>
+      )
+    }
     let k = 0
+    const rest = m.players.filter(p => p.vid !== st.draw.by && !L.out.includes(p.vid))
     return (
       <div className="au-floor is-draw">
-        {top(`ROOM ${m.code} · ${m.players.length} PLAYERS`)}
-        <div className="au-main">
-          <div className="au-draw ag-pop">
-            <span className="au-lbl">THE DRAW</span>
-            <b className="au-draw-head">{by ? <Name p={by} me={mine} /> : 'A bidder'} filled his build</b>
-            <span className="au-draw-sub">Every open slot left gets a random card</span>
-            <div className="au-draw-rows">
-              {m.players.filter(p => st.draw.cards[p.vid]).map(p => (
+        {top(`ROOM ${m.code} · THE DRAW`)}
+        <div className="au-draw ag-pop">
+          <div className="au-draw-top">
+            <span className="au-draw-head">{by ? <Name p={by} me={mine} /> : 'A bidder'} filled his build</span>
+            <span className="au-draw-chips" aria-label="His build">
+              {m.types.map(t => { const w = L.won[st.draw.by]?.[t]; return <i key={t} style={{ '--g': gradeColor(w?.val ?? 0) }}>{shortLabel(kit.attrLabel(t))} <b>{w ? valToGrade(w.val) : '–'}</b></i> })}
+            </span>
+          </div>
+          <span className="au-draw-sub">{rest.length > 1 ? 'Everyone else' : 'The rest of the room'}: every open slot gets a random card</span>
+          <div className="au-draw-rows">
+            {rest.map(p => {
+              const got = st.draw.cards[p.vid] ?? {}
+              const n = Object.keys(got).length
+              return (
                 <div key={p.vid} className={`au-draw-row${p.vid === mine ? ' is-me' : ''}`}>
-                  <span className="au-draw-who"><Pic p={p} me={mine} size={24} /><Name p={p} me={mine} /></span>
+                  <span className="au-draw-who"><Pic p={p} me={mine} size={24} /><Name p={p} me={mine} /><small>{n ? `${n} FROM THE DRAW` : 'BUILD FULL'} · ${L.wallets[p.vid]} LEFT</small></span>
                   <span className="au-draw-cards">
-                    {Object.entries(st.draw.cards[p.vid]).map(([t, c]) => {
-                      const at = 700 + (k++) * DRAW_STEP_MS
-                      const src = kit.photo(c.name, c.team)
-                      return (
-                        <span key={t} className="au-dcard" style={{ '--at': `${at}ms`, '--g': gradeColor(c.val), '--tc': kit.teamColor(c.team, c.name) }}>
-                          <span className="au-dcard-in">
-                            <span className="au-dcard-back"><span>BAP</span></span>
-                            <span className="au-dcard-face">
-                              <small>{shortLabel(kit.attrLabel(t))}</small>
-                              <span className="au-dcard-pic">{src ? <img src={src} alt="" draggable={false} /> : <img className="is-logo" src={kit.crest ? kit.crest(c.name, c.team) : kit.logo(c.team)} alt="" draggable={false} />}</span>
-                              <b>{valToGrade(c.val)}</b>
-                              <i>{lastName(c.name)}</i>
-                            </span>
+                    {m.types.map(t => {
+                      const c = got[t]
+                      const w = L.won[p.vid]?.[t]
+                      if (c) {
+                        const at = 700 + (k++) * DRAW_STEP_MS
+                        return (
+                          <span key={t} className="au-dcard is-dealt" style={{ '--at': `${at}ms`, '--g': gradeColor(c.val), '--tc': kit.teamColor(c.team, c.name) }}>
+                            <span className="au-dcard-in"><span className="au-dcard-back"><span>?</span></span>{face(t, c, <em>DRAW</em>)}</span>
                           </span>
+                        )
+                      }
+                      return w ? (
+                        <span key={t} className="au-dcard is-bought" style={{ '--g': gradeColor(w.val), '--tc': kit.teamColor(w.team, w.name) }}>
+                          <span className="au-dcard-in">{face(t, w, <em>${w.price}</em>)}</span>
                         </span>
-                      )
+                      ) : <span key={t} className="au-dcard is-empty" />
                     })}
                   </span>
                 </div>
-              ))}
-            </div>
+              )
+            })}
           </div>
         </div>
-        <div className="au-side">{mySlots}</div>
       </div>
     )
   }
@@ -348,12 +360,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   else if (sold) act = note(myDone ? 'Build done' : st.sold ? 'Next card coming up' : 'Back in the deck · next card coming up')
   else if (!mayBid) act = note(L.won[mine]?.[lot.trait] ? `${kit.attrLabel(lot.trait)} filled · watching this one` : 'Out of money for this one')
   else if (spinning) act = note(lot.known ? 'Back up, grade showing · bidding opens' : 'Bidding opens when the card turns')
-  else if (high?.vid === mine) act = (
-    <div className="au-act au-act--lead">
-      <span className="au-act-lead"><small>HIGH BIDDER</small><NameTag name={me.name} self /></span>
-      <b>${high.amount}</b>
-    </div>
-  )
+  else if (high?.vid === mine) act = note(`Holding at $${high.amount}`, ' is-lead')
   else if (passed) act = note('Out on this one')
   else if (nextBid > myMax) act = note(`Can't top $${high?.amount} · max bid $${myMax}`)
   else act = (

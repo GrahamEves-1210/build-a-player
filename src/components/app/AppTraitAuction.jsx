@@ -2,10 +2,10 @@ import { lazy, Suspense } from 'react'
 import { usePresence, fmtCount } from '../../lib/presence'
 import { useLiveCounts, searching } from '../../lib/liveCounts'
 import { XpIco } from './GainIcons'
-import { COMPETE_REWARDS } from '../../lib/progress'
+import { COMPETE_REWARDS, useProgress } from '../../lib/progress'
 import { IconClose, IconArrow } from './icons'
-import OnlineRecord from './OnlineRecord'
-import { AUCTION_SIZE, BUDGET } from '../../lib/auction'
+import { Form, TierChip } from './OnlineRecord'
+import { AUCTION_SIZE, BUDGET, auctionKit } from '../../lib/auction'
 import { guardLeave } from '../../lib/liveLock'
 const AppAuction = lazy(() => import('./AppAuction'))
 
@@ -15,13 +15,29 @@ const AppAuction = lazy(() => import('./AppAuction'))
 
 const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
 
-// the gavel, raised over its block (public/fx: the hammer and the block, cut from one picture)
+// the gavel, raised over its block (public/fx: the hammer and the block, cut from one picture). Its box is the
+// whole swing (-12° back to 45° down, measured off the picture's own pixels): the art sits 27% in and 8% down, so the
+// hammer never leaves the box at any point of the swing
 export const GavelMark = ({ className = '' }) => (
-  <span className={`au-mark ${className}`} aria-hidden="true">
-    <img className="au-mark-block" src="/fx/gavel-block.webp" alt="" draggable={false} />
-    <img className="au-mark-head" src="/fx/gavel-hammer.webp" alt="" draggable={false} />
+  <span className={`gv-swing ${className}`} aria-hidden="true">
+    <img className="gv-block" src="/fx/gavel-block.webp" alt="" draggable={false} />
+    <img className="gv-head" src="/fx/gavel-hammer.webp" alt="" draggable={false} />
   </span>
 )
+
+// the auction record, one flat line: played, wins, average place, the last few places
+function AuctionRecord() {
+  const c = useProgress().stats?.compete ?? {}
+  const avg = c.played ? (c.placeSum / c.played).toFixed(1) : '–'
+  return (
+    <div className="au-rec">
+      <span className="au-rec-n"><b>{c.played ?? 0}</b><small>PLAYED</small></span>
+      <span className="au-rec-n"><b>{c.wins ?? 0}</b><small>WINS</small></span>
+      <span className="au-rec-n"><b>{avg}</b><small>AVG PLACE</small></span>
+      <span className="au-rec-form"><Form items={c.recent ?? []} mode="compete" /></span>
+    </div>
+  )
+}
 
 export default function AppTraitAuction({ au, sport, position, positions, onPosition, onHome }) {
   const live = au.phase !== 'idle'
@@ -32,6 +48,7 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
   const sportKey = isBucket ? 'bucket' : sport === 'soccer' ? 'soccer' : 'nfl'
   const sportName = { bucket: 'BASKETBALL', soccer: 'SOCCER', nfl: 'FOOTBALL' }[sportKey]
   const posName = positions.find(o => o.pos === position)?.label ?? position.toUpperCase()
+  const prog = useProgress()
 
   let body
   if (au.phase === 'busy') {
@@ -46,39 +63,69 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
   } else if (live) {
     body = <Suspense fallback={null}><AppAuction au={au} posName={posName} onHome={onHome} onPlayAgain={() => au.join()} /></Suspense>
   } else {
-    body = (
-      <>
-        <div className="au-intro ag-pop">
-          <GavelMark />
-          <div className="au-intro-txt">
-            <div className="au-intro-head">
-              <span className="ag-eyebrow">ONLINE · 2–3 PLAYERS · ${BUDGET} EACH</span>
-              {here > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(here)}<small>PLAYING</small></span>}
+    body = null
+  }
+  const rating = prog.stats?.online?.rating ?? 800
+
+  // the lobby: Blacktop's hub (AppBlacktop BlacktopHubView): the name big on a full-bleed header, the positions as
+  // one list, one button, the record on one line, the prizes and the rules under it
+  if (!live && au.phase !== 'busy') {
+    return (
+      <div className={`ag-screen cp au-screen au-hub cp--${sportKey}`}>
+        <header className="au-hub-stage">
+          <div className="au-hub-in">
+            <div className="au-hub-top">
+              <span className="au-hub-eyebrow">{sportName} · ONLINE · 2–3 PLAYERS</span>
+              <button className="ag-round-btn au-hub-x" onClick={onHome} aria-label="Home"><IconClose size={16} /></button>
             </div>
-            <ol className="au-rules">
+            <h1 className="au-hub-title">Trait{' '}<br />Auction</h1>
+            <div className="au-hub-foot">
+              {here > 0 && <span className="au-hub-on"><i aria-hidden="true" /><b>{fmtCount(here)}</b>PLAYING</span>}
+              <button className="au-hub-rating" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'online' }))}>
+                <small>ONLINE RATING</small><TierChip rating={rating} /><b>{rating}</b><IconArrow size={13} />
+              </button>
+            </div>
+          </div>
+          <GavelMark className="au-hub-gavel" />
+        </header>
+        <div className="au-hub-body">
+          <div className="au-hub-main">
+            {positions.length > 1 ? (
+              <div className="au-hub-pos" role="radiogroup" aria-label="Position">
+                {positions.map(o => {
+                  const on = o.pos === position
+                  const n = searching(waiting, `au:${sportKey}-${o.pos}`)
+                  const k = auctionKit(sportKey, o.pos)
+                  return (
+                    <button key={o.pos} role="radio" aria-checked={on} className={`au-hub-row${on ? ' is-on' : ''}`} onClick={() => onPosition(o.pos)}>
+                      <b className="au-hub-tag">{o.label}</b>
+                      <span className="au-hub-line">{k.types.map(t => k.attrLabel(t)).join(' · ')}{n && <em><i aria-hidden="true" />{n} SEARCHING</em>}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="au-hub-pos"><div className="au-hub-row is-on is-only"><b className="au-hub-tag">{posName}</b><span className="au-hub-line">{au.kit.types.map(t => au.kit.attrLabel(t)).join(' · ')}</span></div></div>
+            )}
+            <button className="ag-btn au-hub-go" onClick={() => au.join()}>FIND AN AUCTION <IconArrow size={18} /></button>
+            <AuctionRecord />
+          </div>
+          <div className="au-hub-side">
+            <div className="au-hub-sec"><span>PRIZES</span></div>
+            <div className="au-prizes">
+              {Array.from({ length: AUCTION_SIZE }, (_, i) => i + 1).map(n => (
+                <span key={n} className="au-prize"><b>{ord(n)}</b><span className="gain"><XpIco /> +{COMPETE_REWARDS[n][0]}</span><span className="gain"><span className="coin-ico coin-ico--sm" /> +{COMPETE_REWARDS[n][1]}</span></span>
+              ))}
+            </div>
+            <div className="au-hub-sec"><span>HOW IT WORKS</span></div>
+            <ol className="au-how">
               <li><b>1</b>5 slots · ${BUDGET} to fill them</li>
               <li><b>2</b>Highest bid wins the card</li>
               <li><b>3</b>Fill first, the rest get random cards</li>
             </ol>
           </div>
         </div>
-        {positions.length > 1 && <div className="cp-pos ag-pop" style={{ '--d': '80ms' }} role="tablist" aria-label="Position">
-          {positions.map(o => {
-            const n = searching(waiting, `au:${sportKey}-${o.pos}`)
-            return (
-              <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => onPosition(o.pos)}>
-                {n && <span className="cp-pos-n">{n} SEARCHING</span>}
-                <span className="ag-pos-label">{o.label}</span>
-              </button>
-            )
-          })}
-        </div>}
-        <button className="ag-btn cp-go ag-pop" style={{ '--d': '120ms' }} onClick={() => au.join()}>FIND AN AUCTION <IconArrow size={16} /></button>
-        <OnlineRecord mode="compete" title="AUCTION RECORD" />
-        <div className="cp-rewards ag-pop" style={{ '--d': '200ms' }}>
-          {Array.from({ length: AUCTION_SIZE }, (_, i) => i + 1).map(n => <span key={n}><b>{ord(n)}</b><span className="gain"><XpIco /> +{COMPETE_REWARDS[n][0]}</span><span className="gain"><span className="coin-ico coin-ico--sm" /> +{COMPETE_REWARDS[n][1]}</span></span>)}
-        </div>
-      </>
+      </div>
     )
   }
 

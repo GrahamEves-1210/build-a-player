@@ -303,12 +303,15 @@ function Rafters({ career, sport = null }) {
   )
 }
 // Trait Auction: the gavel (public/fx, the hammer and its block cut from one picture, so they line up),
-// the hammer up over the block, and the lot on the block: a card, its grade face down
+// the hammer up over the block, and the lot beside it: a card, its grade face down
 const GavelArt = () => (
   <span className="ag-gavel" aria-hidden="true">
     <span className="ag-gavel-lot"><b>?</b><small>GRADE</small></span>
-    <img className="ag-gavel-block" src="/fx/gavel-block.webp" alt="" loading="lazy" decoding="async" draggable={false} />
-    <img className="ag-gavel-head" src="/fx/gavel-hammer.webp" alt="" loading="lazy" decoding="async" draggable={false} />
+    {/* (the gavel's box holds its whole swing: app-game.css .gv-swing) */}
+    <span className="gv-swing">
+      <img className="gv-block" src="/fx/gavel-block.webp" alt="" loading="lazy" decoding="async" draggable={false} />
+      <img className="gv-head" src="/fx/gavel-hammer.webp" alt="" loading="lazy" decoding="async" draggable={false} />
+    </span>
   </span>
 )
 // Squad Builder, football: the whole team, one at each position, side by side
