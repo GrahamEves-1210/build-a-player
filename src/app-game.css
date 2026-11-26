@@ -1621,7 +1621,7 @@ html.is-bucket .ag-edge { background: rgba(12,8,5,.95); }
   display: grid; place-items: center; overflow: hidden;
   padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bottom) + 20px);
   background:
-    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--tc) 55%, transparent), transparent 55%),
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--tc, #d4af37) 55%, transparent), transparent 55%),   /* (no --tc, the honor overlay: without a fallback the whole background was dropped and the page showed through) */
     radial-gradient(circle at 50% 42%, rgba(212,175,55,.25), transparent 70%),
     #040504;
   animation: ag-fade .35s ease both;

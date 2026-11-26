@@ -504,10 +504,10 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       if (ctx.skid === 0) D.headlines = D.headlines.filter(h => h.run !== 'skid' || h.at < k - 4)
       if (ctx.streak >= 3 && ctx.streak % 2 === 1) D.headlines.push({ at: k, run: 'streak', text: headlineFor({ type: 'streak', name, team: teamNick, n: ctx.streak, soccer: isSoccer }, r) })
       else if (ctx.skid >= 3 && ctx.skid % 2 === 1) D.headlines.push({ at: k, run: 'skid', text: headlineFor({ type: 'skid', name, team: teamNick, n: ctx.skid, soccer: isSoccer }, r) })
-      else if (BIG_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'big', name, team: teamNick, opp, label: GAME_LINE[pos]?.(g) ?? '', pos, gw: !!g.gw }, r) })
-      else if (!g.won && BUST_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'bust', name, team: teamNick, opp, pos }, r) })
+      else if (BIG_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'big', name, team: teamNick, opp, label: GAME_LINE[pos]?.(g) ?? '', pos, gw: !!g.gw, soccer: isSoccer }, r) })
+      else if (!g.won && BUST_GAME[pos]?.(g)) D.headlines.push({ at: k, text: headlineFor({ type: 'bust', name, team: teamNick, opp, pos, soccer: isSoccer }, r) })
     }
-    for (const f of fresh) if (!f.quiet) D.headlines.push({ at: k, text: headlineFor({ type: f.record ? 'record' : 'milestone', name, team: teamNick, label: f.label }, r) })
+    for (const f of fresh) if (!f.quiet) D.headlines.push({ at: k, text: headlineFor({ type: f.record ? 'record' : 'milestone', name, team: teamNick, opp, label: f.label, soccer: isSoccer }, r) })
     const need = X?.lines ? X.lines.clinch : isBucket ? 50 : 10, left = total - k
     if (isSoccer) return fresh   // (no playoff line to clinch: the table says it)
     if (!D.seen.has('clinch') && ctx.wins >= need) { D.seen.add('clinch'); D.headlines.push({ at: k, text: headlineFor({ type: 'clinch', name, team: teamNick }, r) }) }

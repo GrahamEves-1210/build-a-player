@@ -435,7 +435,7 @@ function Model({ c, devPick }) {
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : () => tellWhy(t)} role="button">
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
-        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed && !work && !heldNow ? <em className="cr-trait-max">MAXED</em> : winTag ?? (specialtyOf(c)?.traits?.includes(t) ? <em className="cr-trait-win">SPECIALTY</em> : null)}</span>
+        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{(c.sport === 'soccer' ? ch?.qb : null) || nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed && !work && !heldNow ? <em className="cr-trait-max">MAXED</em> : winTag ?? (specialtyOf(c)?.traits?.includes(t) ? <em className="cr-trait-win">SPECIALTY</em> : null)}</span>
         <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{valToGrade(ch?.val ?? 0)}{price ? ` · ${cost} PTS` : ''}</span>
       </div>
     )
@@ -646,7 +646,7 @@ function Draft({ c, setCareer }) {
           ) : (
             <div className="cr-q ag-pop">
               {soccer
-                ? <p className="cr-q-text">The meetings are done. The scouts have {c.name} down as <b>{stockText(c).toLowerCase()}</b>{keenLine(c, list, teamName)}</p>
+                ? <p className="cr-q-text">The meetings are done. The scouts have {c.name} down as {/^[aeiou]/i.test(stockText(c)) ? 'an' : 'a'} <b>{stockText(c).toLowerCase()}</b>{keenLine(c, list, teamName)}</p>
                 : <p className="cr-q-text">The interviews are done. {c.name} is projected to go <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => !talkSkipped(x) && x.a[x.answer]?.stock > 0).map(x => nick(teamName(x.team))), skipped = list.filter(talkSkipped).map(x => nick(teamName(x.team))), and = l => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}` : l[0]); return `${fans.length ? `. The ${and(fans)} came away the most interested.` : '. No team came away sold, so it comes down to need.'}${skipped.length ? ` He skipped the ${and(skipped)}.` : ''}` })()}</p>}
               <button className="ag-btn ag-btn--gold tk-intro-go" onClick={async () => { if (c.sport === 'nfl') await loadDraftClass(); setCareer(runDraft({ ...c, step: 'day', ...(canPickTeam && draftTo ? { draftTeam: draftTo } : null) })); setStep(soccer ? 'offers' : 'day'); setShown(0); sfx('whistle') }}>{soccer ? 'THE OFFERS' : 'DRAFT DAY'} <IconArrow size={16} /></button>
             </div>
@@ -913,7 +913,7 @@ function PressCard({ c, q, onAnswer }) {
       <div className="cr-q-opts">{q.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => onAnswer(k, a)}>{a.t}</button>)}</div>
       <button className="ag-btn ag-btn--ghost cr-q-skip" onClick={() => onAnswer(-1, null)}>NO COMMENT</button>
       {/* (his first one: what an answer is worth) */}
-      {!c.press && <p className="cr-note">The coaches and the locker room read what he says. An answer can move his reputation or the team around him.</p>}
+      {!c.press && <p className="cr-note">The coaches and the {S.isSoccer ? 'dressing room' : 'locker room'} read what he says. An answer can move his reputation or the team around him.</p>}
     </div>
   )
 }
@@ -1115,7 +1115,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               <div className="sm-moment cr-injury ag-pop">
                 <span className="ag-eyebrow">INJURY · {S.gameWord} {weekOfGame(c, a.k)}</span>
                 <h3 className="sm-moment-title">{a.injury.kind}</h3>
-                <p className="sm-moment-body">{a.injury.serious ? `The trainers don't need a second look. ${c.name}'s season is over.` : `The doctors say ${a.injury.games} ${a.injury.games === 1 ? unitOne : unitMany}. ${c.name} could play through it: not at his best for longer, and it can get worse.`}</p>
+                <p className="sm-moment-body">{a.injury.serious ? `The ${S.isSoccer ? 'medical staff' : 'trainers'} don't need a second look. ${c.name}'s season is over.` : `The doctors say ${a.injury.games} ${a.injury.games === 1 ? unitOne : unitMany}. ${c.name} could play through it: not at his best for longer, and it can get worse.`}</p>
                 <div className="sm-options">
                   <button className="sm-option" onClick={() => injury(false)}><b>{a.injury.serious ? 'Shut it down' : `Sit out ${a.injury.games} ${a.injury.games === 1 ? unitOne : unitMany}`}</b><small>Heal up. The {S.isSoccer ? 'club' : 'team'} plays on without him.</small></button>
                   {!a.injury.serious && <button className="sm-option" onClick={() => injury(true)}><b>Play through it</b><small>Two traits down for {a.injury.games + 2} {unitMany}. 35% it gets worse. Costs durability.</small></button>}
@@ -1632,7 +1632,7 @@ function RetireButton({ c, setCareer, forced }) {
   const go = () => { setAsk(false); setCareer(retire(c)); victory({ big: true }) }
   return <>
     <button className={`ag-btn${forced ? ' ag-btn--gold tk-intro-go' : ' ag-btn--ghost'}`} onClick={() => { if (forced) go(); else { setAsk(true); sfx('tap') } }}>{forced ? 'HANG IT UP' : 'RETIRE'}</button>
-    {ask && <AskSheet eyebrow="RETIREMENT" title={`Retire ${c.name}?`} body={c.unretired ? 'This time it\'s for good: there\'s no second comeback. The legacy and the Hall of Fame vote are final.' : 'The career is booked and the legacy is final.'} yes="RETIRE" no="KEEP PLAYING" onYes={go} onNo={() => setAsk(false)} />}
+    {ask && <AskSheet eyebrow="RETIREMENT" title={`Retire ${c.name}?`} body={c.unretired ? `This time it's for good: there's no second comeback. The legacy${c.sport === 'soccer' ? ' is' : ' and the Hall of Fame vote are'} final.` : 'The career is booked and the legacy is final.'} yes="RETIRE" no="KEEP PLAYING" onYes={go} onNo={() => setAsk(false)} />}
   </>
 }
 // The answer to a trade demand, right away: the new team, or a no
@@ -1721,7 +1721,7 @@ function Camp({ c, setCareer }) {
     <div className="ag-card cr-camp ag-pop">
       <span className="ag-eyebrow">{c.sport === 'soccer' ? 'PRE-SEASON' : 'TRAINING CAMP'} · {gameTitle(c, game)}</span>
       {done
-        ? <p className="cr-note">{(done.won ?? done.bonus) ? <>Won the drill in front of the coaches: <span className="gain">+{done.legacy ?? 0} <LegacyIco /> legacy</span>{done.bonus ? ', and +1 development point.' : '. No development point this time.'}</> : 'Lost the drill. Nothing this year.'}</p>
+        ? <p className="cr-note">{(done.won ?? done.bonus) ? <>Won the drill in front of the coaches: <span className="gain">+{done.legacy ?? 0} <LegacyIco /> legacy</span>{done.bonus ? ', and +1 development point.' : '. No development point this time.'}</> : c.sport === 'soccer' ? 'The drill got away from him in front of the coaches. Nothing extra this year.' : 'Lost the drill. Nothing this year.'}</p>
         : <>
             <p className="cr-note">One hard drill in front of the coaching staff. Win it for <span className="gain">+{CAMP_LEGACY} <LegacyIco /> legacy</span> and {sportOf(c).isSoccer || sportOf(c).isBaseball ? 'a shot at a development point (the cleaner the win, the better the shot)' : 'a development point'}.</p>
             <CareerGame c={c} setCareer={setCareer} retry empty team={c.fit} opp={c.fit} pos={combinePos(c)} cast={gameCast(c)} key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} lock={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game, res.hit))} />

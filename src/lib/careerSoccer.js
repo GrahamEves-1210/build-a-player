@@ -384,7 +384,7 @@ export function signAcademy(c, o) {
     ...c, phase: 'preseason', step: null, team: o.team, roster, fit, europeFor: null,
     contract: { kind: 'rookie', years: o.years, left: o.years, perYear: o.perYear, ...clausesFor(c, { team: o.team, kind: 'academy' }, soccerValue({ ...c, contract: { left: o.years } })) },
     draft: { ...c.draft, pick: { team: o.team, tier: c.draft.tier ?? academyText(c) } },
-    decisions: [...c.decisions, { year: 1, text: `Signed a first professional contract with ${fit.name}${o.met ? ' (they interviewed him)' : ''}: ${o.years} yrs, ${wageText(o.perYear, o.team)}` }],
+    decisions: [...c.decisions, { year: 1, text: `Signed a first professional contract with ${fit.name}${o.met ? ' after sitting down with their coaches' : ''}: ${o.years} yrs, ${wageText(o.perYear, o.team)}` }],
   }
 }
 

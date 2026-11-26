@@ -2740,7 +2740,8 @@ export function advanceWeek(c, D) {
     const ab = S.isBucket ? allStarBeat({ ...c, active: { ...a, ...beats } }, D, k) : null
     if (ab) { for (const x of ab.notes ?? []) told.push({ k, ...x }); Object.assign(beats, ab.set ?? {}); if (ab.stop) halt = true }
     if (S.step === 1) feed.push({ k, g, hits, headline })
-    else { chunk.games.push(g); chunk.hits.push(...hits); chunk.headline.push(...headline) }
+    // (a run's headline the next game ended goes too: D.observe drops it, and 'without a win in 3' sat over a W)
+    else { chunk.games.push(g); chunk.hits.push(...hits); chunk.headline = [...chunk.headline.filter(t => D.headlines.some(h => h.text === t)), ...headline] }
     last = { g, hits }
     // an injury: the body, the age and a little luck
     const r = seeded(`${c.seed}-inj-${c.year}-${k}`)
@@ -4590,8 +4591,9 @@ export function compsFor(c, n = 5, prime = false) {
     if (k < c.types.length - 1) return
     const dist = d / k
     const prev = best.get(p.name)
-    if (!prev || dist < prev.dist || (dist === prev.dist && era === 'current')) best.set(p.name, { name: p.name, team: p.team, years: p.years ?? null, era, dist, attrs: p.attrs, photo: p.headshot ? nflHeadshot(p.headshot) : S.photo(p.name) })
+    if (!prev || dist < prev.dist || (dist === prev.dist && era === 'current' && prev.era !== 'current')) best.set(p.name, { name: p.name, team: p.team, years: p.years ?? null, era, dist, attrs: p.attrs, photo: p.headshot ? nflHeadshot(p.headshot) : S.photo(p.name) })
   }
+  // (soccer: a man in both pools is shown at his club, not his country: Saibari 'TODAY · MAR' read as Marseille)
   for (const p of (S.x?.compPool ?? S.pool[c.pos]) ?? []) consider(p, 'current')
   for (const p of ALL_TIME_POOL[c.pos] ?? []) consider(p, S.x?.compPool ? 'current' : 'all-time')
   return [...best.values()].sort((a, b) => a.dist - b.dist).slice(0, n).map(x => ({ ...x, match: Math.max(0, Math.round(100 - x.dist * 9)) }))

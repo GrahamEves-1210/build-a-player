@@ -540,6 +540,9 @@ const SC_CP = [60, 72, 85]
 const scMinutes = k => (k === 0 ? [56, 59, 62, 64] : k === 1 ? [68, 70, 73, 76] : [82, 84, 86, 88, 90, 92])
 // (a two-legged tie: the moment in the first leg about a third of the time, in the second the rest)
 const SC_LEG1 = 0.35
+// (the tie is still on at the hour mark, two goals in it at most: before 2026-11-25 a moment could come with the tie gone,
+// 0-5 down on aggregate, and finish 0-9)
+const SC_OPEN = 2
 function scModel(ctx) {
   const { pool, used, hOf, legs, home } = ctx
   const d = solve(x => scFull(x, legs, home), ctx.pGame, -1.5, 1.5)
@@ -558,22 +561,27 @@ function scModel(ctx) {
     let M = new Map([[0, 1]])
     if (legs === 2 && leg === 2) M = scDelta(L1.u * 90, L1.t * 90)
     const init = new Map()
-    for (const [m, p] of convD(M, scDelta(Lc.u * SC_CP[0], Lc.t * SC_CP[0]))) add(init, `${leg}|${m}`, p)
+    for (const [m, p] of convD(M, scDelta(Lc.u * SC_CP[0], Lc.t * SC_CP[0]))) if (inR(m, -SC_OPEN, SC_OPEN)) add(init, `${leg}|${m}`, p)
+    const tot = [...init.values()].reduce((s, p) => s + p, 0)
+    for (const [k, p] of init) init.set(k, p / tot)
     const kern = mins => { const D = scDelta(Lc.u * mins, Lc.t * mins); return memoK(key => { const m = Number(key.split('|')[1]); return [...D].map(([x, p]) => [`${leg}|${m + x}`, p]) }) }
     return { init, kernels: [kern(SC_CP[1] - SC_CP[0]), kern(SC_CP[2] - SC_CP[1])] }
   }
   const E = (dp, h) => LEGS.reduce((s, [leg, w]) => { const { init, kernels } = build(dp, leg); return s + w * expectOf(landing(init, kernels, branchesOf), branchesOf, h) }, 0)
   const goals = (r, lam) => { let n = 0, p = Math.exp(-lam), s = p; const u = r(); while (u > s && n < 12) { n++; p *= lam / n; s += p } return n }
   return {
-    d, branchesOf, E,
+    d, branchesOf, E, span: 1.2,   // (the lean stays where the hour-mark cut is sound: past it E stops rising)
     path(dp, r) {
       const leg = legs === 2 && r() < SC_LEG1 ? 1 : 2
       const L1 = scLam(dp, legHome(home, 1)), Lc = scLam(dp, legHome(home, leg))
-      const leg1 = legs === 2 && leg === 2 ? [goals(r, L1.u * 90), goals(r, L1.t * 90)] : null
-      let mine = 0, opp = 0, t0 = 0
-      const at = [], base = leg1 ? leg1[0] - leg1[1] : 0
-      for (const t of SC_CP) { mine += goals(r, Lc.u * (t - t0)); opp += goals(r, Lc.t * (t - t0)); t0 = t; at.push({ key: `${leg}|${base + mine - opp}`, mine, opp, leg1, leg, legs }) }
-      return at
+      // (the hour mark with the tie still on: replayed until it is, the way build's init is cut)
+      for (let n = 0; ; n++) {
+        const leg1 = legs === 2 && leg === 2 ? [goals(r, L1.u * 90), goals(r, L1.t * 90)] : null
+        let mine = 0, opp = 0, t0 = 0
+        const at = [], base = leg1 ? leg1[0] - leg1[1] : 0
+        for (const t of SC_CP) { mine += goals(r, Lc.u * (t - t0)); opp += goals(r, Lc.t * (t - t0)); t0 = t; at.push({ key: `${leg}|${base + mine - opp}`, mine, opp, leg1, leg, legs }) }
+        if (inR(base + at[0].mine - at[0].opp, -SC_OPEN, SC_OPEN) || n > 200) return at
+      }
     },
     // the rest: of this leg, of the second one when this is the first, extra time, penalties
     rest(b, scored, r) {
@@ -592,11 +600,12 @@ function scModel(ctx) {
   }
 }
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six']
-function scSit(b, ids, mine, opp, leg1, first) {
+// names: the clubs in words for the line ('Chelsea trail Fulham', not 'CHE trail FUL'); ids stay the short codes
+function scSit(b, ids, mine, opp, leg1, first, names = ids) {
   const { us, them } = ids, minute = b.minute, extra = minute - 90
   const clockText = extra > 0 ? `90+${extra}'` : `${minute}'`
   const when = extra > 0 ? `${extra === 1 ? 'a minute' : `${WORDS[extra]} minutes`} into stoppage time` : `${ordinal(minute)} minute`
-  const night = mine === opp ? `${us} and ${them} level at ${mine}-${opp}` : mine > opp ? `${us} lead ${them} ${mine}-${opp}` : `${us} trail ${them} ${mine}-${opp}`
+  const night = mine === opp ? `${names.us} and ${names.them} level at ${mine}-${opp}` : mine > opp ? `${names.us} lead ${names.them} ${mine}-${opp}` : `${names.us} trail ${names.them} ${mine}-${opp}`
   const agg = leg1 ? `, ${mine + leg1[0]}-${opp + leg1[1]} on aggregate` : ''
   const TAIL = { penalty: 'Penalty.', 'one-on-one': 'Through on goal.', header: 'A cross coming in.', volley: 'It drops in the box.', 'free-kick': 'Free kick on the edge of the area.', 'two-on-one': 'Two on one on the break.' }
   return { us, them, mine, opp, hoops: false, soccer: true, clock: minute, minute, clockText, period: '2ND', leg: first ? 1 : 2, line: `${first ? 'First leg. ' : ''}${night}${agg}, ${when}.`, tail: TAIL[b.game] ?? '' }
@@ -890,7 +899,7 @@ function solved(ctx) {
   const M = MODELS[ctx.sport](ctx)
   const hSim = b => b.h
   // where moments land: the lean that keeps the game won as often as it is with no moments, at his usual rate
-  const dPre = solve(x => M.E(x, hSim), ctx.pGame, M.d - 2.5, M.d + 2.5, 26)
+  const dPre = solve(x => M.E(x, hSim), ctx.pGame, M.d - (M.span ?? 2.5), M.d + (M.span ?? 2.5), 26)
   return keep(SOLVED, id, { M, dPre, all: M.E(dPre, hSim) })
 }
 // the snaps a multi-snap drill plays in this spot: the drive it's in (a short clock is fewer of them)
@@ -913,7 +922,7 @@ export function planMoment(ctx) {
     // his kicks: the distances the drives ended at (the extra point is the 33-yard try)
     if (b.kicks) sit.kicks = b.kicks.map(x => ({ d: x.xp ? 33 : x.long ? 50 + Math.floor(rr() * 9) : drawPair(rr, KICK_D) + Math.floor(rr() * 4), xp: !!x.xp }))
   } else if (ctx.sport === 'hoops') { sit = bkSit(b, ids, mine, opp); if (BK[b.game].opts) sit.reps = b.reps }
-  else if (ctx.sport === 'soccer') sit = scSit(b, ids, mine, opp, at[k].leg1, at[k].legs === 2 && at[k].leg === 1)
+  else if (ctx.sport === 'soccer') sit = scSit(b, ids, mine, opp, at[k].leg1, at[k].legs === 2 && at[k].leg === 1, { us: ctx.usName ?? ctx.us, them: ctx.themName ?? ctx.them })
   else {
     // the inning to his moment, at-bat by at-bat: the runs before it are on the board (his side's or theirs)
     const inn = M.inning(b, seeded(`ig-${ctx.seed}-inning`), k === 0)
