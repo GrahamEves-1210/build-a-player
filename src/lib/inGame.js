@@ -600,11 +600,12 @@ function scModel(ctx) {
   }
 }
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six']
-function scSit(b, ids, mine, opp, leg1, first) {
+// names: the clubs in words for the line ('Chelsea trail Fulham', not 'CHE trail FUL'); ids stay the short codes
+function scSit(b, ids, mine, opp, leg1, first, names = ids) {
   const { us, them } = ids, minute = b.minute, extra = minute - 90
   const clockText = extra > 0 ? `90+${extra}'` : `${minute}'`
   const when = extra > 0 ? `${extra === 1 ? 'a minute' : `${WORDS[extra]} minutes`} into stoppage time` : `${ordinal(minute)} minute`
-  const night = mine === opp ? `${us} and ${them} level at ${mine}-${opp}` : mine > opp ? `${us} lead ${them} ${mine}-${opp}` : `${us} trail ${them} ${mine}-${opp}`
+  const night = mine === opp ? `${names.us} and ${names.them} level at ${mine}-${opp}` : mine > opp ? `${names.us} lead ${names.them} ${mine}-${opp}` : `${names.us} trail ${names.them} ${mine}-${opp}`
   const agg = leg1 ? `, ${mine + leg1[0]}-${opp + leg1[1]} on aggregate` : ''
   const TAIL = { penalty: 'Penalty.', 'one-on-one': 'Through on goal.', header: 'A cross coming in.', volley: 'It drops in the box.', 'free-kick': 'Free kick on the edge of the area.', 'two-on-one': 'Two on one on the break.' }
   return { us, them, mine, opp, hoops: false, soccer: true, clock: minute, minute, clockText, period: '2ND', leg: first ? 1 : 2, line: `${first ? 'First leg. ' : ''}${night}${agg}, ${when}.`, tail: TAIL[b.game] ?? '' }
@@ -921,7 +922,7 @@ export function planMoment(ctx) {
     // his kicks: the distances the drives ended at (the extra point is the 33-yard try)
     if (b.kicks) sit.kicks = b.kicks.map(x => ({ d: x.xp ? 33 : x.long ? 50 + Math.floor(rr() * 9) : drawPair(rr, KICK_D) + Math.floor(rr() * 4), xp: !!x.xp }))
   } else if (ctx.sport === 'hoops') { sit = bkSit(b, ids, mine, opp); if (BK[b.game].opts) sit.reps = b.reps }
-  else if (ctx.sport === 'soccer') sit = scSit(b, ids, mine, opp, at[k].leg1, at[k].legs === 2 && at[k].leg === 1)
+  else if (ctx.sport === 'soccer') sit = scSit(b, ids, mine, opp, at[k].leg1, at[k].legs === 2 && at[k].leg === 1, { us: ctx.usName ?? ctx.us, them: ctx.themName ?? ctx.them })
   else {
     // the inning to his moment, at-bat by at-bat: the runs before it are on the board (his side's or theirs)
     const inn = M.inning(b, seeded(`ig-${ctx.seed}-inning`), k === 0)

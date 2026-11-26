@@ -22,6 +22,8 @@ export function tableNow(c) {
 const seasonTable = (S, s) => { try { return S.x?.tableOf?.(s) ?? null } catch { return null } }
 // where a place in the table leads (each row's zone is the engine's): the Champions League, the Europa League, the
 // Conference League, the drop; a relegation play-off (Germany, France); in a second tier, promotion and its play-offs
+// a simulated tie in words, by how it finished (a 2–2, 2–0 was 'never in doubt' before 2026-11-25)
+const autoLine = x => { const m = Math.abs(x.mySc - x.oppSc); return x.pens ? 'decided from the spot' : x.won ? (m >= 3 ? 'never in doubt' : m === 2 ? 'a comfortable passage' : 'a tight one') : (m >= 3 ? 'never close' : m === 2 ? 'second best' : 'so close') }
 const ZONE_WORD = { ucl: 'Champions League', uel: 'Europa League', uecl: 'Conference League', up: 'Promotion', playoff: 'Play-off', down: 'Relegation' }
 const ZONES = Object.keys(ZONE_WORD)
 const zoneOf = r => (ZONES.includes(r?.zone) ? r.zone : null)
@@ -389,7 +391,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
               ))}
             </div>
             <b>{x.won ? (x.final ? `${x.compName} winners.` : `Through to the ${nextOf(x)?.stage?.toLowerCase() ?? 'next round'}.`) : x.final ? `Beaten in the ${x.compName} final.` : `Out of the ${x.compName} in the ${String(x.stage).toLowerCase()}.`}</b>
-            <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''} · ${x.auto ? (x.won ? 'never in doubt' : 'never close') : x.hit ? (x.won ? 'he scored when it mattered' : 'his goal wasn\'t enough') : 'the chance went begging'}`}{x.swing ? <> · {x.swing}</> : null}</small>
+            <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''} · ${x.auto ? autoLine(x) : x.hit ? (x.won ? 'he scored when it mattered' : 'his goal wasn\'t enough') : 'the chance went begging'}`}{x.swing ? <> · {x.swing}</> : null}</small>
           </div>
         )}
         {po.stage === 'done'
@@ -400,7 +402,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
   }
   if (step === 'game') return (
     <div className="cr-po">
-      <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · {rd.legs === 2 ? 'SECOND LEG · ' : ''}VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''}{odds ? ` Score: about ${pct(odds.hit)}% to ${rd.final ? 'lift the trophy' : 'go through'}. Miss it: about ${pct(odds.miss)}%.` : ''}</small></div>
+      <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · {rd.legs === 2 ? (sit.leg === 1 ? 'FIRST LEG · ' : 'SECOND LEG · ') : ''}VS {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''}{odds ? ` Score: about ${pct(odds.hit)}% to ${rd.final ? 'lift the trophy' : 'go through'}. Miss it: about ${pct(odds.miss)}%.` : ''}</small></div>
       <CareerGame home={rd.home === false ? 'opp' : 'team'} c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={oppOf(rd)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw ?? null)); setStep('result') }} />
     </div>
   )

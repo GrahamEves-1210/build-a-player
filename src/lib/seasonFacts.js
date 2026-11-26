@@ -302,11 +302,15 @@ export function headlineFor(ev, r = Math.random) {
       return pick(r, [`${team} make it ${n} straight`, `${n} in a row — ${team} are rolling`, `${name} has ${team} on a ${n}-game heater`])
     case 'skid': if (ev.soccer) return pick(r, [`${team} without a win in ${n}`, `Pressure on the manager: ${n} without a win for ${team}`, `${team} searching for answers after ${n} winless`])
       return pick(r, [`${team} drop ${n} straight`, `Pressure mounts: ${n}-game skid in ${team.split(' ').slice(-1)[0]} land`, `${team} searching for answers after ${n} losses`])
-    case 'big': if (ev.pos === 'k') return ev.gw ? pick(r, [`${name} beats ${opp} at the gun: ${label}`, `Walk-off: ${name} wins it for ${team}`, `${team} survive ${opp} on ${name}'s leg (${label})`]) : pick(r, [`${name} perfect against ${opp}: ${label}`, `${label} for ${name} as ${team} handle ${opp}`])
+    case 'big': if (ev.soccer || ev.pos === 'st') return pick(r, [`${name} stars against ${opp}: ${label}`, `${opp} have no answer to ${name} (${label})`, `${label[0].toUpperCase()}${label.slice(1)} for ${name} against ${opp}`])
+      if (ev.pos === 'k') return ev.gw ? pick(r, [`${name} beats ${opp} at the gun: ${label}`, `Walk-off: ${name} wins it for ${team}`, `${team} survive ${opp} on ${name}'s leg (${label})`]) : pick(r, [`${name} perfect against ${opp}: ${label}`, `${label} for ${name} as ${team} handle ${opp}`])
       return pick(r, [`${name} torches ${opp}: ${label}`, `${label} — ${name} takes over vs ${opp}`, `${opp} had no answer for ${name} (${label})`])
-    case 'bust': if (ev.pos === 'k') return pick(r, [`A missed kick costs ${team} at ${opp}`, `${name} misses late, ${team} fall to ${opp}`, `Rough day for ${name} in ${opp} loss`])
+    case 'bust': if (ev.soccer || ev.pos === 'st') return pick(r, [`${opp} keep ${name} quiet`, `A frustrating afternoon for ${name} against ${opp}`, `${name} and ${team} come unstuck against ${opp}`])
+      if (ev.pos === 'k') return pick(r, [`A missed kick costs ${team} at ${opp}`, `${name} misses late, ${team} fall to ${opp}`, `Rough day for ${name} in ${opp} loss`])
       return pick(r, [`Rough night for ${name} in ${opp} loss`, `${opp} bottle up ${name}`, `${name}, ${team} stumble at ${opp}`])
-    case 'milestone': return pick(r, [`${name} reaches ${label}`, `Milestone: ${label} for ${name}`, `${name} hits ${label} as ${team} keep pace`])
+    // (soccer: 'Moussa Ndiaye reaches Hat-trick' read wrong; a run of results is the club's, the rest are his)
+    case 'milestone': if (ev.soccer) { const L = /^hat-trick$/i.test(label) ? 'a hat-trick' : label.toLowerCase().startsWith('a ') || /^\d/.test(label) ? label : label.toLowerCase(); const U = L[0].toUpperCase() + L.slice(1); return /win|unbeaten/i.test(label) ? pick(r, [`${U} for ${team}`, `${team} keep it going: ${L}`]) : /^\d/.test(L) ? pick(r, [`${name} reaches ${L}`, `${U} for ${name}`]) : pick(r, [`${U} for ${name}`, `${U} for ${name} against ${opp}`]) }
+      return pick(r, [`${name} reaches ${label}`, `Milestone: ${label} for ${name}`, `${name} hits ${label} as ${team} keep pace`])
     case 'record': return `RECORD: ${name} sets the all-time mark — ${label}`
     case 'clinch': return pick(r, [`${team} clinch a playoff berth`, `Playoffs: ${team} are in`, `${name} leads ${team} to the postseason`])
     case 'out': return pick(r, [`${team} eliminated from playoff contention`, `Season slips away for ${team}`])
