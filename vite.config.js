@@ -1,6 +1,8 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
+import { isClean } from './scripts/clean-flag.mjs'
+import { cleanHtml } from './scripts/clean-html.mjs'
 
 // When each ratings pool last changed, read from git at build time, so the
 // Wiki's "ratings as of" dates follow the data files without anyone editing a
@@ -33,8 +35,12 @@ RATINGS_DATES.all = Object.values(RATINGS_DATES).sort().slice(-1)[0]
 // soccer's strikers (the wiki's table shows them once soccer is on); not in `all` while it's off
 RATINGS_DATES.st = lastChanged([d + 'soccer-strikers.js', d + 'soccer-legends.js'])
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+// the clean build (scripts/clean-flag.mjs): off for main and app, on for app-clean / VITE_CLEAN=1 (shell or .env file)
+const CLEAN = isClean(loadEnv(mode, process.cwd(), ''))
+return {
   define: {
+    __CLEAN__: JSON.stringify(CLEAN),
     __RATINGS_DATES__: JSON.stringify(RATINGS_DATES),
     __BUILD_DATE__: JSON.stringify(today),
   },
@@ -64,5 +70,11 @@ export default defineConfig(({ mode }) => ({
       name: 'strip-web-ads',
       transformIndexHtml: html => html.replace(/\s*<script[^>]*ramp\.js[^>]*><\/script>/, ''),
     },
+    // the clean build: the page's own words (title, descriptions, structured data) without the leagues' marks
+    CLEAN && {
+      name: 'clean-html',
+      transformIndexHtml: { order: 'post', handler: html => cleanHtml(html) },
+    },
   ].filter(Boolean),
-}))
+}
+})

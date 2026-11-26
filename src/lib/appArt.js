@@ -12,9 +12,10 @@ import INDEX from '../data/jersey-index.json'
 import { jerseySvg, svgUri } from './jerseyArt'
 import { jerseySvg as classicJersey, teamMarkSvg as classicMark } from './jerseyArtClassic'
 import { numberFor } from './jerseyNumber'
+import { CLEAN } from './platform'
 
 const cache = new Map()
-const HEADSHOT = /\/headshots\/(.+?)\.(?:webp|png|jpe?g)(?:[?#].*)?$/i
+const HEADSHOT = /\/headshots\/(.+?)\.(?:webp|png|jpe?g)(?:[?#&].*)?$/i
 // (national flags in /logos/nations are flags, not marks: they stay)
 const LOGO = /\/logos\/(?:(nba|cfb|cbb|mlb|soccer)\/)?(?:dark\/|light\/|sm\/)?(conf-)?([A-Za-z0-9&_-]{2,8})\.(?:png|webp|svg)(?:[?#].*)?$/i
 // which tables a logo folder's abbreviation is looked up in, first match wins
@@ -58,6 +59,8 @@ export function teamArt(folder, team) {
 
 // Salary Cap's Home card shows a screenshot of the board (public/modes/*-salary.webp), real photos and all: the app
 // draws the board instead, five rows of five jerseys under the column heads, one of each row picked
+// Home's painted figures wear real teams' helmets and sleeves: the clean build shows them with the marks painted out
+const FIG = /\/modes\/fig-(qb|qb2|wr)\.webp$/
 const SALARY = /\/modes\/(nfl|bucket|soccer|baseball)-salary\.webp$/
 function salaryArt(sport) {
   const lg = sport === 'bucket' ? 'nba' : sport === 'baseball' ? 'mlb' : sport === 'soccer' ? 'soc' : 'nfl'
@@ -87,7 +90,13 @@ export function appImage(src) {
   let out = cache.get(src)
   if (out !== undefined) return out
   let m
-  if ((m = HEADSHOT.exec(src))) {
+  if ((m = FOREIGN_LOGO.exec(src))) {
+    // an old save's or board row's address straight to a league's own site: its team logo becomes the team's tag,
+    out = teamArt(m[1].toLowerCase() === 'nfl' ? '' : m[1].toLowerCase() === 'nba' ? 'nba' : m[1].toLowerCase() === 'soccer' ? 'soccer' : 'cfb', m[2].toUpperCase())
+  } else if (FOREIGN.test(src) && !HEADSHOT.test(src)) {
+    // and any other picture from there (a player's photo) a plain jersey: no photo shows, whatever the address
+    out = playerArt('?', /nba|basketball/i.test(src) ? 'nba' : '')
+  } else if ((m = HEADSHOT.exec(src))) {
     const key = m[1].replace(/^.*?public\/headshots\//, '')
     out = playerArt(key, key.split('/')[0])
   } else if ((m = LOGO.exec(src)) && m[2]) {
@@ -95,6 +104,9 @@ export function appImage(src) {
     out = svgUri(teamMark({ league: 'conf', team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
+  } else if (CLEAN && (m = FIG.exec(src))) {
+    // the clean build's Home figures: the same art with the teams' marks painted out (scripts/clean-art)
+    out = `/modes/clean/fig-${m[1]}.webp`
   } else if ((m = SALARY.exec(src))) {
     // (football and basketball: a real shot of the app's own board, jerseys and five picked, owner 11-19)
     out = m[1] === 'nfl' || m[1] === 'bucket' ? `/modes/app-${m[1]}-salary.webp` : salaryArt(m[1])
@@ -104,8 +116,11 @@ export function appImage(src) {
   return out
 }
 
+// the leagues' and photo sites' own image hosts (an address saved before the game kept its pictures itself)
+const FOREIGN = /^(?:https?:)?\/\/[^/]*\b(?:espncdn\.com|espn\.com|fotmob\.com|nfl\.com|nba\.com|ncaa\.com|mlbstatic\.com|wikimedia\.org|wikipedia\.org)\//i
+const FOREIGN_LOGO = /^(?:https?:)?\/\/[^/]*\bespncdn\.com\/.*?teamlogos\/(nfl|nba|ncaa|soccer)\/\d+\/(?:scoreboard\/)?([A-Za-z0-9]{2,5})\.png/i
 // what an address became: 'p' a player's art, 't' a team's tag, '' neither
-const kindOf = (src, out) => (out === src || SALARY.test(src) ? '' : HEADSHOT.test(src) ? 'p' : 't')   // (the board's picture is no logo: its card keeps its frame)
+const kindOf = (src, out) => (out === src || SALARY.test(src) || FIG.test(src) ? '' : HEADSHOT.test(src) || (FOREIGN.test(src) && !FOREIGN_LOGO.test(src)) ? 'p' : 't')   // (the board's picture is no logo: its card keeps its frame)
 
 // ── Fitting the slot ───────────────────────────────────────────────────────────────────────────────────────────
 // The places a photo used to sit were made for a face: a circle crop, a ring in the team's colour, the team's logo

@@ -9,39 +9,11 @@
 // canvas goes through it too (below).
 import INDEX from '../data/jersey-index.json'
 
-// ── league marks ─────────────────────────────────────────────────────────────────────────────────────────────
-// order matters: the longer phrase first
-export const TERM_MAP = [
-  [/\bSuper Bowl (champions?|winners?|titles?|rings?|MVPs?)\b/g, (m, w) => (/^MVP/.test(w) ? `Championship ${w}` : w === 'titles' ? 'championships' : w === 'title' ? 'championship' : w === 'rings' ? 'championship rings' : w === 'ring' ? 'championship ring' : w)],
-  [/\bSUPER BOWL (CHAMPIONS?|WINNERS?|MVPS?)\b/g, (m, w) => (/^MVP/.test(w) ? `CHAMPIONSHIP ${w}` : w)],
-  [/\bSuper Bowls\b/g, 'Championships'],
-  [/\bSuper Bowl\b/g, 'Championship'],
-  [/\bSUPER BOWLS?\b/g, m => (m.endsWith('S') ? 'CHAMPIONSHIPS' : 'CHAMPIONSHIP')],
-  [/\bPro Bowlers?\b/g, m => (m.endsWith('s') ? 'All-Stars' : 'All-Star')],
-  [/\bPro Bowls\b/g, 'All-Star selections'],
-  [/\bPro Bowl\b/g, 'All-Star'],
-  [/\bPRO BOWLS?\b/g, 'ALL-STAR'],
-  [/\b(?:the )?NBA Finals\b/g, m => (m.startsWith('the') ? 'the Finals' : 'Finals')],
-  [/\bNBA FINALS\b/g, 'FINALS'],
-  [/\bMarch Madness\b/g, 'the tournament'],
-  [/\bMARCH MADNESS\b/g, 'THE TOURNAMENT'],
-  [/\b(?:the )?Final Four\b/g, m => (m.startsWith('the') ? 'the semifinals' : 'semifinals')],
-  [/\bFINAL FOUR\b/g, 'SEMIFINALS'],
-  [/\bHeisman(?: Trophy)?(?: winners?)?\b/g, m => (/winners$/.test(m) ? 'Players of the Year' : 'Player of the Year')],
-  [/\bHEISMAN(?: TROPHY)?\b/g, 'PLAYER OF THE YEAR'],
-  [/\b(?:Vince )?Lombardi(?: Trophy)?\b/g, 'championship trophy'],
-  [/\bLarry O'Brien(?: Trophy)?\b/g, 'championship trophy'],
-  [/\bWorld Series\b/g, 'Championship Series'],
-  [/\b(?:the )?(NFL|NBA|MLB) Draft\b/g, m => (m.startsWith('the') ? 'the Draft' : 'Draft')],
-  [/\b(NFL|NBA|MLB) DRAFT\b/g, 'DRAFT'],
-  // the leagues' own names
-  [/\b(?:the|The) (NFL|NBA|MLB|NCAA)\b/g, m => (m[0] === 'T' ? 'The league' : 'the league')],
-  [/\bTHE (NFL|NBA|MLB|NCAA)\b/g, 'THE LEAGUE'],
-  [/\b(?:an|An) (NFL|NBA|MLB)\b/g, m => (m[0] === 'A' ? 'A pro' : 'a pro')],
-  [/\b(NFL|NBA|MLB)(?=['’]s\b)/g, 'the league'],
-  [/\bNCAA\b/g, 'college'],
-  [/\b(NFL|NBA|MLB)\b/g, (m, x, i, s) => (/[a-z]/.test(s) ? 'pro' : 'PRO')],
-]
+// ── league marks: lib/termMap.js (shared with the clean build's HTML, scripts/clean-dist.mjs)
+import { TERM_MAP as ALL_TERMS, DISCLAIMER } from './termMap'
+import { CLEAN } from './platform'
+// (the clean build's extra rules only in the clean build: the app's own copy stays as it was)
+export const TERM_MAP = CLEAN ? ALL_TERMS : ALL_TERMS.filter(r => !r[2])
 
 // ── team nicknames ──────────────────────────────────────────────────────────────────────────────────────────
 // football's screens read NFL first, then college; basketball's NBA, then college; baseball MLB
@@ -108,7 +80,7 @@ export function appSafe(text, sport = sportOfPath()) {
   const hit = cache.get(ck)
   if (hit !== undefined) return hit
   // (a disclaimer names the leagues to say who we're not: it keeps every name)
-  if (/affiliated|endorsed|trademark|licensed/i.test(text)) { cache.set(ck, text); return text }
+  if (DISCLAIMER.test(text)) { cache.set(ck, text); return text }
   let s = text
   const T = teamRules(sport)
   if (T.fullRe) s = s.replace(T.fullRe, (m, name, verb, at, str) => T.full.get(name) + singular(verb, str, at))
@@ -141,9 +113,9 @@ export function installAppTerms() {
   const setAttr = Element.prototype.setAttribute
   const ATTRS = new Set(['title', 'aria-label', 'alt', 'placeholder'])
   const imgSet = HTMLImageElement.prototype.setAttribute   // lib/appArt.js may have wrapped it already: keep its swap
-  const fix = (name, value) => (ATTRS.has(name) && typeof value === 'string' ? appSafe(value) : value)
-  Element.prototype.setAttribute = function (name, value) { return setAttr.call(this, name, fix(name, value)) }
-  if (imgSet !== setAttr) HTMLImageElement.prototype.setAttribute = function (name, value) { return imgSet.call(this, name, fix(name, value)) }
+  const fix = (name, value, el) => ((ATTRS.has(name) || (name === 'content' && el?.nodeName === 'META')) && typeof value === 'string' ? appSafe(value) : value)   // (a page's description and share tags: Helmet)
+  Element.prototype.setAttribute = function (name, value) { return setAttr.call(this, name, fix(name, value, this)) }
+  if (imgSet !== setAttr) HTMLImageElement.prototype.setAttribute = function (name, value) { return imgSet.call(this, name, fix(name, value, this)) }
   // Text drawn on a canvas (share cards, the mini games' end zones and scoreboards, Blacktop's name tags): every
   // fillText, strokeText and the measureText that sizes it. Code that draws a word a letter at a time asks
   // globalThis.__appSafe for the whole word first (utils/seasonCard.js, lib/mg/kit.js).

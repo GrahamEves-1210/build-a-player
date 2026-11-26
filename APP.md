@@ -54,6 +54,12 @@ so that function has to be live on the website before review. It uses the
 2. In Codemagic, click **Start new build**, choose branch `app` and workflow **iOS → TestFlight**. It takes about 15–20 minutes.
 3. The build appears in App Store Connect → TestFlight. Install Apple's **TestFlight** app on your iPhone to try it.
 
+**The clean build** (`app-clean`, the App Store fallback) is the same code with one build-time switch
+(`scripts/clean-flag.mjs`). It is on when Codemagic or Cloudflare Pages builds the `app-clean` branch, or with
+`VITE_CLEAN=1`. With it on, the website shows the app's art too: jerseys and team tags instead of photos, logos and
+crests, drawn heads on the figures, Home's figures with the team marks painted out, and no league marks in the copy.
+The disclaimers keep the league names. `main` and `app` build with it off. To check it locally, add `?clean=1` on the dev server.
+
 ## Submitting to the App Store
 
 In App Store Connect → your app → the 1.0 version, fill in:

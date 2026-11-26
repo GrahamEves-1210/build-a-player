@@ -7,7 +7,7 @@ import { IconProfile, IconGear, IconBaseball, IconPlay, IconCrown, IconCoin, Ico
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
 import Tutorial, { startTutorial } from './Tutorial'
-import { IS_APP } from '../../lib/platform'
+import { IS_APP, CLEAN } from '../../lib/platform'
 import Disclaimer from '../Disclaimer'
 import { rampAdd } from '../../lib/ads'
 import { NameTag, AvatarBadge } from './NameTag'
@@ -810,7 +810,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       {footer && <div className="ag-home-site">{footer}</div>}
       {/* the app has no site footer: the maker's logo and the fan-project line on their own */}
       {IS_APP && <img className="ag-home-maker" src="/playmaker-games.png" alt="A Playmaker Games game" width="132" height="44" loading="lazy" draggable={false} />}
-      {IS_APP && <Disclaimer sport={isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl'} />}
+      {(IS_APP || CLEAN) && <Disclaimer sport={isBaseball ? 'baseball' : isSoccer ? 'soccer' : isBucket ? 'bucket' : 'nfl'} />}
       <Tutorial onGuided={() => onStart('classic', isBaseball ? 'bat' : isSoccer ? 'st' : isBucket ? 'guard' : 'qb')} />
     </div>
   )
