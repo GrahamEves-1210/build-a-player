@@ -24,7 +24,7 @@ const NOV_26 = {
     {
       name: 'Soccer Career',
       items: [
-        'Start at the academy trials: the 30m sprint, a dribble slalom, a finishing drill and a first-touch test',
+        'Start at the academy trials: the 30m sprint, a dribble slalom and a finishing drill',
         'Play for clubs across Europe\'s top five leagues, with a league table, the domestic cups, relegation and a second tier',
         'European nights in the Champions League, the Europa League and the Conference League',
         'Pick any of FIFA\'s 211 nations, then play for it at the World Cup, the Euros, the Copa América or AFCON',

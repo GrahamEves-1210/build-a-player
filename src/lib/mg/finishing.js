@@ -38,7 +38,7 @@ export function make({ v, seed }) {
   const k = shooter(v, { fill: 820, windup: 180 })
   const g = {
     t: 0, game: 'finishing', zones: 'none', stick: true, pads: null, fx: [], done: null, outro: 1900, stamp: null,
-    shots, i: 0, R, made: 0, k, phase: 'set', at: 700, shot: null, nextAt: null, rollAt: null, doneAt: null,
+    shots, i: 0, R, made: 0, k, broken: {}, phase: 'set', at: 700, shot: null, nextAt: null, rollAt: null, doneAt: null,
     ctl: padCtl(), vh: 640, st: stroke(), lastView: null, camX: lensOf(shots[0].spot).x, camZ: lensOf(shots[0].spot).z, camYaw: lensOf(shots[0].spot).yaw,
     hud: { prompt: 'FIVE BALLS · THREE IN THE TARGET', dots: shots.map(() => null) },
     tick(dt) {
@@ -46,7 +46,7 @@ export function make({ v, seed }) {
       const o = padStick(g.ctl), sh = shots[g.i]
       if (g.phase === 'set' && g.t >= g.at) start()
       if (g.phase === 'aim') {
-        if (k.phase === 'power' || (k.phase === 'strike' && g.t < k.strikeAt - 30)) k.aimAt(o.x, o.y)
+        if (k.phase === 'idle' || k.phase === 'power' || (k.phase === 'strike' && g.t < k.strikeAt - 30)) k.aimAt(o.x, o.y)   // (the cursor follows the stick from the start: owner 11-25)
         // the ball rolled across: it's there when it's there, and he hits it as it gets to him
         if (sh.spot.roll && k.phase === 'strike') k.strikeAt = Math.max(k.strikeAt, g.rollAt)
         if (k.tick(g.t)) strike()
@@ -118,7 +118,12 @@ export function make({ v, seed }) {
     }
     if (hitIn != null) hit = hitIn
     sh.res = hit; g.hud.dots[g.i] = hit
-    if (hit) g.made++
+    if (hit) {
+      g.made++
+      // the target breaks (owner 11-25): it's gone for the rest of the drill, so a later ball that was to light it lights another
+      g.broken[sh.k] = g.t
+      for (let j = g.i + 1; j < N; j++) if (g.broken[shots[j].k] != null) { let kk = shots[j].k; for (let n = 0; n < TARGETS.length && (g.broken[kk] != null || kk === shots[j - 1].k); n++) kk = (kk + 1) % TARGETS.length; shots[j].k = kk }
+    }
     g.stamp = { text: word ?? (hit ? 'TARGET' : s.over ? 'OVER' : s.wide ? 'WIDE' : inGoal ? 'MISSED IT' : 'OFF TARGET'), good: hit, at: g.t, size: 40, ms: 900 }
     g.fx.push(hit ? 'catchball' : 'deny', hit ? 'h:medium' : 'h:light')
     g.phase = 'gap'; g.nextAt = g.t + GAP
@@ -158,6 +163,37 @@ function target(ctx, C, k, lit, R, swing) {
   const sx = Math.sign(x), a = P(C, sx * POST, y > 1 ? BAR : 0.2, 0), b = P(C, x, y > 1 ? BAR : 0.2, 0)
   ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(a.x, a.y); ctx.moveTo(p.x, p.y); ctx.lineTo(b.x, b.y); ctx.stroke()
 }
+// a hit target breaks: its rings burst into pieces that fly out and fall, the ties left hanging; after that, gone
+function shatter(ctx, C, k, R, age, seed) {
+  const [x, y] = TARGETS[k]
+  const p = P(C, x, y, 0.05)
+  if (!p.ok) return
+  const r = R * p.s, sx = Math.sign(x)
+  // the ties, cut, swinging
+  const a = P(C, sx * POST, y > 1 ? BAR : 0.2, 0), b = P(C, x, y > 1 ? BAR : 0.2, 0)
+  const hang = Math.min(1, age / 500) * r * 0.9
+  ctx.strokeStyle = 'rgba(236,240,242,.6)'; ctx.lineWidth = 1
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(a.x + (p.x - a.x) * 0.3, a.y + (p.y - a.y) * 0.3 + hang); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + (p.x - b.x) * 0.3, b.y + (p.y - b.y) * 0.3 + hang); ctx.stroke()
+  if (age > 900) return
+  // the pieces: wedges of the rings, out from the middle, spinning, falling, fading
+  const t = age / 1000, cols = ['#f2f2ee', '#c9423a', '#0b1014']
+  let h = seed
+  const rnd = () => { h = (h * 9301 + 49297) % 233280; return h / 233280 }
+  ctx.save()
+  ctx.globalAlpha = Math.max(0, 1 - age / 900)
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * 6.2832 + rnd() * 0.4, sp = r * (2.2 + rnd() * 2.4)
+    const px = p.x + Math.cos(ang) * sp * t, py = p.y + Math.sin(ang) * sp * t + 260 * t * t * (r / 12)
+    const w = r * (0.35 + rnd() * 0.3)
+    ctx.save(); ctx.translate(px, py); ctx.rotate(ang + t * (rnd() * 12 - 6))
+    ctx.fillStyle = cols[i % 3]
+    ctx.beginPath(); ctx.moveTo(0, -w * 0.5); ctx.lineTo(w * 0.6, 0); ctx.lineTo(0, w * 0.4); ctx.lineTo(-w * 0.5, 0); ctx.closePath(); ctx.fill()
+    ctx.restore()
+  }
+  // the burst of chalk dust where it was
+  if (age < 300) { ctx.globalAlpha = 0.5 * (1 - age / 300); ctx.fillStyle = '#f2f2ee'; ctx.beginPath(); ctx.arc(p.x, p.y, r * (1 + age / 150), 0, 6.2832); ctx.fill() }
+  ctx.restore()
+}
 function ballNow(g) {
   const sh = g.shots[Math.min(g.i, N - 1)], s = g.shot
   if (!s || s.miss) { if (sh.spot.roll) { if (g.rollAt == null) return null; const p = rollPos(g, g.t); return { x: p.x, y: 0.11, z: p.z, spin: g.t / 40 } } return { x: sh.spot.x, y: 0.11, z: sh.spot.z, spin: 0 } }
@@ -179,8 +215,8 @@ export function draw(ctx, g, view) {
   goalFrame(ctx, C)
   const sh = g.shots[Math.min(g.i, N - 1)]
   for (let k = 0; k < TARGETS.length; k++) {
-    const swing = s && sh.res && sh.k === k && g.t > s.at + s.T ? g.t - s.at - s.T : 0
-    target(ctx, C, k, sh.k === k && g.phase !== 'over', k === sh.k ? g.R : g.R * 0.75, swing)
+    if (g.broken[k] != null) { shatter(ctx, C, k, g.R, g.t - g.broken[k], k * 7 + 3); continue }
+    target(ctx, C, k, sh.k === k && g.phase !== 'over', k === sh.k ? g.R : g.R * 0.75, 0)
   }
   // the staff: the coach with the balls on the right of the box, scouts with clipboards on the touchline
   const staff = dress(K.staff, { skin: '#c09060' })
@@ -203,7 +239,7 @@ export function draw(ctx, g, view) {
   man(ctx, C, me.x, me.z, pose, dress(K.train, { number: null, skin: view.cast?.me?.skin ?? '#8d5a3b' }))
   if (b && b.z <= 0.05) ball(ctx, C, b.x, b.y, b.z, b.spin)
   if (g.phase === 'aim' && g.k.drawn && g.k.phase === 'strike') aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
-  else if (g.phase === 'aim' && (g.k.phase === 'power' || g.k.phase === 'strike')) { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }
+  else if (g.phase === 'aim') { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }
   text(ctx, `BALL ${Math.min(g.i + 1, N)} OF ${N} · ${sh.spot.name}`, 12, 60, { font: LABEL, size: 16, align: 'left', track: 0.6, color: 'rgba(255,255,255,.85)' })
   strokeTrail(ctx, g.st, g.t, { C, k: g.k, foot: 1, base: sh.spot.roll ? 'volley' : 'driven', chipP: 0.12 })
   // the first ball: a stroke drawn off the ball to the lit target, and the line under it

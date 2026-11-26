@@ -95,7 +95,7 @@ const SOCCER = {
   durTrait: 'size',
   bigInjury: 8,
   draft: { rounds: 1, stock: () => [1, 1], rookie: () => ({ kind: 'rookie', years: 3, left: 3, perYear: 0.5 }), posList: ['ST'] },
-  combine: { st: [['sprint30', '30m sprint', 'pace'], ['slalom', 'Dribble slalom', 'dribbling'], ['finishing', 'Finishing drill', 'finishing'], ['first-touch', 'First touch', 'dribbling']] },
+  combine: { st: [['sprint30', '30m sprint', 'pace'], ['slalom', 'Dribble slalom', 'dribbling'], ['finishing', 'Finishing drill', 'finishing']] },
   goals: {
     st: ovr => [['lgGoals', 'Score', ovr >= 92 ? 25 : ovr >= 86 ? 18 : ovr >= 80 ? 12 : 8, 'league goals'], ['assists', 'Make', ovr >= 92 ? 9 : ovr >= 86 ? 6 : 4, 'assists'], ['avgRating', 'Average a', ovr >= 92 ? 7.4 : ovr >= 86 ? 7.1 : 6.8, 'match rating']],
   },
