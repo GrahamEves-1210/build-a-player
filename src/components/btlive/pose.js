@@ -10,6 +10,7 @@
 // and active in front guarding, both up only on a shot, a
 // contest or a block, a quick reach on a steal. Every pose is a target the drawn hands and feet ease to (no snaps).
 import { COURT, T, MOVES, MOVE_KEYS, HZ, gticks } from '../../lib/btlive/index.js'
+import { HOOP_LIFT } from './court.js'
 
 const RIM = COURT.rim, STEP = 1000 / HZ, TAU = Math.PI * 2
 const c01 = v => (v < 0 ? 0 : v > 1 ? 1 : v)
@@ -358,11 +359,12 @@ export function createPoser(N) {
     a.gAir = z.air
   }
 
-  // a dunker goes to the rim: his hand ends up on it (the rim is painted at the floor, so by the height he's drawn at too)
+  // a dunker goes to the rim: his hand ends up on it (the rim is drawn HOOP_LIFT up the screen from the floor under it:
+  // court.js, so his body is drawn up there with it, less the height he's drawn at already)
   function glide(z, env, toRim, dRim, w) {
     if (dRim < 0.3 || w <= 0) return
     const reach = 0.55 * env.sFt * (1 + 0.16 * z.air), lift = z.air * env.sFt * 0.2
-    const cx = RIM.x - Math.cos(z.ang) * reach, cy = RIM.y - Math.sin(z.ang) * reach + lift
+    const cx = RIM.x - Math.cos(z.ang) * reach, cy = RIM.y - HOOP_LIFT - Math.sin(z.ang) * reach + lift
     z.ox = (cx - env.x) * w; z.oy = (cy - env.y) * w
   }
 

@@ -132,6 +132,9 @@ export function makeChance(s) {
   if (s.kind === 'dunk') { base = T.dunkBase + T.dunkFin * R.fin - T.dunkLow * (1 - dunkLift(R)); pen = T.contestMaxD * s.c * (1 - T.dunkThrough * R.bnc) }
   else if (s.kind === 'layup') {
     base = T.layBase + T.layFin * R.fin - T.layFar * Math.max(0, s.d - 3)
+    // open, at the rim: the easiest shot there is (T.openLay)
+    const open = clamp(1 - (s.c ?? 0) / T.openLayC, 0, 1) * clamp((8 - s.d) / 2, 0, 1)
+    base += Math.max(0, T.openLay - base) * open
     pen = T.contestMaxL * s.c * (1 - T.finThrough * R.fin)
   } else {
     const close = T.closeBase + T.closeJs * R.js, arc = T.arcBase + T.arcJs * R.js

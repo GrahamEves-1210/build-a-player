@@ -27,7 +27,7 @@ function shot(R, kind, x, y, def) {
   const past = ref.arcPast ? ref.arcPast(x, y) : 0
   if (NEW) {
     const p = ref.makeChance({ R, kind, d, past, c, run: 0, cs: null, rushed: false })
-    const w = M.windowFor(p)
+    const w = M.windowFor(p, kind)
     return { w, rate: M.greenOdds(w, SD) }
   }
   // before: a green went in (a layup unless walled up), anything else rolled its chance off the release

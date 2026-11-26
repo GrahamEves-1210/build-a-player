@@ -114,6 +114,7 @@ export const T = {
   // makes it that often. It changes while he rises (a man closing out shrinks it on the meter)
   kidSd: 75,                         // ms: the release error of an average kid (the CPU levels: cpu.js LEVELS meterSd)
   winMin: 4, winMax: 120,            // ms either side of the ideal, at the least and the most
+  winMaxL: 165,                      // ...a layup or a dunk's most (an open layup's 95% needs about 147)
   checkRush: 0.4,                    // a shot right off the check (before a move, inside checkRushS): the chance x (1 - this), fading out
   checkRushS: 1.0,                   // ...over this long (real seconds)
   staShot: 0.12,                     // legs empty: the chance x (1 - this)
@@ -122,6 +123,10 @@ export const T = {
   layBase: 0.58, layFin: 0.38,       // layup: 87% at Finishing 1, 96% at 11 (an 80: 91%) open at the rim: the best shot there is
   layRange: 7.0,                     // inside this many feet of the rim SHOOT is a layup (or a dunk)
   layFar: 0.045,                     // a layup loses this much a foot past 3 ft (a runner from 7 ft: 18% less)
+  // AN OPEN LAYUP IS EASY (the owner, 11-26: "open layups too hard to hit"): nobody close enough to bother it (the
+  // contest under openLayC: no one within about 4 ft) and he's in close (6 ft in, fading out by 8), it goes in this
+  // often for an average kid, whatever his Finishing; a hand on it takes that away the closer it gets
+  openLay: 0.95, openLayC: 0.3,
   dunkRange: 5.2,                    // a dunk starts inside this
   dunkFar: 4.5, dunkFarSize: 0.9,    // an open lane: he takes off from farther out, up to this more at Bounce 11 (+ this at Size 11)
   laneW: 3.6,                        // ...open: no one who can guard within this of the line from him to the rim

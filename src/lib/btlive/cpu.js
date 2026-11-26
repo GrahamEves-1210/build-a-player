@@ -68,7 +68,7 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
   const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ * 0.6 ? s.players[p.catchFrom].R.pas : null
   // the green window that shot would have (sim.js shotWindow), and how often his release lands in it: that's the make
   const pT = ref.makeChance({ R: p.R, kind, d, past: kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false, sta: p.sta })
-  const pMake = greenOdds(windowFor(pT), lvl.meterSd)
+  const pMake = greenOdds(windowFor(pT, kind), lvl.meterSd)
   // make it, take it: a make is worth its points and the ball back, so a two is worth one and a half ones, not two
   return { v: pMake * (three ? T.twoValue : 1), kind, three, c, d }
 }
@@ -89,7 +89,7 @@ function driveValue(s, p, D, dD, lvl) {
     const back = dR - ref.rimDist(D)
     by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (back - 3.5) / 4, 0.2, 1)
   }
-  const rel = x => greenOdds(windowFor(x), lvl.meterSd)     // the window that layup would have, and his release in it
+  const rel = x => greenOdds(windowFor(x, 'layup'), lvl.meterSd)     // the window that layup would have, and his release in it
   if (beaten) return rel(open) * T.cpuDriveRisk
   return (by * rel(open) + (1 - by) * rel(walled)) * T.cpuDriveRisk
 }

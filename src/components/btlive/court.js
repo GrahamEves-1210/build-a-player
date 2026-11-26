@@ -9,6 +9,14 @@
 import { COURT } from '../../lib/btlive/index.js'
 
 const C = COURT, RIM = C.rim
+// The view is from above and behind half court, so a thing off the floor is drawn up the screen by VIEW_LIFT ft a foot
+// of its height (the ball is drawn the same way: engine.js). The rim is 10 ft up, so the hoop is drawn HOOP_LIFT up from
+// the spot on the floor under it (where the game measures from, and its shadow falls): it reads at the baseline, as
+// a hoop seen from the stands does, while the rim is still 5 ft 3 in in from the baseline on the floor
+export const VIEW_LIFT = 0.27
+export const HOOP_LIFT = VIEW_LIFT * 10
+// the rim as drawn: a touch bigger than its 18 in (the ball is drawn big to be seen, so the rim keeps pace with it)
+export const RIM_DRAW = 1.3
 // each shop picture's own lines, in its own pixels (measured from the pictures: scripts/btlive/court-fit.mjs).
 // They're all drawn to one design but not to the pixel, so each court has its own row: line centres; ftC and halfC are
 // [x, y, r] (ftC's dashed top half a little taller than round: its 4th number); hash: the lane marks' heights
@@ -392,12 +400,13 @@ export function paintCourt(img) {
 // The hoop, on the game's canvas (k: px a foot), drawn from above: the stanchion's arm out over the baseline, the
 // backboard 4 ft in, the rim 15 in out from it, the net hanging under it. sway: the rim's offset (a dunk), [x, y] px
 export function drawHoop(ctx, k, sway = null, part = 'all') {
-  const rx = RIM.x * k + (sway?.[0] || 0), ry = RIM.y * k + (sway?.[1] || 0), r = C.rimR * k * 1.1, by = C.board.y * k, bw = C.board.w * k
+  const up = HOOP_LIFT * k
+  const rx = RIM.x * k + (sway?.[0] || 0), ry = RIM.y * k - up + (sway?.[1] || 0), r = C.rimR * k * RIM_DRAW, by = C.board.y * k - up, bw = C.board.w * k
   const INK = 'rgba(8,10,12,.9)'
   if (part !== 'front') {
     // the arm, from the pole behind the baseline to the board
     ctx.fillStyle = '#3a3f44'; ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1, k * 0.08)
-    ctx.beginPath(); ctx.rect(RIM.x * k - k * 0.22, (C.minY - 2.1) * k, k * 0.44, by - (C.minY - 2.1) * k - k * 0.3); ctx.fill(); ctx.stroke()
+    ctx.beginPath(); ctx.rect(RIM.x * k - k * 0.22, (C.minY - 2.1) * k - up, k * 0.44, by - (C.minY - 2.1) * k + up - k * 0.3); ctx.fill(); ctx.stroke()
     // the board, seen edge on from above (glass, a steel frame)
     ctx.fillStyle = 'rgba(232,240,246,.95)'; ctx.beginPath(); ctx.rect(RIM.x * k - bw / 2, by - k * 0.36, bw, k * 0.36); ctx.fill(); ctx.stroke()
     ctx.fillStyle = 'rgba(160,170,178,.9)'; ctx.fillRect(RIM.x * k - bw / 2, by - k * 0.36, bw, k * 0.1)
@@ -436,7 +445,7 @@ export function drawHoopShadow(ctx, k, sway = null) {
   ctx.rect(RIM.x * k - k * 0.22 + ax, (C.minY - 2.1) * k + ay, k * 0.44, by0 - (C.minY - 2.1) * k - k * 0.3)
   ctx.rect(RIM.x * k - bw / 2 + bx, by0 - k * 0.36 + by, bw, k * 0.42)
   ctx.fill()
-  const rx = RIM.x * k + (sway?.[0] || 0) + rx0, ry = RIM.y * k + (sway?.[1] || 0) + ry0, r = C.rimR * k * 1.1
+  const rx = RIM.x * k + (sway?.[0] || 0) + rx0, ry = RIM.y * k + (sway?.[1] || 0) + ry0, r = C.rimR * k * RIM_DRAW
   // the net: a faint shade inside the ring, out to where the net's own shadow falls
   ctx.fillStyle = 'rgba(0,0,0,.1)'
   ctx.beginPath(); ctx.ellipse(rx + k * 0.05, ry + k * 0.12, r * 0.95, r * 1.05, 0, 0, 6.283); ctx.fill()

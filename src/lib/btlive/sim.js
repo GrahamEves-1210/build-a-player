@@ -243,7 +243,7 @@ export function shotWindow(s, p) {
   const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ ? s.players[p.catchFrom].R.pas : null
   const pT = ref.makeChance({ R: p.R, kind: sh.kind, d: sh.d, past: sh.kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, c, run: sh.run, cs, rushed: s.clock <= T.rushAt * HZ, gp: s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom, sta: p.sta, fresh: freshOf(s, p) })
   sh.p = pT; sh.c = c
-  sh.spec.win = windowFor(pT) * (sh.spec.clutch ?? 1)
+  sh.spec.win = windowFor(pT, sh.kind) * (sh.spec.clutch ?? 1)
   sh.read = c < 0.2 ? 0 : c < 0.5 ? 1 : 2
 }
 // a shot straight off the check: 1 at the check, fading to 0 over T.checkRushS or at his first move
