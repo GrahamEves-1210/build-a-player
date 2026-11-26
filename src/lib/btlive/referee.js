@@ -116,7 +116,7 @@ export function contestOf(shooter, defenders, kind) {
     const set = !jumper && front === 1 && Math.hypot(d.vx || 0, d.vy || 0) < 3
     const stance = beaten(d) ? T.contestBeat : d.act === 'jump' ? T.contestJump + T.contestJumpBnc * d.R.bnc : set ? T.contestSet : T.contestStand
     const rate = T.contestRate + T.contestRateDef * (paint ? d.R.int : d.R.per) + T.contestRateIq * d.R.iq
-    const size = 1 + T.contestSize * (d.R.size - shooter.R.size)
+    const size = kind === 'hook' ? Math.max(0.4, 1 + T.contestSizeH * ((d.R.sizeRaw ?? d.R.size) - (shooter.R.sizeRaw ?? shooter.R.size))) : 1 + T.contestSize * (d.R.size - shooter.R.size)
     const c = clamp(prox * stance * front * rate * size, 0, 1)
     if (c > best) { second = best; best = c; by = d.id } else if (c > second) second = c
   }

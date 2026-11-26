@@ -42,7 +42,11 @@ const erfinv = x => {
 }
 const erf = x => { const t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y }
 // (kind: a layup or a dunk can have a wider one than a jumper: T.winMaxL)
-export function windowFor(p, kind = 'jumper') { return Math.min(kind === 'jumper' || kind === 'hook' || kind === 'fade' ? T.winMax : T.winMaxL, Math.max(T.winMin, T.kidSd * Math.SQRT2 * erfinv(Math.min(0.995, Math.max(0.001, p))))) }
+// (a layup or a dunk's meter is T.lSlow slower: so is everything about its timing, the kid's error too)
+export const isLay = kind => kind === 'layup' || kind === 'dunk'
+export function windowFor(p, kind = 'jumper') { return Math.min(isLay(kind) ? T.winMaxL : T.winMax, Math.max(T.winMin, T.kidSd * (isLay(kind) ? T.lSlow : 1) * Math.SQRT2 * erfinv(Math.min(0.995, Math.max(0.001, p))))) }
+// a release's error on this kind of shot, for a man whose error on a jumper is sd ms
+export const sdFor = (sd, kind) => sd * (isLay(kind) ? T.lSlow : 1)
 // ...and how often a release with sd ms of error lands in a window of w
 export const greenOdds = (w, sd) => erf(w / (sd * Math.SQRT2))
 

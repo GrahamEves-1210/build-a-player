@@ -443,19 +443,23 @@ export function createEngine({ setup, els, on, net = null }) {
       const A = { ball: ['SHOOT', 'HOLD, LET GO'], clear: ['SHOOT', 'TAKE IT BACK'], def: ['BLOCK', 'HAND UP'], dboard: ['REBOUND', 'GO UP'], board: ['REBOUND', 'GO UP'], off: ['SHOOT', 'ON THE CATCH'], sit: ['SHOOT', ''], none: ['SHOOT', ''] }[mode]
       els.btn.a.classList.toggle('is-dim', mode === 'none' || mode === 'sit' || mode === 'off')
       els.btn.a.classList.toggle('is-warn', mode === 'clear')
-      els.btn.a.classList.toggle('is-def', mode === 'def' || mode === 'dboard' || mode === 'board')
+      els.btn.a.classList.toggle('is-def', !ONE && (mode === 'def' || mode === 'dboard' || mode === 'board'))
       els.lab.a.textContent = A[0]
       if (els.lab.sa) els.lab.sa.textContent = A[1]
-      // PASS (a team game): to a teammate with the ball, a call for it without
-      const bl = ball ? 'PASS' : mode === 'off' || mode === 'board' ? 'CALL\nFOR IT' : 'PASS'
+      // the second button. On a phone (the owner, 11-26: "there should only be 2 buttons"): PASS with the ball (a team
+      // game), CALL FOR IT off it, STEAL on defense; with the ball in 1v1 it has nothing to do (dimmed, blank). Always
+      // there, always the same size and place. (On a second stick, as it was: PASS and CALL, STEAL on the pad)
+      const st = mode === 'def' || mode === 'dboard'
+      const bl = ONE && st ? 'STEAL' : ball ? (team ? 'PASS' : ONE ? '' : 'PASS') : mode === 'off' || mode === 'board' ? 'CALL\nFOR IT' : ONE ? '' : 'PASS'
       els.lab.b.textContent = bl
-      els.btn.b.classList.toggle('is-off', !team)
-      els.btn.b.classList.toggle('is-dim', !(ball || mode === 'off' || mode === 'board'))
-      els.btn.b.classList.toggle('is-two', bl !== 'PASS')
+      els.btn.b.classList.toggle('is-off', !ONE && !team)
+      els.btn.b.classList.toggle('is-dim', ONE ? !(st || (team && (ball || mode === 'off' || mode === 'board'))) || mode === 'dboard' : !(ball || mode === 'off' || mode === 'board'))
+      els.btn.b.classList.toggle('is-two', bl.includes('\n'))
+      els.btn.b.dataset.k = st && ONE ? 'steal' : ''
       // the right pad: a plain stick for the dribble moves with the ball; on defense it's the STEAL button; else idle
       // (the dribble moves on the move stick: no pad with the ball, SHOOT and PASS take the right side)
-      const k = ball ? (ONE ? 'hide' : 'ball') : mode === 'def' || mode === 'dboard' ? 'steal' : 'none'
-      if (els.base) els.base.dataset.l = ball && ONE ? 'MOVE\nSNAP FOR A MOVE' : 'MOVE'
+      const k = ONE ? 'hide' : ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'steal' : 'none'
+      if (els.base) els.base.dataset.l = ball && ONE ? 'MOVE\nFLICK FOR A MOVE' : 'MOVE'
       if (els.ds) { els.ds.dataset.k = k; els.ds.classList.toggle('is-dim', mode === 'dboard') }
       if (els.steal) els.steal.textContent = k === 'steal' ? 'STEAL' : ''
       if (els.root) { els.root.dataset.mode = ball ? 'ball' : mode === 'def' || mode === 'dboard' ? 'def' : mode === 'none' || mode === 'sit' ? 'none' : 'off'; els.root.dataset.clear = mode === 'clear' ? '1' : '' }
@@ -483,6 +487,7 @@ export function createEngine({ setup, els, on, net = null }) {
     // STEAL waits out its cooldown
     const cdS = mode === 'def' && p.stealCd > 0
     if (els.ds && els.ds.classList.contains('is-cd') !== cdS) els.ds.classList.toggle('is-cd', cdS)
+    if (ONE && els.btn.b.classList.contains('is-cd') !== cdS) els.btn.b.classList.toggle('is-cd', cdS)
     if (els.keys?.stealRow && els.keys.stealRow.classList.contains('is-cd') !== cdS) els.keys.stealRow.classList.toggle('is-cd', cdS)
     // his dribble legs (the stamina: a move costs some, simple dribbling gives it back): drawn by his ring (draw)
   }
@@ -1404,7 +1409,8 @@ export function createEngine({ setup, els, on, net = null }) {
   const btnHandlers = []
   for (const key of ['a', 'b']) {
     const el = els.btn[key]
-    const d = e => { e.preventDefault(); el.setPointerCapture?.(e.pointerId); press(key, true) }
+    // (on a phone the second button is STEAL on defense)
+    const d = e => { e.preventDefault(); el.setPointerCapture?.(e.pointerId); if (key === 'b' && ONE && onDef()) { stealKey(); el.classList.add('is-down'); clearTimeout(el._ht); el._ht = setTimeout(() => el.classList.remove('is-down'), 140); return } press(key, true) }
     const u = e => { e.preventDefault(); press(key, false) }
     el.addEventListener('pointerdown', d); el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u)
     btnHandlers.push([el, d, u])

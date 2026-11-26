@@ -425,7 +425,9 @@ function doPass(s, p, inp) {
 // Returns the move's key
 export function moveBegin(p, dir, sp = 0) {
   if (sp) return spinBegin(p, dir, sp)
-  const m = ref.moveOf(p, dir), M = MOVES[m.kind]
+  // (the hand the ball was in as the thumb started the flick: a tap reads as it comes back, and the step it took him
+  // that way may have put the ball in that hand already)
+  const m = ref.moveOf(p.hT > 0 ? { ...p, hand: p.hW } : p, dir), M = MOVES[m.kind]
   p.mv = M.n; p.bn = p.burst = ticks(M.time); p.bdx = m.x; p.bdy = m.y; p.bs = 0; p.fkx = dir.x; p.fky = dir.y
   if (m.swap) p.hand = -(p.hand || 1)
   // a spin from the stick: it rolls round from the way the flick went (back, off his man) to the way it comes out
@@ -490,6 +492,7 @@ export function moveQueued(p, tick) {
 }
 // a tick of a move's clock; the step-back ends with his feet set
 function burstTick(p) {
+  if (p.hT > 0) p.hT--
   if (p.chn > 0) p.chn--
   // the legs come back: off a move (a beat after the last one), quicker off the ball than working it
   if (p.burst <= 0 && p.chn <= 0 && p.sta < 1) p.sta = Math.min(1, p.sta + T.staBack * DT)
@@ -564,7 +567,8 @@ const postSized = (p, backing) => p.pos === 'big' || (backing && (p.R.sizeRaw ??
 // in), and out of it (his man gone off him). inp: his input this tick
 function postWatch(s, p, inp) {
   if (p.postCd > 0) p.postCd--
-  const free = p.act === 'free' && p.burst <= 0 && !p.pick
+  // (not while his side still has to take it back past the arc)
+  const free = p.act === 'free' && p.burst <= 0 && !p.pick && s.mustClear !== p.team
   if (!p.post) {
     const d = ref.rimDist(p), m = Math.hypot(inp.mx || 0, inp.my || 0)
     const back = m >= 0.3 && ((inp.mx || 0) * (RIM.x - p.x) + (inp.my || 0) * (RIM.y - p.y)) / (m * (d || 1)) > 0.45
@@ -813,10 +817,12 @@ function move(s, p, inp) {
       // he turns that way; straight at the basket or back keeps the hand it's in
       if (has && p.act === 'free') {
         const d = ref.rimDist(p) || 1, lat = p.vx * -(RIM.y - p.y) / d + p.vy * (RIM.x - p.x) / d
-        if (Math.abs(lat) > T.handSwitch && Math.sign(lat) !== (p.hand || 1)) { p.hand = Math.sign(lat); s.events.push({ e: 'hand', pid: p.i, hand: p.hand }) }
+        if (Math.abs(lat) > T.handSwitch && Math.sign(lat) !== (p.hand || 1)) { if (!(p.hT > 0)) p.hW = p.hand || 1; p.hT = ticks(0.3); p.hand = Math.sign(lat); s.events.push({ e: 'hand', pid: p.i, hand: p.hand }) }
       }
     }
   }
+  // the man with the ball near a line: no stepping out by accident (a burst still can)
+  if (has && p.burst <= 0 && p.act !== 'gather') softEdge(p)
   p.x += p.vx * DT; p.y += p.vy * DT
   const sp = Math.hypot(p.vx, p.vy)
   // the sprint's clock: on while he keeps going one way near full speed, cut back by a turn, gone when he slows
@@ -918,6 +924,19 @@ function move2(p, tvx, tvy, top, rf, spd = 0.5) {
   const tl = Math.max(push, T.brake * 0.8 * rf * DT)
   const k = perp > tl ? tl / perp : 1
   p.vx += ux * dp + px * k; p.vy += uy * dp + py * k
+}
+
+// The man with the ball by a line: the part of his speed going out over it dies away inside T.softEdge of where he'd
+// be out (his foot on it: T.footIn), so he slows and slides along it, and it never takes him over it (his momentum on a
+// stop near it neither)
+function softEdge(p) {
+  const m = T.footIn + 0.08, E = T.softEdge
+  const lim = d => Math.max(0, d) * Math.min(1, Math.max(0, d) / E) / DT * 0.5   // ft/s he may still go out at, d ft in
+  const x0 = p.x - (COURT.minX + m), x1 = COURT.maxX - m - p.x, y0 = p.y - (COURT.minY + m), y1 = COURT.maxY - m - p.y
+  if (p.vx < 0 && x0 < E) p.vx = Math.max(p.vx, -lim(x0))
+  if (p.vx > 0 && x1 < E) p.vx = Math.min(p.vx, lim(x1))
+  if (p.vy < 0 && y0 < E) p.vy = Math.max(p.vy, -lim(y0))
+  if (p.vy > 0 && y1 < E) p.vy = Math.min(p.vy, lim(y1))
 }
 
 // Never past a line; inside `keep` of it he's eased back in (no jump), and he doesn't walk farther out

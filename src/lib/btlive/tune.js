@@ -98,10 +98,13 @@ export const T = {
   groundDefSpeed: 4.0,
   massSize: 0.8,                     // ...and the rest is weight: 1 at Size 1, 1 + this at Size 11 (a big backs a guard down)
   gatherSlowJ: 0.25,                 // speed kept while rising for a jumper
-  gatherSlowL: 0.75,                 // ...and while going up for a layup
+  gatherSlowL: 0.52,                 // ...and while going up for a layup
   follow: 0.45,                      // after the release he's this long coming down before he can move freely
   footIn: 0.75,                      // the man with the ball is out when his centre is this close to a line (his foot on it:
                                      // the dot reaches radius past the centre, a foot about half that)
+  softEdge: 1.5,                     // the man with the ball: inside this of the line he'd be out at, his push out over it dies
+                                     // away and he's held in, sliding along it (the owner, 11-26: "goes out of bounds too
+                                     // easily"); only a dribble move's burst (or a body) takes him over
   lineKeep: 0.9,                     // everyone else stays this far inside (eased back, never past the line itself)
   clearPast: 0.8,                    // taking it back after a stop: his centre this far behind the arc (his feet behind it)
   shootBuffer: 0.5,                  // a SHOOT press this recent starts the shot the moment he can (a catch, a board)
@@ -111,9 +114,14 @@ export const T = {
   jIdealMs: 500,                     // the middle of the green window
   jWinMs: 11, jWinJs: 31,            // green half-width: 11 + 31 x (plain Jump Shot)²: 42 ms at 11, 11 at a 1 (a green always goes in)
   jFallMs: 170,                      // past the green, quality runs down to 0 over this long (the meter's fill: a miss either way)
-  lTotalMs: 620, lIdealMs: 300,      // layups and dunks: a quicker meter
-  lWinMs: 24, lWinFin: 32,           // green half-width from Finishing: 24 + 32 x (plain Finishing)²: 56 ms at 11, 24 at a 1
-  lFallMs: 190,
+  // layups and dunks: their own meter. The owner, 11-26: "layup meter feels too fast, it's so hard to time": it fills
+  // lSlow slower (620 to 900 ms, the green at 435 not 300), and everything about its timing in ms is lSlow wider with it
+  // (the window, the fall, the most it can be, the error a kid's and a CPU's release are judged with: kidSd x lSlow),
+  // so the odds are what they were and the time to see it coming is longer
+  lSlow: 1.45,
+  lTotalMs: 900, lIdealMs: 435,
+  lWinMs: 35, lWinFin: 46,           // green half-width from Finishing: 35 + 46 x (plain Finishing)²: 81 ms at 11, 35 at a 1
+  lFallMs: 275,
   greenWallL: 0.55,                  // a green layup or dunk goes in unless the contest on it is this much or more (walled up)
   dunkWin: 1.35,                     // a dunk's window is this much wider
   clutchLo: 0.5, clutchHi: 1.2,      // at game point the green window is this x at Clutch 1 ... this x at Clutch 11
@@ -130,7 +138,7 @@ export const T = {
   // makes it that often. It changes while he rises (a man closing out shrinks it on the meter)
   kidSd: 75,                         // ms: the release error of an average kid (the CPU levels: cpu.js LEVELS meterSd)
   winMin: 4, winMax: 120,            // ms either side of the ideal, at the least and the most
-  winMaxL: 165,                      // ...a layup or a dunk's most (an open layup's 95% needs about 147)
+  winMaxL: 240,                      // ...a layup or a dunk's most (an open layup's 95% needs about 147)
   checkRush: 0.4,                    // a shot right off the check (before a move, inside checkRushS): the chance x (1 - this), fading out
   checkRushS: 1.0,                   // ...over this long (real seconds)
   staShot: 0.12,                     // legs empty: the chance x (1 - this)
@@ -309,10 +317,11 @@ export const T = {
   dropFreeze: 0.5,                   // got by: his man sealed off this long
   dropCut: 0.55,                     // read: the burst goes this share (his man cuts it off)
   // the hook and the fadeaway: on the jumper's meter (the green window is the shot, as every shot)
-  hookBase: 0.12, hookFin: 0.34, hookSize: 0.14, hookIq: 0.1,   // a hook from 6-8 ft: about 60% for a skilled big open, 35% for a stiff
+  hookBase: 0.16, hookFin: 0.34, hookSize: 0.14, hookIq: 0.1,   // a hook from 6-8 ft: about 60% for a skilled big open, 35% for a stiff
   hookFar: 0.035,                    // ...less this a foot past 6 ft
   contestMaxH: 0.62,                 // a perfect contest takes this share off a hook (it's shot away from his body)...
   hookThrough: 0.35,                 // ...less this share of it at Size 11 (over the top)
+  contestSizeH: 0.6,                 // a hand on a hook: x (1 + this x (his Size - the shooter's), the plain grades): a big hooks over a guard
   blockHook: 0.45,                   // a hook is this much as easy to block as a layup
   fadeK: 0.8,                        // the fadeaway: the jumper from there, x this (off balance)...
   fadeSize: 0.12,                    // ...plus this at Size 11 (a big's fade is over everyone)...
@@ -332,7 +341,7 @@ export const T = {
   pivotR: 1.7,                       // picked up: his pivot foot down, the other foot reaches this far (ft)...
   pivotSpeed: 5.5,                   // ...this fast
   // a CPU's bite: (the fake's sell) x (bite0 - biteIq x (his IQ - 0.5)) x his level's bite
-  sell0: 0.3, sellShot: 0.5, sellIq: 0.2, sellAgain: 0.55,   // the sell: a threat to shoot from there sells it; a second fake
+  sell0: 0.05, sellShot: 0.75, sellIq: 0.2, sellAgain: 0.55,   // the sell: a threat to shoot from there sells it; a second fake
                                      // in the same hold sells this share of the one before
   bite0: 0.62, biteIq: 0.55,
 

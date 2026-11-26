@@ -27,6 +27,8 @@ export const DUNK = { hang: 230, drop: 190, land: 120 }   // ms: on the rim, com
 const FOLLOW = 560                    // ms a shooter holds his follow-through
 const EASE_HAND = 70, EASE_FAST = 24, EASE_FOOT = 45      // ms: how quickly the drawn hands and feet reach the pose
 
+// (the post's shots by the shape they're drawn in: the fadeaway a jumper going back, the hook a one-hand shot at the rim)
+const shape = k => (k === 'fade' ? 'jumper' : k === 'hook' ? 'layup' : k)
 export function createPoser(N) {
   const A = Array.from({ length: N }, () => ({
     ang: -Math.PI / 2, x: null, y: 0, run: 0, sp: 0, lx: 1, ly: 0, side: 1, from: 1, drib: 0,
@@ -45,7 +47,7 @@ export function createPoser(N) {
     const p = e.pid != null ? A[e.pid] : null
     // a big bucket (a dunk, a poster, a three): once he's down, a fist pump after a dunk, a point after a three
     if (e.e === 'make' && p && (e.kind === 'dunk' || e.poster || e.deep || e.three)) p.cele = { t0: now + (e.kind === 'dunk' ? 560 : 420), pump: e.kind === 'dunk' || !!e.poster }
-    if (e.e === 'release') p.rel = { t0: now, kind: e.kind, air: p.gAir, side: p.gSide, slam: 0, out: 0 }
+    if (e.e === 'release') p.rel = { t0: now, kind: shape(e.kind), air: p.gAir, side: p.gSide, slam: 0, out: 0 }
     else if (e.e === 'make' || e.e === 'waved') {
       if (p.rel) { p.rel.out = now; if (e.kind === 'dunk') p.rel.slam = now }
       // a poster: the man under it goes down
@@ -136,7 +138,8 @@ export function createPoser(N) {
       const going = a.sp > 4 ? Math.atan2(mvy, mvx) : toMan
       fa = dm > 9 && a.sp > 6 && Math.abs(wrap(going - toMan)) > 1.3 ? going : toMan
       turn = 110
-    } else if (has && live && (a.sp < 3 || Math.cos(Math.atan2(mvy, mvx) - toRim) < -0.2)) fa = toRim + clamp(wrap(Math.atan2(mvy, mvx) - toRim), -0.6, 0.6) * c01((a.sp - 3) / 4)   // (with the ball, backing out or side to side: still facing up the floor)
+    } else if (has && live && (p.post || p.pick || p.act === 'fake')) fa = Math.atan2(p.fy, p.fx)   // (the post: his back to his man; picked up: the way he pivots; a fake: square up)
+    else if (has && live && (a.sp < 3 || Math.cos(Math.atan2(mvy, mvx) - toRim) < -0.2)) fa = toRim + clamp(wrap(Math.atan2(mvy, mvx) - toRim), -0.6, 0.6) * c01((a.sp - 3) / 4)   // (with the ball, backing out or side to side: still facing up the floor)
     else if (live && !has && b.st === 'pass' && b.to === i) fa = toBall
     else if (live && !has && a.sp < 2.2) fa = toBall
     else if (!live && a.sp < 1) fa = Math.atan2(p.fy, p.fx)
@@ -209,7 +212,14 @@ export function createPoser(N) {
     // ── the ball in his hands ──
     if (has && p.act !== 'gather') {
       z.ball = true
-      if (!live) {
+      if (live && (p.pick || p.act === 'fake')) {
+        // picked up: the ball held in both hands at his chest, no dribble; a pump fake shows it up over his head and
+        // brings it back down
+        const f = p.act === 'fake' ? c01((p.actT + env.a) / Math.max(1, p.actN)) : 0, up = Math.sin(Math.PI * f)
+        set3(TL, 0.3, -0.12, 0.45 + 0.45 * up); set3(TR, 0.3, 0.12, 0.45 + 0.45 * up); set3(z.bl, 0.33, 0, 3.6 + 3.2 * up)
+        z.scale = 1 + 0.03 * up; z.two = true; z.lf[1] = -0.18; z.rf[1] = 0.18
+        a.side = p.hand || 1
+      } else if (!live) {
         // between plays: in triple threat, the ball on his strong hip in both hands, knees bent, the foot on that side
         // back (his pivot foot forward); while he's walking it up, at his belt
         const hd = p.hand || 1, tt = c01(1 - (a.sp - 1) / 3)
@@ -219,7 +229,11 @@ export function createPoser(N) {
         if (tt > 0.5) { const back = hd > 0 ? z.rf : z.lf, fr = hd > 0 ? z.lf : z.rf; back[0] = -0.08; fr[0] = 0.12; z.lf[1] = -0.19; z.rf[1] = 0.19; z.scale = 0.97 }
         z.two = true
         a.side = hd
-      } else dribble(s, p, a, z, now, env, amp)
+      } else {
+        dribble(s, p, a, z, now, env, amp)
+        // the post: down low and wide, his back in his man
+        if (p.post && p.burst <= 0) { z.scale = Math.min(z.scale, 0.95); z.lf[1] -= 0.06; z.rf[1] += 0.06; z.lean = -0.05 }
+      }
     } else { a.inMv = 0; a.side = p.hand || 1 }
 
     // ── a pass just thrown: both hands through it ──
@@ -405,7 +419,7 @@ export function createPoser(N) {
 
   // rising for a shot: by its kind. g: 0 as he starts, 1 where the green is
   function gather(p, a, z, now, env, dRim, toRim) {
-    const sh = p.shot, kind = sh.kind
+    const sh = p.shot, kind = shape(sh.kind)
     if (a.gT0 < 0 || a.gKind !== kind) { a.gT0 = now; a.gKind = kind; a.gSide = kind === 'jumper' ? 1 : a.side >= 0 ? 1 : -1; a.rel = null }
     const ideal = sh.spec?.ideal || (kind === 'jumper' ? T.jIdealMs : T.lIdealMs)
     const g = Math.max(0, env.held) / ideal, sd = a.gSide

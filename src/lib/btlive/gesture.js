@@ -34,7 +34,7 @@ export const GEST = {
   rollR: 0.45,         // ...never nearer the middle than this
   rollEnd: 45,         // ms without it turning: the roll is over (and before it's far enough: two turns, not one roll)
   rollSlow: 140,       // deg/s: turning slower than this, it isn't rolling...
-  rollGap: 26,         // ...and this long of that before it got round: it was two turns, not one roll
+  rollGap: 45,         // ...and this long of that before it got round: it was two turns, not one roll
   lockMs: 150,         // after a move, this long before another one
   keep: 600,           // ms of the stick kept
 }
@@ -76,6 +76,8 @@ export function createGesture(o = GEST) {
     const pr = Math.hypot(prev.x, prev.y)
     if (r < o.rollR || pr < o.rollR) { if (roll?.hit) return endRoll(t, prev.x, prev.y); roll = null; return null }
     const da = wrap(Math.atan2(y, x) - Math.atan2(prev.y, prev.x))
+    // (a jump of the angle from one sample to the next is the stick going across the middle, not round the rim)
+    if (Math.abs(da) > 55 * D2R) { if (roll?.hit) return endRoll(t, prev.x, prev.y); roll = null; return null }
     if (!roll || (Math.abs(da) > 4 * D2R && Math.sign(da) !== roll.sgn && !roll.hit)) {
       roll = Math.abs(da) > 0.5 * D2R ? { sgn: Math.sign(da), pts: [{ t: prev.t, c: 0, a: Math.atan2(prev.y, prev.x) }, { t, c: da, a: Math.atan2(y, x) }], c: da, hit: false, last: t, t0: prev.t } : null
       return null

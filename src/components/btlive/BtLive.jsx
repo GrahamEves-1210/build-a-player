@@ -188,13 +188,21 @@ function Controls({ onBack }) {
           <h2>WITH THE BALL</h2>
           <Row c={K ? <Wasd /> : pill('LEFT STICK')} t="MOVE" />
           <Row c={K ? <span className="btlv-ctl-pill">TAP</span> : pill('FLICK IT')} t={K ? 'TAP A KEY: DRIBBLE MOVE THAT WAY' : 'DRIBBLE MOVE THAT WAY'} />
+          <Row c={K ? <span className="btlv-ctl-pill">SHIFT</span> : pill('ROLL IT ROUND')} t="SPIN MOVE" />
           <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="SHOOT: HOLD, LET GO IN THE GREEN" />
+          <Row c={K ? <Key wide>TAP SPACE</Key> : pill('TAP SHOOT')} t="PUMP FAKE (AFTER DRIBBLING: PIVOT, THEN SHOOT OR PASS)" />
           <Row c={K ? <Key>E</Key> : pill('PASS')} t="PASS (2V2)" />
         </section>
         <section>
+          <h2>IN THE POST (BIGS)</h2>
+          <Row c={pill(K ? 'W AT THE RIM' : 'STICK AT THE RIM')} t="BACK HIM DOWN" />
+          <Row c={pill(K ? 'TAP A SIDE' : 'FLICK A SIDE')} t="DROP STEP OR SPIN" />
+          <Row c={K ? <Key wide>SPACE</Key> : pill('SHOOT')} t="HOOK (STICK AWAY: FADEAWAY)" />
+        </section>
+        <section>
           <h2>ON DEFENSE</h2>
-          <Row c={K ? <Key>E</Key> : pill('STEAL')} t="STEAL" />
-          <Row c={K ? <Key wide>SPACE</Key> : pill('BLOCK')} t="BLOCK, OR JUMP FOR THE BOARD" />
+          <Row c={K ? <Key>E</Key> : pill('STEAL')} t={K ? 'STEAL' : 'STEAL (THE PASS BUTTON)'} />
+          <Row c={K ? <Key wide>SPACE</Key> : pill('BLOCK')} t={K ? 'BLOCK, OR JUMP FOR THE BOARD' : 'BLOCK, OR JUMP FOR THE BOARD (THE SHOOT BUTTON)'} />
         </section>
       </div>
     </div>

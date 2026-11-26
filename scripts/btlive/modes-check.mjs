@@ -335,16 +335,18 @@ head('2v2: the call for the ball, the pass to the teammate')
 
 
 // ── the dribble moves ─────────────────────────────────────────────────────────────────────────────
-head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the hand the ball is in')
+head('Dribble moves: read from the basket (forward), the hand the ball is in and how he\'s going; a spin only rolled')
 {
   // a 1v1, the ball at the top of the key (the rim straight up the floor), his man well off him
   const fresh = (x = 28, y = 30) => { const s = toLive(createGame({ teams: [[man('a0', 86)], [man('b0', 86)]], seed: 'mv' })); const h = s.ball.holder; put(s.players[h], x, y); put(s.players[1 - h], 28, 12); s.players[h].moveCd = 0; step(s, idle(s)); return s }
   const flick = (s, dx, dy) => { const inp = idle(s); inp[s.ball.holder] = { mx: 0, my: 0, dx, dy }; step(s, inp); return s.events.find(e => e.e === 'move') }
   // (the ball in his right hand: left is toward the off hand)
-  for (const [dx, dy, kind, hand, word] of [[0, -1, 'hesi', 1, 'toward the basket: a hesitation'], [-1, 0, 'btl', -1, 'left (the off hand): between the legs, to the left hand'], [1, 0, 'inout', 1, 'right (the ball hand): the in-and-out, same hand'], [0, 1, 'back', 1, 'straight back: a step-back'],
-    [-0.72, 0.7, 'btb', -1, 'back and left: behind the back, to the left hand'], [0.72, 0.7, 'spin', 1, 'back and right (the ball hand): the spin'], [-0.77, -0.64, 'cross', -1, 'forward and left (50 degrees off the basket): a crossover'], [-0.5, -0.87, 'cross', -1, 'forward, a little left (30 degrees): a crossover'],
-    [0.77, -0.64, 'inout', 1, 'forward and right: the in-and-out'], [-0.15, -0.99, 'hesi', 1, 'at the basket, a touch left: the hesitation']]) {
-    const s = fresh(), h = s.ball.holder, e = flick(s, dx, dy), p = s.players[h]
+  for (const [dx, dy, kind, hand, word, vy = 0] of [[0, -1, 'hesi', 1, 'toward the basket: a hesitation'], [-1, 0, 'cross', -1, 'left (the off hand), standing: the crossover, to the left hand'], [1, 0, 'inout', 1, 'right (the ball hand): the in-and-out, same hand'], [0, 1, 'back', 1, 'straight back: a step-back'],
+    [-0.72, 0.7, 'cross', -1, 'back and left, standing: a crossover (no spin off a flick)'], [0.72, 0.7, 'inout', 1, 'back and right (the ball hand): the in-and-out, never a spin'], [-0.77, -0.64, 'cross', -1, 'forward and left (50 degrees off the basket): a crossover'],
+    [-1, 0, 'btl', -1, 'left going forward at an easy pace: between the legs', -3.5], [-1, 0, 'btb', -1, 'left going forward at speed: behind the back', -8.5],
+    [0.77, -0.64, 'inout', 1, 'forward and right: the in-and-out'], [-0.15, -0.99, 'hesi', 1, 'at the basket, a touch left: the hesitation'], [-0.5, -0.87, 'hesi', 1, 'forward, a little left (30 degrees): the hesitation']]) {
+    const s = fresh(), h = s.ball.holder, p0 = s.players[h]; p0.vx = 0; p0.vy = vy
+    const e = flick(s, dx, dy), p = s.players[h]
     ok(e?.kind === kind && MOVE_KEYS[p.mv] === kind && p.burst === gticks(MOVES[kind].time) && p.hand === hand && p.moveCd > p.burst, `${word} (${kind}), its burst on, the ball in his ${hand > 0 ? 'right' : 'left'} hand`)
   }
   {
@@ -352,12 +354,12 @@ head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the
     const s = fresh(), p = s.players[s.ball.holder]; p.hand = -1
     ok(flick(s, -1, 0)?.kind === 'inout' && p.hand === -1, 'the ball in his left hand: left is the in-and-out')
     const t = fresh(), q = t.players[t.ball.holder]; q.hand = -1
-    ok(flick(t, 1, 0)?.kind === 'btl' && q.hand === 1, '...and right is between the legs, to the right hand')
+    ok(flick(t, 1, 0)?.kind === 'cross' && q.hand === 1, '...and right is the crossover, to the right hand')
   }
   {
     // in the corner the basket is across the floor: the same flicks are different moves
     const s = fresh(50, 5), e = flick(s, -1, 0); ok(e?.kind === 'hesi', 'from the right corner a flick left (at the basket) is the hesitation')
-    const t = fresh(50, 5); ok(flick(t, 1, 0)?.kind === 'back' && flick(fresh(50, 5), 0, 1)?.kind === 'btl', '...right (away from it) the step-back, down the floor (his left) between the legs')
+    const t = fresh(50, 5); ok(flick(t, 1, 0)?.kind === 'back' && flick(fresh(50, 5), 0, 1)?.kind === 'cross', '...right (away from it) the step-back, down the floor (his left, standing) the crossover')
   }
   {
     const s = fresh(), h = s.ball.holder, p = s.players[h]
@@ -381,18 +383,25 @@ head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the
     ok(!d.events.some(e => e.e === 'move'), 'without the ball a flick is nothing')
   }
   {
-    // the spin: a second flick, round from the first, while the first is still on
+    // the spin: only the stick rolled round (sp); a second plain flick round from the first is never one
+    const n = fresh(), np = n.players[n.ball.holder]
+    flick(n, 1, 0); step(n, idle(n)); step(n, idle(n))
+    ok(!flick(n, -0.5, -0.87) && MOVE_KEYS[np.mv] === 'inout', 'a second plain flick a third of a turn round, early in the move: no spin (it waits its turn)')
     const s = fresh(), h = s.ball.holder, p = s.players[h]
+    const roll = (dx, dy, sp) => { const inp = idle(s); inp[h] = { mx: 0, my: 0, dx, dy, sp }; step(s, inp); return s.events.find(e => e.e === 'move') }
+    const e0 = roll(-1, 0, 1)
+    ok(e0?.kind === 'spin' && MOVE_KEYS[p.mv] === 'spin', 'the stick rolled round (sp): the spin, from standing')
+    for (let k = 0; k < 30 && (p.burst > 0 || p.moveCd > 0); k++) step(s, idle(s))
     flick(s, 1, 0); step(s, idle(s)); step(s, idle(s))
-    const e = flick(s, -0.5, -0.87)
-    ok(e?.kind === 'spin' && MOVE_KEYS[p.mv] === 'spin', 'a second flick a third of a turn round, early in the move: a spin')
-    ok(!flick(s, 0, 1) && MOVE_KEYS[p.mv] === 'spin', '...and a third waits for the spin to end')
+    const e = roll(-0.5, -0.87, -1)
+    ok(e?.kind === 'spin' && MOVE_KEYS[p.mv] === 'spin', 'rolled round early in a move: the move bends into a spin')
+    ok(!flick(s, 0, 1) && MOVE_KEYS[p.mv] === 'spin', '...and a flick then waits for the spin to end')
     let x1 = p.x, turned = false
     for (let n = 0; n < 20; n++) { const vy = p.vy; step(s, idle(s)); if (p.burst > 0 && vy < -6) turned = true }
     ok(turned && p.mv === 0, 'the burst bends round: by its end he is going the new way')
     const t = fresh(), q = t.players[t.ball.holder]
     flick(t, 1, 0); step(t, idle(t))
-    ok(!flick(t, 0.9, -0.44) && MOVE_KEYS[q.mv] === 'inout', 'a second flick only a little round (26 degrees) leaves the in-and-out as it is')
+    ok(!flick(t, 0.9, -0.44) && MOVE_KEYS[q.mv] === 'inout', 'a second flick a little round (26 degrees) leaves the in-and-out as it is')
     void x1
   }
   {
@@ -424,6 +433,7 @@ head('Dribble moves: NBA 2K\'s pro stick, read from the basket (forward) and the
     }
     console.log(`CPU moves in ${games} games (all-star): ${Object.entries(by).map(([k, v]) => `${k} ${(v / games).toFixed(1)}/g`).join('  ')}`)
     ok(['cross', 'hesi', 'back', 'btb', 'spin', 'inout', 'btl'].every(k => by[k] > 0), 'the CPUs make every move: crossover, hesitation, step-back, behind the back, spin, in-and-out, between the legs')
+    ok((by.spin || 0) < (by.cross || 0) + (by.inout || 0), 'a spin is the rarer move: the CPU rolls it only off a crossover his man stayed with')
   }
   {
     // same seed, same inputs (flicks among them): the same game
@@ -440,7 +450,7 @@ head('Dribble legs: every move costs some, a chained one more; tired legs make a
   fl(-1, -0.3); const bk1 = h.bk, after1 = h.sta
   for (let n = 0; n < 40 && (h.burst > 0 || h.moveCd > 0); n++) step(s, idle(s))
   fl(1, -0.3); const after2 = h.sta, bk2 = h.bk
-  ok(sta0 === 1 && after1 < 1 && sta0 - after1 > 0.15, `a move costs legs (${sta0.toFixed(2)} to ${after1.toFixed(2)})`)
+  ok(sta0 === 1 && after1 < 1 && sta0 - after1 > 0.1 && sta0 - after1 < 0.15, `a move costs legs, a little (${sta0.toFixed(2)} to ${after1.toFixed(2)}: 3-4 strung together before he's low)`)
   ok(after1 - after2 > sta0 - after1, `...one chained straight off it costs more (${(after1 - after2).toFixed(2)})`)
   for (let i = 0; i < 4; i++) { for (let n = 0; n < 40 && (h.burst > 0 || h.moveCd > 0); n++) step(s, idle(s)); fl(i % 2 ? 1 : -1, -0.3) }
   ok(h.sta < 0.15 && h.bk < bk1 * 0.7 && h.bk >= T.staFloor * T.chainSlow - 1e-9, `spammed: the legs run out (${h.sta.toFixed(2)}) and the move goes at ${(100 * h.bk).toFixed(0)}% (never nothing)`)
@@ -456,6 +466,19 @@ head('Dribble legs: every move costs some, a chained one more; tired legs make a
   for (let i = 0; i < 100; i++) { const r = i / 100; if (ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta: 1 }, { x: 28, y: 26, vx: d.R.topDef, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, r, 1).freeze) a++; if (ref.judgeMove({ x: 28, y: 30, vx: 0, vy: 0, R: h.R, sta: 0 }, { x: 28, y: 26, vx: d.R.topDef, vy: 0, act: 'free', R: d.R }, { x: -1, y: 0 }, r, 1).freeze) b++ }
   void fz
   ok(b < a, `tired legs freeze his man less (${a} fresh, ${b} tired in 100)`)
+  // a new possession: everyone's legs full again (the owner, 11-26)
+  {
+    const u = toLive(duo('sta2')), U = u.players, uh = U[u.ball.holder]
+    for (const q of U) q.sta = 0.2
+    uh.x = 1; step(u, idle(u))
+    for (let n = 0; n < 400 && u.phase !== 'live'; n++) step(u, idle(u))
+    ok(U.every(q => q.sta === 1), `out of bounds, the check: everyone starts the next possession on full legs (${U.map(q => q.sta.toFixed(2)).join(', ')})`)
+    const v = toLive(duo('sta3')), V = v.players, vh = V[v.ball.holder], vd = V.find(q => q.team !== vh.team)
+    for (const q of V) q.sta = 0.3
+    v.ball.st = 'loose'; v.ball.x = vd.x; v.ball.y = vd.y; v.ball.z = 1; v.ball.vx = v.ball.vy = v.ball.vz = 0; v.ball.reb = true; v.ball.grabAt = v.tick
+    for (let n = 0; n < 20 && v.poss !== vd.team; n++) step(v, idle(v))
+    ok(v.poss === vd.team && V.every(q => q.sta === 1), `a defensive board, no check: full legs for the new possession too (${V.map(q => q.sta.toFixed(2)).join(', ')})`)
+  }
 }
 {
   // the CPU plays under the same legs: no CPU move ever starts with more legs than it has, and it can't spam
@@ -494,7 +517,7 @@ head(`The pace: the game ${PACE}x quicker, the things a person does in real time
   const t = toLive(createGame({ teams: [[man('a0')], [man('b0')]], seed: 'pace2' }))
   ok(t.clock === RULES.shotClock[0] * HZ, `the shot clock is real seconds: ${RULES.shotClock[0]} s is ${t.clock} ticks`)
   const j = meterSpec('jumper', R), l = meterSpec('layup', R)
-  ok(j.total === 900 && j.ideal === 500 && l.total === 620 && l.ideal === 300, `the shot meter is real milliseconds, as it was: jumper ${j.ideal} of ${j.total}, layup ${l.ideal} of ${l.total}, green +/- ${j.win.toFixed(0)} and ${l.win.toFixed(0)} at an 80`)
+  ok(j.total === 900 && j.ideal === 500 && l.total === 900 && l.ideal === 435, `the shot meter is real milliseconds (the layup's slower since 11-26): jumper ${j.ideal} of ${j.total}, layup ${l.ideal} of ${l.total}, green +/- ${j.win.toFixed(0)} and ${l.win.toFixed(0)} at an 80`)
   // the meter in the step: a CPU release held 500 real ms is a release at tick 15
   const u = toLive(createGame({ teams: [[man('a0')], [man('b0')]], seed: 'pace3' })), uh = u.ball.holder
   put(u.players[uh], 28, 26); put(u.players[1 - uh], 45, 8)
@@ -561,7 +584,7 @@ head('The room: a flick of the small stick reaches the game once, with the way i
   di = r.tickOnce(now)[d]
   ok(di.jump && !di.steal && !r.tickOnce(now)[d].jump, '...up: one jump')
   const snap = last(ws[0], 's')
-  ok(snap.p[h].length === 29 && typeof snap.p[h][27] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going, his ball hand) for the screens')
+  ok(snap.p[h].length === 32 && typeof snap.p[h][30] === 'string', 'a snapshot carries each man\'s move (which one, how long, where it is going, his ball hand; in the post, picked up, bit) for the screens')
 }
 head('2v2 with four people: each one moves his own man, and only his')
 {

@@ -9,7 +9,7 @@
 // space the floor, cut, and crash the glass.
 import { HZ, GHZ, DT, PACE, COURT, T, MOVES } from './tune.js'
 import { rollAt, gauss } from './rng.js'
-import { meterQuality, windowFor, greenOdds } from './meter.js'
+import { meterQuality, windowFor, greenOdds, sdFor } from './meter.js'
 import * as ref from './referee.js'
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
@@ -75,7 +75,7 @@ export function shotValue(s, p, lvl, defs, extra = 0) {
   const cs = p.catchFrom >= 0 && s.tick - p.catchT <= T.csWindow * HZ * 0.6 ? s.players[p.catchFrom].R.pas : null
   // the green window that shot would have (sim.js shotWindow), and how often his release lands in it: that's the make
   const pT = ref.makeChance({ R: p.R, kind, d, past: kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, c, run: Math.hypot(p.vx, p.vy) / p.R.topBall, cs, rushed: false, sta: p.sta })
-  const pMake = greenOdds(windowFor(pT, kind), lvl.meterSd)
+  const pMake = greenOdds(windowFor(pT, kind), sdFor(lvl.meterSd, kind))
   // make it, take it: a make is worth its points and the ball back, so a two is worth one and a half ones, not two
   return { v: pMake * (three ? T.twoValue : 1), kind, three, c, d }
 }
@@ -96,7 +96,7 @@ function driveValue(s, p, D, dD, lvl) {
     const back = dR - ref.rimDist(D)
     by = clamp(T.cpuBeat + T.cpuBeatR * ((p.R.spd + p.R.hnd) - (D.R.per + D.R.spd)) / 2, 0.12, 0.75) * clamp(1 - (back - 3.5) / 4, 0.2, 1)
   }
-  const rel = x => greenOdds(windowFor(x, 'layup'), lvl.meterSd)     // the window that layup would have, and his release in it
+  const rel = x => greenOdds(windowFor(x, 'layup'), sdFor(lvl.meterSd, 'layup'))    // the window that layup would have, and his release in it
   if (beaten) return rel(open) * T.cpuDriveRisk
   return (by * rel(open) + (1 - by) * rel(walled)) * T.cpuDriveRisk
 }
@@ -178,7 +178,7 @@ function withBall(s, p, m, lvl, out) {
     // a pump fake: SHOOT let go before the meter is under way (no quality: the step reads it as a fake)
     if (m.faking) { if (p.actT >= 2) { out.shoot = false; m.faking = false } else out.shoot = true; return }
     if (!m.rel) {
-      const held = clamp(p.shot.spec.ideal + gauss(roll(s), roll(s)) * lvl.meterSd, T.minHoldMs, p.shot.spec.total)
+      const held = clamp(p.shot.spec.ideal + gauss(roll(s), roll(s)) * sdFor(lvl.meterSd, p.shot.kind), T.minHoldMs, p.shot.spec.total)
       m.rel = { n: Math.max(2, Math.round(held / MS)), held }
     }
     // (judged against the window as it is when he lets go: it moves while he rises)
@@ -382,24 +382,26 @@ function fakeNow(s, p, D, dD, lvl, clockS) {
 // else he shoots it
 function pickedUp(s, p, m, lvl, out) {
   if (m.pickT == null) m.pickT = s.tick
+  const clearing = s.mustClear === p.team
   const open = p.openT > s.tick, d = ref.rimDist(p)
-  if (open && d <= T.uauRange) {
+  if (open && d <= T.uauRange && !clearing) {
     const stepped = ref.rimDist({ x: p.pvx, y: p.pvy }) - d
     if (stepped < 0.8 && s.tick - m.pickT < GHZ) { out.mx = (RIM.x - p.x) / (d || 1); out.my = (RIM.y - p.y) / (d || 1); return }
     out.shoot = true; return
   }
-  if (open) { out.shoot = true; return }
+  if (open && !clearing) { out.shoot = true; return }
   if (s.size > 1 && p.noAct <= 0) {
     const defs = s.players.filter(o => o.team !== p.team && !o.out).map(fact)
     let to = null, tv = 0.25
     for (const o of s.players) {
       if (o.team !== p.team || o === p || !laneOpen(s, p, o, p.team)) continue
+      if (clearing && !ref.behindArc(o.x, o.y, T.clearPast + 1)) continue
       const v = shotValue(s, o, lvl, defs, Math.hypot(o.x - p.x, o.y - p.y) / p.R.passSpeed * 9).v
       if (v > tv) { tv = v; to = o }
     }
     if (to) { const dx = to.x - p.x, dy = to.y - p.y, l = Math.hypot(dx, dy) || 1; out.mx = dx / l; out.my = dy / l; out.pass = true; return }
   }
-  if (s.tick - m.pickT >= Math.round(0.35 * GHZ)) out.shoot = true
+  if (s.tick - m.pickT >= Math.round(0.35 * GHZ) && !clearing) out.shoot = true
 }
 // In the post: back his man down a few bumps (more against a smaller man, fewer against one he can't move), then the
 // shot: the hook from close, the drop step when he has the edge or his man is leaning, the fadeaway against a man he
@@ -530,6 +532,16 @@ function defend(s, p, m, lvl, out) {
     out.mx = 0; out.my = 0
     return
   }
+  if (onBall && man.post && man.act === 'free') {
+    // guarding the post: bodied up behind him, between him and the rim, leaning into him (he has to move him; he
+    // doesn't step up and back with every bump)
+    const dd = Math.hypot(man.x - p.x, man.y - p.y) || 1, dR = ref.rimDist(man) || 1
+    const sx = man.x + (RIM.x - man.x) / dR * 3.1, sy = man.y + (RIM.y - man.y) / dR * 3.1
+    // (one steady push: to his spot, and into the man; never a step up and a step back)
+    const vx = sx - p.x + (man.x - p.x) / dd * 0.5, vy = sy - p.y + (man.y - p.y) / dd * 0.5, vl = Math.hypot(vx, vy) || 1, k = clamp(vl / 2, 0.3, 1)
+    out.mx = vx / vl * k; out.my = vy / vl * k
+    return
+  }
   if (onBall) {
     // up on a shooter in his range, off a man who can't shoot, tight near the rim
     // (a step off a man who can't shoot: more than that only gives him a running start)
@@ -582,8 +594,9 @@ function defend(s, p, m, lvl, out) {
     if (h && h.team !== p.team && man.pos === 'big' && dRimM < 11 && Math.hypot(h.x - mx, h.y - my) > 9) {
       if (m.frontN !== s.possN) { m.frontN = s.possN; m.fronts = (p.R.sizeRaw ?? p.R.size) < (man.R.sizeRaw ?? man.R.size) - 0.1 ? roll(s) < 0.7 : roll(s) < 0.25 }
       const bx = h.x - mx, by = h.y - my, bl = Math.hypot(bx, by) || 1
-      if (m.fronts) { tx = mx + bx / bl * 2.9; ty = my + by / bl * 2.9 }
-      else { tx = mx + ux * 2.9 + bx / bl * 1.2; ty = my + uy * 2.9 + by / bl * 1.2 }
+      // (a body's width off him: on him, not into him)
+      if (m.fronts) { tx = mx + bx / bl * 3.4; ty = my + by / bl * 3.4 }
+      else { const vx = ux * 3.2 + bx / bl * 1.2, vy = uy * 3.2 + by / bl * 1.2, vl = Math.hypot(vx, vy) || 1; tx = mx + vx / vl * 3.4; ty = my + vy / vl * 3.4 }
     }
     if (b.st === 'pass' && b.to === man.i) { tx = mx + ux * 3.4; ty = my + uy * 3.4 }
     else if (h && h.team !== p.team) {
@@ -672,7 +685,16 @@ export function cpuInput(s, i, level = 'pro') {
   const out = { mx: 0, my: 0, shoot: false, pass: false, dx: 0, dy: 0, steal: false, jump: false, q: null, t: s.tick }
   if (s.phase !== 'live' || p.out) { m.plan = null; m.rel = null; m.hist = null; m.spot = null; return out }
   const b = s.ball
-  if (b.st === 'held' && b.holder === i) { withBall(s, p, m, lvl, out); return out }
+  if (b.st === 'held' && b.holder === i) {
+    withBall(s, p, m, lvl, out)
+    // (he knows where the lines are: by one, no push out over it; the step only holds him in: sim.js softEdge)
+    const E = T.footIn + T.softEdge + 0.8
+    if (out.mx < 0 && p.x - COURT.minX < E) out.mx = 0
+    if (out.mx > 0 && COURT.maxX - p.x < E) out.mx = 0
+    if (out.my < 0 && p.y - COURT.minY < E) out.my = 0
+    if (out.my > 0 && COURT.maxY - p.y < E) out.my = 0
+    return out
+  }
   m.rel = null
   if ((b.st === 'shot' || b.st === 'loose') && chaseBall(s, p, m, lvl, out)) return out
   if (p.team !== s.poss) defend(s, p, m, lvl, out)
