@@ -115,7 +115,7 @@ export function snapOf(s, events, acks) {
   const b = s.ball
   return {
     t: 's', k: s.tick, ph: s.phase, pT: s.phaseT, po: s.poss, pn: s.possN, cl: s.clock, sc: s.score, gp: s.gamePoint ? 1 : 0, w: s.winner,
-    nx: s.next, call: s.call, kg: s.king, si: s.sit, mc: s.mustClear, p,
+    nx: s.next, call: s.call, kg: s.king, si: s.sit, mc: s.mustClear, gn: s.gone ?? undefined, p,
     b: { st: b.st, holder: b.holder, x: r2(b.x), y: r2(b.y), z: r2(b.z), vx: r2(b.vx), vy: r2(b.vy), vz: r2(b.vz), from: b.from, to: b.to, t: b.t, n: b.n,
       sx: r2(b.sx), sy: r2(b.sy), sz: r2(b.sz), tx: r2(b.tx), ty: r2(b.ty), kind: b.kind, speed: b.speed, lastTeam: b.lastTeam, reb: b.reb, d: b.verdict ? r2(b.verdict.d) : 0 },
     e: events, a: acks, st: s.phase === 'over' ? s.stats : undefined,
@@ -128,7 +128,7 @@ export function snapOf(s, events, acks) {
 // device moves (me) keeps his own position; everything else is the referee's word.
 export function applySnap(s, m, me) {
   s.tick = m.k; s.phase = m.ph; s.phaseT = m.pT; s.poss = m.po; s.possN = m.pn; s.clock = m.cl; s.score = m.sc; s.gamePoint = !!m.gp; s.winner = m.w
-  s.next = m.nx; s.call = m.call; s.king = m.kg ?? null; s.sit = m.si ?? -1; s.mustClear = m.mc ?? null
+  s.next = m.nx; s.call = m.call; s.king = m.kg ?? null; s.sit = m.si ?? -1; s.mustClear = m.mc ?? null; s.gone = m.gn ?? null
   m.p.forEach((a, i) => {
     const o = s.players[i]
     if (i !== me) PF.forEach((f, j) => { o[f] = a[j] })

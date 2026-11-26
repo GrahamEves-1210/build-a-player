@@ -104,9 +104,8 @@ function Queue({ mine, photoOf, onMatch, onLeave }) {
     const id = setInterval(() => setWaited(w => w + 1), 1000)
     return () => { clearInterval(id); sock.close() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  // me first, then the others as they came in, then the open spots
-  const sorted = [...list.filter(p => p.vid === me), ...list.filter(p => p.vid !== me)]
-  const seats = [...Array(SEATS)].map((_, i) => sorted[i] ?? null)
+  // in the order they came in (the seat order: a guest's number, Guest 2, is his place here), then the open spots
+  const seats = [...Array(SEATS)].map((_, i) => list[i] ?? null)
   const have = Math.min(SEATS, list.length || (line === 'live' ? 1 : 0))
   return (
     <div className="btlv btlv-menu btlk btlk-queue">
@@ -192,6 +191,8 @@ function Room({ match, name, photoOf, onRequeue }) {
   }, [live]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const forfeit = () => {
+    // the room takes him out of the game at once (live/src/btlive.js 'quit': the other two play it out)
+    link.current?.net.send({ t: 'quit' })
     if (booked.current === (seatRef.current?.seed ?? match.code)) return
     booked.current = seatRef.current?.seed ?? match.code
     clearEntered(match.code)
@@ -239,7 +240,7 @@ function Room({ match, name, photoOf, onRequeue }) {
     )
   }
   return (
-    <Game key={setup.seed} setup={setup} name={name} link={link.current} again={again} onFinal={onFinal}
+    <Game key={setup.seed} setup={setup} name={setup.names[setup.me] || name} link={link.current} again={again} onFinal={onFinal}
       onMenu={() => { if (!over) forfeit(); releaseLive(); toHub() }}
       onRematch={() => { link.current?.net.send({ t: 'again' }); setAgain(a => a ?? { have: 1, need: SEATS }) }} />
   )

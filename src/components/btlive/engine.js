@@ -427,14 +427,14 @@ export function createEngine({ setup, els, on, net = null }) {
       const lit = i === on, king = K && s.king === i, sit = K && s.sit === i
       if (lit !== c.on || king !== c.king || sit !== c.sit) { c.on = lit; c.king = king; c.sit = sit; c.el.classList.toggle('is-on', lit); c.el.classList.toggle('is-king', king); c.el.classList.toggle('is-out', sit) }
       // King of the Hill: the king marked, and the man sitting out (he's up next)
-      const t = !K ? '' : sit ? 'UP NEXT' : king ? 'KING' : ''
-      if (t !== c.t) { c.t = t; c.tag.textContent = t; c.tag.classList.toggle('is-clear', t === 'TAKE IT BACK'); c.tag.classList.toggle('is-next', t === 'UP NEXT') }
+      const t = !K ? '' : s.gone?.[i] ? 'LEFT' : sit ? 'UP NEXT' : king ? 'KING' : ''   // (LEFT: he quit an online game, kothLeave)
+      if (t !== c.t) { c.t = t; c.tag.textContent = t; c.tag.classList.toggle('is-clear', t === 'TAKE IT BACK'); c.tag.classList.toggle('is-next', t === 'UP NEXT' || t === 'LEFT') }
     })
     let note = ''
     if (s.phase !== 'over') {
       if (K) {
         const kg = s.phase === 'dead' && s.next?.carrier != null ? s.next.carrier : s.king
-        note = kg != null && kg >= 0 ? `${nameOf(kg)} IS KING${s.sit >= 0 ? ` · ${nameOf(s.sit)} SITS` : ''}` : ''
+        note = kg != null && kg >= 0 ? `${nameOf(kg)} IS KING${s.sit >= 0 && !s.gone?.[s.sit] ? ` · ${nameOf(s.sit)} SITS` : ''}` : ''
       } else if (team != null && team >= 0) note = s.mustClear === team && s.phase === 'live' ? `${nameOf(team)}'S BALL · TAKE IT BACK` : `${nameOf(team)}'S BALL`
     }
     const nc = K ? (cl >= 0 ? cl : s.king ?? on) : team
@@ -780,7 +780,7 @@ export function createEngine({ setup, els, on, net = null }) {
     ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.beginPath(); ctx.moveTo(ex, y - 13); ctx.lineTo(ex - off * 10, y - 13); ctx.lineTo(ex - off * 17, y); ctx.lineTo(ex - off * 10, y + 13); ctx.lineTo(ex, y + 13); ctx.fill()
     ctx.fillStyle = colOf(i); ctx.fillRect(off < 0 ? ex : ex - 4, y - 13, 4, 26)
     ctx.font = `${fs}px ${FONT}`
-    const nm = setup.looks[i].label.toUpperCase().slice(0, 9) + (s.players[i].out ? ' · NEXT' : ''), nw = ctx.measureText(nm).width
+    const nm = setup.looks[i].label.toUpperCase().slice(0, 9) + (s.gone?.[i] ? ' · LEFT' : s.players[i].out ? ' · NEXT' : ''), nw = ctx.measureText(nm).width
     const x0 = off < 0 ? ex + 20 : ex - 20 - nw - 8
     drawTag([x0, y - fs * 0.62, x0 + nw + 8, y + fs * 0.62], nm, fs, colOf(i), i === me, i === me)
     if (has) drawBall(off < 0 ? x0 + nw + 8 + 9 : x0 - 9, y, 0.85, off < 0 ? x0 + nw + 17 : x0 - 9, y, 3)
@@ -1205,7 +1205,7 @@ export function createEngine({ setup, els, on, net = null }) {
       const cx = FIG[i].x, cy = FIG[i].cy, hs = FIG[i].hs
       const im = imgs[i], face = im && im.complete && im.naturalWidth ? i : -1
       // (the man sitting out: UP NEXT with his name)
-      const nm = setup.looks[i].label.toUpperCase() + (P[i].out && s.phase !== 'over' ? ' · UP NEXT' : ''), bw = ctx.measureText(nm).width + 10 + (face >= 0 ? bh : 0)
+      const nm = setup.looks[i].label.toUpperCase() + (s.gone?.[i] ? ' · LEFT' : P[i].out && s.phase !== 'over' ? ' · UP NEXT' : ''), bw = ctx.measureText(nm).width + 10 + (face >= 0 ? bh : 0)
       const crown = i === king ? tk * 0.36 : 0
       const C = [
         [cx - bw / 2, cy + hs + 1],                                   // under him
@@ -1269,7 +1269,7 @@ export function createEngine({ setup, els, on, net = null }) {
       const off = cut(i)
       if (!off) continue
       ctx.font = `${tfs}px ${FONT}`
-      const tw = 30 + ctx.measureText(setup.looks[i].label.toUpperCase().slice(0, 9) + (P[i].out ? ' · NEXT' : '')).width + (i === holder ? 20 : 0)
+      const tw = 30 + ctx.measureText(setup.looks[i].label.toUpperCase().slice(0, 9) + (s.gone?.[i] ? ' · LEFT' : P[i].out ? ' · NEXT' : '')).width + (i === holder ? 20 : 0)
       const ex = off < 0 ? L : Rr, y0 = clamp(Y(i), camPy + 14, camPy + h - 14)
       let best = y0, bc = Infinity
       for (const st of [0, -1, 1, -2, 2, -3, 3, -4, 4]) {

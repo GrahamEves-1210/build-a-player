@@ -12,6 +12,9 @@
 //   A make: the king keeps it (make it, take it), the man he scored on sits and the one sitting comes in to guard him.
 //   A stop (a defensive board, a steal, a block he comes up with, the king stepping out or the shot clock): the
 //   defender is the new king, the old king sits, the one sitting comes in. Every change is checked at the top
+//   A man who leaves an online game (kothLeave: the room says so) is out of the rotation for good: he sits for the rest
+//   of it, the other two play one on one (make it, take it; a stop is the crown), and he can't win it (his points
+//   stand, but the game is decided between the two still in). Down to one man: he wins it. s.gone[i]: he's left.
 //   s.mustClear                     the side (team index) that has to take it back past the arc before a basket counts,
 //                                   or null. 1v1 and 2v2: a stop (a defensive board, a steal, a pick, a block the defense
 //                                   comes up with) is a live ball, no check; whoever secures it has to take it back
@@ -169,7 +172,7 @@ function holdBall(s) {
 function endPossession(s, pts, nextTeam, carrier, why) {
   s.events.push({ e: 'poss', team: s.poss, pts, why })
   s.possN++
-  const st = ref.scoreState(s.score, s.rules)
+  const st = ref.scoreState(liveScore(s), s.rules)
   s.gamePoint = st.gamePoint
   for (const p of s.players) { p.burst = 0; p.mv = 0; p.bs = 0; p.mqT = -1; p.shot = null; if (p.act !== 'down') { p.act = 'free'; p.actT = 0 } p.pb = 0; p.bit = 0; p.sta = 1; letGoOf(p) }
   s.call = null; s.mustClear = null
@@ -185,6 +188,7 @@ function endPossession(s, pts, nextTeam, carrier, why) {
     // the rotation: a make sends the man he scored on to sit; a stop sends the king. The one sitting comes in on D
     // (out of bounds off the defender: nobody moves)
     const king = s.king, def = kothDef(s), sit = s.sit
+    // (a man who has left sits for good: kingIs keeps him out whatever the rotation says)
     if (why === 'make') kingIs(s, c, def)
     else if (c !== king) kingIs(s, c, king)
     else kingIs(s, c, sit)
@@ -200,8 +204,34 @@ function endPossession(s, pts, nextTeam, carrier, why) {
 
 // King of the Hill: he's the king, sit sits out, and the other one guards him
 function kingIs(s, i, sit) {
+  const g = s.gone ? s.gone.findIndex(Boolean) : -1
+  if (g >= 0) sit = g
   s.king = i; s.sit = sit
   for (const p of s.players) { p.out = p.i === sit; p.man = p.i === i || p.out ? -1 : i }
+}
+// King of the Hill: the score the game is decided on (a man who has left counts for nothing: he can't win it)
+const liveScore = s => (s.gone ? s.score.map((v, i) => (s.gone[i] ? -99 : v)) : s.score)
+// King of the Hill online: man i has left the game (the room says so: he quit, or his line has been gone too long).
+// He sits for the rest of it and the other two play it out. On the floor now: the possession ends there, no points (he
+// was the king: the defender takes the crown; he was guarding: the king keeps it), and the man sitting comes in. If
+// only one man is left, he wins it. Once a man; a second man leaving ends it
+export function kothLeave(s, i) {
+  if (s.mode !== 'koth' || s.phase === 'over' || !s.players[i] || s.gone?.[i]) return false
+  s.gone = s.gone ?? s.players.map(() => false)
+  s.gone[i] = true
+  s.events.push({ e: 'left', pid: i })
+  const left = s.players.filter(p => !s.gone[p.i])
+  if (left.length <= 1) {
+    s.phase = 'over'; s.winner = left[0]?.i ?? null
+    s.events.push({ e: 'final', winner: s.winner, score: [...s.score] })
+    return true
+  }
+  const p = s.players[i]
+  if (p.out) return true                                     // he was sitting: the two on the floor play on
+  const c = s.king === i ? kothDef(s) : s.king               // the one of the two on the floor who isn't him
+  s.ball.holder = c; holdBall(s)
+  endPossession(s, 0, s.players[c].team, c, 'left')
+  return true
 }
 // King of the Hill: the man guarding the king
 export const kothDef = s => { for (const p of s.players) if (p.i !== s.king && !p.out) return p.i; return -1 }
