@@ -604,7 +604,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const modes = useMemo(() => isSoccer || isBaseball ? (
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
-      <div className={`ag-cards ag-cards--duo${isSoccer ? ' ag-cards--soccer' : ''}`}>
+      <div className={`ag-cards ag-cards--duo${isSoccer ? ' ag-cards--soccer ag-cards--trio' : ''}`}>
         {onCareer && (
           <ModeArt kind="career" tone="career" title="CAREER" line={crLine} color={career?.fit?.color} onClick={onCareer} soon={!!soon?.career}>
             <Rafters career={career} sport={sport} />
@@ -613,9 +613,9 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="Daily grid" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
           {isBaseball ? <BaseballFees /> : <Fees />}
         </ModeArt>
+        {isSoccer && auctionCard(true)}
       </div>
       <div className="ag-more ag-more--one">
-        {isSoccer && auctionCard(true)}
         {onSquad && !isSoccer && (
           <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad} soon={!!soon?.squad}>
             {isBaseball ? <Diamond /> : <Formation />}
