@@ -24,6 +24,13 @@ const seasonTable = (S, s) => { try { return S.x?.tableOf?.(s) ?? null } catch {
 // Conference League, the drop; a relegation play-off (Germany, France); in a second tier, promotion and its play-offs
 // a simulated tie in words, by how it finished (a 2–2, 2–0 was 'never in doubt' before 2026-11-25)
 const autoLine = x => { const m = Math.abs(x.mySc - x.oppSc); return x.pens ? 'decided from the spot' : x.won ? (m >= 3 ? 'never in doubt' : m === 2 ? 'a comfortable passage' : 'a tight one') : (m >= 3 ? 'never close' : m === 2 ? 'second best' : 'so close') }
+// the key moment in his line, as it went: his goal, the one he set up, the chance saved or missed
+const momentLine = x => {
+  if (x.setUp) return x.won ? 'he set up the goal that mattered' : 'his assist wasn\'t enough'
+  if (x.hit) return x.won ? 'he scored when it mattered' : 'his goal wasn\'t enough'
+  if (x.game === 'penalty') return x.chance === 'saved' ? 'his penalty was saved' : 'he missed his penalty'
+  return x.chance === 'saved' ? 'his chance was saved' : 'the chance went begging'
+}
 const ZONE_WORD = { ucl: 'Champions League', uel: 'Europa League', uecl: 'Conference League', up: 'Promotion', playoff: 'Play-off', down: 'Relegation' }
 const ZONES = Object.keys(ZONE_WORD)
 const zoneOf = r => (ZONES.includes(r?.zone) ? r.zone : null)
@@ -400,7 +407,7 @@ export function SoccerNights({ c, setCareer, onBook, step, setStep, game, sit })
               ))}
             </div>
             <b>{x.track === 'promo' && (x.up || x.stay) ? promoLine(x, c.fit.name) : x.won ? (x.final ? (x.intl ? `${nationName(c.nation)} win the ${x.compName}.` : `${x.compName} winners.`) : `Through to the ${nextOf(x)?.stage?.toLowerCase() ?? 'next round'}.`) : x.final ? `Beaten in the ${x.compName} final.` : x.intl && x.key === 'sf' && x.track === 'wc' ? `Beaten in the semi-final. ${nationName(c.nation)} play for third place.` : `Out of the ${x.compName} in the ${String(x.stage).toLowerCase()}.`}</b>
-            <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''} · ${x.auto ? autoLine(x) : x.hit ? (x.won ? 'he scored when it mattered' : 'his goal wasn\'t enough') : 'the chance went begging'}`}{x.swing ? <> · {x.swing}</> : null}</small>
+            <small>{tieText(x)}{x.sat ? ' · watched from the stand' : ` · ${x.goals ? `${x.goals} ${x.goals === 1 ? 'goal' : 'goals'}` : 'no goal'}${x.assists ? `, ${x.assists} ${x.assists === 1 ? 'assist' : 'assists'}` : ''}${x.shots != null ? `, ${x.shots} ${x.shots === 1 ? 'shot' : 'shots'}` : ''} · ${x.auto ? autoLine(x) : momentLine(x)}`}{x.swing ? <> · {x.swing}</> : null}</small>
           </div>
         )}
         {po.stage === 'done'

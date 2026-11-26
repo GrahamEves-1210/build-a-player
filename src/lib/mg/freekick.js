@@ -151,7 +151,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     const s = g.shot, goal = s.kind === 'goal'
     g.res = s.kind; g.endAt = g.t; g.doneAt = g.t
     const score = goal ? clamp(0.62 + (s.timed === 'green' ? 0.3 : s.timed === 'ok' ? 0.18 : 0.08) + (s.blind ? 0.06 : 0), 0, 1) : s.kind === 'saved' || s.kind === 'wood' ? 0.32 : 0.15
-    g.done = outcome(score, goal, s.why)
+    g.done = outcome(score, goal, s.why, { res: s.kind })   // (raw.res: how it ended, for his match line)
     g.stamp = { text: goal ? 'GOAL' : s.kind === 'wall' ? 'BLOCKED' : s.kind === 'saved' ? 'SAVED' : s.kind === 'wood' ? (s.why === 'Off the bar' ? 'OFF THE BAR' : 'OFF THE POST') : 'MISSED', good: goal, at: g.t, size: 50, sub: s.kind === 'wood' ? null : s.why }
     if (goal) {
       g.popAt = g.t; g.fx.push('h:success'); g.nudge.kick(g.t, 2.5, 0, 1, 180)

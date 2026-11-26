@@ -167,7 +167,9 @@ function fbPlay(R, b, hit, F) {
   const pts = F?.pts, to = !!F?.to || (F?.ints ?? 0) > 0
   const drive = (td, fg, used, side = 'u', tag = 'drive') => {
     const T = Math.max(0, c - used), nx = side === 'u' ? 't' : 'u', sg = side
-    return [{ p: td, [sg]: 7, next: nx, T, tag: 'td' }, { p: fg, [sg]: 3, next: nx, T, tag: 'fg' }, { p: Math.max(0, 1 - td - fg), next: nx, T, tag }]
+    // (a touchdown the drive goes on to score is the drive's, 'dtd': not his play's. Before 2026-11-26 it was 'td' and
+    // went in his line: a good kick return a return touchdown, a tight end's block a receiving touchdown)
+    return [{ p: td, [sg]: 7, next: nx, T, tag: 'dtd' }, { p: fg, [sg]: 3, next: nx, T, tag: 'fg' }, { p: Math.max(0, 1 - td - fg), next: nx, T, tag }]
   }
   if (t === 'game-winner') return [{ p: 1, u: hit || pts === 3 ? 3 : 0, next: null, T: 0, tag: hit ? 'fg' : 'miss' }]
   if (t === 'deep-kick') {

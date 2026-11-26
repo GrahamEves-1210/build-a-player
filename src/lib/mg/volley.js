@@ -208,7 +208,7 @@ export function make({ v, seed, cast = null, situation = null }) {
   function finish() {
     const goal = g.res === 'goal', vol = g.choice === 'volley'
     const q = goal ? clamp((vol ? 0.7 : 0.58) + (g.shot?.timed === 'green' ? 0.2 : 0.08), 0, 1) : clamp(0.08 + (g.res === 'saved' ? 0.15 : 0.05), 0, 0.4)
-    g.done = outcome(q, goal, g.why); g.doneAt = g.t
+    g.done = outcome(q, goal, g.why, { res: g.res }); g.doneAt = g.t   // (raw.res: how it ended, for his match line)
     g.outro = goal ? celebMs() + 300 : lightMode() ? 1100 : 2200
     const word = { goal: 'GOAL', saved: 'SAVED', over: 'OVER THE BAR', wide: 'WIDE', blocked: 'BLOCKED', cleared: 'CLEARED', missed: 'MISSED IT' }[g.res]
     g.stamp = { text: word, good: goal, at: g.t, size: word.length > 9 ? 40 : 50, sub: g.why }
