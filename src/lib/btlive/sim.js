@@ -49,6 +49,7 @@ import { rollAt, hashSeed } from './rng.js'
 import { meterSpec, meterQuality, windowFor } from './meter.js'
 import * as ref from './referee.js'
 import { modeOfTeams } from './modes.js'
+import { lagView, lagTicks } from './lagcomp.js'
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const RIM = COURT.rim
@@ -61,6 +62,20 @@ const rnd = s => rollAt(s.seed, s.rn++)
 // what the referee is handed about a player
 // (a man who bit on a pump fake is out of the play while he comes down: to the referee he's beaten)
 const fact = p => ({ id: p.id, x: p.x, y: p.y, vx: p.vx, vy: p.vy, fx: p.fx, fy: p.fy, act: p.bit ? 'frozen' : p.act, actT: p.actT * DT, burst: p.burst, mv: p.mv, bdx: p.bdx, bdy: p.bdy, R: p.R })
+// Online, the referee's lag compensation (lagcomp.js: the rule), set on its game only; null everywhere else
+const LAGS = new WeakMap()
+export const setLag = (s, L) => { if (L) LAGS.set(s, L); else LAGS.delete(s) }
+// h as defender d saw him: only his spot and the way he's going and facing go back (what he's doing is as it is now)
+const seenBy = (s, d, h) => { const v = lagView(LAGS.get(s), s, d.i, h.i); return v ? { ...fact(h), x: v.x, y: v.y, vx: v.vx, vy: v.vy, fx: v.fx, fy: v.fy } : fact(h) }
+// d at shooter sh's release as d saw it: where he stood off the shooter, and how far into his jump he was
+const atRelease = (s, d, sh) => {
+  const L = LAGS.get(s), n = lagTicks(L, d.i), f = fact(d)
+  if (!n) return f
+  const v = lagView(L, s, d.i, sh.i)
+  if (v) { f.x += sh.x - v.x; f.y += sh.y - v.y }
+  if (f.act === 'jump') f.actT = (d.actT + n) * DT
+  return f
+}
 const stat0 = () => ({ pts: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ast: 0, reb: 0, oreb: 0, stl: 0, blk: 0, tov: 0 })
 
 export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
@@ -339,7 +354,7 @@ function release(s, p, q) {
   // late in the game (game point, or anyone three from the goal): Clutch counts
   const late = s.gamePoint || Math.max(...s.score) >= s.rules.goal - T.clutchFrom
   const defs = s.players.filter(o => o.team !== p.team && on(o))
-  const v = ref.judgeShot(fact(p), defs.map(fact), { kind: sh.kind, d: sh.d, past: sh.kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp, gp: late, sta: p.sta, fresh: freshOf(s, p) },
+  const v = ref.judgeShot(fact(p), defs.map(d => atRelease(s, d, p)), { kind: sh.kind, d: sh.d, past: sh.kind === 'jumper' ? ref.arcPast(p.x, p.y) : 0, three: sh.three, q, run: sh.run, cs, rushed, cUp: sh.cUp, gp: late, sta: p.sta, fresh: freshOf(s, p) },
     { block: defs.map(() => rnd(s)), make: rnd(s) })
   const st = s.stats[p.i]
   p.act = 'follow'; p.actT = 0; p.actN = ticks(T.follow); p.shot = null
@@ -678,7 +693,7 @@ function biteCheck(s, d) {
 function doSteal(s, p) {
   const b = s.ball, h = s.players[b.holder]
   p.stealCd = ticks(T.stealCd)
-  const v = ref.judgeSteal(fact(p), fact(h), rnd(s))
+  const v = ref.judgeSteal(fact(p), seenBy(s, p, h), rnd(s))
   if (v.ok) {
     s.stats[p.i].stl++; s.stats[h.i].tov++
     b.holder = p.i; holdBall(s)
@@ -744,7 +759,7 @@ function act(s, p, inp) {
 // a man who goes up just after the release (T.blockAfter) can still get a hand on it, near where it left the hand
 function lateBlock(s, d) {
   const b = s.ball
-  if (b.st !== 'shot' || b.t > ticks(T.blockAfter) || b.from < 0) return
+  if (b.st !== 'shot' || b.t > ticks(T.blockAfter) + lagTicks(LAGS.get(s), d.i) || b.from < 0) return
   const sh = s.players[b.from]
   const at = { ...fact(sh), x: b.rx ?? sh.x, y: b.ry ?? sh.y }
   const v = ref.judgeShot(at, [{ ...fact(d), act: 'jump', after: true }], { kind: b.kind, d: b.verdict?.d ?? 0, q: 0 }, { block: [rnd(s)] })
