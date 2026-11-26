@@ -42,3 +42,58 @@ for (const [nm, how, over] of [['straight at the rim', 'straight', {}], ['at the
   const row = ['rookie', 'pro', 'allstar'].map(l => { let k = 0; for (let g = 0; g < N; g++) if (trial(l, how, g, over)) k++; return `${l} ${Math.round(100 * k / N)}%` })
   console.log(`  ${nm.padEnd(42)} ${row.join('   ')}`)
 }
+
+// ── From the check, in a real game, as a kid plays it (the owner, 11-26: "you can just kinda run by the CPU in practice
+// every time"). The rows above start from a set spot against an 80 shooter; practice is played from the check-up with
+// real stars, nearly all of them great shooters, and the CPU's late read on a shooter's first step let a plain curl get
+// by most of the time. Each try is a real possession of a real game (the CPU plays both sides in between): the stick
+// held at the rim, held on a diagonal and turned in once he's level, curled round him, taken to the wing then down the
+// baseline, or gone straight off the check. Clean by: as above.
+const RIMX = RIM.x, RIMY = RIM.y
+const nrm = (x, y) => { const l = Math.hypot(x, y) || 1; return [x / l, y / l] }
+function stickFor(how, t, h, d, side) {
+  const [ux, uy] = nrm(RIMX - h.x, RIMY - h.y)
+  let mx = ux, my = uy
+  if (how === 'now') { mx = 0; my = -1 }
+  else if (how === 'diag') [mx, my] = nrm(side, -1)
+  else if (how === 'curl') { const a = Math.max(0, 80 - t / HZ * 66) * Math.PI / 180;[mx, my] = [ux * Math.cos(a) - uy * side * Math.sin(a), uy * Math.cos(a) + ux * side * Math.sin(a)] }
+  else if (how === 'baseline') { if (h.y > RIMY + 5 && t < 4 * HZ) [mx, my] = Math.abs(h.x - RIMX) < 13 ? nrm(side, -0.35) : [side * 0.1, -1] }
+  else if (how === 'seek') { const lat = (d.x - h.x) * -uy + (d.y - h.y) * ux, sg = lat >= 0 ? -1 : 1;[mx, my] = nrm(d.x - uy * sg * 3.6 + ux * 1.5 - h.x, d.y + ux * sg * 3.6 + uy * 1.5 - h.y) }
+  // (level with him or past him, or near the rim: a kid turns it in)
+  if (rd(h) < rd(d) + (how === 'diag' ? 1 : 0) || h.y < RIMY + 6) [mx, my] = [ux, uy]
+  return { mx, my }
+}
+function gameTries(lvl, how, hb, db, hpos, dpos, want) {
+  let k = 0, n = 0, g = 0
+  while (n < want && g < 200) {
+    const s = createGame({ teams: [[{ id: 'h', pos: hpos, build: hb }], [{ id: 'd', pos: dpos, build: db }]], seed: `gt-${how}-${lvl}-${g++}` })
+    while (n < want) {
+      let c = 0
+      while (c++ < 20000 && !(s.phase === 'over' || (s.phase === 'check' && s.poss === 0 && s.mustClear == null && s.ball.holder === 0))) step(s, [cpuInput(s, 0, lvl), cpuInput(s, 1, lvl)])
+      if (s.phase !== 'check') break
+      while (s.phase !== 'live') step(s, [{}, cpuInput(s, 1, lvl)])
+      const h = s.players[0], d = s.players[1], side = n % 2 ? 1 : -1, wait = how === 'now' ? 0 : (n % 4) * 4
+      let ok = 0
+      for (let t = 0; t < 5 * HZ; t++) {
+        step(s, [t < wait ? {} : stickFor(how, t - wait, h, d, side), cpuInput(s, 1, lvl)])
+        if (s.ball.st !== 'held' || s.ball.holder !== 0) break
+        if (rd(h) < 7) { ok = d.act === 'frozen' || d.act === 'down' || rd(d) > rd(h) + 1.5 ? 1 : 0; break }
+      }
+      k += ok; n++
+    }
+  }
+  return Math.round(100 * k / Math.max(1, n))
+}
+const NG = Math.max(40, Math.round(N / 2))
+const star = flatBuild('guard', grade, { jumpShot: 1 + (95 - 57) / 44 * 9 })
+const plain = flatBuild('guard', grade)
+const fast = flatBuild('guard', grade, { speed: 1 + (95 - 57) / 44 * 9, handles: 1 + (92 - 57) / 44 * 9, jumpShot: 1 + (90 - 57) / 44 * 9 })
+const slowBig = flatBuild('big', grade, { speed: 1 + (62 - 57) / 44 * 9 })
+console.log(`\nfrom the check, in a real game (${NG} possessions each; targets on plain drives, equal men: rookie <=35, pro <=15, all-star <=8)`)
+for (const [nm, hb, db, hp, dp] of [['80 v 80, he shoots 95', star, star, 'guard', 'guard'], ['80 v 80', plain, plain, 'guard', 'guard'], ['quick guard v slow big', fast, slowBig, 'guard', 'big']]) {
+  console.log(`  ${nm}`)
+  for (const how of ['now', 'diag', 'curl', 'baseline', 'seek']) {
+    const row = ['rookie', 'pro', 'allstar'].map(l => `${l} ${gameTries(l, how, hb, db, hp, dp, NG)}%`)
+    console.log(`    ${how.padEnd(10)} ${row.join('   ')}`)
+  }
+}

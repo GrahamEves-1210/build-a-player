@@ -215,7 +215,7 @@ export const T = {
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
 
   // ── The CPU's judgment ───────────────────────────────────────────────────────────────────────────
-  cpuRespect: 12,                    // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
+  cpuRespect: 3,                     // a CPU defender sees a drive this many ticks later per 1.0 of the man's Jump Shot over 0.55 (sooner under it)
   cpuRace: 0.35,                     // how often a CPU on a driver's hip races him to the spot instead of running into him (x his contest)
   cpuNeed: 0.42,                     // early in the clock a CPU wants a shot worth this (later, less)...
   cpuHurry: 0.05,                    // ...and this much less every second he has had it (a streetball possession doesn't wait around)
@@ -227,6 +227,7 @@ export const T = {
   cpuCrash: 0.08, cpuCrashReb: 0.15,  // a CPU follows his own shot this often (+ this x his Rebounding); else he lands and...
   cpuHold: 0.95,                     // ...holds this long into the miss before he goes for it (the owner, 11-26)
   cpuCushion: 0.5,                   // ft a CPU gives a man driving at him (a step of cushion)
+  cpuAngle: 1.6,                     // ft more he gives a man going across him (a curl, the baseline): he keeps the angle
   cpuSitV: 0.33,                     // an open look over a man sitting back at the rim: worth taking from this
 
   // ── Blocks (JUMP, timed against the release) ────────────────────────────────────────────────────
