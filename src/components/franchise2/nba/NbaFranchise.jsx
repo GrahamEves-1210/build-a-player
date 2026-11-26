@@ -40,7 +40,8 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   const slotRef = useRef(slot)
   slotRef.current = slot
   useEffect(() => { try { sessionStorage.removeItem(TRIP); sessionStorage.removeItem(MOMENT) } catch {} }, [])
-  const [F, setF] = useState(() => { try { const m = sessionStorage.getItem(MOMENT); return m != null ? loadNba(Number(m)) : null } catch { return null } })
+  // (and back from the build page with a Sandbox prospect: the league that sent him, TRIP; a setup's slot has none)
+  const [F, setF] = useState(() => { try { const m = sessionStorage.getItem(MOMENT) ?? sessionStorage.getItem(TRIP); return m != null ? loadNba(Number(m)) : null } catch { return null } })
   const [setup, setSetup] = useState(() => (slot != null ? rawNbaSlot(slot)?.setup ?? null : null))
   const [, bump] = useState(0)
   const Fr = useRef(F); Fr.current = F
@@ -82,6 +83,13 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
   useEffect(() => {
     if (!built || took.current === built) return
     took.current = built
+    // (a Sandbox prospect for this year's class: his name on the draft screen, draft.js addSandboxProspect)
+    if (built.id === 'prospect' && Fr.current) {
+      act(X => { X.sbp = { pos: built.pos, spot: built.spot ?? null, build: built.build, types: built.types ?? null } })
+      sfx('claim'); haptic('success')
+      onBuiltTaken?.()
+      return
+    }
     const S = setup ?? (slotRef.current != null ? rawNbaSlot(slotRef.current)?.setup : null)
     if (S && built.id) {
       const was = S.builds?.[built.id]
@@ -91,7 +99,7 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
     }
     onBuiltTaken?.()
   }, [built]) // eslint-disable-line react-hooks/exhaustive-deps
-  const buildOut = useCallback(job => { flush(); try { sessionStorage.setItem(TRIP, String(setup?.slot ?? slot ?? 0)) } catch {} ; onBuild?.(job) }, [onBuild, flush, setup, slot])
+  const buildOut = useCallback(job => { flush(); try { sessionStorage.setItem(TRIP, String(setup?.slot ?? F?.slot ?? slot ?? 0)) } catch {} ; onBuild?.(job) }, [onBuild, flush, setup, slot, F])
   const open = s => {
     flush()
     try { localStorage.setItem(LAST, String(s)) } catch {}
@@ -104,7 +112,7 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
     const builds = (S.picks ?? []).map(p => S.builds?.[p.id] && { ...S.builds[p.id], ...(p.spot && { spot: p.spot }) }).filter(B => B?.name)
     // (the coach from the COACH step: coach.js, his staff the team's own; the pick from the MODE step: F.pace)
     const coach = S.cb && NC.linesDone(S.cb) ? NC.finishCoach(S.cb, { name: `${S.coach?.first ?? ''} ${S.coach?.last ?? ''}`.trim() || owner, face: S.coach?.face ?? null, style: S.coach?.style ?? null }) : null
-    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, moments: S.games ?? 'advanced', builds, pace: S.pace ?? 'full', ...(coach && { coach }) })
+    const X = createNbaFranchise({ seed: S.seed, team: S.team, slot: S.slot, owner, rules: S.rules ?? { cap: true, inj: true }, sandbox: !!S.rules?.sandbox, moments: S.games ?? 'advanced', builds, pace: S.pace ?? 'full', ...(coach && { coach }) })
     if (saveNba(X)) leaveNote(X); else { bad.current = true; setSaveBad(true) }
     setF(X); setSetup(null)
     sfx('whistle'); haptic('medium')
@@ -114,5 +122,5 @@ export default function NbaFranchise({ user, onHome, onBuild, built, onBuiltTake
 
   if (slot == null || (!F && !setup)) return <Slots owner={owner} onOpen={open} onHome={onHome} onSquad={onSquad} lg={LG} />
   if (!F) return <NbaSetup setup={setup} owner={owner} put={putSetup} onStart={start} onBack={toSlots} onBuild={buildOut} />
-  return <Suspense fallback={<div className="ag-screen fk fk-root fh" />}><NbaHub F={F} act={act} owner={owner} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} saveBad={saveBad} onRetry={retry} /></Suspense>
+  return <Suspense fallback={<div className="ag-screen fk fk-root fh" />}><NbaHub F={F} act={act} owner={owner} onBuild={buildOut} onHome={() => { flush(); onHome?.() }} onSlots={toSlots} onDelete={remove} saveBad={saveBad} onRetry={retry} /></Suspense>
 }

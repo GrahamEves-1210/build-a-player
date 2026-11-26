@@ -519,3 +519,16 @@ button.nb-sch-row:active { background: var(--fk-g3); }
 .fsu-pos-st b.nb-repl i { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: normal; }
 /* readable first: a coach's GRADE under his letter is 13px in basketball's screens (the shared kit draws it at 12) */
 :is(.nb, .nb-sheet, .nb-setup, .nb-gd) :is(.fsu-cc-ovr, .fk-l3-ovr.is-stat, .fsu-chy-ovr) > small { font-size: 13px; }
+
+/* a league team's trade call (NbaHub TradeCall): the caller's colour down the left edge, the offer, three answers */
+.nb-call { display: grid; gap: 10px; margin: 0 0 14px; padding: 12px; background: var(--fk-g2); box-shadow: inset 4px 0 0 var(--tca, var(--fk-gold)); }
+.nb-call-top { display: flex; align-items: center; gap: 10px; }
+.nb-call-top span { display: grid; gap: 1px; }
+.nb-call-top small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; letter-spacing: .4px; color: var(--fk-mute); }
+.nb-call-top b { font-family: var(--fk-d); font-weight: 400; font-size: 20px; text-transform: uppercase; color: #fff; }
+.nb-call p { margin: 0; font-family: var(--fk-b); font-weight: 600; font-size: 15px; line-height: 1.4; color: #fff; }
+.nb-call-acts { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 6px; }
+.nb-call-acts .fk-go { min-width: 0; }
+.nb-call.is-done { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+.nb-call.is-done p { font-size: 14px; }
+.nb-call-x { width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: transparent; color: var(--fk-mute); cursor: pointer; }

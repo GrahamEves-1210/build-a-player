@@ -256,7 +256,7 @@ export function RoundDone({ F, owner }) {
 export function LightOffseason(props) {
   return <ManSheetHost {...props}><Summer {...props} /></ManSheetHost>
 }
-function Summer({ F, act, owner }) {
+function Summer({ F, act, owner, onBuild = null }) {
   const i = lightStep(F)
   const st = F.off?.step ?? 'awards'
   const go = (fn, s = 'whistle') => { act(fn); sfx(s); haptic('medium'); toTop() }
@@ -271,7 +271,7 @@ function Summer({ F, act, owner }) {
         ))}
       </nav>
       <div className="lt-off-main">
-        {i === 0 && (st === 'draft' ? <><LotteryLine F={F} /><Draft F={F} act={act} go={toFA} next="Next: Free agency" /></> : <Awards F={F} act={act} go={toDraft} next="Draft night" />)}
+        {i === 0 && (st === 'draft' ? <><LotteryLine F={F} /><Draft F={F} act={act} go={toFA} next="Next: Free agency" onBuild={onBuild} /></> : <Awards F={F} act={act} go={toDraft} next="Draft night" />)}
         {i === 1 && st === 'resign' && <Resign F={F} act={act} owner={owner} />}
         {i === 1 && st === 'fa' && (L?.done || !L ? <MarketDone F={F} act={act} owner={owner} /> : <Market F={F} act={act} owner={owner} />)}
         {i === 2 && <><CampCalls F={F} act={act} /><Camp F={F} act={act} owner={owner} go={() => go(X => { lightNewSeason(X) })} /></>}

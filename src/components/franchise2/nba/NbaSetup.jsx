@@ -36,7 +36,7 @@ export const GAMES_WHAT = { advanced: 'Play the full mini game', simple: 'One ta
 export const CAP_WHAT = { on: 'The NBA cap and tax', off: 'No cap, no tax' }
 // Key moments in the league rules' look (rules.css .fr-rule: the setup doesn't load the hub's season.css), three across
 export const GAMES_CLS = { root: 'fr-rule', top: 'fr-rule-top', group: 'fr-rule-seg nb-seg3' }
-const rulesIn = S => ({ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true })
+const rulesIn = S => ({ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, sandbox: S.rules?.sandbox ?? false })
 
 let PREVIEW = null
 export function preview() {

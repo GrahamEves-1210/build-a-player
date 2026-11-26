@@ -2,8 +2,9 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import {
   TEAM, STEPS, STEP_NAME, nextStep, manOf, teamOfMan, AWARD_FULL, seasonText, nick, FINISH_TEXT, onClock, available, makePick, draftTo,
   rangeOf, scout, starProspect, resignMine, signFA, faNext, campCheck, CAP_SIM, ROSTER_MAX, draftOrder, addNews, teamOptions, setOption, answerSheet, minPool, signMin, tenderQO, pullFA,
-  records, recText, NC, campInvite, campInviteOk, SCOUT_CARRY,
+  records, recText, NC, campInvite, campInviteOk, SCOUT_CARRY, canSandbox, addSandboxProspect,
 } from '../../../lib/franchise2/nba'
+import { cleanName, nameOk } from '../../../lib/franchise2/identity'
 import { manPhoto } from './NbaBuilds'
 import { nbaCoachPhoto } from './nbaCoachLg'
 import { sfx, haptic } from '../../../lib/juice'
@@ -39,7 +40,7 @@ export function ManSheetHost({ F, act, owner, children }) {
 export default function NbaOffseason(props) {
   return <ManSheetHost {...props}><Summer {...props} /></ManSheetHost>
 }
-function Summer({ F, act, owner }) {
+function Summer({ F, act, owner, onBuild = null }) {
   const st = F.off?.step ?? 'awards'
   const at = STEPS.indexOf(st)
   const [look, setLook] = useState(null)
@@ -79,7 +80,7 @@ function Summer({ F, act, owner }) {
         <>
           {st === 'awards' && <Awards F={F} act={act} go={go} />}
           {st === 'lottery' && <Lottery F={F} go={go} />}
-          {st === 'draft' && <Draft F={F} act={act} go={go} />}
+          {st === 'draft' && <Draft F={F} act={act} go={go} onBuild={onBuild} />}
           {st === 'resign' && <Resign F={F} act={act} go={go} owner={owner} />}
           {st === 'fa' && <FreeAgency F={F} act={act} go={go} />}
           {st === 'camp' && <Camp F={F} act={act} go={go} owner={owner} />}
@@ -379,7 +380,7 @@ const rows = (F, ids) => ids.map(i => (F.dc ?? []).find(p => p.i === i)).filter(
 // (a prospect's age on the board: the age he turns in his draft year, the one he plays his rookie season at. A
 // freshman reads 19, a senior 22 or 23. The draft stores him a year younger until the summer's birthday.)
 export const draftAge = p => p.ag ?? 20
-export function Draft({ F, act, go, next = 'Re-sign' }) {
+export function Draft({ F, act, go, next = 'Re-sign', onBuild = null }) {
   const pk = onClock(F)
   const mine = pk?.t === F.team
   const made = F.dn?.made ?? []
@@ -412,6 +413,7 @@ export function Draft({ F, act, go, next = 'Re-sign' }) {
           <ol className="nb-made">{earlier.slice().reverse().map(m => <MadeRow key={m.n} F={F} m={m} />)}</ol>
         </details>
       )}
+      {pk && !made.length && onBuild && <SandboxBox F={F} act={act} onBuild={onBuild} />}
       {pk && mine && <p className="nbo-note">{`The ${nick(F.team)} are on the clock. ${(F.sp ?? 0) > 0 ? `${F.sp} scouting ${F.sp === 1 ? 'report' : 'reports'} left${F.sp > SCOUT_CARRY ? ` (only ${SCOUT_CARRY} carry over to next year's class)` : ''}. ` : ''}Pick a man from the board, or take the best available: ${starred.length ? 'the top of the starred board' : 'the top of the consensus board (star men to set a board of the team’s own)'}.`}</p>}
       <div className="nb-by" role="tablist">
         {pk && <button type="button" role="tab" aria-selected={show === 'board'} className={show === 'board' ? 'is-on' : ''} onClick={() => setShow('board')}>Big board</button>}
@@ -439,6 +441,48 @@ export function Draft({ F, act, go, next = 'Re-sign' }) {
       {pk && !mine && <ActionBar><Go onClick={simTo}>{mineLeft.length ? `Sim to pick ${mineLeft[0].n}` : 'Sim the rest'}</Go></ActionBar>}
       {!pk && <ActionBar><Go onClick={go}>{next}</Go></ActionBar>}
     </section>
+  )
+}
+// SANDBOX (League rules > Sandbox, draft.js addSandboxProspect): before the first pick, a build into the class. Pick
+// his spot, build him on the build page, name him here; he's on the board with everyone else. Locked with Sandbox off,
+// so the feature is there to see (football's draft week does the same).
+const SB_SPOTS = ['PG', 'SG', 'SF', 'PF', 'C']
+function SandboxBox({ F, act, onBuild }) {
+  const [add, setAdd] = useState(false)
+  const [first, setFirst] = useState('')
+  const [last, setLast] = useState('')
+  const on = canSandbox(F)
+  const wait = on && F.sbp
+  const fresh = (F.dc ?? []).filter(p => p.sb && !p.dt)
+  if (!F.sandbox) return (
+    <div className="nbo-sbx is-locked">
+      <b className="nbo-sbx-h">Sandbox</b>
+      <button type="button" className="nbo-sbx-add is-locked" aria-disabled="true" onClick={() => sfx('deny')}>Add a prospect</button>
+      <p className="nbo-note">Turn Sandbox on in League rules on the hub and a build can go into the draft class.</p>
+    </div>
+  )
+  if (!on) return null
+  const ok = nameOk(first, last)
+  return (
+    <div className="nbo-sbx">
+      <b className="nbo-sbx-h">{`Sandbox${fresh.length ? ` · ${fresh.length} in the class` : ''}`}</b>
+      {wait ? (
+        <form className="nbo-sbx-name" onSubmit={e => e.preventDefault()}>
+          <span className="nbo-note">{`Name the ${F.sbp.spot ?? (F.sbp.pos === 'big' ? 'big' : 'guard')} for the board.`}</span>
+          <input aria-label="First name" placeholder="First" value={first} maxLength={14} onChange={e => setFirst(e.target.value)} />
+          <input aria-label="Last name" placeholder="Last" value={last} maxLength={16} onChange={e => setLast(e.target.value)} />
+          <div className="nbo-two">
+            <Go ghost onClick={() => { act(X => { delete X.sbp }); sfx('back') }}>Drop him</Go>
+            <Go disabled={!ok} onClick={() => { if (!ok) return; act(X => addSandboxProspect(X, { ...X.sbp, name: `${cleanName(first)} ${cleanName(last)}` })); setFirst(''); setLast(''); sfx('claim'); haptic('success') }}>Into the class</Go>
+          </div>
+        </form>
+      ) : (
+        <>
+          <button type="button" className={`nbo-sbx-add${add ? ' is-on' : ''}`} aria-expanded={add} onClick={() => { setAdd(!add); sfx('tap') }}>{add ? 'Pick his spot' : '+ Add a prospect'}</button>
+          {add && <div className="nbo-sbx-pos">{SB_SPOTS.map(k => <button key={k} type="button" onClick={() => { sfx('tap'); onBuild({ id: 'prospect', pos: k === 'PF' || k === 'C' ? 'big' : 'guard', spot: k, n: 1, of: 1, team: F.team }) }}>{k}</button>)}</div>}
+        </>
+      )}
+    </div>
   )
 }
 // the pick as the commissioner reads it: the team, the slot, the man
@@ -483,7 +527,7 @@ export function Prospect({ F, p, act, onPick, sel = false }) {
   return (
     <div className={`nb-pros${sel ? ' is-sel' : ''}`}>
       <span className="nb-pros-rk">{p.rank}</span>
-      <span className="nb-pros-txt"><b>{p.n}</b><small>{p.p} · {draftAge(p)} · {htText(p.ht)} · {p.c}</small></span>
+      <span className="nb-pros-txt"><b>{p.n}</b><small>{p.p} · {draftAge(p)} · {htText(p.ht)} · {p.c}{p.sb ? ' · SANDBOX' : ''}</small></span>
       <span className="nb-pros-gr"><b>{R.text}</b><small>{`${p.sc >= 2 ? R.tag : p.sc === 1 ? 'SCOUTED' : 'CEILING'} · ${p.o} TODAY`}</small></span>
       <span className="nb-pros-acts">
         <button type="button" aria-pressed={star} className={star ? 'is-on' : ''} onClick={() => { act(X => { starProspect(X, p.i) }); sfx('tap') }} aria-label="Star">★</button>
@@ -529,11 +573,17 @@ function Resign({ F, act, go, owner }) {
       <MyRetired F={F} owner={owner} />
       <CapBar F={F} />
       <Chyron team={F.team} title="Re-sign" sub={men.length ? `${men.length} ${nick(F.team).toUpperCase()} ${men.length === 1 ? 'FREE AGENT' : 'FREE AGENTS'}` : 'NOBODY LEFT TO DECIDE ON'} />
+      {men.length > 0 && <p className="nbo-note">Keep a man at his ask, or let him go and clear his cap hold.</p>}
       {men.length > 0 && (
-        <p className="nbo-note">
-          {`Keep a man and he signs at his ask. Let one go and his rights are renounced: his cap hold comes off the ${poss(nick(F.team))} books. Holds count against cap room only, never the tax or the aprons. Anyone still undecided when re-signing ends is renounced too. A restricted free agent stays restricted only with his qualifying offer tendered (Tender QO): then the ${nick(F.team)} can match any offer sheet he signs. Without it he becomes an unrestricted free agent.`}
-          {!free && allHolds > 0.05 && ` Renouncing every unrestricted man here clears ${money(allHolds)} in holds${roomIf(allHolds) > 0.05 ? ` (${money(sheet.room + roomIf(allHolds))} in cap room)` : `; the ${nick(F.team)} would still be over the cap`}.`}
-        </p>
+        <details className="nbo-how">
+          <summary>How re-signing works</summary>
+          <ul>
+            <li>{`Let a man go and his rights are renounced: his cap hold comes off the ${poss(nick(F.team))} books. Holds count against cap room only, never the tax or the aprons.`}</li>
+            <li>Anyone still undecided when re-signing ends is renounced too.</li>
+            <li>{`A restricted free agent stays restricted only with his qualifying offer tendered (Tender QO): then the ${nick(F.team)} can match any offer sheet he signs.`}</li>
+            {!free && allHolds > 0.05 && <li>{`Renouncing every unrestricted man here clears ${money(allHolds)} in holds${roomIf(allHolds) > 0.05 ? ` (${money(sheet.room + roomIf(allHolds))} in cap room)` : `; the ${nick(F.team)} would still be over the cap`}.`}</li>}
+          </ul>
+        </details>
       )}
       {men.map(p => {
         const d = CAP_SIM.resignOffer(F, p)

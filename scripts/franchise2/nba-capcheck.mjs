@@ -178,7 +178,7 @@ const fa = F => [...F.fa].filter(p => p.fr !== 'BOS' && p.fr !== T && !p.rfa && 
   const F = clone(RS)
   const o = K.ownerCap(F)
   setPay(F, 'BOS', o.$ - 1)
-  const p = (F.off.mine ?? []).map(i => F.fa.find(x => x.i === i)).filter(Boolean).sort((a, b) => b.o - a.o)[0]
+  const p = (F.off.mine ?? []).map(i => F.fa.find(x => x.i === i)).filter(x => x && (x.bird ?? 0) >= 3).sort((a, b) => b.o - a.o)[0]   // (a man with full Bird rights: a Non-Bird man hits his rights' limit first)
   if (p) {
     const r = N.resignMine(F, p.i, true)
     const ask = C.resignOffer(F, p)

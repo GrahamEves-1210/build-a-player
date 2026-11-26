@@ -32,6 +32,7 @@
 import { coachPull } from './coach'
 import { rngOf, clamp, r1 } from '../rng'
 import { signText, termsText } from './news'
+import { isRepeater } from './cap'
 import { capOf, minOf, maxOf, twoWayOf, payroll, capPayroll, capYear, standardOf, twoWaysOf, holdOf, excOf, hardCapOf, floorOf, apron1Of, apron2Of, indexed } from './cap'
 import {
   marketValue, worthOf, rankOf, termOf, canSign, signMan, rightsOf, resignOffer, renounce, situationOf,
@@ -141,11 +142,20 @@ export function keeperOf(F, s, p) {
 // instead. Anyone else: the line its ownership spends to (contracts.js spendLines: one of its best five to the line
 // for keeping, the rest of the bench to the line for adding). That is where a good-but-not-great player walks: a
 // team in the mix doesn't pay the tax to keep its sixth man.
+// THE BILL COMES DUE (2026-11-25): "whatever it takes" is for a team's two best men. A third star on a big deal is kept
+// to the second apron and a little past it, like any star; past that he goes (a sign-and-trade, or the market), the
+// way the real league's apron teams have broken up (the 2024 Celtics, the 2025 Suns). A repeater (a taxpayer three of
+// the last four seasons, cap.js isRepeater) pays less past the second apron: its owner has seen the bills.
+const bigDeal = (F, s, p, year) => F.teams[s].r.filter(x => !x.tw && x.i !== p.i && (x.y ?? 0) >= 1 && (x.$ ?? 0) >= capOf(year) * 0.2 && (x.o ?? 0) >= (p.o ?? 0) - 2).length
 export function keepLine(F, s, p, year = capYear(F)) {
   const rk = rankOf(F, p), ag = p.ag ?? 27
-  if (rk <= 12 && ag <= 32) return Infinity
+  const rep = isRepeater(F.teams[s], year)
+  const bd = bigDeal(F, s, p, year)
+  if (rk <= 12 && ag <= 32 && bd < 2) return Infinity
   const L = spendLines(F, s, year)
-  if (rk <= 40 && ag <= 32) return Math.max(L.keep, apron2Of(year) + capOf(year) * 0.06)
+  // (a fourth: only to the line its owner spends to, the first apron at most: the real league's four-star rosters
+  // last a season or two)
+  if (rk <= 40 && ag <= 32) return bd >= 3 ? Math.min(L.keep, apron1Of(year)) : Math.max(L.keep, apron2Of(year) + capOf(year) * (rep ? 0.01 : 0.05))
   const better = F.teams[s].r.filter(x => !x.tw && x.i !== p.i && (x.o ?? 0) > (p.o ?? 0)).length
   return better < 5 ? L.keep : L.add
 }
@@ -165,7 +175,12 @@ export function wantsOut(F, s, p) {
   const sit = situationOf(F, s)
   const ag = p.ag ?? 27
   const W = wantsOf(p)
+  // (a star in his prime with his deal up looks around more than a role player does: the market is his, and the real
+  // league's best have moved this way every few summers, LeBron, Durant, Kawhi, George; more from a team going
+  // nowhere, less from a contender)
+  const star = rankOf(F, p) <= 40 && ag >= 25 && ag <= 32
   let ch = 0.07 + (sit === 'reb' && ag >= 27 ? 0.18 : 0) + (sit === 'mid' && ag >= 30 ? 0.05 : 0) - W.home * 2
+    + (star ? (sit === 'win' ? 0.08 : sit === 'mid' ? 0.2 : 0.28) : 0)
   const R = rngOf(`${F.seed}-${capYear(F)}-out-${p.i}`)
   return R.u() < clamp(0.03, 0.5, ch)
 }
@@ -967,6 +982,12 @@ export function cpuExtensions(F, s) {
     // best: a star into his thirties)
     const rk = rankOf(F, p), ag = p.ag ?? 30
     if (p.rs ? rk > 110 : rk > 70 || (ag >= 31 && rk > 35) || ag >= 35) continue
+    // (a veteran star a year from free agency doesn't always sign: some bet on the market, the way Durant, Kawhi and
+    // George played out their deals; one off a team going nowhere more often; seeded by the man and the summer)
+    if (!p.rs && rk <= 40 && ag <= 31) {
+      const sit = situationOf(F, s), u = rngOf(`${F.seed}-${year}-noext-${p.i}`).u()
+      if (u < (sit === 'win' ? 0.25 : sit === 'mid' ? 0.4 : 0.55)) continue
+    }
     const ask = extensionAsk(F, s, p)
     if (!ask) continue
     const w = worthOf(F, { ...p, ag: (p.ag ?? 25) + 1 }, year + 1)

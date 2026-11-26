@@ -229,6 +229,9 @@ function endDay(F, { mine = null, news = [] } = {}) {
   // dates them the day they were made, the deadline's own day too)
   const dl = X.cpuDeadline(F, was) ?? []
   for (const x of dl) addNews(F, x)
+  // (a league team calls the GM with an offer: trades.js cpuOffer, most in the deadline's last ten days)
+  const call = X.cpuOffer(F, was)
+  if (call) addNews(F, call)
   if (was === F.ddl) addNews(F, { k: 'ddl', tag: 'DEADLINE', text: `The trade deadline has passed. Rosters are set for the stretch run` })
   // (the All-Star Game is the Sunday of the break: played, and dated, that day)
   if (F.asb && (F.asDone ?? 0) < 3 && was >= F.asb[0] + AS_SUNDAY) allStarGame(F)

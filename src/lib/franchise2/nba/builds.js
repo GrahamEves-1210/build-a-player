@@ -11,6 +11,7 @@ import { rngOf, clamp } from '../rng'
 import { addNews, POS_FULL, signText } from './news'
 import * as X from './seams'
 import { coachDev } from './coach'
+import { spotFive, dressed, spotOf } from './rotation'
 
 // one at each spot, PG to C (the setup's PLAYERS step)
 export const BUILD_MAX = 5
@@ -20,7 +21,7 @@ export function buildSpot(pos, a) {
   const pg = (a.passing ?? 5) + (a.handles ?? 5), wing = (a.size ?? 5) * 2
   return pg >= 15 && pg >= wing ? 'PG' : wing >= 13 && (a.size ?? 5) >= 7 ? 'SF' : 'SG'
 }
-const HT = { PG: 75, SG: 77, SF: 79, PF: 81, C: 83 }, WT = { PG: 190, SG: 205, SF: 220, PF: 235, C: 255 }
+export const HT = { PG: 75, SG: 77, SF: 79, PF: 81, C: 83 }, WT = { PG: 190, SG: 205, SF: 220, PF: 235, C: 255 }
 // the draft slot his OVR goes at: a 90 or better is the first pick, an 85 goes ninth, an 80 in the middle of the
 // round, a 75 late in it, a 72 or less last (No. 30)
 export const buildSlot = o => clamp(1, 30, Math.round(1 + (90 - o) * 1.6))
@@ -107,6 +108,11 @@ export function placeBuilds(F) {
     addNews(F, { k: 'sign', tag: 'SIGNED', s: F.team, text: `${signText('signs with', { ...p, n: `${p.n}, a ${POS_FULL[p.p] ?? p.p},` }, F.team, { note: ' (rookie scale)' })}${same ? `; ${same.n} is waived` : ''}` })
     if (!F.noCap) addNews(F, { k: 'cap', tag: 'PAYROLL', s: F.team, text: buildCapText(F, before, X.capSheet(F, F.team)) })
   }
+  // the man each build replaces in the five (setup.js setupStarters reads it the same way: the coach's five of
+  // opening night's men at the build's spot): kept on the build as rp, so he comes off the bench while he's healthy
+  // and an injury to him never sends a better man to the bench (rotation.js setOf / buildFive)
+  const five = spotFive(dressed(t, { year: F.year }).filter(x => x.b == null))
+  for (const p of made) { const m = five[spotOf(p)]; if (m) p.rp = m.i }
 }
 // the man a full roster waives to make room for a build of group g (setup's preview and placeBuilds agree)
 export function waiveFor(F, t, g) {

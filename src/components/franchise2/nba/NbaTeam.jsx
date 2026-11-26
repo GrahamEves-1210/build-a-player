@@ -84,9 +84,12 @@ const entryText = (F, e) => {
 // what a protected first that stays home turns into (draft.js runLottery: the next first, the protection halved)
 const rollText = top => (Math.floor(top / 2) >= 1 ? `top-${Math.floor(top / 2)} protected` : 'unprotected')
 function Trades({ F, act, onBack }) {
-  const [them, setThem] = useState(null)
-  const [side, setSide] = useState(0)
-  const [ga, setGa] = useState([]), [gb, setGb] = useState([]), [pa, setPa] = useState([]), [pb, setPb] = useState([])
+  // (COUNTER on a league team's call, NbaHub TradeCall: its offer loaded to work from; the call is over once it's here)
+  const [w] = useState(() => (F.tof?.work && CAP_SIM.checkTrade(F, F.tof.deal).ok ? F.tof.deal : null))
+  useEffect(() => { if (F.tof?.work) act(X => { delete X.tof }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [them, setThem] = useState(w?.b ?? null)
+  const [side, setSide] = useState(w ? 1 : 0)
+  const [ga, setGa] = useState(w?.ga ?? []), [gb, setGb] = useState(w?.gb ?? []), [pa, setPa] = useState(w?.pa ?? []), [pb, setPb] = useState(w?.pb ?? [])
   const [ans, setAns] = useState(null)
   // (the deal just done: each side's names, kept on the board after the selections clear)
   const [sent, setSent] = useState(null)

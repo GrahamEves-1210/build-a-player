@@ -28,7 +28,7 @@ export const ORD = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 's
 export const money = v => (v == null ? '-' : `$${(Math.round(v * 10) / 10).toFixed(1)}M`)
 export const momentOpts = F => ({ moments: (F.moments ?? 'advanced') !== 'off' })
 
-export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveBad, onRetry }) {
+export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveBad, onRetry, onBuild = null }) {
   const [tab, setTab] = useState('season')
   // (LIGHT never goes into a game: a save waiting on a moment is simmed on, lightSettle)
   const light = isLight(F)
@@ -89,7 +89,8 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
-          {tab === 'season' && (off ? (light ? <LightOffseason F={F} act={act} owner={owner} /> : <NbaOffseason F={F} act={act} owner={owner} />) : <Season F={F} R={R} act={act} play={play} owner={owner} light={light} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
+          {tab === 'season' && <TradeCall F={F} act={act} onCounter={() => { act(X => { if (X.tof) X.tof.work = 1 }); toTab('team', 'trades') }} />}
+          {tab === 'season' && (off ? (light ? <LightOffseason F={F} act={act} owner={owner} onBuild={onBuild} /> : <NbaOffseason F={F} act={act} owner={owner} onBuild={onBuild} />) : <Season F={F} R={R} act={act} play={play} owner={owner} light={light} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
           {tab === 'team' && <NbaTeam F={F} act={act} owner={owner} view={teamView} setView={setTeamView} />}
           {tab === 'league' && <NbaLeague F={F} act={act} owner={owner} />}
           {tab === 'history' && <NbaHistory F={F} owner={owner} onSlots={onSlots} onDelete={onDelete} />}
@@ -151,11 +152,37 @@ function Season({ F, R, act, play, owner, onTrades, onSim, light = false }) {
         <ScoutRow F={F} act={act} />
         {!light && <GamesSwitch mode={F.moments ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
           onPick={m => act(X => { X.moments = m })} cls={GAMES_CLS} />}
-        <LeagueRules value={{ cap: !F.noCap, inj: !F.noInj }} nick={TEAM[F.team].nick} capWhat={CAP_WHAT}
-          onChange={r => act(X => { if (r.cap != null) { if (r.cap) delete X.noCap; else X.noCap = 1 } if (r.inj != null) { if (r.inj) delete X.noInj; else { X.noInj = 1; for (const s of SHORTS) for (const p of X.teams[s].r) delete p.inj } } })} />
+        <LeagueRules value={{ cap: !F.noCap, inj: !F.noInj, sandbox: !!F.sandbox }} nick={TEAM[F.team].nick} capWhat={CAP_WHAT}
+          onChange={r => act(X => { if (r.sandbox != null) X.sandbox = !!r.sandbox; if (r.cap != null) { if (r.cap) delete X.noCap; else X.noCap = 1 } if (r.inj != null) { if (r.inj) delete X.noInj; else { X.noInj = 1; for (const s of SHORTS) for (const p of X.teams[s].r) delete p.inj } } })} />
       </aside>
     </div>
     </ManSheetHost>
+  )
+}
+
+// A LEAGUE TEAM ON THE PHONE (trades.js cpuOffer): its offer for one of the GM's men, the way a front office puts it.
+// Accept (the trade goes through), decline (the wire says so), or counter (the trade screen with the offer loaded, to
+// work from). It stands a few days in the season, the summer's stop it came on.
+function TradeCall({ F, act, onCounter }) {
+  const o = F.tof ? CAP_SIM.offerNow({ ...F }) : null
+  const [done, setDone] = useState(null)
+  if (done) return <div className="nb-call is-done" style={fkVars(done.s)} role="status"><KLogo s={done.s} size={28} /><p>{NBA.teamWords(done.text)}</p><button type="button" className="nb-call-x" aria-label="Dismiss" onClick={() => { setDone(null); sfx('tap') }}><IconClose /></button></div>
+  if (!o) return null
+  const answer = yes => {
+    const r = act(X => { const r = CAP_SIM.answerOffer(X, yes); for (const x of r?.news ?? []) NBA.addNews(X, x); return r })
+    if (r?.ok) { setDone({ s: o.s, text: yes ? `${r.line}.` : `The ${F.team} pass on the ${o.s}' offer.` }); sfx(yes ? 'claim' : 'tap'); if (yes) haptic('success') } else sfx('deny')
+  }
+  const left = F.phase === 'season' && o.until != null ? Math.max(0, Math.min(o.until, F.ddl ?? o.until) - (F.day ?? 0)) : null
+  return (
+    <section className="nb-call" style={fkVars(o.s)} aria-label="Trade offer">
+      <div className="nb-call-top"><KLogo s={o.s} size={36} /><span><small>{`TRADE CALL${left != null ? ` · ${left === 0 ? 'ANSWER TONIGHT' : `${left + 1} DAYS TO ANSWER`}` : ''}`}</small><b>{`${TEAM[o.s].name}`}</b></span></div>
+      <p>{NBA.teamWords(CAP_SIM.offerText(F, o))}</p>
+      <div className="nb-call-acts">
+        <Go onClick={() => answer(true)}>Accept</Go>
+        <Go ghost onClick={onCounter}>Counter</Go>
+        <Go ghost onClick={() => answer(false)}>Decline</Go>
+      </div>
+    </section>
   )
 }
 

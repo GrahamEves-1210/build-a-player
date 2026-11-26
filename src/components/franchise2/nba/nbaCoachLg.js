@@ -40,7 +40,7 @@ function randomName(not) {
 export const NBA_COACH = {
   TEAM, CTYPES: NC.CTYPES, CLABEL: NC.CLABEL, SHORT_LABEL: NC.CSHORT, STYLES: NC.STYLES, RESPINS: NC.RESPINS, cLetter: NC.cLetter, coachGrade: NC.coachGrade,
   wheelOf: NC.wheelOf, dealSpin: NC.dealSpin, dealRespin: NC.dealRespin, coachByName: NC.coachByName, takeLine: NC.takeLine, linesDone: NC.linesDone, realHC: NC.realHC,
-  photo: nbaCoachPhoto, color: colorOf, mark: () => null, faces, randomName,
+  photo: nbaCoachPhoto, color: colorOf, mark: () => null, faces, randomName, sandbox: true,
   hireSub: real => `TAKES OVER FROM ${real.name.toUpperCase()}`,
 }
 // Staff.jsx's league (StaffL3, Grades)

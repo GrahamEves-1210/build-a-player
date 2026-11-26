@@ -8,6 +8,7 @@ import { records, pct, leagueOrder } from './season'
 import { addNews } from './news'
 import { rngOf, clamp } from '../rng'
 import { fixNumbers } from './numbers'
+import { attrsOfBuild, buildSpot, HT as BHT, WT as BWT } from './builds'
 import * as X from './seams'
 
 export const DRAFT_YEARS = 7
@@ -398,3 +399,27 @@ export function pruneDrafts(F) {
 }
 export const lotteryText = L => L.lottery.filter(x => x.to < x.from).map(x => `${x.s} jumps from ${x.from} to ${x.to}`)
 export { leagueOrder }
+
+// ── SANDBOX: a build into the class (2026-11-25, football's switch for basketball: League rules > Sandbox) ──
+// The GM builds a man on the build page and he joins this year's class as a prospect like any other: his ratings the
+// build's, 20 years old, the board reading his ceiling a few points above what he is (scouts see what's there; he
+// can still grow, the way any 20-year-old does). Any team can draft him; he's a draft pick, not one of the GM's own
+// builds (sb: 1 marks him on the board). Open until the draft's first pick: canSandbox.
+//   F.sbp = { pos, spot, build, types }: a build back from the build page, waiting for his name (the draft screen)
+export const canSandbox = F => !!F?.sandbox && (F.phase !== 'off' || ['awards', 'lottery'].includes(F.off?.step) || (F.off?.step === 'draft' && !(F.dn?.at > 0)))
+export function addSandboxProspect(F, { pos, spot, build, name }) {
+  if (!canSandbox(F) || !build || !String(name ?? '').trim()) return null
+  const g = pos === 'big' ? 'big' : 'guard'
+  const a = attrsOfBuild(g, build)
+  const sp = spot && groupOfSpot(spot) === g ? spot : buildSpot(g, a)
+  const o = ovrOfAttrs(g, a)
+  const pk = clamp(o, 99, o + 5)
+  const p = { i: F.nid++, n: String(name).trim(), p: sp, g, o, a, ag: 20, pk, ht: BHT[sp], wt: BWT[sp], yr: 2, seen: pk, w: 2, sc: 0, sb: 1 }
+  p.c = schoolOf(p)
+  p.tg = tagOf(p)
+  F.dc = [...(F.dc ?? []), p].sort((x, y) => (y.seen + y.o * 0.25) - (x.seen + x.o * 0.25))
+  F.dc.forEach((x, k) => { x.rank = k + 1 })
+  delete F.sbp
+  addNews(F, { k: 'draft', tag: 'DRAFT', s: F.team, text: `${p.n}, a ${p.p} rated ${p.o}, enters the ${F.year + 1} NBA Draft` })
+  return p
+}
