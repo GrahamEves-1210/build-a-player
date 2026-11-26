@@ -8606,3 +8606,54 @@ html.app-look .au-screen.au-hub > .au-hub-body { margin-left: auto; margin-right
 @keyframes au-rv-step { from { transform: translateY(-10px); opacity: .4; } }
 @keyframes au-rv-land { from { transform: scale(1.35); } }
 @media (min-width: 1024px) { .au-reveal-tag { font-size: 128px; } .au-reveal { padding: 34px 0 28px; } }
+
+/* ═══ TRAIT AUCTION, round 4 (owner 11-26): only what it takes to bid, and every bidder's build in view ═══ */
+.au-top { min-height: 0; justify-content: flex-end; }
+.au-top .au-lbl:empty { display: none; }
+/* the paddles: name and money, then his five grades (the slot on the block ringed); another bidder opens to his full build */
+.au-roomwrap { order: 1; display: grid; gap: 0; }
+.au-paddle { display: grid; grid-template-columns: none; gap: 5px; align-content: start; text-align: left; font: inherit; color: inherit; cursor: default; }
+button.au-paddle { cursor: pointer; }
+button.au-paddle:focus-visible { outline: 2px solid var(--au-amber); outline-offset: -2px; }
+.au-paddle-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.au-paddle-top .au-paddle-name { flex: 1; min-width: 0; }
+.au-paddle-top .au-paddle-cash { flex: none; }
+.au-grades { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.au-grades i { flex: 1 1 0; min-width: 0; max-width: 26px; padding: 2px 0 1px; border-radius: 3px; text-align: center; font-style: normal; font-family: var(--ag-display); font-size: 13px; line-height: 1.1; color: rgba(214,224,243,.35); background: rgba(255,255,255,.05); }
+.au-grades i.is-in { color: #fff; background: color-mix(in srgb, var(--g) 55%, #0b1222); }
+.au-grades i.is-up { box-shadow: inset 0 0 0 1.5px var(--au-amber); }
+.au-grades em { margin-left: 4px; font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; color: var(--au-muted); }
+.au-paddle.is-open { background: var(--au-panel); }
+.au-peek { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--au-panel); border-bottom: 1px solid var(--au-line); }
+.au-peek-cell { display: grid; justify-items: center; gap: 2px; padding: 7px 2px; border-left: 1px solid var(--au-line); text-align: center; min-width: 0; }
+.au-peek-cell:first-child { border-left: 0; }
+.au-peek-cell small { font-family: var(--ag-font); font-size: 13px; letter-spacing: .6px; line-height: 1.05; color: var(--au-muted); overflow-wrap: anywhere; }
+.au-peek-cell b { font-family: var(--ag-display); font-weight: 400; font-size: 20px; line-height: 1; color: rgba(214,224,243,.3); }
+.au-peek-cell.is-in b { color: var(--g); }
+.au-peek-cell i { max-width: 100%; font-style: normal; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--au-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-peek-cell:not(.is-in) i { color: rgba(214,224,243,.4); }
+.au-peek-cell.is-up { box-shadow: inset 0 -3px 0 var(--au-amber); }
+@media (min-width: 1024px) {
+  .au-roomwrap { order: 0; }
+  .au-paddle, .au-paddle.is-me, .au-paddle:first-child { padding: 10px 12px; }
+  .au-grades i { max-width: 34px; font-size: 15px; }
+}
+.au-roomwrap > .au-room { order: 0; }
+.au-roomwrap > .au-peek { order: 1; }
+/* BID at the thumb on the page's own ground, so whatever scrolls under it doesn't show through */
+.au-act.au-bids { background: var(--au-bg); padding-top: 8px; }
+/* a phone: the room fits above the dock with a bidder's build open (smaller card, tighter board and strip) */
+@media (max-width: 1023px) {
+  .au-lot { grid-template-columns: 112px minmax(0, 1fr); gap: 12px; }
+  .au-lot-card, .au-card, .au-deck { width: 112px; height: 152px; }
+  .au-lot-trait { font-size: 34px; }
+  .au-grade { width: 58px; height: 68px; }
+  .au-grade-back, .au-grade-face { font-size: 30px; }
+  .au-board { padding-top: 8px; gap: 4px 12px; }
+  .au-amt { font-size: 46px; }
+  .au-call { font-size: 40px; }
+  .au-cell, .au-cell.is-in, .au-cell.is-up { padding: 5px 2px; }
+  .au-cell-g { font-size: 21px; }
+  .au-floor { gap: 8px; }
+  .au-amt.is-none { display: none; }
+}

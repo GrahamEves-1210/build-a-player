@@ -64,7 +64,8 @@ export function auctionCoreKit(sport, pos) {
   const slots = bucket
     ? SAL_COLS.map(c => ({ key: c.key, label: c.label, types: p === 'big' ? c.bigTypes : c.guardTypes, alt: p === 'big' ? c.guardTypes : c.bigTypes }))
     : fb.cols.map(c => ({ key: c.key, label: c.label, types: c.types, alt: [] }))
-  const ovr = bucket ? b => calcBucketOVR(b, posTypes, p) : b => NFL_OVR[p](b, posTypes)
+  // the position's own OVR, the same function its builds use, unrounded (calcOvr takes it to one decimal)
+  const ovr = bucket ? b => calcBucketOVR(b, posTypes, p, true) : b => NFL_OVR[p](b, posTypes, true)
   return slotKit({ sport: bucket ? 'bucket' : 'nfl', pos: p, slots, posTypes, attr, pool: bucket ? BUCKET_SAL_POOL : fb.pool, ovr })
 }
 
@@ -98,7 +99,8 @@ export function slotKit({ sport, pos, slots, posTypes, attr, pool, ovr }) {
       for (const t of loose) b[t] = { type: t, val: avg(got.map(w => w.extra?.[t]).filter(v => v != null)), qbFull: 'Team average', team: null }
       return b
     },
-    calcOvr: b => Math.round(ovr(b) ?? 0),
+    // to one decimal (87.4): whole numbers tied too often (owner 11-26)
+    calcOvr: b => Math.round((ovr(b) ?? 0) * 10) / 10,
   }
 }
 
@@ -225,8 +227,9 @@ export function rankAuction(m, L, kit) {
       const quit = L.out.includes(p.vid)
       return { ...p, slots, ovr: quit ? -1 : kit.calcOvr(kit.buildOf(won)), left: L.wallets[p.vid] ?? 0, forfeit: quit, closer: L.closer === p.vid }
     })
-    // a tie goes to the bidder who filled his build first, then to money left
-    .sort((a, b) => b.ovr - a.ovr || (b.closer - a.closer) || b.left - a.left || a.vid.localeCompare(b.vid))
+    // OVR to one decimal; dead level, the money left (spent less for the same build), then whoever filled his build
+    // first (it ended the auction), then the seat (owner 11-26: money before filling first)
+    .sort((a, b) => b.ovr - a.ovr || b.left - a.left || (b.closer - a.closer) || a.vid.localeCompare(b.vid))
     .map((p, i) => ({ ...p, place: i + 1 }))
 }
 

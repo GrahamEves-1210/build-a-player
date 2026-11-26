@@ -8,6 +8,13 @@ import {
 } from '../../src/lib/auctionCore.js'
 import '../../src/lib/soccerAuction.js'   // (soccer's kit: the striker)
 import { seeded } from '../../src/lib/rng.js'
+import { calcOVR, calcOVRRB, calcOVRWR } from '../../src/utils/simulation.js'
+import { calcBucketOVR } from '../../src/utils/bucketSimulation.js'
+import { calcSoccerOVR } from '../../src/utils/soccerSimulation.js'
+import { FB_SAL } from '../../src/data/fb-salary.js'
+import { GUARD_TYPES } from '../../src/data/nba-guards.js'
+import { BIG_TYPES } from '../../src/data/nba-bigs.js'
+import { SOCCER_TYPES } from '../../src/data/soccer-attrs.js'
 
 let fails = 0
 const ok = (c, msg) => { if (!c) { fails++; console.log('FAIL', msg) } }
@@ -64,6 +71,10 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
     }
   }
   const ranked = rankAuction(m, L, kit)
+  stats.finals = (stats.finals ?? 0) + 1
+  if (ranked.length > 1 && ranked[0].ovr === ranked[1].ovr) stats.topTies = (stats.topTies ?? 0) + 1
+  if (ranked.length > 1 && Math.round(ranked[0].ovr) === Math.round(ranked[1].ovr)) stats.topTiesWhole = (stats.topTiesWhole ?? 0) + 1
+  for (const p of ranked) if (p.ovr >= 99) stats.at99 = (stats.at99 ?? 0) + 1
   ok(ranked.length === n && ranked.every((p, i) => p.place === i + 1), 'ranked')
   ok(ranked.every(p => p.ovr > 0 && p.ovr <= 99), `${sport} ${pos}: OVRs ${ranked.map(p => p.ovr)}`)
   ok(players.every(p => BUDGET - L.wallets[p.vid] === Object.values(L.won[p.vid]).reduce((a, w) => a + (w.price || 0), 0)), 'wallets match')
@@ -131,6 +142,55 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
     lines.push(`  ${k.padEnd(13)} lot ${f(a.lot)} → ${f(b.lot)} · draw ${f(a.draw)} → ${f(b.draw)} · A/S ${Math.round(a.top * 100)}% → ${Math.round(b.top * 100)}% · C+ and below ${Math.round(a.low * 100)}% → ${Math.round(b.low * 100)}%`)
   }
   console.log(`grade spread, even draw → GRADE_TILT ${real}:\n${lines.join('\n')}`)
+}
+
+// The auction's OVR is each position's own build OVR (the builder's function, its own weights), to one decimal:
+// for random builds it rounds to exactly the builder's whole number, and it's that number before rounding
+{
+  const REAL = {
+    'nfl-qb': (b, ex) => calcOVR(b, FB_SAL.qb.types, ex), 'nfl-rb': (b, ex) => calcOVRRB(b, FB_SAL.rb.types, ex), 'nfl-wr': (b, ex) => calcOVRWR(b, FB_SAL.wr.types, ex),
+    'bucket-guard': (b, ex) => calcBucketOVR(b, GUARD_TYPES, 'guard', ex), 'bucket-big': (b, ex) => calcBucketOVR(b, BIG_TYPES, 'big', ex),
+    'soccer-st': (b, ex) => calcSoccerOVR(b, SOCCER_TYPES, ex),
+  }
+  const ties = {}
+  for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list) {
+    const kit = auctionCoreKit(sport, pos), real = REAL[`${sport}-${pos}`]
+    const r = seeded(`ovr-${sport}-${pos}`)
+    const seen = new Map()
+    let wholeTies = 0, decTies = 0, pairs = 0
+    for (let g = 0; g < 600; g++) {
+      const won = Object.fromEntries(kit.types.map(t => [t, { ...kit.lotOf(kit.pool[Math.floor(r() * kit.pool.length)], t), price: 1 }]))
+      const b = kit.buildOf(won)
+      const o = kit.calcOvr(b)
+      ok(Math.abs(o - Math.round(real(b, true) * 10) / 10) < 1e-9, `${sport} ${pos}: auction OVR ${o} is the builder's ${real(b, true)}`)
+      ok(Math.round(real(b, true)) === real(b, false) || Math.abs(real(b, true) % 1 - 0.5) < 1e-6, `${sport} ${pos}: unrounded and whole OVR agree`)
+      ok(Math.round(o) === real(b, false) || Math.abs(real(b, true) % 1 - 0.5) < 0.051, `${sport} ${pos}: ${o} rounds to the builder's ${real(b, false)}`)
+      seen.set(g, [o, real(b, false)])
+    }
+    // how often two builds tie: whole numbers against one decimal
+    const v = [...seen.values()]
+    for (let i = 0; i < v.length; i += 2) { if (!v[i + 1]) break; pairs++; if (v[i][1] === v[i + 1][1]) wholeTies++; if (v[i][0] === v[i + 1][0]) decTies++ }
+    ties[`${sport}-${pos}`] = `${Math.round(wholeTies / pairs * 100)}% → ${Math.round(decTies / pairs * 100)}%`
+  }
+  stats.tiesWholeToDecimal = ties
+}
+
+// The tie order: OVR to one decimal, then money left, then whoever filled his build first, then the seat
+{
+  const kit = auctionCoreKit('nfl', 'qb')
+  const players = [{ vid: 'a' }, { vid: 'b' }, { vid: 'c' }]
+  const m = { code: 'TIE', seed: 'tie', players, types: kit.types }
+  const card = kit.lotOf(kit.pool[0], kit.types[0])
+  const same = Object.fromEntries(kit.types.map(t => [t, { ...kit.lotOf(kit.pool[0], t), price: 1 }]))
+  const L = { ...freshLedger(players), won: { a: same, b: same, c: same }, wallets: { a: 10, b: 12, c: 12 }, closer: 'c' }
+  const order = rankAuction(m, L, kit).map(p => p.vid).join('')
+  ok(order === 'cba', `the tie order: same OVR, more money first, then the one who filled first (got ${order})`)
+  const better = { ...same, [kit.types[0]]: { ...kit.lotOf([...kit.pool].sort((x, y) => kit.lotOf(y, kit.types[0]).val - kit.lotOf(x, kit.types[0]).val)[0], kit.types[0]), price: 1 } }
+  const L2 = { ...L, won: { ...L.won, a: better } }
+  const r2 = rankAuction(m, L2, kit)
+  ok(r2[0].vid === 'a' || r2[0].ovr === r2[1].ovr, `a better build wins whatever the money (got ${r2.map(p => `${p.vid}:${p.ovr}`).join(' ')})`)
+  ok(r2.every(p => Number.isFinite(p.ovr) && Math.round(p.ovr * 10) === p.ovr * 10), 'OVRs to one decimal')
+  void card
 }
 
 // soccer: the striker's slots are Salary Cap's five soccer columns, and the OVR is the striker's (calcSoccerOVR):

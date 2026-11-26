@@ -12,6 +12,6 @@ export const soccerAuctionKit = () => (kit ??= slotKit({
   sport: 'soccer', pos: 'st',
   slots: SOCCER_SAL_COLS.map(c => ({ key: c.key, label: c.label, types: c.types, alt: [] })),
   posTypes: SOCCER_TYPES, attr: SOCCER_ATTR, pool: SOCCER_SAL_POOL,
-  ovr: b => calcSoccerOVR(b, SOCCER_TYPES),
+  ovr: b => calcSoccerOVR(b, SOCCER_TYPES, true),
 }))
 addAuctionKit('soccer', () => soccerAuctionKit())

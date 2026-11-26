@@ -26,6 +26,7 @@ const Name = ({ p, me }) => <NameTag name={p.name} cos={p.cos} self={p.vid === m
 
 // a slot's name, short enough for the build strip (PACE & SIZE → PACE/SIZE, SIZE & ATHLETICISM → SIZE)
 const shortLabel = l => String(l)   // (every slot by its full name, owner 11-26: no ELUSIVE, no PACE/SIZE)
+const ovr1 = o => (Number.isFinite(o) ? o.toFixed(1) : '–')   // one decimal: 87.4
 const lastName = n => { const w = String(n || '').split(' '); return w.length > 1 ? w.slice(1).join(' ') : w[0] }
 
 // The lot: a real player card, the way Salary Cap draws one (his team's colour, the logo faded behind him, the ESPN
@@ -127,6 +128,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   const { kit, match: m, st, me } = au
   const mine = me.vid
   const cheered = useRef(null)
+  const [openVid, setOpenVid] = useState(null)
 
   // the gavel: a sound when a lot sells, a cheer at the end
   const lastSold = useRef(0)
@@ -210,7 +212,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
             <b className="au-podium-place">{meR ? ord(meR.place) : '—'}</b>
             <span className="au-podium-who">
               <span className="au-podium-name"><NameTag name={me.name} self /></span>
-              {meR && <span className="au-podium-ovr"><b>{meR.ovr}</b> OVR · ${meR.left} LEFT{meR.place === 1 ? ' · BEST BUILD IN THE ROOM' : ` · OF ${au.ranked.length}`}</span>}
+              {meR && <span className="au-podium-ovr"><b>{ovr1(meR.ovr)}</b> OVR · ${meR.left} LEFT{meR.place === 1 ? ' · BEST BUILD IN THE ROOM' : ` · OF ${au.ranked.length}`}</span>}
             </span>
           </div>
           {meR && <span className="au-podium-pay gain"><XpIco /> +{xp} <span className="coin-ico coin-ico--sm" /> +{coins}</span>}
@@ -226,7 +228,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
                   {m.types.map(t => <i key={t} className={p.slots[t].drawn ? 'is-drawn' : undefined} style={{ '--g': gradeColor(p.slots[t].val) }} title={`${kit.attrLabel(t)}: ${p.slots[t].name}${p.slots[t].drawn ? ' (the draw)' : ''}`}>{shortLabel(kit.attrLabel(t))} <b>{valToGrade(p.slots[t].val)}</b></i>)}
                 </span>
               </span>
-              <span className="au-final-ovr">{p.forfeit ? <b className="is-left">LEFT</b> : <><b>{p.ovr}</b><small>OVR · ${p.left}</small></>}</span>
+              <span className="au-final-ovr">{p.forfeit ? <b className="is-left">LEFT</b> : <><b>{ovr1(p.ovr)}</b><small>OVR · ${p.left}</small></>}</span>
             </div>
           ))}
         </div>
@@ -247,25 +249,48 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   const high = st.stage === 'draw' ? null : st.high
 
   // the paddles: every bidder in the room, his money and how much of his build is in
+  // the paddles: every bidder, his money, and his build as it stands (a grade a slot, the slot on the block ringed),
+  // so it's plain who still needs what. Tap another bidder for his five slots in full
   const room = (
-    <div className="au-room" role="list" aria-label="Bidders">
-      {m.players.map(p => {
-        const out = L.out.includes(p.vid)
-        const full = openSlots(L, p.vid, m.types).length === 0
-        const tag = out ? 'LEFT' : full ? 'DONE' : onBlock && st.passed.includes(p.vid) ? 'PASS' : onBlock && L.won[p.vid]?.[lot.trait] ? 'FILLED' : null
-        return (
-          <div key={p.vid} role="listitem" className={`au-paddle${p.vid === mine ? ' is-me' : ''}${high?.vid === p.vid && st.stage !== 'sold' ? ' is-high' : ''}${out || (!here.has(p.vid) && p.vid !== mine) ? ' is-away' : ''}${tag ? ' has-tag' : ''}`}>
-            <Pic p={p} me={mine} size={26} />
-            <span className="au-paddle-txt">
-              <span className="au-paddle-name"><Name p={p} me={mine} /></span>
-              <span className="au-paddle-sub">
+    <div className="au-roomwrap">
+      <div className="au-room" role="list" aria-label="Bidders">
+        {m.players.map(p => {
+          const out = L.out.includes(p.vid)
+          const full = openSlots(L, p.vid, m.types).length === 0
+          const tag = out ? 'LEFT' : full ? 'DONE' : onBlock && st.passed.includes(p.vid) ? 'PASS' : null
+          const other = p.vid !== mine
+          const Tag = other ? 'button' : 'div'
+          return (
+            <Tag key={p.vid} role="listitem" {...(other ? { type: 'button', 'aria-expanded': openVid === p.vid, onClick: () => { setOpenVid(v => (v === p.vid ? null : p.vid)); sfx('tap') } } : {})}
+              className={`au-paddle${p.vid === mine ? ' is-me' : ''}${high?.vid === p.vid && st.stage !== 'sold' ? ' is-high' : ''}${out || (!here.has(p.vid) && p.vid !== mine) ? ' is-away' : ''}${openVid === p.vid ? ' is-open' : ''}`}>
+              <span className="au-paddle-top">
+                <Pic p={p} me={mine} size={22} />
+                <span className="au-paddle-name"><Name p={p} me={mine} /></span>
                 <b className="au-paddle-cash">${L.wallets[p.vid]}</b>
-                {tag ? <em>{tag}</em> : <span className="au-pips">{m.types.map(t => <i key={t} className={L.won[p.vid]?.[t] ? 'is-in' : ''} />)}</span>}
               </span>
-            </span>
-          </div>
-        )
-      })}
+              <span className="au-grades" aria-label="Build">
+                {m.types.map(t => {
+                  const w = L.won[p.vid]?.[t]
+                  return <i key={t} className={`${w ? 'is-in' : ''}${onBlock && lot.trait === t ? ' is-up' : ''}`} style={w ? { '--g': gradeColor(w.val) } : undefined} title={kit.attrLabel(t)}>{w ? valToGrade(w.val) : '·'}</i>
+                })}
+                {tag && <em>{tag}</em>}
+              </span>
+            </Tag>
+          )
+        })}
+      </div>
+      {openVid && nameOf(openVid) && (
+        <div className="au-peek" aria-label="His build">
+          {m.types.map(t => {
+            const w = L.won[openVid]?.[t]
+            return (
+              <span key={t} className={`au-peek-cell${w ? ' is-in' : ''}${onBlock && lot.trait === t ? ' is-up' : ''}`} style={w ? { '--g': gradeColor(w.val) } : undefined}>
+                <small>{kit.attrLabel(t)}</small><b>{w ? valToGrade(w.val) : '—'}</b><i>{w ? lastName(w.name) : 'OPEN'}</i>
+              </span>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 
@@ -384,7 +409,6 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   const shown = !!lot && (sold || lot.known) && lot.val != null
   const myDone = myOpen === 0
   // the cards that went back in the deck unsold, face up: what could still come back
-  const back = (L.back ?? []).filter(c => !(st.stage === 'lot' && lot?.known && c.trait === lot.trait && c.name === lot.name))
   const state = sold ? (st.sold ? 'sold' : 'pass') : call ?? (bidding ? 'open' : 'wait')
 
   let act
@@ -412,7 +436,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
 
   return (
     <div className={`au-floor is-${state}`} data-lot={st.n || 0}>
-      {top(`ROOM ${m.code} · ${m.players.length} PLAYERS`)}
+      {top('')}
       <div className="au-main">
         <div className={`au-block is-${state}`}>
           {lot ? (
@@ -425,7 +449,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
                 {sold && <span className={`au-stamp${st.sold ? '' : ' is-pass'}`} key={`s${st.n}`}>{st.sold ? 'SOLD' : 'NO BIDS'}</span>}
               </div>
               <div className="au-lot-info">
-                <span className="au-lbl">{lot.known && st.stage === 'lot' ? 'BACK FROM THE DECK' : 'UP FOR'}</span>
+                {lot.known && st.stage === 'lot' && <span className="au-lbl">BACK FROM THE DECK</span>}
                 <b className="au-lot-trait">{kit.attrLabel(lot.trait)}</b>
                 {kit.slotTraits(lot.trait).length > 1 && <span className="au-lot-covers">{kit.slotTraits(lot.trait).join(' · ')}</span>}
                 <div className="au-lot-foot">
@@ -471,33 +495,6 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
         {room}
         {/* (not while the position's being drawn: its five slots would give it away) */}
         {lot || st.n > 0 ? mySlots : null}
-        {back.length > 0 && (
-          <div className="au-back" aria-label="Back in the deck">
-            <span className="au-lbl">BACK IN THE DECK</span>
-            <div className="au-back-cards">
-              {back.map(c => (
-                <span key={`${c.trait}:${c.name}`} className="au-back-card" style={{ '--g': gradeColor(c.val) }}>
-                  <b>{valToGrade(c.val)}</b><small>{shortLabel(kit.attrLabel(c.trait))}</small><i>{lastName(c.name)}</i>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        {L.log.length > 0 && (
-          <div className="au-log" aria-label="Recent lots">
-            <span className="au-lbl">RECENT</span>
-            {L.log.slice(0, 4).map(e => {
-              const who = e.vid && nameOf(e.vid)
-              return (
-                <span key={e.n} className="au-log-row" style={{ '--g': gradeColor(e.val) }}>
-                  <b>{valToGrade(e.val)}</b>
-                  <span className="au-log-what">{shortLabel(kit.attrLabel(e.trait))} · {e.name}</span>
-                  <span className="au-log-to">{who ? <><Name p={who} me={mine} /> ${e.amount}</> : 'NO BIDS'}</span>
-                </span>
-              )
-            })}
-          </div>
-        )}
       </div>
     </div>
   )

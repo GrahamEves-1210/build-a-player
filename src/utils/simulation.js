@@ -121,7 +121,7 @@ export const ATTR_WEIGHT = {
   'leadership':      0.04,
 }
 
-export function calcOVR(build, types = TYPES) {
+export function calcOVR(build, types = TYPES, exact = false) {
   const filled = types.filter(t => build[t])
   if (!filled.length) return null
 
@@ -140,7 +140,8 @@ export function calcOVR(build, types = TYPES) {
     else if (minVal >= 8) bonus += 0.8
   }
 
-  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+  // (exact: the same number before it's rounded to a whole OVR; the Trait Auction ranks by it to one decimal)
+  return Math.min(99, Math.max(0, exact ? base + bonus : Math.round(base + bonus)))
 }
 
 export function getArchetype(ovr, build, types = TYPES) {
@@ -887,7 +888,7 @@ export const RB_ATTR_WEIGHT = {
   'carrying':    0.05,
 }
 
-export function calcOVRRB(build, types = RB_TYPES) {
+export function calcOVRRB(build, types = RB_TYPES, exact = false) {
   const filled = types.filter(t => build[t])
   if (!filled.length) return null
 
@@ -905,7 +906,8 @@ export function calcOVRRB(build, types = RB_TYPES) {
     else if (minVal >= 8) bonus += 0.5
   }
 
-  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+  // (exact: the same number before it's rounded to a whole OVR; the Trait Auction ranks by it to one decimal)
+  return Math.min(99, Math.max(0, exact ? base + bonus : Math.round(base + bonus)))
 }
 
 export function getArchetypeRB(ovr, build, types = RB_TYPES) {
@@ -1530,7 +1532,7 @@ export const WR_ATTR_WEIGHT = {
   'release':     0.08,
 }
 
-export function calcOVRWR(build, types = WR_TYPES) {
+export function calcOVRWR(build, types = WR_TYPES, exact = false) {
   const filled = types.filter(t => build[t])
   if (!filled.length) return null
 
@@ -1548,7 +1550,8 @@ export function calcOVRWR(build, types = WR_TYPES) {
     else if (minVal >= 8) bonus += 0.5
   }
 
-  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+  // (exact: the same number before it's rounded to a whole OVR; the Trait Auction ranks by it to one decimal)
+  return Math.min(99, Math.max(0, exact ? base + bonus : Math.round(base + bonus)))
 }
 
 export function getArchetypeWR(ovr, build, types = WR_TYPES) {

@@ -215,7 +215,7 @@ export const SOCCER_OVR_WEIGHTS = {
   finishing: 0.18, positioning: 0.17, dribbling: 0.12, composure: 0.11, pace: 0.10,
   shotPower: 0.08, heading: 0.08, passing: 0.08, size: 0.08,
 }
-export function calcSoccerOVR(build, types = SOCCER_TRAITS) {
+export function calcSoccerOVR(build, types = SOCCER_TRAITS, exact = false) {
   let sum = 0, wt = 0
   for (const t of types) {
     if (!build?.[t]) continue
@@ -225,7 +225,9 @@ export function calcSoccerOVR(build, types = SOCCER_TRAITS) {
     wt += w
   }
   if (!wt) return 0
-  return Math.min(99, Math.round(57 + ((sum / wt - 1) / 9) * 44))
+  // (exact: the same number before it's rounded to a whole OVR; the Trait Auction ranks by it to one decimal)
+  const v = 57 + ((sum / wt - 1) / 9) * 44
+  return Math.min(99, exact ? v : Math.round(v))
 }
 const ovrOfAttrs = attrs => calcSoccerOVR(Object.fromEntries(SOCCER_TRAITS.map(t => [t, { val: attrs?.[t] ?? 5 }])), SOCCER_TRAITS)
 

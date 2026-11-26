@@ -147,7 +147,7 @@ export const OVR_WEIGHTS = {
   },
 }
 
-export function calcBucketOVR(build, types, position = 'guard') {
+export function calcBucketOVR(build, types, position = 'guard', exact = false) {
   const W = OVR_WEIGHTS[position] ?? OVR_WEIGHTS.guard
   let sum = 0, wt = 0
   for (const t of types) {
@@ -158,7 +158,9 @@ export function calcBucketOVR(build, types, position = 'guard') {
     wt += w
   }
   if (!wt) return 0
-  return Math.min(99, Math.round(57 + ((sum / wt - 1) / 9) * 44))
+  // (exact: the same number before it's rounded to a whole OVR; the Trait Auction ranks by it to one decimal)
+  const v = 57 + ((sum / wt - 1) / 9) * 44
+  return Math.min(99, exact ? v : Math.round(v))
 }
 
 // ─── Best-of-7 Series ─────────────────────────────────────────────────────────
