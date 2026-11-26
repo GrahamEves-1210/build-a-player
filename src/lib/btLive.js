@@ -15,4 +15,5 @@ const BT_DEV = (() => {
 export const BT_LIVE = false || BT_DEV
 // The practice page itself opens only on an address that asks for it (/bucket?btlive=1), so the switch being on
 // from an earlier visit never takes the rest of the site away. Dev server only.
-export const BT_LIVE_OPEN = BT_LIVE && typeof location !== 'undefined' && /[?&]btlive=1\b/.test(location.search)
+// (owner 11-26: Blacktop's PRACTICE button opens it, so it's in every build, behind that address)
+export const BT_LIVE_OPEN = typeof location !== 'undefined' && /[?&]btlive=1\b/.test(location.search)

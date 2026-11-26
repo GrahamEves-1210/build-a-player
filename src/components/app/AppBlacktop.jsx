@@ -178,7 +178,8 @@ export function BlacktopHubView({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null,
           </div>
           <div className="btl-acts">
             {go && <button className="ag-btn btl-btn btl-go" onClick={() => { sfx('tap'); go() }}>JOIN {mode.size}V{mode.size} LOBBY <IconArrow size={18} /></button>}
-            {go && onPractice && <button className="ag-btn btl-btn btl-btn--line" onClick={() => { sfx('tap'); onPractice(mode.size) }}>PRACTICE · {mode.cpus}</button>}
+            
+            {onPractice && <button className="ag-btn btl-btn btl-btn--line" onClick={() => { sfx('tap'); onPractice() }}>PRACTICE</button>}
             {mode.size === 1 && <OneOnOneOptions onPickup={go ? undefined : onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />}
           </div>
           <div className="btl-record"><ModeStats mode={mode.size === 3 ? 'bt' : mode.size === 2 ? 'bt2' : onJoin1v1 ? 'bt1' : 'h2hB'} /></div>
@@ -189,7 +190,7 @@ export function BlacktopHubView({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null,
           <details className="btl-rules">
             <summary>HOUSE RULES</summary>
             <ol>
-              <li><span>Real players only. A 1v1 starts when both spots are taken, a 2v2 when all four are, a 3v3 when all six are. Practice puts you against CPUs right away.</span></li>
+              <li><span>Real players only. A 1v1 starts when both spots are taken, a 2v2 when all four are, a 3v3 when all six are. PRACTICE is your own run against CPUs: pick the game, your player and the level.</span></li>
               <li><span>In a 1v1 you take your spot as a guard or a big. A 2v2 squad is a guard and a big; a 3v3 squad is two guards and a big. The spot you take is the build you make.</span></li>
               <li><span>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</span></li>
               <li><span>First to <b>11</b>, 1s and 2s, win by 2. Make it, take it.</span></li>

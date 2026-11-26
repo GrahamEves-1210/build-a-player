@@ -66,9 +66,9 @@ const AppCompete = lazy(() => import('./app/AppCompete'))
 // DEV only: Blacktop's game screens on a made-up game (?btlook=live|final|watch|hud: app/BlacktopLook.jsx)
 const BT_LOOK = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('btlook') : null
 const BlacktopLook = import.meta.env.DEV ? lazy(() => import('./app/BlacktopLook')) : null
-// DEV only: Blacktop Live, the real-time prototype (/bucket?btlive=1: lib/btLive.js, components/btlive). Never in a production build
-import { BT_LIVE, BT_LIVE_OPEN } from '../lib/btLive'
-const BtLive = import.meta.env.DEV ? lazy(() => import('./btlive/BtLive')) : null
+// Blacktop's PRACTICE: Blacktop Live against CPUs (/bucket?btlive=1: lib/btLive.js, components/btlive; owner 11-26)
+import { BT_LIVE_OPEN } from '../lib/btLive'
+const BtLive = lazy(() => import('./btlive/BtLive'))
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
 // A 1v1 player's match id starts with their account id when signed in (VersusLobby myId)
 const uidFromVsId = id => (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i.test(id) ? id.slice(0, 36) : null)
@@ -440,7 +440,7 @@ export default function BucketApp() {
       : { starters: false, oneTeam: null }
   })
   // a reload on the build page lands back on it (lib/buildSave.js); opened fresh, the build waits on Home's CONTINUE card
-  const [page, setPage]               = useState(() => { const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : NBA_FRANCHISE_LIVE && buildPageAtLoad('bucket') === 'nbafranchise' ? 'nbafranchise' : (IS_APP || APP_LOOK) && buildPageAtLoad('bucket') === 'career' ? 'career' : 'splash' })   // (the Career hub marks itself too: a reload there opens the career he was playing)   // (basketball Franchise marks itself during a key moment's mini game: a reload there comes back to it)
+  const [page, setPage]               = useState(() => { if (/[?&]bthub=1\b/.test(window.location.search)) return 'blacktop'; const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : NBA_FRANCHISE_LIVE && buildPageAtLoad('bucket') === 'nbafranchise' ? 'nbafranchise' : (IS_APP || APP_LOOK) && buildPageAtLoad('bucket') === 'career' ? 'career' : 'splash' })   // (the Career hub marks itself too: a reload there opens the career he was playing)   // (basketball Franchise marks itself during a key moment's mini game: a reload there comes back to it)
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? saved?.gameMode ?? null)
   const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; if (saved) return saved.position; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
   const [build, setBuild]             = useState(() => liveAt?.build ?? saved?.build ?? {})
@@ -699,7 +699,7 @@ export default function BucketApp() {
         handleStart(String(to).slice(5), p)
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'salarycap') handleStart('salarycap', position)
-      else if (to === 'blacktop') { if (import.meta.env.DEV && BT_LIVE) window.location.href = '/bucket?btlive=1'; else setPage(btPageFor(btPhaseRef.current)) }   // (dev server: the new Blacktop, lib/btLive.js)
+      else if (to === 'blacktop') setPage(btPageFor(btPhaseRef.current))
       else if (to === 'squad') openSquadRef.current?.()
       else if (to === 'career') openCareerRef.current?.()
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
@@ -721,7 +721,7 @@ export default function BucketApp() {
   // the sim page and Salary Cap. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
     // (DEV: Blacktop Live on a phone asks for no ads at all: components/btlive/BtLive.jsx)
-    if (import.meta.env.DEV && BT_LIVE_OPEN && window.matchMedia?.('(pointer: coarse), (max-width: 899px)').matches) return
+    if (BT_LIVE_OPEN && window.matchMedia?.('(pointer: coarse), (max-width: 899px)').matches) return
     if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/bucket', soft: true }); return }
     const here = window.location.pathname
     const path = page === 'sim' ? '/bucket/simulate'
@@ -2229,7 +2229,7 @@ export default function BucketApp() {
   )
   const withGame = el => (IS_APP && gameMode && gameMode !== 'salarycap' && KEEP_GAME_ON.has(page) ? shell(el) : el)
 
-  if (import.meta.env.DEV && BT_LIVE_OPEN) return <Suspense fallback={null}><BtLive pools={LIVE_POOLS} user={user} /></Suspense>
+  if (BT_LIVE_OPEN) return <Suspense fallback={null}><BtLive pools={LIVE_POOLS} user={user} /></Suspense>
   if (import.meta.env.DEV && BT_LOOK) return <Suspense fallback={null}><BlacktopLook look={BT_LOOK} pools={LIVE_POOLS} types={LIVE_TYPES} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} /></Suspense>
   if (page === 'splash') {
     return withGame(
@@ -2243,7 +2243,7 @@ export default function BucketApp() {
               user={user}
               onStart={handleStart}
               onVersus={onVersus}
-              onBlacktop={() => { if (import.meta.env.DEV && BT_LIVE) window.location.href = '/bucket?btlive=1'; else setPage(btPageFor(bt.phase)) }}
+              onBlacktop={() => setPage(btPageFor(bt.phase))}
               blacktop={{ phase: bt.phase, queue: bt.seated }}
               onSquad={openSquad}
               squad={squad}
@@ -2289,7 +2289,7 @@ export default function BucketApp() {
         onJoin2v2={bt.server ? () => { bt.clearKicked(); bt.join(false, 2) } : null}
         onJoin1v1={bt.server ? () => { bt.clearKicked(); bt.join(false, 1) } : null}
         notice={bt.kicked ? 'The build clock ran out before you finished. A CPU took your spot, and it counts as leaving the game.' : null} onNotice={bt.clearKicked}
-        onPractice={bt.practice ? sz => { bt.clearKicked(); bt.practice(sz) } : null}
+        onPractice={() => { window.location.href = '/bucket?btlive=1' }}
         onPickup={() => startVersus(position, { kind: 'pickup' })} onFriend={() => startVersus(position, { kind: 'friend' })}
         onJoinCode={code => startVersus(position, { kind: 'join', code })} />
     }

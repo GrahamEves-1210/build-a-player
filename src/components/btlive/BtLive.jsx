@@ -125,9 +125,9 @@ export default function BtLive({ pools, user }) {
   return (
     <div className="btlv btlv-menu">
       <header className="btlv-menu-head">
-        <a className="btlv-exit" href="/bucket">EXIT</a>
-        <h1>BLACKTOP LIVE</h1>
-        <span className="btlv-tag">PRACTICE</span>
+        <a className="btlv-exit" href="/bucket?bthub=1">BACK</a>
+        <h1>PRACTICE</h1>
+        <span className="btlv-tag">BLACKTOP</span>
       </header>
       <div className="btlv-menu-body">
         <section>
