@@ -27,9 +27,13 @@ import { openNet, netFromUrl } from './net'
 import './btlive.css'
 
 // the practice builds: real players' ratings, a spread of games to try (a shooter, a slasher, a stopper, bigs)
+// (more players, owner 11-26: a name the pool doesn't have is just left out)
 const PRESETS = [
-  ['guard', 'Stephen Curry'], ['guard', 'Shai Gilgeous-Alexander'], ['guard', 'Anthony Edwards'], ['guard', 'Dyson Daniels'],
-  ['big', 'Nikola Jokic'], ['big', 'Victor Wembanyama'], ['big', 'Giannis Antetokounmpo'], ['big', 'Rudy Gobert'],
+  ...['Stephen Curry', 'Shai Gilgeous-Alexander', 'Luka Doncic', 'Anthony Edwards', 'Jayson Tatum', 'LeBron James', 'Kevin Durant',
+    'Jalen Brunson', 'Tyrese Haliburton', 'Ja Morant', 'Donovan Mitchell', 'Devin Booker', 'Kyrie Irving', 'Cade Cunningham',
+    'Tyrese Maxey', 'Jaylen Brown', 'Kawhi Leonard', 'Jalen Williams', 'LaMelo Ball', 'Trae Young', "De'Aaron Fox", 'Dyson Daniels'].map(n => ['guard', n]),
+  ...['Nikola Jokic', 'Victor Wembanyama', 'Giannis Antetokounmpo', 'Joel Embiid', 'Anthony Davis', 'Karl-Anthony Towns', 'Bam Adebayo',
+    'Domantas Sabonis', 'Evan Mobley', 'Chet Holmgren', 'Alperen Sengun', 'Jaren Jackson Jr.', 'Zion Williamson', 'Paolo Banchero', 'Rudy Gobert'].map(n => ['big', n]),
 ]
 const LEVEL_KEYS = Object.keys(LEVELS)
 const KEEP = 'bap_btlive_practice'
