@@ -124,8 +124,8 @@ const ART = '/st-silhouette.webp'
 // under the brow, a faint fold above the lid, and a faint lower lid; the far eye is a real foreshortened eye now.
 // [lash crescent, iris sliver [cx, cy, rx, ry], opacity, socket [cx, cy, rx, ry], crease, lower lid]
 const EYES = [
-  ['M702.4 238.2 Q716 235.2 729.6 244 Q716 239.9 702.4 238.2 Z', [716.6, 241.3, 3.1, 0.95], 0.6, [716, 238.6, 15, 6], 'M703.4 234.8 Q716 231.8 728.2 239.6', 'M707 243.2 Q717.4 246.4 727.6 245.4'],
-  ['M745.4 243.3 Q751.4 240.7 757.6 243.9 Q751.6 242.9 745.4 243.3 Z', [751.6, 244.1, 2.1, 0.75], 0.55, [751.4, 242.2, 8.4, 4.6], 'M746.2 240.5 Q751.6 238.3 756.8 241.1', 'M747.4 245.6 Q752.2 247.2 756.6 246.1'],
+  ['M702.4 236.2 Q716 233.2 729.6 242.0 Q716 237.9 702.4 236.2 Z', [716.6, 239.3, 3.1, 0.95], 0.6, [716, 236.6, 15, 6], 'M703.4 232.8 Q716 229.8 728.2 237.6', 'M707 241.2 Q717.4 244.4 727.6 243.4'],
+  ['M743.0 241.3 Q751.4 237.7 760.0 242.2 Q751.6 240.8 743.0 241.3 Z', [751.6, 242.4, 2.9, 1.1], 0.75, [751.4, 240.0, 11.5, 6], 'M744.1 237.4 Q751.6 234.3 758.9 238.3', 'M745.8 244.6 Q752.5 246.8 758.6 245.3'],
 ]
 // the sideburn and the hair at the temple, between the ear and the forehead (inside the face's path; the hair's
 // path stops at the hairline), traced on the art's own dark hair: it runs to x 697 down to the corner of the brow
@@ -347,11 +347,11 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
               <g filter={url('eyeblur')}>
                 {EYES.map(([lash, [ix, iy, rx, ry], a, [sx, sy, srx, sry], crease, lower], n) => (
                   <g key={n} opacity={a}>
-                    <ellipse cx={sx} cy={sy} rx={srx} ry={sry} transform={`rotate(13 ${sx} ${sy})`} fill={shadeOf(face, 0.3)} opacity="0.22" />
-                    <path d={crease} fill="none" stroke={shadeOf(face, 0.3)} strokeWidth="0.8" strokeLinecap="round" opacity="0.45" />
-                    <path d={lower} fill="none" stroke={shadeOf(face, 0.35)} strokeWidth="0.6" strokeLinecap="round" opacity="0.35" />
-                    <ellipse cx={ix} cy={iy} rx={rx} ry={ry} transform={`rotate(13 ${ix} ${iy})`} fill={shadeOf(face, 0.12)} opacity="0.6" />
-                    <path d={lash} fill={shadeOf(face, 0.2)} />
+                    <ellipse cx={sx} cy={sy} rx={srx} ry={sry} transform={`rotate(13 ${sx} ${sy})`} fill={shadeOf(face, 0.12)} opacity="0.25" />
+                    <path d={crease} fill="none" stroke={shadeOf(face, 0.1)} strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
+                    <path d={lower} fill="none" stroke={shadeOf(face, 0.12)} strokeWidth="0.6" strokeLinecap="round" opacity="0.4" />
+                    <ellipse cx={ix} cy={iy} rx={rx} ry={ry} transform={`rotate(13 ${ix} ${iy})`} fill={shadeOf(face, 0.05)} opacity="0.7" />
+                    <path d={lash} fill={shadeOf(face, 0.06)} />
                   </g>
                 ))}
               </g>
