@@ -27,7 +27,7 @@ const GRADES = [[0, 'F'], [1, 'D'], [3, 'C'], [6, 'B'], [9, 'A'], [11, 'S']]
 // (soccer only once it's live: SOCCER_LIVE, or ?soccer=1 on the dev server)
 const SPORTS = [['nfl', 'FOOTBALL'], ['bucket', 'BASKETBALL'], ...(SOCCER_LIVE ? [['soccer', 'SOCCER']] : []), ...(BASEBALL_LIVE ? [['baseball', 'BASEBALL']] : [])]
 const POS = { nfl: [['QB', 'qb'], ['RB', 'rb'], ['WR', 'wr'], ['TE', 'te'], ['DB', 'db'], ['DL', 'dl'], ...(LB_LIVE ? [['LB', 'lb']] : []), ...(OL_LIVE ? [['OL', 'ol']] : []), ...(K_LIVE ? [['K', 'k']] : [])], bucket: [['GUARD', 'guard'], ['BIG', 'big']], soccer: [['ST', 'st']], baseball: [['BATTER', 'bat'], ['PITCHER', 'pit']] }
-const COMBINE = { nfl: ['forty', 'cone', 'gauntlet', 'bench', 'velo', 'acc'], bucket: ['sprint', 'lane', 'spot', 'vert', 'nbench'], soccer: ['sprint30', 'slalom', 'finishing', 'first-touch'], baseball: ['sixty', 'exit-velo', 'arm-strength', 'pitch-velo', 'spin', 'bullpen'] }
+const COMBINE = { nfl: ['forty', 'cone', 'gauntlet', 'bench', 'velo', 'acc'], bucket: ['sprint', 'lane', 'spot', 'vert', 'nbench'], soccer: ['sprint30', 'slalom', 'finishing'], baseball: ['sixty', 'exit-velo', 'arm-strength', 'pitch-velo', 'spin', 'bullpen'] }
 // basketball's All-Star Saturday (Career): the Three-Point Contest
 const ALL_STAR = { bucket: ['three-contest', 'dunk-contest'] }
 // the Slam Dunk Contest plays one dunk, called on the board in the game (?dunk=<id> opens the board on one)

@@ -143,7 +143,7 @@ export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone
   k: ['deep-kick', 'game-winner'],
   // soccer's academy trial: the career's first step (raw: sprint30 { secs }, slalom { secs, made, of }, finishing { made, of },
   // first-touch { ups, made, dead, of, pts })
-  st: ['sprint30', 'slalom', 'finishing', 'first-touch'],
+  st: ['sprint30', 'slalom', 'finishing'],   // (no first-touch test: owner 11-25)
   // baseball's showcase (raw: sixty { secs }, exit-velo { mph, dist, made (95+), of }, arm-strength { mph, made (on line), of },
   // pitch-velo { mph, of }, spin { rpm (the average), max, of }, bullpen { made (on the glove), of, miss (inches) })
   bat: ['sixty', 'exit-velo', 'arm-strength'], pit: ['pitch-velo', 'spin', 'bullpen'] }

@@ -1,6 +1,116 @@
 // The patch notes (components/app/AppWhatsNew.jsx), newest first. A new update: add one at the top, with a new
 // `id`, and it opens once for every returning player; the date menu goes back through the older ones.
 // Only what's new against the live site. ratings: the Ratings tab (data/ratings-patch.js) belongs to that one
+const NOV_26 = {
+  id: '2026-11-26',
+  date: 'NOV 26',
+  fullDate: 'NOV 26, 2026',
+  sections: [
+    {
+      name: 'New Sport: Soccer',
+      image: { src: '/patch/world-cup-build.webp', alt: 'A World Cup striker build: Pelé\'s Brazil No. 10 kit, with Cristiano Ronaldo, Messi, Ronaldo, Zidane, Batistuta, Henry, Klose and Drogba on the nine ratings, 99 overall', w: 240, h: 484 },
+      items: [
+        'Build a striker from nine ratings: Pace, Finishing, Shot Power, Dribbling, Passing, Positioning, Heading, Size and Composure',
+        'Champions League pool: the 36 clubs of 2026-27 and their best-known attackers',
+        'World Cup pool: 48 nations across history and their legends, from Pelé and Maradona to Messi and Cristiano Ronaldo',
+        'Simulate Season plays the Champions League from the league phase to the final, or the World Cup from the group stage',
+        'Every match plays out live with the clock, goals, commentary and a box score, and the table updates after each matchday',
+        'The Golden Boot, Player of the Season and Young Player of the Season in the Champions League; the Golden Boot and Golden Ball at the World Cup',
+        'Key moments are real chances in the match: penalties, free kicks, one-on-ones, volleys, headers and 2-on-1 breaks',
+        'Free kicks are drawn: the stroke sets where the ball goes and how much it bends',
+        'Salary Cap\'s daily grid, Compete and the leaderboards on Ranks',
+      ],
+    },
+    {
+      name: 'Soccer Career',
+      items: [
+        'Start at the academy trials: the 30m sprint, a dribble slalom and a finishing drill',
+        'Play for clubs across Europe\'s top five leagues, with a league table, the domestic cups, relegation and a second tier',
+        'European nights in the Champions League, the Europa League and the Conference League',
+        'Pick any of FIFA\'s 211 nations, then play for it at the World Cup, the Euros, the Copa América or AFCON',
+        'Summer and January transfer windows, with release clauses, and fees and wages set by the size of the club',
+        'The Ballon d\'Or at the end of every season',
+        'Derby weeks, manager sackings and transfer rumors come up through the season',
+      ],
+    },
+    {
+      name: 'Franchise',
+      items: [
+        'Trades: put a deal together with any team, see where it stands on the gauge, and answer their counteroffers',
+        'Trade finder: shop your players and picks to the whole league, or search a position and see what each target costs',
+        'Free agent list all year: sign unsigned veterans during the season, and see who is headed for the market before free agency',
+        'Make your own cuts to 53, with each player\'s dead money shown',
+        'League rules at setup and on the hub: salary cap, injuries and Sandbox, each on or off; the cap switch covers the whole league',
+        'The cap screen shows where the money goes line by line, and unused room rolls over (up to a tenth of the cap)',
+        'A page for every team from the standings, and team stats with league ranks',
+        'Signed in, your franchises save to your account and come back on any device',
+        'Injuries now come at half the NFL\'s rate',
+        'Key moments: a catch-and-run can score from anywhere on the field, and a back tackled in his own end zone is a safety',
+        'Phones: more room at the sides, and the setup, draft room and game day screens fit',
+      ],
+    },
+    {
+      name: 'Career',
+      items: [
+        'Press conferences before each season: what he says can move his reputation and the locker room',
+        'Basketball: All-Star Saturday, with the 3-Point Contest (Jump Shot A or better) and the Slam Dunk Contest (the best finishers and leapers)',
+        'Each 3-Point or Slam Dunk Contest title is worth a legacy point, and both contests are in Practice',
+        'Sandbox: pick the team that drafts him before Draft Day',
+        'Durability counts much more: an A body gets hurt about a quarter as often as an average one',
+        'No grade costs more than 3 development points',
+        'His specialty trains two years longer and ages later',
+        'A won camp drill always pays its point, and a season that meets two of its goals pays one',
+        'Basketball: a 30-point scorer now has about seven 40-point games a season',
+        'Basketball: team ratings follow the roster, so a team with three stars plays like a contender',
+        'Basketball: landing a late go-ahead moment now wins the game',
+      ],
+    },
+    {
+      name: 'College Football',
+      items: [
+        'Added TE, DL and DB, with every FBS team\'s starters and All-Time legends',
+        'Defenders track sacks, TFLs, interceptions, pass breakups and tackles, with the Bednarik, Nagurski, Outland, Hendricks and Thorpe awards; tight ends go for the Mackey',
+        'TEs, DL and DBs can enter the NFL Draft into a Career, and Start in College works for all six positions',
+        'A star quarterback now lifts his team more',
+      ],
+    },
+    {
+      name: 'Settings',
+      items: [
+        'Colorblind-friendly colors: in the mini games the two teams always differ in lightness (in Settings and the More menu)',
+      ],
+    },
+    {
+      name: 'Builder Pass and BAP Pro',
+      items: [
+        'Black Friday: the Builder Pass is 50% off ($4.49) through Nov 30',
+        'BAP Pro monthly: the first month is 50% off, then $4.99',
+        'BAP Pro members with Discord linked now get the Pro role',
+      ],
+    },
+    {
+      name: 'Rosters',
+      items: [
+        'Football ratings updated: 24 grades across 11 players, plus sizes for five quarterbacks',
+        'Kickers: every overall up 3 (99 at most), and the Colts get Adam Vinatieri\'s Indianapolis years as their All-Time kicker',
+        'NBA jersey numbers, heights and weights checked against ESPN',
+      ],
+    },
+    {
+      name: 'Fixes',
+      items: [
+        'Fixed the game crashing in an open tab after an update',
+        'Fixed Career progress lost on a refresh: a reload now returns to the hub',
+        'Simulate Season: a reload or closing the page mid-spin now lands on the same team',
+        'Fixed Franchise free agency with the salary cap off: players can be signed again',
+        'Fixed a granted summer trade demand not going through in Career',
+        'Fixed College Football careers crashing when the position was switched after Start in College',
+        'Fixed the jersey number sheet opening under the face editor in Career',
+        'On a short laptop window the build screen scrolls, so every rating clears the bottom ad',
+      ],
+    },
+  ],
+}
 const NOV_18 = {
   id: '2026-11-18',
   date: 'NOV 18',
@@ -483,7 +593,7 @@ const NOV_5 = {
     },
   ],
 }
-export const PATCH_NOTES = [NOV_18, NOV_10, NOV_7, NOV_5]
+export const PATCH_NOTES = [NOV_26, NOV_18, NOV_10, NOV_7, NOV_5]
 export const WHATS_NEW = PATCH_NOTES[0]
 const KEY = 'bap_whatsnew'
 export const whatsNewSeen = () => { try { return localStorage.getItem(KEY) === WHATS_NEW.id } catch { return true } }

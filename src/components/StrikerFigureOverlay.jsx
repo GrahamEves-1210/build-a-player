@@ -89,7 +89,7 @@ const Group = ({ ids, fill, opacity, mask }) => (
   </g>
 )
 
-const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }
+const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', pointerEvents: 'none', opacity: 0.9 }   // (every colour layer 10% less, owner 11-25)
 const ART = '/st-silhouette.webp'
 
 // the face's features, on the art's own face (art pixels), kept to the scale and softness of the render: he looks
@@ -120,7 +120,7 @@ const SIDEBURN = 'M650 183 L700.5 175.5 L699 183 L698 191 L696.6 197.6 L691.6 20
 // that plane (narrowed across, sheared up), the crest at a real kit crest's size.
 const plane = (cx, cy, sx, skew, rot = 0) => `translate(${cx} ${cy}) rotate(${rot}) skewY(${skew}) scale(${sx} 1) translate(${-cx} ${-cy})`
 const CREST = { cx: 714, cy: 400, size: 36, tf: plane(714, 400, 0.8, -9, 4), shade: [2.0, 0.22] }
-const NUMBER = { cx: 655, y: 555, size: 118, tf: plane(655, 512, 0.9, -7, 4) }   // (down and left a touch, owner 11-25)
+const NUMBER = { cx: 667, y: 555, size: 118, tf: plane(667, 512, 0.9, -7, 4) }   // (down and left a touch, owner 11-25)
 // the crest on the front of the shorts, on the leg he strikes with (his left), low by the hem: the leg runs down to
 // the right, so the crest leans with it (its uprights about 17 degrees off), and its horizontals sit level, between the hem's
 // slight climb and the folds' fall. `shade`: the art's folds laid back over it ([slope, intercept] of the grey ramp, as SHADE)
@@ -258,10 +258,10 @@ export default function StrikerFigureOverlay({ build, logoDir = null, box = null
             <g clipPath={url('c-face')}>
               {/* the right side of his face in shadow (the light is on his left): a soft fall-off across the face, in a
                   dark of his own skin, no edge anywhere (owner 11-25) */}
-              <linearGradient id={id('fshade')} x1="672" y1="0" x2="776" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="rotate(12 730 250)">
-                <stop offset="0" stopColor={shadeOf(face, 0.3)} stopOpacity="0" />
-                <stop offset="0.55" stopColor={shadeOf(face, 0.3)} stopOpacity="0.55" />
-                <stop offset="1" stopColor={shadeOf(face, 0.3)} stopOpacity="0.82" />
+              <linearGradient id={id('fshade')} x1="660" y1="0" x2="776" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="rotate(12 730 250)">
+                <stop offset="0" stopColor={shadeOf(face, 0.22)} stopOpacity="0" />
+                <stop offset="0.55" stopColor={shadeOf(face, 0.22)} stopOpacity="0.72" />
+                <stop offset="1" stopColor={shadeOf(face, 0.22)} stopOpacity="0.95" />
               </linearGradient>
               <rect x="620" y="170" width="170" height="160" fill={url('fshade')} />
               {/* the eyes: small, narrow and soft, deep in the shadow under his brow (EYES) */}
