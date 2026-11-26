@@ -413,6 +413,7 @@ const BOARDS = {
   bt1: { load: ctx => blacktopBoard(ctx, '1v1') },
   bt2: { load: ctx => blacktopBoard(ctx, '2v2') },
   bt3: { load: ctx => blacktopBoard(ctx, '3v3') },
+  btk: { load: ctx => blacktopBoard(ctx, 'koth') },
   daily: { load: dailyBoard },
   potd: { load: potdBoard },
   cup: { load: cupBoard },
@@ -468,7 +469,8 @@ export function todayBoards() {
   ]
 }
 // Blacktop's own choice: the total, or one size of game
-export const blacktopModes = () => [{ id: 'bt', label: 'Total' }, { id: 'bt1', label: '1v1' }, { id: 'bt2', label: '2v2' }, { id: 'bt3', label: '3v3' }]
+// (3v3 is gone from the hub, 11-26: its board, bt3, still loads for a saved link; King of the Hill took its tab)
+export const blacktopModes = () => [{ id: 'bt', label: 'Total' }, { id: 'bt1', label: '1v1' }, { id: 'bt2', label: '2v2' }, { id: 'btk', label: 'KOTH' }]
 // Soccer's records: real football numbers, by pool (TOP DIVISIONS = 'soccer-classic', WORLD CUP = 'soccer-all-time')
 const TD = 'CHAMPIONS LEAGUE', WC = 'WORLD CUP'
 function soccerRecords() {
@@ -602,7 +604,7 @@ async function cupBoard(ctx) {
 // Blacktop, from the games the live server books (bots never count). Wins first, then fewest losses;
 // a forfeit is a loss. All of it is one read, sliced by mode.
 const blacktopRows = () => memo('raw-blacktop', async () => {
-  const { data } = await read(() => supabase.from('vs_results').select('user_id,username,result,match_type').in('match_type', ['1v1', '2v2', '3v3']).limit(10000))
+  const { data } = await read(() => supabase.from('vs_results').select('user_id,username,result,match_type').in('match_type', ['1v1', '2v2', '3v3', 'koth']).limit(10000))
   return data ?? []
 })
 async function blacktopBoard(ctx, mode) {

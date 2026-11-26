@@ -1,6 +1,6 @@
-# DEV ONLY, for testing BLACKTOP LIVE (src/btlive.js) on this machine:  npx wrangler dev -c wrangler.btlive.toml --port 8787
-# Never deploy with this file: it is wrangler.toml plus the BtLiveRoom binding. Shipping the room is the owner's call
-# (see src/btlive-dev.js for the three steps). Its entry is src/btlive-dev.js: index.js plus the BLACKTOP LIVE rooms.
+# DEV ONLY (kept so old commands still work):  npx wrangler dev -c wrangler.btlive.toml --port 8787
+# Since King of the Hill (2026-11-26) wrangler.toml has the BLACKTOP LIVE rooms itself, so plain `npx wrangler dev`
+# does the same. This file is wrangler.toml without the cron; never deploy with it.
 # Build-A-Player live server: the Blacktop 3v3 lobby and its game rooms.
 # Its own Worker, separate from the website (Cloudflare Pages): deploy with
 #   cd server && npx wrangler deploy
@@ -64,6 +64,14 @@ class_name = "BtLiveRoom"
 [[migrations]]
 tag = "v5"
 new_sqlite_classes = ["BtLiveRoom"]
+
+[[durable_objects.bindings]]
+name = "KOTH_QUEUE"
+class_name = "KothQueue"
+
+[[migrations]]
+tag = "v6"
+new_sqlite_classes = ["KothQueue"]
 
 # the shared game rules come from the app (../src): they read import.meta.env
 [define]
