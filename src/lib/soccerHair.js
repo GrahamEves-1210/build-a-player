@@ -1,3 +1,5 @@
+import HAIR_OF from '../data/soccer-hair.json'
+import { soccerFaceKey } from './soccerFace'
 // Whose hair the striker figure draws as short tight curls (components/StrikerFigureOverlay.jsx). The art's hair is
 // a combed quiff, comb lines and all, which looks wrong on a player with Afro-textured hair: his is drawn over the
 // art's as close-cropped tight curls. Decided from each player's photo (2026-11-25, every player whose sampled skin
@@ -45,4 +47,19 @@ export function curlyHair(chip) {
   if (name && STRAIGHT.has(name)) return false
   const l = lumOf(chip?.skinColor ?? chip?.skin)
   return l != null && l < SKIN_CURL
+}
+
+// His hair's colour (the striker figure's hair and sideburn), read off his photo by scripts/soccer/hair-colors.py
+// into data/soccer-hair.json (photo key -> one of the names below, 'bald' for a shaved or bald head). No photo, no
+// entry: the figure keeps the art's own dark hair. Grey is drawn as the dark it was (the players are drawn at ~21).
+// each a flat mid tone of that hair: the art's own light and shade are laid over it (StrikerFigureOverlay.jsx)
+export const HAIR = {
+  black: '#1c1613', darkbrown: '#35251a', brown: '#523724', lightbrown: '#745135', darkblond: '#957046',
+  blond: '#bd975c', platinum: '#d8c9a2', auburn: '#73341f', ginger: '#ad5a2c',
+}
+// chip: a build chip (its photo URL, else its name and team); -> a HAIR name, 'bald', or null (no photo)
+export function hairOf(chip) {
+  const k = chip?.photo?.match(/headshots\/(.+)\.webp$/)?.[1]
+    ?? soccerFaceKey({ name: chip?.qbFull ?? chip?.name, team: chip?.team, espn: chip?.espn })
+  return (k && HAIR_OF[k]) || null
 }
