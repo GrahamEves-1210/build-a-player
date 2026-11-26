@@ -21,7 +21,7 @@ export function buildSpot(pos, a) {
   const pg = (a.passing ?? 5) + (a.handles ?? 5), wing = (a.size ?? 5) * 2
   return pg >= 15 && pg >= wing ? 'PG' : wing >= 13 && (a.size ?? 5) >= 7 ? 'SF' : 'SG'
 }
-const HT = { PG: 75, SG: 77, SF: 79, PF: 81, C: 83 }, WT = { PG: 190, SG: 205, SF: 220, PF: 235, C: 255 }
+export const HT = { PG: 75, SG: 77, SF: 79, PF: 81, C: 83 }, WT = { PG: 190, SG: 205, SF: 220, PF: 235, C: 255 }
 // the draft slot his OVR goes at: a 90 or better is the first pick, an 85 goes ninth, an 80 in the middle of the
 // round, a 75 late in it, a 72 or less last (No. 30)
 export const buildSlot = o => clamp(1, 30, Math.round(1 + (90 - o) * 1.6))

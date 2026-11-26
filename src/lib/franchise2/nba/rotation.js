@@ -91,6 +91,9 @@ export function rotationOf(F, short, { playoff = false } = {}) {
   return L.order.filter(i => L.min[i] > 0).map(i => ({ i, st: L.st.includes(i), min: L.min[i] }))
 }
 
+// an old man's minutes: a coach saves a 35-year-old's legs for the spring (LeBron's 35 at 40 is the exception, not the
+// rule): about a minute and a half less a year from 35, up to six; half of it in the playoffs
+const oldPull = (p, po) => { const ag = p.ag ?? 27; return ag < 35 ? 0 : Math.min(6, (ag - 34) * 1.5) * (po ? 0.5 : 1) }
 export const MIN_CAP = 37
 export const GAME_MIN = 240
 const ovr = p => p.o ?? 70
@@ -222,7 +225,7 @@ export function planRotation(players, set = {}) {
   const tgt = new Map()
   five.forEach((p, k) => {
     if (fixed.has(p)) return
-    const m = Math.min(CAP, S[k] + clampN(-4, 2.5, (ovr(p) - 84) * 0.28))
+    const m = Math.min(CAP - oldPull(p, po) * 0.5, S[k] + clampN(-4, 2.5, (ovr(p) - 84) * 0.28) - oldPull(p, po))
     tgt.set(p, m)
     min[p.i] = take(p, m, 1)
   })
@@ -231,7 +234,7 @@ export function planRotation(players, set = {}) {
   // not yet in the rotation costs a bit more to bring in (the playoffs: a lot more), so the coach plays nine or ten
   // (eight), not twelve.
   const ENTRY = po ? 7 : 3.5
-  const capOf = p => (tgt.has(p) ? Math.min(CAP, tgt.get(p) + 2.5) : CAP - 6)
+  const capOf = p => (tgt.has(p) ? Math.min(CAP - oldPull(p, po) * 0.5, tgt.get(p) + 2.5) : CAP - 6 - oldPull(p, po))
   const M = order.filter(p => !fixed.has(p)).map(p => ({ p, sp: spot.get(p), o: ovr(p), t: tgt.get(p), cap: capOf(p), bonus: po ? 0 : set.dev?.[p.i] ?? 0 }))
   const util = (x, j, loose) => {
     const d = Math.abs(x.sp - j)

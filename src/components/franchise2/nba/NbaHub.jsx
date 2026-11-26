@@ -28,7 +28,7 @@ export const ORD = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 's
 export const money = v => (v == null ? '-' : `$${(Math.round(v * 10) / 10).toFixed(1)}M`)
 export const momentOpts = F => ({ moments: (F.moments ?? 'advanced') !== 'off' })
 
-export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveBad, onRetry }) {
+export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveBad, onRetry, onBuild = null }) {
   const [tab, setTab] = useState('season')
   // (LIGHT never goes into a game: a save waiting on a moment is simmed on, lightSettle)
   const light = isLight(F)
@@ -89,7 +89,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
-          {tab === 'season' && (off ? (light ? <LightOffseason F={F} act={act} owner={owner} /> : <NbaOffseason F={F} act={act} owner={owner} />) : <Season F={F} R={R} act={act} play={play} owner={owner} light={light} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
+          {tab === 'season' && (off ? (light ? <LightOffseason F={F} act={act} owner={owner} onBuild={onBuild} /> : <NbaOffseason F={F} act={act} owner={owner} onBuild={onBuild} />) : <Season F={F} R={R} act={act} play={play} owner={owner} light={light} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
           {tab === 'team' && <NbaTeam F={F} act={act} owner={owner} view={teamView} setView={setTeamView} />}
           {tab === 'league' && <NbaLeague F={F} act={act} owner={owner} />}
           {tab === 'history' && <NbaHistory F={F} owner={owner} onSlots={onSlots} onDelete={onDelete} />}
@@ -151,8 +151,8 @@ function Season({ F, R, act, play, owner, onTrades, onSim, light = false }) {
         <ScoutRow F={F} act={act} />
         {!light && <GamesSwitch mode={F.moments ?? 'advanced'} modes={GAMES_MODES} what={GAMES_WHAT} title="Key moments" sub="the last possession of a close game"
           onPick={m => act(X => { X.moments = m })} cls={GAMES_CLS} />}
-        <LeagueRules value={{ cap: !F.noCap, inj: !F.noInj }} nick={TEAM[F.team].nick} capWhat={CAP_WHAT}
-          onChange={r => act(X => { if (r.cap != null) { if (r.cap) delete X.noCap; else X.noCap = 1 } if (r.inj != null) { if (r.inj) delete X.noInj; else { X.noInj = 1; for (const s of SHORTS) for (const p of X.teams[s].r) delete p.inj } } })} />
+        <LeagueRules value={{ cap: !F.noCap, inj: !F.noInj, sandbox: !!F.sandbox }} nick={TEAM[F.team].nick} capWhat={CAP_WHAT}
+          onChange={r => act(X => { if (r.sandbox != null) X.sandbox = !!r.sandbox; if (r.cap != null) { if (r.cap) delete X.noCap; else X.noCap = 1 } if (r.inj != null) { if (r.inj) delete X.noInj; else { X.noInj = 1; for (const s of SHORTS) for (const p of X.teams[s].r) delete p.inj } } })} />
       </aside>
     </div>
     </ManSheetHost>

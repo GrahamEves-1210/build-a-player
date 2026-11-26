@@ -69,6 +69,9 @@ function role(s, p) {
   s.dw = r ** TUNE.rebExpD * (s.big ? 1 : TUNE.rebWing)
   s.ow = r ** TUNE.rebExpO * (s.big ? 1 : TUNE.rebWing)
   s.r3 = s.big ? 1 : TUNE.reb3
+  // (an old star defers: from 34 his share of the shots comes down a little each year (TUNE.usageOld), the offense
+  // moving to the younger men around him, the way it went for Dirk, Duncan and Carmelo late)
+  s.ua = p.ag >= 34 ? Math.exp(-TUNE.usageOld * (p.ag - 33)) : 1
   return s
 }
 
@@ -98,7 +101,7 @@ export const TUNE = {
   // how hard the ball finds the creators: the weight is exp(usage * (off - 6)) up to the knee, where a first or
   // second option sits; past it the slope is usage * usageTop (a star's share of the shots has a ceiling), and under
   // 6 it is usage * usageLo. About 40 men average 20, a dozen or so 25, two or three 30.
-  usage: 0.24, usageKnee: 7.3, usageTop: 0.1, usageLo: 0.75, usageBig: 0.9,
+  usage: 0.24, usageKnee: 7.3, usageTop: 0.1, usageLo: 0.75, usageBig: 0.9, usageOld: 0.06,
   // the assist's man: his passing (to a power), his head, how much of the offense runs through him, and his spot
   // (PG..C: the ball is in the guards' hands). A point guard leads the league near 11; a forward or a center who
   // passes gets 5 to 8, and only the very best passer among them 9 or 10.
@@ -136,7 +139,7 @@ const other = s => (s === 'h' ? 'a' : 'h')
 const mean = (a, f) => a.reduce((s, x) => s + f(x), 0) / (a.length || 1)
 
 function side(T, home, po = false) {
-  const men = (T.men ?? []).filter(p => !(p.inj?.g > 0) || T.hurtOk).map(p => ({ i: p.i, p: p.p, g: p.g, a: { ...p.a }, ht: p.ht, o: p.o, sp: spotOf(p) }))
+  const men = (T.men ?? []).filter(p => !(p.inj?.g > 0) || T.hurtOk).map(p => ({ i: p.i, p: p.p, g: p.g, a: { ...p.a }, ht: p.ht, o: p.o, sp: spotOf(p), ...(p.ag >= 34 && { ag: p.ag }) }))
   const rot = planRotation(men, { ...(T.set ?? {}), po })
   return { short: T.short, men, rot, floor: [], home, fouls: 0, out: [], ...(T.dnp?.length && { dnp: T.dnp }), ...(T.co && { co: T.co, ...(T.co.pace && { pace: T.co.pace }) }) }
 }
@@ -347,7 +350,7 @@ function actor(S, k) {
   const O = S[k]
   const u = tn(S, 'usage')
   const kn = TUNE.usageKnee, top = tn(S, 'usageTop'), lo = TUNE.usageLo
-  const w = O.on.map(s => Math.exp(u * (s.off < 6 ? lo * (s.off - 6) : Math.min(s.off, kn) - 6 + top * Math.max(0, s.off - kn))) * (s.big ? TUNE.usageBig : 1))
+  const w = O.on.map(s => Math.exp(u * (s.off < 6 ? lo * (s.off - 6) : Math.min(s.off, kn) - 6 + top * Math.max(0, s.off - kn))) * (s.big ? TUNE.usageBig : 1) * (s.ua ?? 1))
   return wpick(S.R, O.floor, w)
 }
 

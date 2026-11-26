@@ -86,6 +86,10 @@
 .nbo-pick-gr small { font-family: var(--fk-b); font-weight: 700; font-size: 13px; color: var(--fk-mute); }
 .nbo-recent { display: grid; gap: 6px; }
 .nbo-recent summary { min-height: 40px; display: flex; align-items: center; padding: 0 12px; background: var(--fk-g1); font-family: var(--fk-b); font-weight: 700; font-size: 14px; cursor: pointer; }
+.nbo-how { margin: 0; }
+.nbo-how summary { min-height: 40px; display: flex; align-items: center; padding: 0 12px; background: var(--fk-g1); font-family: var(--fk-b); font-weight: 700; font-size: 14px; color: var(--fk-mute); cursor: pointer; }
+.nbo-how[open] summary { color: #fff; }
+.nbo-how ul { margin: 0; padding: 10px 12px 4px 28px; display: grid; gap: 6px; font-family: var(--fk-b); font-weight: 500; font-size: 14px; line-height: 1.4; color: var(--fk-mute); }
 .nb-made li .nbo-made-o { grid-area: st; font-family: var(--fk-d); font-size: 18px; color: #fff; }
 .nb-made li small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nb-pros.is-sel { outline: 2px solid #f4f5f7; outline-offset: -2px; background: var(--fk-g2); }
@@ -193,3 +197,15 @@
 .nbo-coach-moves li { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 6px 10px; background: var(--fk-g1); box-shadow: inset 3px 0 0 var(--tc, var(--fk-g4)); font-family: var(--fk-b); font-size: 14px; line-height: 1.2; }
 .nbo-coach-moves li span { flex: 1; min-width: 0; }
 .nbo-coach-moves li small { flex: none; font-family: var(--fk-f); font-size: 13px; letter-spacing: .6px; color: var(--fk-mute); }
+
+/* Sandbox: a build into the class (NbaOffseason SandboxBox) */
+.nbo-sbx { display: grid; gap: 8px; }
+.nbo-sbx-h { font-family: var(--fk-d); font-weight: 400; font-size: 18px; letter-spacing: .6px; text-transform: uppercase; color: #fff; }
+.nbo-sbx-add { width: 100%; height: 48px; border: 0; background: transparent; box-shadow: inset 0 0 0 2px var(--fk-line2); color: #fff; font-family: var(--fk-d); font-weight: 400; text-transform: uppercase; font-size: 19px; letter-spacing: .8px; cursor: pointer; }
+.nbo-sbx-add.is-on { box-shadow: inset 0 0 0 2px #fff; }
+.nbo-sbx-add.is-locked { color: var(--fk-mute); box-shadow: inset 0 0 0 2px var(--fk-line); cursor: default; }
+.nbo-sbx-pos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.nbo-sbx-pos button { height: 44px; border: 0; background: var(--fk-g2); color: #fff; font-family: var(--fk-d); font-weight: 400; font-size: 18px; letter-spacing: .6px; cursor: pointer; }
+.nbo-sbx-pos button:active { background: var(--fk-g3); }
+.nbo-sbx-name { display: grid; gap: 8px; }
+.nbo-sbx-name input { height: 44px; padding: 0 12px; border: 0; background: var(--fk-g2); color: #fff; font-family: var(--fk-b); font-weight: 600; font-size: 16px; }

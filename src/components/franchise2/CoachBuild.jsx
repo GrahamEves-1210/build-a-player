@@ -228,7 +228,7 @@ export function CoachReveal({ S, owner, onStart, onRules, lg = FB_COACH, capWhat
       <CoachCard c={{ ...c, name, r }} team={S.team} from={from} lg={lg} />
       {children}
       {/* (the league rules, kept for the save and changed any time on the hub: Rules.jsx) */}
-      {onRules && <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={{ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, ...(lg === FB_COACH && { sandbox: S.rules?.sandbox ?? !!S.sandbox }) }} nick={TEAM[S.team].nick} capWhat={capWhat} onChange={onRules} />{extra}</section>}
+      {onRules && <section className="fsu-rules"><Chyron tone="ink" size="s" title="LEAGUE RULES" /><LeagueRules value={{ cap: S.rules?.cap ?? true, inj: S.rules?.inj ?? true, ...((lg === FB_COACH || lg?.sandbox) && { sandbox: S.rules?.sandbox ?? !!S.sandbox }) }} nick={TEAM[S.team].nick} capWhat={capWhat} onChange={onRules} />{extra}</section>}
       <div className="fsu-acts">{hint && <p className="fsu-hint">{hint}</p>}<Go onClick={onStart} disabled={!canStart}>{cta}</Go></div>
     </div>
   )

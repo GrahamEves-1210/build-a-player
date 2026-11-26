@@ -45,11 +45,15 @@ const kindOf = t => (t === 'size' ? 'size' : ATH.has(t) ? 'ath' : TOUCH.has(t) ?
 // the decline, grade points a year by age: [legs, body, touch]
 // (the league's curve: about flat from 26 to 29, a point a year by 31 and 32, two from 33, three past 35. The
 // summers a man turns 30 to 32 used to cost him 0.4 a year, and the league filled with 85s in their mid-thirties.)
-const DECL = { 26: [0, 0, 0], 27: [0.04, 0, 0], 28: [0.12, 0.03, 0], 29: [0.3, 0.1, 0.02], 30: [0.52, 0.22, 0.05], 31: [0.72, 0.34, 0.09], 32: [0.9, 0.46, 0.13], 33: [1.08, 0.6, 0.2], 34: [1.3, 0.8, 0.3], 35: [1.5, 1.0, 0.4], 36: [1.7, 1.2, 0.5] }
+// (2026-11-25: the late thirties. Touch used to stop going at 36, and the old stars kept 86-91 to 40 and led their
+// teams in scoring: Curry 34 a night at 39. From 34 the shot and the head go too, faster each year, so a star at
+// 37-40 is a role player in fact as well as on paper (Nash, Carmelo, Dirk's last seasons), the rare great one a
+// starter who's lost a lot.)
+const DECL = { 26: [0, 0, 0], 27: [0.04, 0, 0], 28: [0.12, 0.03, 0], 29: [0.3, 0.1, 0.02], 30: [0.52, 0.22, 0.05], 31: [0.72, 0.34, 0.09], 32: [0.9, 0.46, 0.13], 33: [1.08, 0.62, 0.22], 34: [1.3, 0.85, 0.36], 35: [1.5, 1.08, 0.52], 36: [1.7, 1.3, 0.68], 37: [1.9, 1.5, 0.84], 38: [2.1, 1.7, 1.0], 39: [2.3, 1.9, 1.15] }
 // the cliff: the summer a veteran's body goes (the Achilles that never comes back, the knees, the year the legs are
 // gone). From 31 on a few men a year lose in one summer what the curve takes in three.
 const cliffAt = ag => (ag < 31 ? 0 : Math.min(0.16, 0.05 + 0.02 * (ag - 31)))
-const declAt = ag => (ag < 26 ? [0, 0, 0] : DECL[Math.min(36, ag)])
+const declAt = ag => (ag < 26 ? [0, 0, 0] : DECL[Math.min(39, ag)])
 // the share of the gap to his ceiling a young man closes in a year
 const RATE = { 18: 0.3, 19: 0.3, 20: 0.29, 21: 0.27, 22: 0.25, 23: 0.23, 24: 0.21, 25: 0.17, 26: 0.1, 27: 0.05 }
 const typesOf = g => (g === 'big' ? BIG_TYPES : GUARD_TYPES)
@@ -90,10 +94,18 @@ export function ageMan(p, R, { mpg = null, coach = 0, cliff = true } = {}) {
   const legs = ((a.speed ?? 5) + (a.bounce ?? 5)) / 2, skill = ((a.jumpShot ?? 5) + (a.basketballIQ ?? 5)) / 2
   const style = clamp(0.65, 1.5, 1 + 0.07 * (legs - skill) + (g === 'guard' ? 0.08 : -0.06))
   const luck = Math.exp(R.n() * 0.3) * (cliff && R.u() < cliffAt(ag) ? 2.4 + R.u() * 1.2 : 1)
+  // the very top doesn't hold still (2026-11-25): a 95-99 is a season, not a decade. Past 25 a man that good gives a
+  // little back most summers (the wear of 40-minute playoff runs, the league catching up to what he does), more the
+  // further above 92 he is, and every prime has its up and down years. This is what keeps one 99 from winning ten
+  // titles: Jordan's and LeBron's best years were runs of five or six, not twelve.
+  let top = 0
+  if (ag >= 25) top -= Math.max(0, o0 - 92) * 0.22
+  if (cliff && ag >= 24 && ag <= 31) top += R.n() * 0.9   // (not the GM's builds: ageBuild only takes the falls)
   const [dA, dB, dT] = declAt(ag)
+  const topU = top / OVR_PER_GRADE
   for (let j = 0; j < types.length; j++) {
     const t = types[j], k = kindOf(t)
-    let d = unit * W[j] * (1 + R.n() * 0.35)
+    let d = unit * W[j] * (1 + R.n() * 0.35) + topU
     if (k === 'ath') d -= dA * style * luck
     else if (k === 'body') d -= dB * (g === 'big' && t !== 'finishing' ? 0.75 : 1) * style * luck
     else if (k === 'touch') d -= dT * luck - (t === 'basketballIQ' && ag >= 23 && ag <= 30 ? 0.12 : 0)
