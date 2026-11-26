@@ -11,7 +11,7 @@ const AppAuction = lazy(() => import('./AppAuction'))
 
 // TRAIT AUCTION, the mode's own screen (Compete's old place, owner 11-26): the lobby
 // (how it works, the position, your record, find an auction), then the queue, the
-// floor and the results (AppAuction). Football QB, RB or WR; basketball guard or big.
+// floor and the results (AppAuction). Football QB, RB or WR; basketball guard or big; soccer the striker.
 
 const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
 
@@ -29,7 +29,8 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
   // how many are waiting in each position's queue (lib/liveCounts.js), while the lobby's up
   const waiting = useLiveCounts(!live)
   const isBucket = sport === 'bucket'
-  const sportName = isBucket ? 'BASKETBALL' : 'FOOTBALL'
+  const sportKey = isBucket ? 'bucket' : sport === 'soccer' ? 'soccer' : 'nfl'
+  const sportName = { bucket: 'BASKETBALL', soccer: 'SOCCER', nfl: 'FOOTBALL' }[sportKey]
   const posName = positions.find(o => o.pos === position)?.label ?? position.toUpperCase()
 
   let body
@@ -50,7 +51,11 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
         <div className="au-intro ag-pop">
           <GavelMark />
           <div className="au-intro-txt">
-            <span className="ag-eyebrow">ONLINE · 2–3 BIDDERS · ${BUDGET} EACH{here > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(here)}<small>PLAYING</small></span>}</span>
+            <div className="au-intro-head">
+              <b>Conditions of sale</b>
+              <span>ONLINE · 2–3 BIDDERS · ${BUDGET} EACH</span>
+              {here > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(here)}<small>PLAYING</small></span>}
+            </div>
             <ol className="au-rules">
               <li><b>Five slots, ${BUDGET} to fill them.</b> A card is pulled for one slot and lands on a real player. His grade stays face down until the gavel.</li>
               <li><b>Bid $1 at a time.</b> Every bid puts the clock back to {RESET_SECS} seconds. Nobody bids, it goes back in the deck face up.</li>
@@ -58,9 +63,9 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
             </ol>
           </div>
         </div>
-        <div className="cp-pos ag-pop" style={{ '--d': '80ms' }} role="tablist" aria-label="Position">
+        {positions.length > 1 && <div className="cp-pos ag-pop" style={{ '--d': '80ms' }} role="tablist" aria-label="Position">
           {positions.map(o => {
-            const n = searching(waiting, `au:${isBucket ? 'bucket' : 'nfl'}-${o.pos}`)
+            const n = searching(waiting, `au:${sportKey}-${o.pos}`)
             return (
               <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => onPosition(o.pos)}>
                 {n && <span className="cp-pos-n">{n} SEARCHING</span>}
@@ -68,7 +73,7 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
               </button>
             )
           })}
-        </div>
+        </div>}
         <button className="ag-btn cp-go ag-pop" style={{ '--d': '120ms' }} onClick={() => au.join()}>FIND AN AUCTION <IconArrow size={16} /></button>
         <OnlineRecord mode="compete" title="AUCTION RECORD" />
         <div className="cp-rewards ag-pop" style={{ '--d': '200ms' }}>
@@ -79,7 +84,7 @@ export default function AppTraitAuction({ au, sport, position, positions, onPosi
   }
 
   return (
-    <div className={`ag-screen cp au-screen cp--${isBucket ? 'bucket' : 'nfl'}`}>
+    <div className={`ag-screen cp au-screen cp--${sportKey}${au.phase === 'auction' || au.phase === 'result' ? ' is-live' : ''}`}>
       <div className="ag-screen-head">
         <div><span className="ag-eyebrow">{sportName} · {posName}</span><h1 className="ag-h1">Trait Auction</h1></div>
         <button className="ag-round-btn" onClick={() => guardLeave(() => { if (au.phase === 'queue') au.leave(); onHome() })} aria-label="Home"><IconClose size={16} /></button>

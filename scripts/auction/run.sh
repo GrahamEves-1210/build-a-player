@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bundle the Trait Auction rules check with Vite's esbuild and run it in Node.
-#   bash scripts/auction/run.sh [scripts/auction/core-check.mjs]
+#   bash scripts/auction/run.sh [scripts/auction/core-check.mjs]   (football, basketball and soccer)
 set -e
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="${1:-scripts/auction/core-check.mjs}"

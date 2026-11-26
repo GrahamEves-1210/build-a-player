@@ -25,14 +25,32 @@ import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
 import { SPORT } from './career'
 import { auctionCoreKit, AUCTION_FILL_SECS } from './auctionCore'
+import { nflHeadshot } from '../utils/simulation'
+import { teamHint } from './teamHint'
+import { APP_ART } from './platform'
 
 export * from './auctionCore'
 
 // the rules' kit, plus what the screens show: the position's name, photos, logos
+// a sport that adds its own kit adds its look too (soccer: lib/soccerAuctionUi.js)
+const LOOKS = {}
+export const addAuctionLook = (sport, look) => { LOOKS[sport] = look }
 export function auctionKit(sport, pos) {
   const k = auctionCoreKit(sport, pos)
+  if (LOOKS[k.sport]) { const L = LOOKS[k.sport]; return { ...k, ...L, label: L.label } }
   const S = SPORT[k.sport]
-  return { ...k, label: S.label[k.pos], photo: S.photo, logo: S.logo }
+  // the lot's card: his photo the way Salary Cap finds it (the headshot list, else the pool's own headshot; no photo,
+  // the app draws his team's jersey, the website shows the team's logo), on his team's colour
+  const byName = new Map(k.pool.map(p => [p.name, p]))
+  const tint = Object.fromEntries((S.teams ?? []).map(t => [t.short, t.color]))
+  const lg = k.sport === 'bucket' ? 'nba' : 'nfl'
+  const photo = (name, team) => {
+    const p = byName.get(name)
+    const src = S.photo(name) ?? (p?.headshot ? nflHeadshot(p.headshot) : null)
+    if (src) return teamHint(src, team ?? p?.team)
+    return APP_ART && p ? `/headshots/x/${lg}/${team ?? p.team}/${p.number ?? ''}.webp` : null
+  }
+  return { ...k, label: S.label[k.pos], photo, logo: S.logo, teamColor: team => tint[team] ?? '#3a2a22' }
 }
 
 export function useAuction({ enabled, user, sport, pos }) {

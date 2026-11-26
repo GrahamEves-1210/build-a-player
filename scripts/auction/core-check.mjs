@@ -5,6 +5,7 @@ import {
   AUCTION_POS, auctionCoreKit, freshLedger, pickLot, takeLot, returnLot, finishedEarly, drawFor, applyDraw,
   rankAuction, ledgerOk, canTop, maxBid, minNext, openSlots, auctionOver, BUDGET,
 } from '../../src/lib/auctionCore.js'
+import '../../src/lib/soccerAuction.js'   // (soccer's kit: the striker)
 import { seeded } from '../../src/lib/rng.js'
 
 let fails = 0
@@ -66,6 +67,20 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
   ok(ranked.every(p => p.ovr > 0 && p.ovr <= 99), `${sport} ${pos}: OVRs ${ranked.map(p => p.ovr)}`)
   ok(players.every(p => BUDGET - L.wallets[p.vid] === Object.values(L.won[p.vid]).reduce((a, w) => a + (w.price || 0), 0)), 'wallets match')
   stats.auctions++
+}
+// soccer: the striker's slots are Salary Cap's five soccer columns, and the OVR is the striker's (calcSoccerOVR):
+// the pool's best card at every slot makes an elite No. 9, its worst a poor one
+{
+  const kit = auctionCoreKit('soccer', 'st')
+  ok(kit.sport === 'soccer' && kit.types.length === 5, 'soccer kit: five slots')
+  const pick = better => Object.fromEntries(kit.types.map(t => {
+    const cards = kit.pool.map(p => kit.lotOf(p, t)).sort((a, b) => (better ? b.val - a.val : a.val - b.val))
+    return [t, { ...cards[0], price: 1 }]
+  }))
+  const hi = kit.calcOvr(kit.buildOf(pick(true))), lo = kit.calcOvr(kit.buildOf(pick(false)))
+  ok(hi >= 93 && hi <= 99, `soccer: the best build is elite (${hi})`)
+  ok(lo < 80, `soccer: the worst build is poor (${lo})`)
+  stats.soccerRange = [lo, hi]
 }
 console.log(JSON.stringify(stats))
 console.log(fails ? `${fails} FAILED` : 'all auction checks pass')

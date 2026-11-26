@@ -24,12 +24,31 @@ const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)   //
 const Pic = ({ p, me, size = 34 }) => <AvatarBadge name={p.name} cos={p.cos} self={p.vid === me} size={size} className="cp-avb" />
 const Name = ({ p, me }) => <NameTag name={p.name} cos={p.cos} self={p.vid === me} />
 
-function Headshot({ kit, name, className = '' }) {
+// a slot's name, short enough for the build strip (PACE & SIZE → PACE/SIZE, SIZE & ATHLETICISM → SIZE)
+const shortLabel = l => { const s = String(l).replace(' & ', '/'); return s.length > 10 ? String(l).split(/ & | /)[0] : s }
+const lastName = n => { const w = String(n || '').split(' '); return w.length > 1 ? w.slice(1).join(' ') : w[0] }
+
+// The lot: a real player card, the way Salary Cap draws one (his team's colour, the logo faded behind him, the ESPN
+// headshot; no photo, the logo), his name along the bottom
+function LotCard({ kit, lot, className = '' }) {
   const [bad, setBad] = useState(false)
-  const src = kit.photo(name)
-  return src && !bad
-    ? <img className={`au-shot ${className}`} src={src} alt="" draggable={false} onError={() => setBad(true)} />
-    : <span className={`au-shot au-shot--none ${className}`}>{name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
+  const src = kit.photo(lot.name, lot.team)
+  const [first, ...rest] = lot.name.split(' ')
+  const logo = kit.crest ? kit.crest(lot.name, lot.team) : kit.logo(lot.team)
+  return (
+    <div className={`sc-card sc-card--view au-lc ${className}`} style={{ '--tc': kit.teamColor(lot.team, lot.name) }}>
+      <div className="sc-card-visual" data-team={lot.team}>
+        <img src={logo} alt="" aria-hidden="true" className="sc-card-logo-bg" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />
+        {src && !bad
+          ? <img src={src} alt={lot.name} className="sc-card-headshot" draggable={false} onError={() => setBad(true)} />
+          : <div className="sc-card-no-photo"><img src={logo} alt={lot.team} draggable={false} /></div>}
+      </div>
+      <div className="sc-card-name-wrap">
+        <span className="sc-card-first">{rest.length ? first : lot.team}</span>
+        <span className="sc-card-last">{rest.length ? rest.join(' ') : first}</span>
+      </div>
+    </div>
+  )
 }
 
 // The bidding window, draining: the time left is read once, then CSS runs it
@@ -37,18 +56,6 @@ function Drain({ end, total }) {
   const [ms] = useState(() => Math.max(0, end - Date.now()))
   return <i className="is-run" style={{ '--ms': `${ms}ms`, '--from': Math.min(1, ms / total) }} />
 }
-
-// A lot's card, face up: the player's headshot over his team's logo, his name
-// along the bottom. No photo: his initials, the same size, never stretched
-const PlayerFace = ({ kit, lot }) => (
-  <div className="au-pcard">
-    <div className="au-pcard-pic">
-      <img className="au-pcard-logo" src={kit.logo(lot.team)} alt="" draggable={false} />
-      <Headshot kit={kit} name={lot.name} className="au-pcard-shot" />
-    </div>
-    <span className="au-pcard-name">{lot.name}</span>
-  </div>
-)
 
 // The deck: the cards shuffle, then the top one is pulled and turns over on the lot's player
 const DECK_MS = 1500
@@ -58,18 +65,19 @@ function Deck({ kit, lot, seed }) {
     <div className="au-deck" aria-hidden="true" style={{ '--deck': `${DECK_MS}ms` }}>
       {backs.map((k, i) => (
         <div key={k} className="au-card" style={{ '--i': i, '--s': i % 2 ? 1 : -1 }}>
-          <div className="au-card-in"><div className="au-card-back"><span>BAP</span></div></div>
+          <div className="au-card-in"><CardBack /></div>
         </div>
       ))}
       <div className="au-card is-pull" style={{ '--i': backs.length, '--s': 1 }}>
         <div className="au-card-in">
-          <div className="au-card-back"><span>BAP</span></div>
-          <div className="au-card-face"><PlayerFace kit={kit} lot={lot} /></div>
+          <CardBack />
+          <div className="au-card-face"><LotCard kit={kit} lot={lot} /></div>
         </div>
       </div>
     </div>
   )
 }
+const CardBack = () => <div className="au-card-back"><span>BAP</span></div>
 
 // The gavel (public/fx: the hammer and its block, cut from one picture so they line up):
 // it winds back, comes down on the block, bounces, and lifts away again
@@ -135,7 +143,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           <span className="ag-eyebrow">FINDING AN AUCTION · {posName}</span>
           <b className="cp-count">{n}<i>/{AUCTION_SIZE}</i></b>
           <span className="cp-sub">{n >= AUCTION_SIZE ? 'Starting…' : n < AUCTION_MIN ? 'Waiting for another bidder. Auctions are real players only.' : `Starts in ${Math.max(0, AUCTION_FILL_SECS - au.waited)}s with ${n}, or as soon as a third is in.`}</span>
-          <LinkPill link={au.link} onRetry={au.retry} room={`${kit.sport === 'bucket' ? 'BASKETBALL' : 'FOOTBALL'} ${posName} AUCTION`} />
+          <LinkPill link={au.link} onRetry={au.retry} room={`${{ bucket: 'BASKETBALL', soccer: 'SOCCER' }[kit.sport] ?? 'FOOTBALL'} ${posName} AUCTION`} />
           <span className="cp-sub cp-sub--room">Friends find you by picking the same sport and position.</span>
         </div>
         <div className="cp-seats au-seats">
@@ -164,29 +172,34 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
     const closer = au.ranked.find(p => p.closer)
     return (
       <>
-        <div className={`cp-podium ag-pop${meR?.place === 1 ? ' is-win' : ''}`}>
-          <span className="ag-eyebrow">AUCTION {m.code} · FINAL</span>
-          <b className="cp-place">{meR ? ord(meR.place) : '—'}</b>
-          <span className="cp-sub">{meR ? (meR.place === 1 ? `Best build in the room · ${meR.ovr} OVR` : `of ${au.ranked.length} · ${meR.ovr} OVR · $${meR.left} left`) : ''}</span>
-          {meR && <span className="cp-reward gain"><XpIco /> +{xp} · <span className="coin-ico coin-ico--sm" /> +{coins}</span>}
-          {closer && <span className="au-final-note"><Name p={closer} me={mine} /> filled his build first. The rest went to the draw.</span>}
+        <div className={`au-podium ag-pop${meR?.place === 1 ? ' is-win' : ''}`}>
+          <span className="au-lbl">AUCTION {m.code} · FINAL</span>
+          <div className="au-podium-row">
+            <b className="au-podium-place">{meR ? ord(meR.place) : '—'}</b>
+            <span className="au-podium-who">
+              <span className="au-podium-name"><NameTag name={me.name} self /></span>
+              {meR && <span className="au-podium-ovr"><b>{meR.ovr}</b> OVR · ${meR.left} LEFT{meR.place === 1 ? ' · BEST BUILD IN THE ROOM' : ` · OF ${au.ranked.length}`}</span>}
+            </span>
+          </div>
+          {meR && <span className="au-podium-pay gain"><XpIco /> +{xp} <span className="coin-ico coin-ico--sm" /> +{coins}</span>}
         </div>
         <div className="au-final">
           {au.ranked.map((p, i) => (
-            <div key={p.vid} className={`au-final-row ag-pop${p.vid === mine ? ' is-me' : ''}${p.place === 1 ? ' is-first' : ''}`} style={{ '--d': `${i * 60}ms` }}>
-              <span className="cp-rank">{p.place === 1 ? <IconTrophy size={16} /> : p.place}</span>
-              <Pic p={p} me={mine} />
+            <div key={p.vid} className={`au-final-row ag-pop${p.vid === mine ? ' is-me' : ''}${p.place === 1 ? ' is-first' : ''}`} style={{ '--d': `${120 + i * 70}ms` }}>
+              <span className="au-final-rank">{p.place === 1 ? <IconTrophy size={18} /> : p.place}</span>
+              <Pic p={p} me={mine} size={32} />
               <span className="au-final-who">
-                <span className="cp-row-name"><Name p={p} me={mine} />{p.closer && <i className="au-tag">FILLED FIRST</i>}</span>
+                <span className="au-final-name"><Name p={p} me={mine} />{p.closer && <i className="au-tag">FILLED FIRST</i>}</span>
                 <span className="au-final-traits">
-                  {m.types.map(t => <i key={t} className={p.slots[t].drawn ? 'is-drawn' : undefined} style={{ '--g': gradeColor(p.slots[t].val) }} title={`${kit.attrLabel(t)}: ${p.slots[t].name}${p.slots[t].drawn ? ' (the draw)' : ''}`}>{kit.attrLabel(t)} <b>{valToGrade(p.slots[t].val)}</b></i>)}
+                  {m.types.map(t => <i key={t} className={p.slots[t].drawn ? 'is-drawn' : undefined} style={{ '--g': gradeColor(p.slots[t].val) }} title={`${kit.attrLabel(t)}: ${p.slots[t].name}${p.slots[t].drawn ? ' (the draw)' : ''}`}>{shortLabel(kit.attrLabel(t))} <b>{valToGrade(p.slots[t].val)}</b></i>)}
                 </span>
               </span>
-              <span className="cp-row-ovr">{p.forfeit ? 'LEFT' : <><b>{p.ovr}</b> OVR<small>${p.left} left</small></>}</span>
+              <span className="au-final-ovr">{p.forfeit ? <b className="is-left">LEFT</b> : <><b>{p.ovr}</b><small>OVR · ${p.left}</small></>}</span>
             </div>
           ))}
         </div>
-        <div className="cp-actions">
+        {closer && <span className="au-fine"><Name p={closer} me={mine} /> filled his build first. Every other open slot went to the draw.</span>}
+        <div className="cp-actions au-actions">
           <button className="ag-btn" onClick={() => { sfx('tap'); onPlayAgain() }}>PLAY AGAIN</button>
           <button className="ag-btn ag-btn--ghost" onClick={() => { au.leave(); onHome() }}>HOME</button>
         </div>
@@ -195,18 +208,69 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   }
 
   const L = st.L
-  const myBuild = m.types.map(t => [t, L.won[mine]?.[t]])
+  const lot = st.lot
+  const onBlock = st.stage === 'lot' && lot
+  const myOpen = openSlots(L, mine, m.types).length
+  const here = new Set(au.present.map(p => p.vid))
+  const high = st.stage === 'draw' ? null : st.high
+
+  // the paddles: every bidder in the room, his money and how much of his build is in
+  const room = (
+    <div className="au-room" role="list" aria-label="Bidders">
+      {m.players.map(p => {
+        const out = L.out.includes(p.vid)
+        const full = openSlots(L, p.vid, m.types).length === 0
+        const tag = out ? 'LEFT' : full ? 'DONE' : onBlock && st.passed.includes(p.vid) ? 'PASS' : onBlock && L.won[p.vid]?.[lot.trait] ? 'FILLED' : null
+        return (
+          <div key={p.vid} role="listitem" className={`au-paddle${p.vid === mine ? ' is-me' : ''}${high?.vid === p.vid && st.stage !== 'sold' ? ' is-high' : ''}${out || (!here.has(p.vid) && p.vid !== mine) ? ' is-away' : ''}${tag ? ' has-tag' : ''}`}>
+            <Pic p={p} me={mine} size={26} />
+            <span className="au-paddle-txt">
+              <span className="au-paddle-name"><Name p={p} me={mine} /></span>
+              <span className="au-paddle-sub">
+                <b className="au-paddle-cash">${L.wallets[p.vid]}</b>
+                {tag ? <em>{tag}</em> : <span className="au-pips">{m.types.map(t => <i key={t} className={L.won[p.vid]?.[t] ? 'is-in' : ''} />)}</span>}
+              </span>
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  // the build strip: the five slots, what's in them and what it cost
+  // the draw: my slots it deals turn up with their cards, not before
+  const dealtAt = {}
+  if (st.stage === 'draw' && st.draw) {
+    let k = 0
+    for (const p of m.players) for (const t of Object.keys(st.draw.cards[p.vid] ?? {})) { if (p.vid === mine) dealtAt[t] = 700 + k * DRAW_STEP_MS; k++ }
+  }
   const mySlots = (
     <div className="au-mine">
-      <div className="au-mine-head"><span className="ag-eyebrow"><NameTag name={me.name} self /></span><b className="au-cash">${L.wallets[mine]} <small>left · {openSlots(L, mine, m.types).length ? `max bid $${maxBid(L, mine, m.types)}` : 'build done'}</small></b></div>
-      <div className="au-slots">
-        {myBuild.map(([t, w]) => (
-          <div key={t} className={`au-slot${w ? ' is-in' : ''}${w?.drawn ? ' is-drawn' : ''}${st.lot?.trait === t && st.stage === 'lot' ? ' is-up' : ''}`} style={w ? { '--g': gradeColor(w.val) } : undefined}>
-            <span className="au-slot-t">{kit.attrLabel(t)}</span>
-            {w ? <><b>{valToGrade(w.val)}</b><small>{w.name} · {w.drawn ? 'draw' : `$${w.price}`}</small></> : <small>{st.lot?.trait === t && st.stage === 'lot' ? 'Up now' : 'Open'}</small>}
-          </div>
-        ))}
+      <div className="au-mine-head">
+        <span className="au-mine-who"><NameTag name={me.name} self /></span>
+        <span className="au-mine-cash"><b>${L.wallets[mine]}</b> LEFT{myOpen ? <> · MAX BID <b>${maxBid(L, mine, m.types)}</b></> : ' · BUILD DONE'}</span>
       </div>
+      <div className="au-strip">
+        {m.types.map(t => {
+          const w = L.won[mine]?.[t]
+          const up = !w && onBlock && lot.trait === t
+          return (
+            <div key={t} className={`au-cell${w ? ' is-in' : ''}${w?.drawn ? ' is-drawn' : ''}${up ? ' is-up' : ''}${dealtAt[t] != null ? ' is-dealt' : ''}`} style={w ? { '--g': gradeColor(w.val), '--at': `${(dealtAt[t] ?? 0) + 550}ms` } : undefined} title={w ? `${kit.attrLabel(t)}: ${w.name}` : kit.attrLabel(t)}>
+              <span className="au-cell-t">{shortLabel(kit.attrLabel(t))}</span>
+              <b className="au-cell-g">{w ? valToGrade(w.val) : '—'}</b>
+              <span className="au-cell-n">{w ? lastName(w.name) : up ? 'UP NOW' : 'OPEN'}</span>
+              <span className="au-cell-p">{w ? (w.drawn ? 'DRAW' : `$${w.price}`) : ''}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  const top = (label) => (
+    <div className="au-top">
+      <span className="au-lbl">{label}</span>
+      <LiveLeaveButton />
     </div>
   )
 
@@ -215,47 +279,53 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
     const by = nameOf(st.draw.by)
     let k = 0
     return (
-      <>
-        <div className="au-top">
-          <span className="ag-eyebrow">AUCTION {m.code} · THE DRAW</span>
-        </div>
-        <div className="au-draw ag-pop">
-          <span className="au-draw-head">{by ? <Name p={by} me={mine} /> : 'A bidder'} filled his build</span>
-          <span className="au-draw-sub">The rest go to the draw · one random card a slot</span>
-          <div className="au-draw-rows">
-            {m.players.filter(p => st.draw.cards[p.vid]).map(p => (
-              <div key={p.vid} className={`au-draw-row${p.vid === mine ? ' is-me' : ''}`}>
-                <span className="au-draw-who"><Pic p={p} me={mine} size={26} /><Name p={p} me={mine} /></span>
-                <span className="au-draw-cards">
-                  {Object.entries(st.draw.cards[p.vid]).map(([t, c]) => {
-                    const at = 700 + (k++) * DRAW_STEP_MS
-                    return (
-                      <span key={t} className="au-dcard" style={{ '--at': `${at}ms`, '--g': gradeColor(c.val) }}>
-                        <span className="au-dcard-in">
-                          <span className="au-dcard-back">?</span>
-                          <span className="au-dcard-face"><small>{kit.attrLabel(t)}</small><b>{valToGrade(c.val)}</b><i>{c.name}</i></span>
+      <div className="au-floor is-draw">
+        {top(`AUCTION ${m.code} · THE DRAW`)}
+        <div className="au-main">
+          <div className="au-draw ag-pop">
+            <span className="au-lbl">AUCTION CLOSED</span>
+            <b className="au-draw-head">{by ? <Name p={by} me={mine} /> : 'A bidder'} filled his build</b>
+            <span className="au-draw-sub">Every open slot left gets one card off the deck</span>
+            <div className="au-draw-rows">
+              {m.players.filter(p => st.draw.cards[p.vid]).map(p => (
+                <div key={p.vid} className={`au-draw-row${p.vid === mine ? ' is-me' : ''}`}>
+                  <span className="au-draw-who"><Pic p={p} me={mine} size={24} /><Name p={p} me={mine} /></span>
+                  <span className="au-draw-cards">
+                    {Object.entries(st.draw.cards[p.vid]).map(([t, c]) => {
+                      const at = 700 + (k++) * DRAW_STEP_MS
+                      const src = kit.photo(c.name, c.team)
+                      return (
+                        <span key={t} className="au-dcard" style={{ '--at': `${at}ms`, '--g': gradeColor(c.val), '--tc': kit.teamColor(c.team, c.name) }}>
+                          <span className="au-dcard-in">
+                            <span className="au-dcard-back"><span>BAP</span></span>
+                            <span className="au-dcard-face">
+                              <small>{shortLabel(kit.attrLabel(t))}</small>
+                              <span className="au-dcard-pic">{src ? <img src={src} alt="" draggable={false} /> : <img className="is-logo" src={kit.crest ? kit.crest(c.name, c.team) : kit.logo(c.team)} alt="" draggable={false} />}</span>
+                              <b>{valToGrade(c.val)}</b>
+                              <i>{lastName(c.name)}</i>
+                            </span>
+                          </span>
                         </span>
-                      </span>
-                    )
-                  })}
-                </span>
-              </div>
-            ))}
+                      )
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-        {mySlots}
-      </>
+        <div className="au-side">{mySlots}</div>
+      </div>
     )
   }
 
   // ── the floor ──
-  const lot = st.lot
   const bidEnd = lotEnd(st, m)
   const spinning = st.stage === 'lot' && au.now < st.t0 + spinOf(lot)
   const bidding = st.stage === 'lot' && !spinning
   const left = bidding ? Math.max(0, bidEnd - au.now) : 0
   const call = bidding ? callOf(left) : null
-  const high = st.high
+  const total = (st.last ? (m.reset ?? RESET_SECS) : m.bidSecs) * 1000
   const highP = high && nameOf(high.vid)
   const myMax = maxBid(L, mine, m.types)
   const mayBid = lot && canBidOn(L, mine, m.types, lot.trait)
@@ -263,122 +333,131 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   const nextBid = minNext(high)
   // a bigger step when you want it: three over the high bid, if you can afford it
   const jumpBid = (high?.amount ?? 0) + 3 <= myMax ? (high?.amount ?? 0) + 3 : null
-  const here = new Set(au.present.map(p => p.vid))
   const soldTo = st.sold && nameOf(st.sold.vid)
   const sold = st.stage === 'sold'
   // the grade turns over at the gavel, sold or not; a card back from the deck is already face up
   const shown = !!lot && (sold || lot.known) && lot.val != null
-  const myDone = openSlots(L, mine, m.types).length === 0
+  const myDone = myOpen === 0
   // the cards that went back in the deck unsold, face up: what could still come back
   const back = (L.back ?? []).filter(c => !(st.stage === 'lot' && lot?.known && c.trait === lot.trait && c.name === lot.name))
+  const state = sold ? (st.sold ? 'sold' : 'pass') : call ?? (bidding ? 'open' : 'wait')
 
-  let controls
-  if (!lot || st.stage === 'wait') controls = <p className="au-note">The auctioneer's shuffling the deck…</p>
-  else if (sold) controls = <p className="au-note">{myDone ? 'Your build is done.' : st.sold ? 'Next card coming up…' : 'Back in the deck. Next card coming up…'}</p>
-  else if (!mayBid) controls = <p className="au-note">{L.won[mine]?.[lot.trait] ? `Your ${kit.attrLabel(lot.trait)} slot is filled. Watching this one.` : 'Out of money for this one.'}</p>
-  else if (spinning) controls = <p className="au-note">{lot.known ? 'Back up, grade showing. Bidding opens in a moment.' : 'Bidding opens when the card turns over.'}</p>
-  else if (high?.vid === mine) controls = <p className="au-note au-note--lead">High bid ${high.amount}. Hold on…</p>
-  else if (passed) controls = <p className="au-note">Out on this one.</p>
-  else if (nextBid > myMax) controls = <p className="au-note">Can't top ${high?.amount}: max bid ${myMax}.</p>
-  else controls = (
-    <div className={`au-bids${jumpBid ? ' has-jump' : ''}`}>
+  let act
+  const note = (txt, cls = '') => <div className={`au-act au-act--note${cls}`}><span>{txt}</span></div>
+  if (!lot || st.stage === 'wait') act = note('Shuffling the deck')
+  else if (sold) act = note(myDone ? 'Build done' : st.sold ? 'Next lot coming up' : 'Back in the deck · next lot coming up')
+  else if (!mayBid) act = note(L.won[mine]?.[lot.trait] ? `${kit.attrLabel(lot.trait)} filled · watching this one` : 'Out of money for this one')
+  else if (spinning) act = note(lot.known ? 'Back up, grade showing · bidding opens' : 'Bidding opens when the card turns')
+  else if (high?.vid === mine) act = (
+    <div className="au-act au-act--lead">
+      <span className="au-act-lead"><small>HIGH BIDDER</small><NameTag name={me.name} self /></span>
+      <b>${high.amount}</b>
+    </div>
+  )
+  else if (passed) act = note('Out on this one')
+  else if (nextBid > myMax) act = note(`Can't top $${high?.amount} · max bid $${myMax}`)
+  else act = (
+    <div className={`au-act au-bids${jumpBid ? ' has-jump' : ''}`}>
+      <button className="au-pass" onClick={() => { au.pass(); sfx('tap') }}>PASS</button>
       <button className="au-bid" onClick={() => { if (au.bid(nextBid)) { sfx('tap'); haptic('light') } }}>
-        <small>{high ? 'BID +1' : 'OPEN AT'}</small><b>${nextBid}</b>
+        <small>{high ? 'BID' : 'OPEN AT'}</small><b>${nextBid}</b>
       </button>
       {jumpBid && (
         <button className="au-bid au-bid--jump" onClick={() => { if (au.bid(jumpBid)) { sfx('tap'); haptic('medium') } }}>
-          <small>+3</small><b>${jumpBid}</b>
+          <small>JUMP +3</small><b>${jumpBid}</b>
         </button>
       )}
-      <button className="au-pass" onClick={() => { au.pass(); sfx('tap') }}>PASS</button>
     </div>
   )
 
   return (
-    <>
-      <div className="au-top">
-        <span className="ag-eyebrow">AUCTION {m.code} · LOT {st.n || 1}</span>
-        <LiveLeaveButton />
-      </div>
-
-      <div className="au-room" role="list" aria-label="Bidders">
-        {m.players.map(p => {
-          const out = L.out.includes(p.vid)
-          const full = openSlots(L, p.vid, m.types).length === 0
-          return (
-            <div key={p.vid} role="listitem" className={`au-bidder${p.vid === mine ? ' is-me' : ''}${high?.vid === p.vid ? ' is-high' : ''}${out || !here.has(p.vid) && p.vid !== mine ? ' is-away' : ''}`}>
-              <Pic p={p} me={mine} size={30} />
-              <span className="au-bidder-name"><Name p={p} me={mine} /></span>
-              <b className="au-cash">${L.wallets[p.vid]}</b>
-              <span className="au-dots">{m.types.map(t => <i key={t} className={L.won[p.vid]?.[t] ? 'is-in' : ''} />)}</span>
-              {out ? <em>LEFT</em> : full ? <em>DONE</em> : st.stage === 'lot' && st.passed.includes(p.vid) ? <em>PASS</em> : st.stage === 'lot' && lot && L.won[p.vid]?.[lot.trait] ? <em>FILLED</em> : null}
-            </div>
-          )
-        })}
-      </div>
-
-      <div className={`au-stage${sold ? (st.sold ? ' is-sold' : ' is-pass') : ''}${call ? ` is-${call}` : ''}`}>
-        {lot ? (
-          // the card turns over on the player; what he's up for reads beside it once it has
-          <div className={`au-lot${spinning && !lot.known ? ' is-pulling' : ''}`} key={lot.n} style={{ '--deck': `${DECK_MS}ms` }}>
-            {spinning && !lot.known
-              ? <Deck kit={kit} lot={lot} seed={m.seed} />
-              : <div className="au-card au-card--lot"><div className="au-card-face"><PlayerFace kit={kit} lot={lot} /></div></div>}
-            <div className="au-lot-info">
-              <span className="au-lot-for">{lot.known && st.stage === 'lot' ? 'BACK FROM THE DECK' : 'UP FOR'}</span>
-              <b className="au-lot-trait">{kit.attrLabel(lot.trait)}</b>
-              {kit.slotTraits(lot.trait).length > 1 && <span className="au-lot-covers">{kit.slotTraits(lot.trait).join(' · ')}</span>}
-              <span className="au-lot-team"><img src={kit.logo(lot.team)} alt="" /> {lot.team}</span>
-            </div>
-            <div className={`au-grade${shown ? ' is-open' : ''}${lot.known ? ' is-known' : ''}`} aria-label={shown ? `Grade ${valToGrade(lot.val)}` : 'Grade hidden'}>
-              <div className="au-grade-in">
-                <span className="au-grade-back">?</span>
-                {shown && <b className="au-grade-face" style={{ '--g': gradeColor(lot.val) }}>{valToGrade(lot.val)}</b>}
+    <div className={`au-floor is-${state}`} data-lot={st.n || 0}>
+      {top(`AUCTION ${m.code} · ${m.players.length} BIDDERS`)}
+      <div className="au-main">
+        <div className={`au-block is-${state}`}>
+          {lot ? (
+            <div className={`au-lot${spinning && !lot.known ? ' is-pulling' : ''}`} key={lot.n} style={{ '--deck': `${DECK_MS}ms` }}>
+              <div className="au-lot-card">
+                <span className="au-lot-n">LOT {st.n || 1}</span>
+                {spinning && !lot.known
+                  ? <Deck kit={kit} lot={lot} seed={m.seed} />
+                  : <div className="au-card au-card--lot"><div className="au-card-face"><LotCard kit={kit} lot={lot} /></div></div>}
+                {sold && <span className={`au-stamp${st.sold ? '' : ' is-pass'}`} key={`s${st.n}`}>{st.sold ? 'SOLD' : 'NO SALE'}</span>}
+              </div>
+              <div className="au-lot-info">
+                <span className="au-lbl">{lot.known && st.stage === 'lot' ? 'BACK FROM THE DECK' : 'UP FOR'}</span>
+                <b className="au-lot-trait">{kit.attrLabel(lot.trait)}</b>
+                {kit.slotTraits(lot.trait).length > 1 && <span className="au-lot-covers">{kit.slotTraits(lot.trait).join(' · ')}</span>}
+                <div className="au-lot-foot">
+                  <span className="au-lot-team"><img src={kit.crest ? kit.crest(lot.name, lot.team) : kit.logo(lot.team)} alt="" />{lot.team}</span>
+                  <div className={`au-grade${shown ? ' is-open' : ''}${lot.known ? ' is-known' : ''}`} aria-label={shown ? `Grade ${valToGrade(lot.val)}` : 'Grade hidden'}>
+                    <div className="au-grade-in">
+                      <span className="au-grade-back"><small>GRADE</small>?</span>
+                      {shown && <span className="au-grade-face" style={{ '--g': gradeColor(lot.val) }}><small>GRADE</small>{valToGrade(lot.val)}</span>}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="au-lot au-lot--wait"><span className="cp-pulse" /><span className="cp-sub">Everyone has ${BUDGET} and {m.types.length} slots. New cards come up face down; the grade turns over at the gavel.</span></div>
-        )}
-        {st.stage === 'lot' && (
-          <div className="au-clock">
-            <div className="au-bar">{bidding ? <Drain key={`${st.n}:${st.last}`} end={bidEnd} total={(st.last ? RESET_SECS : m.bidSecs) * 1000} /> : <i />}</div>
-            <span className="au-high">{high ? <>HIGH <b>$<RollingNumber value={high.amount} /></b> · {highP ? <Name p={highP} me={mine} /> : '—'}</> : bidding ? <>OPENING BID <b>$1</b></> : lot?.known || au.now >= st.t0 + DECK_MS ? 'BIDDING OPENS…' : 'SHUFFLING…'}</span>
-            <b className={`au-call${call ? ' is-on' : ''}`} key={call ?? 'tick'}>{call === 'once' ? 'GOING ONCE' : call === 'twice' ? 'GOING TWICE' : bidding ? Math.ceil(left / 1000) : ''}</b>
-          </div>
-        )}
-        {sold && (
-          <div className="au-gavel">{st.sold
-            ? <><Gavel key={st.n} /><span className="au-gavel-txt" key={`t${st.n}`}>SOLD · {soldTo ? <Name p={soldTo} me={mine} /> : '—'} · <b>${st.sold.amount}</b></span></>
-            : <>NO BIDS · BACK IN THE DECK · <b style={{ color: gradeColor(lot.val) }}>{valToGrade(lot.val)}</b></>}</div>
-        )}
+          ) : (
+            <div className="au-lot au-lot--wait"><span className="au-lbl">THE FLOOR</span><span className="au-wait-line">Everyone has ${BUDGET} and {m.types.length} slots. New cards come up face down; the grade turns over at the gavel.</span></div>
+          )}
+          {(st.stage === 'lot' || sold) && (
+            <div className="au-board">
+              <div className="au-board-bid">
+                <span className="au-lbl">{sold ? (st.sold ? 'SOLD FOR' : 'NO BIDS') : high ? 'HIGH BID' : 'OPENING BID'}</span>
+                <b className={`au-amt${sold && !st.sold ? ' is-none' : ''}`}>{sold && !st.sold ? '—' : <>${sold ? <RollingNumber value={st.sold.amount} /> : high ? <RollingNumber value={high.amount} /> : 1}</>}</b>
+                <span className="au-holder">{sold
+                  ? (st.sold ? (soldTo ? <><Pic p={soldTo} me={mine} size={20} /><Name p={soldTo} me={mine} /></> : '—') : 'Back in the deck, face up')
+                  : highP ? <><Pic p={highP} me={mine} size={20} /><Name p={highP} me={mine} /></> : 'No bids yet'}</span>
+              </div>
+              <div className="au-board-clock" key={sold ? `g${st.n}` : call ?? 'clock'}>
+                {sold
+                  ? (st.sold ? <><Gavel key={st.n} /><b className="au-call is-sold">SOLD</b></> : <b className="au-call is-pass">PASSED</b>)
+                  : call
+                    ? <><span className="au-lbl">GOING</span><b className={`au-call is-${call}`}>{call === 'once' ? 'ONCE' : 'TWICE'}</b></>
+                    : <><span className="au-lbl">CLOCK</span><b className={`au-call${bidding ? '' : ' is-idle'}`}>{bidding ? Math.ceil(left / 1000) : m.bidSecs}</b></>}
+              </div>
+              <div className="au-bar" style={{ '--once': `${Math.min(100, 4000 / total * 100)}%`, '--twice': `${Math.min(100, 2000 / total * 100)}%` }}>
+                {bidding ? <Drain key={`${st.n}:${st.last}`} end={bidEnd} total={total} /> : <i className={sold ? 'is-out' : ''} />}
+              </div>
+            </div>
+          )}
+        </div>
+        {act}
       </div>
 
-      {controls}
-
-      {back.length > 0 && (
-        <div className="au-back" aria-label="Back in the deck">
-          <span className="ag-eyebrow">BACK IN THE DECK · FACE UP</span>
-          <div className="au-back-cards">
-            {back.map(c => (
-              <span key={`${c.trait}:${c.name}`} className="au-back-card" style={{ '--g': gradeColor(c.val) }}>
-                <b>{valToGrade(c.val)}</b><small>{kit.attrLabel(c.trait)}</small><i>{c.name}</i>
-              </span>
-            ))}
+      <div className="au-side">
+        {room}
+        {mySlots}
+        {back.length > 0 && (
+          <div className="au-back" aria-label="Back in the deck">
+            <span className="au-lbl">BACK IN THE DECK · FACE UP</span>
+            <div className="au-back-cards">
+              {back.map(c => (
+                <span key={`${c.trait}:${c.name}`} className="au-back-card" style={{ '--g': gradeColor(c.val) }}>
+                  <b>{valToGrade(c.val)}</b><small>{shortLabel(kit.attrLabel(c.trait))}</small><i>{lastName(c.name)}</i>
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      {mySlots}
-
-      {L.log.length > 0 && (
-        <div className="au-log" aria-label="Recent lots">
-          {L.log.slice(0, 4).map(e => {
-            const who = e.vid && nameOf(e.vid)
-            return <span key={e.n}>{kit.attrLabel(e.trait)} {valToGrade(e.val)} · {e.name} → {who ? <><Name p={who} me={mine} /> ${e.amount}</> : 'no bids'}</span>
-          })}
-        </div>
-      )}
-    </>
+        )}
+        {L.log.length > 0 && (
+          <div className="au-log" aria-label="Recent lots">
+            <span className="au-lbl">THE BOOK</span>
+            {L.log.slice(0, 4).map(e => {
+              const who = e.vid && nameOf(e.vid)
+              return (
+                <span key={e.n} className="au-log-row" style={{ '--g': gradeColor(e.val) }}>
+                  <b>{valToGrade(e.val)}</b>
+                  <span className="au-log-what">{shortLabel(kit.attrLabel(e.trait))} · {e.name}</span>
+                  <span className="au-log-to">{who ? <><Name p={who} me={mine} /> ${e.amount}</> : 'NO SALE'}</span>
+                </span>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

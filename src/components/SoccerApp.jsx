@@ -19,6 +19,7 @@ const AppSquad = lazy(() => import('../lib/squadSeason').then(m => m.loadSquadSo
 const AppCareer = lazy(() => import('./app/AppCareer'))
 const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
 const SoccerSalaryCap = lazy(() => import('./SoccerSalaryCap'))
+const AppTraitAuction = lazy(() => import('./app/AppTraitAuction'))
 import { SOCCER_ATTR, SOCCER_TYPES, SOCCER_CATEGORIES } from '../data/soccer-attrs'
 import { SOCCER_STRIKERS, UCL_STRIKERS, WC_STRIKERS, WC2026_STRIKERS } from '../data/soccer-strikers'
 import { SOCCER_CLUBS, UCL_CLUBS, SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
@@ -39,6 +40,8 @@ import AppHome from './app/AppHomeSwitch'   // today's Home, or the classic one 
 import { BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { FORFEIT_RATING, dailyState } from '../lib/progress'
+import { useAuction } from '../lib/auction'
+import '../lib/soccerAuctionUi'   // the Trait Auction's soccer kit (the striker) and its cards
 import { flagEmoji, ensureFlagFont } from '../lib/flagEmoji'
 import { setSandboxGate, sandboxItemFor, sandboxLocked, clearSandboxHint } from './app/AppSandbox'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
@@ -461,6 +464,7 @@ export default function SoccerApp() {
         else handleStartRef.current?.('classic')
       } else if (String(to).startsWith('mode:')) handleStartRef.current?.(String(to).slice(5))
       else if (to === 'leaderboard') setPage('leaderboard')
+      else if (to === 'auction' || to === 'compete') setPage('auction')
       else if (to === 'salarycap') handleStartRef.current?.('salarycap')
       else if (to === 'squad') openSquadRef.current?.()
       else if (to === 'career') openCareerRef.current?.()
@@ -631,6 +635,18 @@ export default function SoccerApp() {
   }, [user?.id])
   const careerNew = useRef({ slot: 0, name: null })
   const startCareerBuild = useCallback(() => { handleStart('classic'); setPage('career-build') }, [handleStart])
+  // ── TRAIT AUCTION (lib/auction.js, soccer's kit lib/soccerAuction.js): the striker, locked in while it's on ──
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'soccer', pos: 'st' })
+  const auctionLive = au.phase === 'auction'
+  useEffect(() => {
+    if (!auctionLive) return
+    setLiveLock({
+      title: 'Leave the auction?',
+      body: `The auction goes on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
+      forfeit: () => au.forfeit(),
+    })
+    return () => setLiveLock(null)
+  }, [auctionLive]) // eslint-disable-line react-hooks/exhaustive-deps
   const openCareer = useCallback(() => { setPage(SOCCER_MODES.career ? 'career-intro' : 'soon-career'); window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
   openCareerRef.current = openCareer
   const enterDraft = useCallback(async () => {
@@ -824,7 +840,7 @@ export default function SoccerApp() {
     />
   )
 
-  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'privacy'])
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'privacy', 'auction'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
   const shareLink = useMemo(() => {
@@ -1004,6 +1020,7 @@ export default function SoccerApp() {
             squad={squad}
             onCareer={openCareer}
             career={career}
+            onAuction={IS_APP || APP_LOOK ? () => setPage('auction') : null}
             soon={{ career: !SOCCER_MODES.career, salary: !SOCCER_MODES.salary, squad: !SOCCER_MODES.squad }}
             faces={HOME_FACES}
             resume={(gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `ST · ${SOCCER_POOL[pool].label}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
@@ -1072,6 +1089,14 @@ export default function SoccerApp() {
           />
         </Suspense>
       </>
+    )
+  }
+
+  if (page === 'auction') {
+    return withGame(
+      <Suspense fallback={null}>
+        <AppTraitAuction au={au} sport="soccer" position="st" positions={[{ pos: 'st', label: 'STRIKER' }]} onPosition={() => {}} onHome={() => setPage('splash')} />
+      </Suspense>
     )
   }
 

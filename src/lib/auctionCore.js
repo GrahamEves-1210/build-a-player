@@ -31,8 +31,8 @@ export const DRAW_STEP_MS = 420
 export const GRACE_MS = 450                // late bids still in flight when the window shuts
 export const FILLER_VAL = 3         // a slot nobody won by the end: a free agent
 
-// Football: QB, RB or WR (each on its Salary Cap board's five slots); basketball: guard or big
-export const AUCTION_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }
+// Football: QB, RB or WR (each on its Salary Cap board's five slots); basketball: guard or big; soccer: the striker
+export const AUCTION_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'], soccer: ['st'] }
 const NFL_OVR = { qb: calcOVR, rb: calcOVRRB, wr: calcOVRWR }
 const avg = vs => (vs.length ? vs.reduce((x, y) => x + y, 0) / vs.length : 5)
 
@@ -40,7 +40,13 @@ const avg = vs => (vs.length ? vs.reduce((x, y) => x + y, 0) / vs.length : 5)
 // Salary Cap's five columns; each covers one to three of the position's traits.
 // Traits no slot covers (basketball's IQ, clutch, rebounding…) come from the
 // average of the players you won, the way Salary Cap fills them.
+// A sport whose rosters stay out of this file's bundle adds its kit (soccer: lib/soccerAuction.js, which the soccer
+// app and the live worker import)
+const ADDED_KITS = {}
+export const addAuctionKit = (sport, make) => { ADDED_KITS[sport] = make }
 export function auctionCoreKit(sport, pos) {
+  if (ADDED_KITS[sport]) return ADDED_KITS[sport](pos)
+  if (!AUCTION_POS[sport] || sport === 'soccer') throw new Error(`auction: no kit for ${sport}`)
   const bucket = sport === 'bucket'
   const p = bucket ? (pos === 'big' ? 'big' : 'guard') : AUCTION_POS.nfl.includes(pos) ? pos : 'qb'
   const fb = bucket ? null : FB_SAL[p]
@@ -49,15 +55,20 @@ export function auctionCoreKit(sport, pos) {
   const slots = bucket
     ? SAL_COLS.map(c => ({ key: c.key, label: c.label, types: p === 'big' ? c.bigTypes : c.guardTypes, alt: p === 'big' ? c.guardTypes : c.bigTypes }))
     : fb.cols.map(c => ({ key: c.key, label: c.label, types: c.types, alt: [] }))
+  const ovr = bucket ? b => calcBucketOVR(b, posTypes, p) : b => NFL_OVR[p](b, posTypes)
+  return slotKit({ sport: bucket ? 'bucket' : 'nfl', pos: p, slots, posTypes, attr, pool: bucket ? BUCKET_SAL_POOL : fb.pool, ovr })
+}
+
+// The kit from a sport's five slots (each { key, label, types, alt }), its traits, their labels, the pool and its OVR
+export function slotKit({ sport, pos, slots, posTypes, attr, pool, ovr }) {
   const bySlot = Object.fromEntries(slots.map(sl => [sl.key, sl]))
   const covered = new Set(slots.flatMap(sl => sl.types))
   const loose = posTypes.filter(t => !covered.has(t))
   const valOf = (pl, sl, t) => pl.attrs?.[t] ?? sl.alt.map(a => pl.attrs?.[a]).find(v => v != null) ?? 5
-  const ovr = bucket ? b => calcBucketOVR(b, posTypes, p) : b => NFL_OVR[p](b, posTypes)
   return {
-    sport: bucket ? 'bucket' : 'nfl', pos: p,
+    sport, pos,
     types: slots.map(sl => sl.key),                       // the auction's slots
-    pool: bucket ? BUCKET_SAL_POOL : fb.pool,
+    pool,
     attrLabel: k => bySlot[k]?.label ?? k,
     slotTraits: k => (bySlot[k]?.types ?? []).map(t => attr[t]?.label ?? t),
     // a lot: the player's numbers for the slot's traits (its grade is their average), plus the loose traits

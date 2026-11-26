@@ -7,6 +7,7 @@
 //                 once / going twice clock (called at once when nobody left can
 //                 bid), sells, puts unsold cards back in the deck face up, deals the
 //                 draw when somebody fills his build first, and ranks the builds
+// Football, basketball and soccer (the striker, its kit from src/lib/soccerAuction.js).
 // The rules are the app's own (src/lib/auctionCore.js), so the phones show exactly
 // what the server enforces. Phones only send: hello, bid, pass, quit.
 
@@ -15,6 +16,7 @@ import {
   AUCTION_POS, auctionCoreKit, freshLedger, canTop, minNext, maxBid, auctionOver, pickLot, takeLot, returnLot,
   finishedEarly, drawFor, applyDraw, rankAuction, lotEnd, spinOf,
 } from '../../src/lib/auctionCore.js'
+import '../../src/lib/soccerAuction.js'   // soccer's kit (the striker): added to the rules above
 import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
 import { competeDelta } from '../../src/lib/rating.js'
 import { bookRatings } from './rating.js'

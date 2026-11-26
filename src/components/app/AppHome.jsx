@@ -584,7 +584,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : squad.team ? 'Ready to play' : 'Needs a team'
 
   const sp = isBucket ? 'bucket' : 'nfl'
-  // Soccer and baseball: Career, Salary Cap and Squad Builder (no Blacktop, no Depth Chart, no auction)
+  // Soccer and baseball: Career, Salary Cap and Squad Builder (no Blacktop, no Depth Chart); soccer's Trait Auction (the striker) in the row under them
   // Salary Cap's card: in the card grid on football, the bottom row on basketball (beside the Trait Auction)
   const salary = (
     <button className={`ag-way ag-mc ag-mc--salary ag-way--quick${isBucket ? ' is-small' : ''}`} onClick={() => startRef.current('salarycap')}>
@@ -612,6 +612,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         </ModeArt>
       </div>
       <div className="ag-more ag-more--one">
+        {isSoccer && auctionCard(true)}
         {onSquad && !isSoccer && (
           <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad} soon={!!soon?.squad}>
             {isBaseball ? <Diamond /> : <Formation />}
