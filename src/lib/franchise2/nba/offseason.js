@@ -173,6 +173,8 @@ function enter(F, step) {
     F.off.kept = []
   }
   if (step === 'fa') { F.off.day = 0 }
+  // (the calls a summer brings: a league team's offer at the draft, in free agency, at camp: trades.js cpuOffer)
+  if (step === 'draft' || step === 'fa' || step === 'camp') { const c = X.cpuOffer(F); if (c) addNews(F, c) }
 }
 function leave(F, step) {
   // the re-sign stop done: the GM's free agents he didn't keep are let go (their cap holds off his books, the way a
