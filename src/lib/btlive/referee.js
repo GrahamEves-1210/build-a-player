@@ -143,7 +143,7 @@ export function makeChance(s) {
     base = close + (arc - close) * Math.pow(t, T.curve)
     // behind the line: every foot farther back is harder, less so for a shooter with range
     if ((s.past ?? 0) > 0) base *= Math.exp(-s.past * (T.pastK - T.pastJs * (R.jsRaw ?? R.js)))
-    base *= 1 - T.setFeet * clamp(((s.run ?? 0) - T.runFrom) / (1 - T.runFrom), 0, 1)
+    base *= 1 - (T.setFeet + ((s.past ?? -1) >= 0 ? T.setFeet3 : 0)) * clamp(((s.run ?? 0) - T.runFrom) / (1 - T.runFrom), 0, 1)
     if (s.cs != null) base *= 1 + T.csBoost * s.cs
     pen = T.contestMaxJ * s.c * (1 - T.jsThrough * (R.jsRaw ?? R.js))     // a great shooter shoots over a hand (on the plain grade)
   }
@@ -264,7 +264,7 @@ export function judgePick(def, passerR, near, roll) {
 // Two or more under the same ball: who comes down with it. cands: [{ id, R, d (ft from the ball), jump }]
 export function judgeBoard(cands, roll) {
   if (cands.length === 1) return cands[0].id
-  const w = cands.map(c => Math.max(0.2, 1 + T.boardReb * (c.R.reb - 0.75) + T.boardSize * (c.R.size - 0.75) + T.boardBnc * (c.R.bnc - 0.75)) * (1.3 - 0.3 * clamp(c.d / T.grabDist, 0, 1)) * (c.jump ? 1.25 : 1))
+  const w = cands.map(c => Math.max(0.2, 1 + T.boardReb * (c.R.reb - 0.75) + T.boardSize * (c.R.size - 0.75) + T.boardBnc * (c.R.bnc - 0.75)) * (1.3 - 0.3 * clamp(c.d / T.grabDist, 0, 1)) * (c.jump ? 1.25 : 1) * (c.own ? T.selfRebW : 1))
   let t = roll * w.reduce((s, x) => s + x, 0)
   for (let i = 0; i < cands.length; i++) { t -= w[i]; if (t <= 0) return cands[i].id }
   return cands[cands.length - 1].id

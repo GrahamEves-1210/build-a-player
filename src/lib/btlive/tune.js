@@ -157,7 +157,10 @@ export const T = {
   arcBase: -0.66, arcJs: 1.20,       // a jumper from the arc (25 ft): 25% at Jump Shot 1, 54% at 11 (an 80: 39%)
   arcRef: 25, curve: 1.3,            // the distance those are measured at, and how the chance bends between 8 ft and there
   pastK: 0.16, pastJs: 0.06,         // every foot behind the three-point line: the chance x e^-(0.16 - 0.06 x Jump Shot) (range)
-  setFeet: 0.16,                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
+  setFeet: 0.16,
+  setFeet3: 0.07,                    // ...and a three on the move this much more on top (owner 11-26: a moving three is harder)
+  selfRebWait: 0.45,                 // s: the shooter, coming down, can't get to his own miss before this (owner 11-26)
+  selfRebW: 0.5,                     // ...and in a scramble for it he's this much less likely to come up with it                     // a jumper taken at a full run loses this much (a step-back lands him set: little); still: nothing
   runFrom: 0.2,                      // ...from this share of his top speed up (a drift is free)
   csWindow: 1.3,                     // a jumper this soon after a catch is "off the catch"...
   csBoost: 0.25,                     // ...and gains up to this much from the passer's Passing/Playmaking
@@ -180,12 +183,12 @@ export const T = {
   frontDot: 0.5,                     // square in front: full; beside him (at right angles to the rim)...
   contestSide: 0.55,                 // ...this much; trailing straight behind him (he beat you)...
   contestBehind: 0.6,                // ...this much (a man on his hip still bothers it)
-  contestRate: 0.30, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
+  contestRate: 0.34, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.28,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
-  contestMaxJ: 0.86,                 // a perfect contest takes this share off a jumper
+  contestMaxJ: 0.92,                 // a perfect contest takes this share off a jumper
   jsThrough: 0.28,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
-  contestMaxL: 0.85,                 // ...off a layup
+  contestMaxL: 0.90,                 // ...off a layup
   contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest

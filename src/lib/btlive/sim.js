@@ -813,11 +813,14 @@ function ballStep(s) {
   for (const p of P) {
     if (p.act === 'frozen' || p.act === 'down' || p.act === 'gather' || p.out) continue
     if (p.act === 'follow' && p.i === b.from && !b.reb) continue     // blocked: he's still coming down
+    const own = b.reb && p.i === b.from
     const d = Math.hypot(p.x - b.x, p.y - b.y)
+    // (his own miss: he's still landing, so his reach for it is shorter for a beat)
+    if (own && b.t < ticks(T.selfRebWait) && d > p.R.grab * 0.5) continue
     if (d > p.R.grab) continue
     const up = p.act === 'jump' ? Math.sin(Math.PI * clamp(p.actT / ticks(T.jumpTime), 0, 1)) : 0
     if (b.z > p.R.standReach + (p.R.jumpReach - p.R.standReach) * up) continue
-    ;(cands ??= []).push({ id: p.i, R: p.R, d, jump: p.act === 'jump' })
+    ;(cands ??= []).push({ id: p.i, R: p.R, d, jump: p.act === 'jump', own })
   }
   // nobody got to it: after a while it goes to whoever is nearest
   if (!cands && b.t > ticks(6)) {
