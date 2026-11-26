@@ -8009,32 +8009,27 @@ html.is-soccer .bap-wm--img .wmi--soccer, [data-sport="soccer"] .bap-wm--img .wm
 /* ═══ TRAIT AUCTION: the Home card, the lobby, the draw, the deck (AppHome GavelArt, AppTraitAuction, AppAuction) ═══ */
 /* the Home card: the gavel raised over its block on the right, the lot on the table beside it, face down */
 .ag-mc--auction::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24%; z-index: 0; background: rgba(0,0,0,.24); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
-.ag-gavel { position: absolute; right: 4%; bottom: 7%; z-index: 1; width: 48%; max-width: 150px; aspect-ratio: 180 / 234; pointer-events: none; }
-.ag-gavel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.ag-gavel-head { transform-origin: 4.8% 47.6%; }
-.ag-gavel-block { transform-origin: 70% 92%; }
-.ag-gavel-lot { position: absolute; right: 108%; bottom: 4%; display: grid; place-items: center; align-content: center; gap: 2px; width: 46px; height: 64px; border-radius: 6px; transform: rotate(-6deg);
-  background: repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 2px, transparent 2px 8px), #0b1222; box-shadow: inset 0 0 0 1.5px #f5b83d, 0 4px 10px rgba(0,0,0,.4); }
+/* the gavel and the lot side by side, bottom right; the gavel's box holds its whole swing (.gv-swing), so on hover the
+   hammer comes down inside it and never crosses the lot or the card's edge */
+.ag-gavel { position: absolute; right: 4%; bottom: 8%; z-index: 1; height: 72%; max-height: 150px; display: flex; align-items: flex-end; gap: 4px; pointer-events: none; }
+.ag-gavel .gv-swing { height: 100%; }
+.ag-gavel-lot { flex: none; display: grid; place-items: center; align-content: center; gap: 2px; width: 46px; height: 64px; margin-bottom: 2px; border-radius: 6px; transform: rotate(-6deg);
+  background: #0b1222; box-shadow: inset 0 0 0 1.5px #f5b83d, 0 4px 10px rgba(0,0,0,.4); }
 .ag-gavel-lot b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; color: #ffd06b; }
 .ag-gavel-lot small { font-family: var(--ag-font); font-size: 10px; letter-spacing: 1.5px; color: rgba(214,224,243,.75); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  html:not(.bap-reduce-motion) .ag-mc--auction:hover .ag-gavel-head { animation: au-hammer 1.1s both; }
-  html:not(.bap-reduce-motion) .ag-mc--auction:hover .ag-gavel-block { animation: au-block .3s .44s ease-out both; }
+  html:not(.bap-reduce-motion) .ag-mc--auction:hover .gv-head { animation: au-hammer 1.1s both; }
+  html:not(.bap-reduce-motion) .ag-mc--auction:hover .gv-block { animation: au-block .3s .44s ease-out both; }
 }
-html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bottom: 6%; }
-@media (min-width: 1024px) {
-  html.app-look .ag-mc--auction.is-small .ag-gavel { right: 6%; height: 92%; bottom: 4%; }
-  html.app-look .ag-mc--auction .ag-gavel-lot { width: 54px; height: 74px; }
+@media (max-width: 1023px) {
+  .ag-mc--auction .ag-gavel { height: 60%; right: 3%; bottom: 7%; }
+  .ag-mc--auction .ag-gavel-lot { width: 40px; height: 56px; }
+  .ag-mc--auction .ag-gavel-lot b { font-size: 22px; }
 }
 /* the classic Home's row */
 .ag-card-art--gavel { position: absolute; right: 10px; bottom: 6px; width: 74px; aspect-ratio: 180 / 234; opacity: .95; }
 .ag-card-art--gavel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 
-@media (max-width: 1023px) {
-  html.app-look .ag-more .ag-mc--auction .ag-gavel { height: 62%; bottom: 5%; right: 1%; }
-  .ag-mc--auction .ag-gavel-lot { width: 40px; height: 56px; }
-  .ag-mc--auction .ag-gavel-lot b { font-size: 22px; }
-}
 
 /* ═══ TRAIT AUCTION: the room (AppTraitAuction, AppAuction), a draft-night board (owner 11-26) ═══
    Ink navy with one gold accent, white type; gold is the primary action too. The lot is the hero: a real player card on the block, the high bid and who holds
@@ -8071,21 +8066,6 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-screen.is-live .ag-screen-head .ag-eyebrow { margin-bottom: 3px; }
 .au-lbl { font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; line-height: 1.1; color: var(--au-amber); text-transform: uppercase; }
 
-/* ── the lobby: the gavel beside three short lines ── */
-.au-intro { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 14px; padding: 14px 16px 14px 12px; border-radius: 14px; background: var(--au-panel); border: 1px solid var(--au-line); }
-.au-mark { position: relative; display: block; width: 64px; aspect-ratio: 180 / 234; }
-.au-mark img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.au-mark-head { transform-origin: 4.8% 47.6%; }
-.au-mark-block { transform-origin: 70% 92%; }
-@media (prefers-reduced-motion: no-preference) {
-  html:not(.bap-reduce-motion) .au-intro.ag-pop .au-mark-head { animation: au-hammer 1.1s .35s both; }
-  html:not(.bap-reduce-motion) .au-intro.ag-pop .au-mark-block { animation: au-block .3s .79s ease-out both; }
-}
-.au-intro-txt { display: grid; gap: 8px; min-width: 0; }
-.au-intro-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
-.au-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
-.au-rules li { display: flex; align-items: baseline; gap: 10px; font-family: var(--ag-font); font-size: 19px; letter-spacing: 1.2px; line-height: 1.15; color: var(--au-white); text-transform: uppercase; }
-.au-rules li b { flex: none; width: 14px; font-family: var(--ag-display); font-weight: 400; font-size: 17px; color: var(--au-amber); }
 .au-screen .ag-pos { background: var(--au-panel); border-color: var(--au-line); }
 .au-screen .ag-pos--on { background: var(--au-deep); border-color: var(--au-amber); box-shadow: none; }
 .au-screen .ag-pos--on .ag-pos-label { color: var(--au-amber-hi); }
@@ -8218,7 +8198,6 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-call.is-twice { color: var(--au-hot); }
 .au-call.is-sold { color: var(--au-amber-hi); }
 .au-call.is-pass { font-size: 34px; color: var(--au-muted); }
-.au-board-clock:has(.au-hammer) { grid-template-columns: auto auto; align-items: end; column-gap: 4px; }
 .au-block.is-wait .au-amt { color: var(--au-muted); }
 .au-bar { position: relative; grid-column: 1 / -1; height: 8px; border-radius: 4px; background: rgba(0,0,0,.4); overflow: hidden; }
 .au-bar i { display: block; height: 100%; background: var(--au-amber); transform-origin: left; transform: scaleX(1); transition: background .2s; }
@@ -8232,22 +8211,11 @@ html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bot
 .au-block.is-twice .au-bar i { background: var(--au-hot); }
 @keyframes au-drain { from { transform: scaleX(var(--from, 1)); } to { transform: scaleX(0); } }
 
-/* the gavel, beside SOLD on the board */
-.au-hammer { position: relative; flex: 0 0 auto; width: 44px; height: 58px; margin-bottom: -4px; }
-.au-hammer img { position: absolute; inset: 0; width: 100%; height: 100%; }
-.au-hammer-head { transform-origin: 4.8% 47.6%; }
-.au-hammer-block { transform-origin: 70% 92%; }
-.au-hammer-hit { position: absolute; left: 70%; top: 84%; width: 0; height: 0; opacity: 0; }
-.au-hammer-hit::before, .au-hammer-hit::after { content: ''; position: absolute; width: 34px; height: 2px; left: -17px; top: -1px; border-radius: 2px; background: linear-gradient(90deg, var(--au-amber-hi) 0 30%, transparent 30% 70%, var(--au-amber-hi) 70%); }
-.au-hammer-hit::after { width: 26px; left: -13px; top: -9px; }
 
 /* the calls and the sale: one-shot moves, none of them loop */
 @media (prefers-reduced-motion: no-preference) {
   html:not(.bap-reduce-motion) .au-board-clock .au-call.is-once, html:not(.bap-reduce-motion) .au-board-clock .au-call.is-twice { animation: au-call .35s cubic-bezier(.2,.9,.25,1.4) both; }
   html:not(.bap-reduce-motion) .au-block.is-twice .au-call.is-twice { animation: au-call .35s cubic-bezier(.2,.9,.25,1.4) both, au-shake .3s .35s both; }
-  html:not(.bap-reduce-motion) .au-hammer-head { animation: au-hammer 1.1s both; }
-  html:not(.bap-reduce-motion) .au-hammer-block { animation: au-block .3s .44s ease-out both; }
-  html:not(.bap-reduce-motion) .au-hammer-hit { animation: au-hit .4s .44s ease-out both; }
   html:not(.bap-reduce-motion) .au-call.is-sold { animation: au-stamp .34s .46s cubic-bezier(.2,.9,.3,1.3) both; }
   html:not(.bap-reduce-motion) .au-stamp { animation: au-slam .32s .44s cubic-bezier(.2,.9,.3,1.25) both; }
   html:not(.bap-reduce-motion) .au-stamp.is-pass { animation-delay: 0s; }
@@ -8434,5 +8402,166 @@ html.bap-reduce-motion :is(.au-dcard-in, .au-deck .au-card) { animation-duration
 .au-screen { --btn-start: #ffd06b; --btn-end: #f5b83d; --btn-txt: #0b0f1a; --ag-on: #0b0f1a; --ag-grad: #f5b83d; }
 .au-bid { align-items: center; }
 .au-bid b { margin-top: 2px; }
-/* the sale: the gavel alone on the board (SOLD flashes on the card) */
-.au-board-clock .au-hammer { width: 62px; height: 80px; margin: -12px 0 -6px; }
+
+/* ═══ TRAIT AUCTION, round 3 (owner 11-26: "vibe-coded"): Blacktop hub's approach. A full-bleed header with the name
+   big, one list, one button, the record on one line; in the room, the lot and the board are the hero with no box, the
+   paddles and the slots flat rows, and the sections plain headings over plain rows. ═══ */
+
+/* the gavel's box: the whole swing, -12° back to 45° down, measured off the picture's own pixels (x -0.375 to 1.014,
+   y -0.086 to 0.983 of the picture): the art sits 27% in and 8% down in a square, and the head never leaves it */
+.gv-swing { position: relative; display: block; flex: none; aspect-ratio: 1; }
+.gv-swing img { position: absolute; left: 27%; top: 8%; width: 72%; height: 93.5%; max-width: none; object-fit: contain; }
+.gv-head { transform-origin: 4.8% 47.6%; }
+.gv-block { transform-origin: 70% 92%; }
+
+/* ── the lobby ── */
+.au-screen.au-hub { padding-top: 0; gap: 0; }
+.au-screen.au-hub > * { margin-left: 0; margin-right: 0; }
+.au-hub-stage { position: relative; isolation: isolate; overflow: hidden; background: #0e1730; border-bottom: 1px solid var(--au-line-hi); }
+.au-hub-stage::before { content: ''; position: absolute; inset: 0; z-index: -1; background: repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 64px); }
+.au-hub-in { position: relative; z-index: 1; display: flex; flex-direction: column; width: 100%; max-width: 980px; min-height: 214px; margin-inline: auto; box-sizing: border-box; padding: calc(var(--safe-top) + 14px) 16px 14px; }
+.au-hub-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.au-hub-eyebrow { font-family: var(--ag-font); font-size: 13px; letter-spacing: 2.4px; color: var(--au-amber); }
+.au-hub-x { position: relative; z-index: 2; }
+.au-hub-title { margin: 6px 0 0; font-family: var(--ag-display); font-weight: 400; font-size: clamp(56px, 17vw, 104px); line-height: .88; letter-spacing: .5px; text-transform: uppercase; color: var(--au-white); }
+.au-hub-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 14px; }
+.au-hub-on { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.6px; color: var(--au-muted); }
+.au-hub-on b { font-family: var(--ag-display); font-weight: 400; font-size: 18px; color: var(--au-white); }
+.au-hub-on i { width: 8px; height: 8px; border-radius: 50%; background: #3ddc84; }
+.au-hub-rating { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 0; border-radius: 8px; background: rgba(10,15,28,.78); color: var(--au-muted); cursor: pointer; font-family: var(--ag-font); }
+.au-hub-rating small { font-size: 13px; letter-spacing: 1.6px; }
+.au-hub-rating b { font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; color: var(--au-white); }
+.au-hub-gavel { position: absolute; z-index: 0; right: max(8px, calc(50% - 490px)); bottom: 46px; height: 150px; opacity: .95; }
+.au-hub-body { width: 100%; max-width: 980px; margin-inline: auto; box-sizing: border-box; padding: 16px 14px 0; display: flex; flex-direction: column; gap: 14px; }
+.au-hub-main, .au-hub-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.au-hub-pos { display: flex; flex-direction: column; border-radius: 12px; background: var(--au-panel); overflow: hidden; }
+.au-hub-row { position: relative; display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 64px; padding: 6px 14px 6px 18px; border: 0; border-top: 1px solid var(--au-line); background: none; text-align: left; cursor: pointer; color: rgba(238,242,250,.45); }
+.au-hub-row:first-child { border-top: 0; }
+.au-hub-row.is-on { color: var(--au-white); background: var(--au-panel-2); box-shadow: inset 4px 0 0 var(--au-amber); }
+.au-hub-row.is-only { cursor: default; }
+.au-hub-tag { font-family: var(--ag-display); font-weight: 400; font-size: 40px; line-height: 1; letter-spacing: .3px; }
+.au-hub-line { display: grid; gap: 3px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.3px; line-height: 1.2; }
+.au-hub-line em { font-style: normal; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--au-amber); }
+.au-hub-line em i { width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; }
+.ag-btn.au-hub-go { min-height: 58px; font-size: 24px; letter-spacing: 2.4px; border-radius: 10px; }
+.au-rec { display: flex; align-items: flex-end; gap: 22px; padding: 4px 2px 0; }
+.au-rec-n { display: grid; gap: 2px; }
+.au-rec-n b { font-family: var(--ag-display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--au-white); }
+.au-rec-n small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.4px; color: var(--au-muted); }
+.au-rec-form { margin-left: auto; align-self: center; font-family: var(--ag-body); font-size: 13px; color: var(--au-muted); }
+.au-hub-sec { display: flex; align-items: center; gap: 12px; font-family: var(--ag-font); font-size: 14px; letter-spacing: 2px; color: var(--au-white); }
+.au-hub-sec::after { content: ''; flex: 1; height: 1px; background: var(--au-line); }
+.au-prizes { display: grid; gap: 0; margin-top: -6px; }
+.au-prize { display: grid; grid-template-columns: 1fr 80px 80px; align-items: center; padding: 8px 2px; border-bottom: 1px solid var(--au-line); font-family: var(--ag-body); font-size: 14px; font-weight: 600; color: var(--au-text); }
+.au-prize b { font-family: var(--ag-font); font-weight: 400; font-size: 17px; letter-spacing: 1.5px; text-transform: uppercase; }
+.au-prize .gain { justify-content: flex-start; }
+.au-how { margin: -6px 0 0; padding: 0; list-style: none; display: grid; }
+.au-how li { display: flex; align-items: baseline; gap: 12px; padding: 8px 2px; border-bottom: 1px solid var(--au-line); font-family: var(--ag-font); font-size: 17px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--au-text); }
+.au-how li b { font-family: var(--ag-display); font-weight: 400; font-size: 17px; color: var(--au-amber); }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .au-hub-gavel .gv-head { animation: au-hammer 1.1s .35s both; }
+  html:not(.bap-reduce-motion) .au-hub-gavel .gv-block { animation: au-block .3s .79s ease-out both; }
+}
+@media (max-width: 420px) { .au-hub-gavel { height: 118px; bottom: 52px; right: 4px; } }
+@media (min-width: 1024px) {
+  .au-hub-in { min-height: 250px; padding-left: 20px; padding-right: 20px; }
+  .au-hub-title { font-size: 104px; }
+  .au-hub-title br { display: none; }
+  .au-hub-gavel { height: 210px; bottom: 20px; }
+  .au-hub-body { padding: 20px 20px 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .au-hub-row { min-height: 74px; grid-template-columns: 110px minmax(0, 1fr); }
+  .au-hub-tag { font-size: 46px; }
+}
+
+/* ── the room: the lot and the board are the hero, no box ── */
+.au-block, .au-block.is-once, .au-block.is-twice, .au-block.is-sold { padding: 4px 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.au-board { padding-top: 12px; }
+
+/* the paddles: one flat row, the high bidder lit gold */
+.au-room { gap: 0; border-top: 1px solid var(--au-line); border-bottom: 1px solid var(--au-line); }
+.au-paddle, .au-paddle.is-me { padding: 8px 10px; border: 0; border-left: 1px solid var(--au-line); border-radius: 0; background: none; }
+.au-paddle:first-child { border-left: 0; padding-left: 2px; }
+.au-paddle.is-high { background: none; border-color: var(--au-line); color: inherit; box-shadow: inset 0 -3px 0 var(--au-amber); }
+.au-paddle.is-high :is(.au-paddle-name, .au-paddle-cash) { color: var(--au-amber-hi); }
+.au-paddle.is-high em { color: var(--au-muted); }
+.au-paddle.is-high .au-pips i { background: rgba(214,224,243,.18); }
+.au-paddle.is-high .au-pips i.is-in { background: var(--au-amber); }
+
+/* the slots: a flat strip */
+.au-mine { padding: 0; border: 0; border-radius: 0; background: none; gap: 6px; }
+.au-mine-head { padding: 0; }
+.au-strip { gap: 0; border-top: 1px solid var(--au-line); border-bottom: 1px solid var(--au-line); }
+.au-cell, .au-cell.is-in, .au-cell.is-up { padding: 8px 2px 7px; border: 0; border-left: 1px solid var(--au-line); border-radius: 0; background: none; }
+.au-cell:first-child { border-left: 0; }
+.au-cell.is-in .au-cell-g { color: var(--g); }
+.au-cell.is-drawn { border-style: solid; }
+.au-cell.is-up { box-shadow: inset 0 -3px 0 var(--au-amber); }
+@keyframes au-dealt { 40% { transform: scale(1.1); } }
+
+/* the controls: the notes are plain text on the page (no panel); holding the high bid is one line */
+.au-act--note { background: var(--au-bg); border: 0; border-top: 1px solid var(--au-line); border-radius: 0; }
+.au-act--note.is-lead span { color: var(--au-amber-hi); }
+
+/* back in the deck, recent: plain headings over plain rows */
+.au-back { padding: 0; border: 0; border-radius: 0; background: none; }
+.au-back-card { background: none; border: 0; padding: 2px 10px 2px 0; }
+.au-screen .au-side .au-lbl { display: flex; align-items: center; gap: 12px; color: var(--au-white); letter-spacing: 2px; }
+.au-screen .au-side .au-lbl::after { content: ''; flex: 1; height: 1px; background: var(--au-line); }
+
+/* the draw: his build small up top, the rest of the room's builds turning over under it */
+.au-draw { padding: 4px 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; gap: 8px; }
+.au-draw-top { display: grid; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--au-line); }
+.au-draw-head { font-size: 26px; }
+.au-draw-chips { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.au-draw-chips i { font-style: normal; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; color: var(--au-muted); }
+.au-draw-chips b { font-family: var(--ag-display); font-weight: 400; font-size: 17px; color: var(--g); }
+.au-draw-sub { font-size: 14px; }
+.au-draw-rows { gap: 16px; margin-top: 2px; }
+.au-draw-who { flex-wrap: wrap; font-size: 17px; }
+.au-draw-who small { margin-left: auto; font-size: 13px; letter-spacing: 1.2px; color: var(--au-muted); }
+.au-draw-row.is-me .au-draw-who { color: var(--au-amber-hi); }
+.au-dcard { aspect-ratio: auto; height: 118px; }
+.au-dcard-face { grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 2px; }
+.au-dcard-face em { font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1; color: var(--au-amber); }
+.au-dcard.is-bought .au-dcard-in { animation: none; }
+.au-dcard.is-bought .au-dcard-face { transform: none; opacity: .72; }
+.au-dcard.is-bought .au-dcard-face em { color: var(--au-muted); }
+.au-dcard.is-empty { border-radius: 7px; background: rgba(255,255,255,.03); }
+.au-dcard.is-dealt .au-dcard-face { box-shadow: inset 0 0 0 1.5px var(--g), 0 4px 10px rgba(0,0,0,.4); }
+.au-dcard-back span { font-size: 24px; }
+
+/* the results: the place big on the page, the room as flat rows */
+.au-podium, .au-podium.is-win { padding: 4px 0 12px; border: 0; border-radius: 0; background: none; box-shadow: none; border-bottom: 1px solid var(--au-line); }
+.au-podium-pay { border-top: 0; padding-top: 0; }
+.au-final { gap: 0; }
+.au-final-row, .au-final-row.is-me { padding: 12px 2px; border: 0; border-bottom: 1px solid var(--au-line); border-radius: 0; background: none; }
+.au-final-row.is-first { box-shadow: none; }
+
+/* the gavel on the board: its box holds the swing, so nothing beside it is crossed */
+.au-board-clock .gv-swing.au-hammer { width: 76px; height: 76px; margin: 0; }
+.au-board-clock:has(.au-hammer) { min-height: 76px; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .au-hammer.is-hit .gv-head { animation: au-hammer 1.1s both; }
+  html:not(.bap-reduce-motion) .au-hammer.is-hit .gv-block { animation: au-block .3s .44s ease-out both; }
+}
+@media (min-width: 1024px) {
+  .au-dcard { height: 150px; }
+  .au-draw-cards { grid-template-columns: repeat(5, minmax(0, 120px)); }
+  .au-room { border-top: 0; border-bottom: 0; }
+  .au-paddle, .au-paddle.is-me, .au-paddle:first-child { border-left: 0; border-bottom: 1px solid var(--au-line); padding: 10px 2px; }
+  .au-paddle.is-high { box-shadow: inset 3px 0 0 var(--au-amber); padding-left: 12px; }
+}
+.au-hub-stage, .au-hub-body { flex-shrink: 0; }
+html.app-look .au-screen.au-hub { padding-left: 0; padding-right: 0; }
+@media (max-width: 1023px) { .au-hub-gavel { height: 104px; bottom: 56px; right: 8px; } }
+@media (min-width: 1024px) { .au-hub-gavel { height: 220px; bottom: 16px; right: calc(max(20px, 50% - 470px) + 250px); } }
+.au-screen.au-hub > .au-hub-body { margin-left: auto; margin-right: auto; }
+.au-hub-row.is-only, .au-hub-row.is-only:first-child { grid-template-columns: auto minmax(0, 1fr); gap: 18px; }
+@media (min-width: 1024px) {
+  .au-floor.is-draw { display: flex; }
+  .au-draw-cards { grid-template-columns: repeat(5, minmax(0, 132px)); gap: 12px; }
+  .au-dcard { height: 168px; }
+}
+html.app-look .au-screen.au-hub > .au-hub-body { margin-left: auto; margin-right: auto; }
+@media (min-width: 1024px) { .au-hub-gavel { height: 170px; bottom: 54px; right: calc(max(20px, 50% - 470px) + 60px); } }
+@media (min-width: 1024px) { .au-floor.is-draw { align-items: stretch; } }
