@@ -7,7 +7,7 @@
 //      soon and it's off the front of the rim; a beat late and you can only lay it in (it counts, for
 //      less); later than that and it rolls off.
 // Three lobs, from either wing, the arc different every time. Two finished to pass.
-import { byV, clamp, lerp, prog, easeIn, easeOut, easeInOut, rngOf, outcome, onBoard, layer, text, themOf, nudge, basketball, GOOD, BAD, GOLD, DISPLAY } from './kit.js'
+import { byV, clamp, lerp, prog, easeIn, easeOut, easeInOut, rngOf, outcome, onBoard, layer, text, themOf, nudge, basketball, GOOD, BAD, GOLD, DISPLAY, faceHair } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, paintRoom, paintLines, paintHoop, rimHalf, netOf, ballIn, athleteFront, project, PT, FIG_FT, RIM_R, RIM_Y, BALL_R, SKINS, warmCrowd, crowdUp, boardFlash, camFlashes, lightFx, R_UP, R_FLEX, R_HEAD, R_HIPS, frontRun } from './meter.js'
 import { POSE, tagAt, tagsDown } from './arena.js'
 import { castMen } from './read.js'
@@ -450,7 +450,7 @@ export function draw(ctx, g, view) {
   }
   item(bZ, () => {
     if (ballScr) basketball(ctx, ballScr.x, ballScr.y, { r: ballScr.r, spin })
-    athleteFront(ctx, bfx, bfy, PB, { jersey: us.color, trim: us.trim, s: bsc, back, num: me.number, skin: me.skin })
+    athleteFront(ctx, bfx, bfy, PB, { jersey: us.color, trim: us.trim, s: bsc, back, num: me.number, skin: me.skin, ...faceHair(me) })
     if (M && on(bfx)) tagAt(bfx, bfy - 11, me.name, bsc)
   })
 

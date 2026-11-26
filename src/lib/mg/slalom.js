@@ -197,7 +197,7 @@ export function draw(ctx, g, view) {
   const run = { ...dribblePose(g.cycle % 1, 0.9, { lean }) }
   if (kick) { if (foot > 0) { run.rx = 9; run.ry = -10; run.rk = 0.6 } else { run.lx = -9; run.ly = -10; run.lk = 0.6 } }
   const pose = g.phase === 'set' ? POSE.ready : g.done ? (g.t - g.crossed > 600 ? (g.done.hit ? POSE.fist : POSE.hips) : runPose(g.cycle % 1, 0.6)) : run
-  list.push({ z: me.z, fn: () => man(ctx, C, me.x, me.z, pose, dress(K.train, { number: null, skin: view.cast?.me?.skin ?? '#8d5a3b' })) })
+  list.push({ z: me.z, fn: () => man(ctx, C, me.x, me.z, pose, dress(K.train, { number: null, skin: view.cast?.me?.skin ?? '#8d5a3b', face: view.cast?.me?.face })) })
   list.sort((a, b) => b.z - a.z)
   for (const m of list) m.fn()
   // the cut coming up: the arrow which way, the ring closing on the ball

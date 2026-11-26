@@ -608,8 +608,27 @@ export const manOf = (cast, side, group, i = 0) => {
   const list = cast?.[side]?.[group]
   if (!list?.length) return null
   const p = list[i % list.length]
-  return { number: p.number, skin: p.skin, name: p.name, ...(p.ball != null ? { ball: p.ball } : null), ...(p.yac != null ? { yac: p.yac } : null) }
+  return { number: p.number, skin: p.skin, name: p.name, ...(p.face ? { face: p.face } : null), ...(p.ball != null ? { ball: p.ball } : null), ...(p.yac != null ? { yac: p.yac } : null) }
 }
+// The player's own created face (Career's face creator, c.face: lib/franchise2/faces.js) on his figure in a mini game.
+// who: a cast man (manOf / castMen); only the build himself carries a face. → null (keep the game's own look), or
+//   { skin, hair (its colour), cut, beard, hairName (the creator's own cut) }
+// cut, the closest the mini games draw: 'crop' | 'fade' | 'buzz' | 'curly' (tall: an afro, curls, twists, a high
+// top) | 'locs' (hanging locs, braids) | 'bun' | 'long' (a flow, a mullet)
+const CUT_OF = {
+  crew: 'crop', sidepart: 'crop', textured: 'crop', flow: 'long', mullet: 'long', long: 'long', receding: 'crop', balding: 'buzz',
+  fade: 'fade', waves: 'fade', cornrows: 'fade', frohawk: 'curly', hightop: 'curly', afro: 'curly', curly: 'curly', twists: 'curly',
+  buzz: 'buzz', shaved: 'buzz', locs: 'locs', locsup: 'bun', starter: 'curly', bun: 'bun',
+}
+// beard, the closest drawn: 'none' | 'stubble' | 'goatee' | 'chin' (a strap or a patch) | 'full' (short, full, long)
+const BEARD_OF = { none: 'none', stubble: 'stubble', patch: 'chin', chin: 'chin', goatee: 'goatee', short: 'full', full: 'full', long: 'full' }
+export function faceLook(who) {
+  const f = who?.face
+  if (!f || typeof f !== 'object') return null
+  return { skin: f.skin ?? who.skin, hair: f.hc ?? '#16110e', cut: CUT_OF[f.hair] ?? 'crop', beard: BEARD_OF[f.beard] ?? 'none', hairName: f.hair ?? null }
+}
+// the court's figures (meter.js athleteFront / athlete): spread over its options, after skin. Null: no created face
+export const faceHair = who => { const f = faceLook(who); return f ? { skin: f.skin, hair: f.hair, cut: f.cut, beard: f.beard } : null }
 // The football games' full eleven a side (career's gameCast: cast.us.xi / cast.them.xi), every man real and
 // tagged with his last name. Null in the demo clips and the bots' runs: the scene keeps its own look.
 // spot: 'qb' 'rb' 'wr' 'te' 'ol' (left tackle to right tackle) | 'edge' 'dt' 'lb' 'cb' 's' |

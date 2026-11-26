@@ -14,7 +14,7 @@
 //   passing   PASS hits the most open man (a flat ring under him says who). A defender in the lane picks it off.
 //   lost      a reach that finds the ball (dribble into traffic and they come for it), a block, a miss, the shot clock.
 // The rules are in feet, the rim at the origin, z toward the baseline: the same court as every basketball game here.
-import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, nudge, text, rr, circle, keyCap, particles, byV, GOOD, BAD, GOLD, DISPLAY, LABEL } from './kit.js'
+import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, nudge, text, rr, circle, keyCap, particles, byV, GOOD, BAD, GOLD, DISPLAY, LABEL, faceHair } from './kit.js'
 import { arenaCam, dolly, arenaStage, wallNow, manAt, POSE, RUN, tagAt, tagsDown, AB, flyTo, dropThrough, hoopWith, shotApex, liftPose } from './arena.js'
 import { frontRun, ballIn, easedState, easedPose, newPose, copyPose, mixPose, pose, project, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_R, RIM_Y, R_HEAD, R_HIPS, R_UP, warmCrowd, crowdUp, camFlashes, boardFlash, lightFx, SKINS } from './meter.js'
 import { crowdPop } from './art.js'
@@ -949,7 +949,7 @@ export function draw(ctx, g, view) {
     const { P, back, live, hop } = poseOf(g, i, T, dt, cam)
     const who = M ? (m.o ? M.us[i] : M.them[i - 5]) : null
     const side = m.o ? us : them
-    const o = { jersey: side.color, trim: side.trim, skin: who?.skin ?? SKIN_OF[i], num: who?.number ?? NUM_OF[i], back, live, ball: inHands && i === g.h ? IN_HANDS : null, spin }
+    const o = { jersey: side.color, trim: side.trim, skin: who?.skin ?? SKIN_OF[i], ...faceHair(who), num: who?.number ?? NUM_OF[i], back, live, ball: inHands && i === g.h ? IN_HANDS : null, spin }
     const PJ = hop ? liftPose(P, hop) : P
     if (!manAt(ctx, view, cam, m.x, m.z, PJ, o)) continue
     if (M && PT.x > 6 && PT.x < view.w - 6) tagAt(PT.x, PT.y - 11 - (PJ.j ?? 0) * (PT.k / FIG_FT), who?.name, PT.k / FIG_FT)

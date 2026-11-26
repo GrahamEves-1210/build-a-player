@@ -200,7 +200,7 @@ export function draw(ctx, g, view) {
     void p
   }
   // you, in a training top
-  const me = dress(K.train, { number: null, skin: view.cast?.us?.st?.[0]?.skin ?? view.cast?.me?.skin ?? '#8d5a3b' })
+  const me = dress(K.train, { number: null, skin: view.cast?.us?.st?.[0]?.skin ?? view.cast?.me?.skin ?? '#8d5a3b', face: view.cast?.me?.face })
   let pose = POSE.ready
   if (g.part === 'ups') {
     if (g.phase === 'set') pose = touchPose(prog(g.t, SET - 260, SET + 40), 1)

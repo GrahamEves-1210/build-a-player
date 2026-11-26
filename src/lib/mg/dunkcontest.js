@@ -21,7 +21,7 @@
 // attempt, label (his name), need (what the dunk needs to move him up, Career), onPick(id) (the call, as he makes it),
 // tries (the contest's three: a miss before the last is called, he walks back to the top of the run-up and the next
 // try's card comes up, all in the one game; onTry(raw) hears each of those misses as it happens. Without tries, one).
-import { clamp, lerp, prog, easeOut, easeIn, easeInOut, rngOf, outcome, layer, text, basketball, nudge, keyCap, rr, GOOD, BAD, GOLD, DISPLAY, LABEL, BODY } from './kit.js'
+import { clamp, lerp, prog, easeOut, easeIn, easeInOut, rngOf, outcome, layer, text, basketball, nudge, keyCap, rr, GOOD, BAD, GOLD, DISPLAY, LABEL, BODY, faceHair } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, athlete, athleteFront, paintBowl, crowdUp, camFlashes, boardFlash, lightFx, warmCrowd, FIG_FT, BALL_R, SKINS, R_UP, R_FLEX, R_HEAD, R_HIPS } from './meter.js'
 import { standAt, SCOUT, FOLK_SKIN } from './dash.js'
 import { nameTag } from './art.js'
@@ -722,7 +722,7 @@ export function draw(ctx, g, view) {
   const M = castMen(g, view)
   const me = M?.us[0] ?? null
   const name = String(g.label ?? me?.name ?? 'GUEST').toUpperCase()
-  const look = { jersey: c.us, trim: c.trim, skin: me?.skin ?? SKINS[0], num: me?.number ?? 1 }
+  const look = { jersey: c.us, trim: c.trim, skin: me?.skin ?? SKINS[0], num: me?.number ?? 1, ...faceHair(me) }
   const tau = g.p1 == null ? null : t - g.p1
   const dtG = CLK.dt * g.rate
 
@@ -953,10 +953,10 @@ export function draw(ctx, g, view) {
     if (mode === 'down' && landed && t - landAt > 520) { const w = Math.sin((t - landAt - 520) / 90); F.hy += w * 2; F.hFy += w * 5; F.hBy += w * 5 }
     const FEz = easedPose(FE, F, g, dtG, 30)
     FEz.j = j
-    athleteFront(ctx, hipX, floorY, FEz, { jersey: look.jersey, trim: look.trim, s, back: Math.sin(theta) < 0, num: look.num, skin: look.skin })
+    athleteFront(ctx, hipX, floorY, FEz, { jersey: look.jersey, trim: look.trim, s, back: Math.sin(theta) < 0, num: look.num, skin: look.skin, hair: look.hair, cut: look.cut, beard: look.beard })
   } else {
     ctx.save(); ctx.translate(hipX, 0); ctx.scale(q, 1); ctx.translate(-hipX, 0)
-    athlete(ctx, hipX, floorY, PEz, { jersey: look.jersey, trim: look.trim, skin: look.skin, s, flip, num: look.num })
+    athlete(ctx, hipX, floorY, PEz, { jersey: look.jersey, trim: look.trim, skin: look.skin, hair: look.hair, cut: look.cut, beard: look.beard, s, flip, num: look.num })
     ctx.restore()
   }
   if (!behind && !inRim) drawBall()

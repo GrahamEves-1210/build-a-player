@@ -236,7 +236,7 @@ export function draw(ctx, g, view) {
     pose = f < 0.9 ? runPose((g.t / 300) % 1, 0.7) : mix(runPose((g.t / 300) % 1, 0.7), POSE.ready, (f - 0.9) / 0.1)
     if (!nx.roll) ball(ctx, C, nx.x, 0.11, nx.z, 0)
   }
-  man(ctx, C, me.x, me.z, pose, dress(K.train, { number: null, skin: view.cast?.me?.skin ?? '#8d5a3b' }))
+  man(ctx, C, me.x, me.z, pose, dress(K.train, { number: null, skin: view.cast?.me?.skin ?? '#8d5a3b', face: view.cast?.me?.face }))
   if (b && b.z <= 0.05) ball(ctx, C, b.x, b.y, b.z, b.spin)
   if (g.phase === 'aim' && g.k.drawn && g.k.phase === 'strike') aimMark(ctx, C, g.k.drawn.x, g.k.drawn.y)
   else if (g.phase === 'aim') { const a = g.k.aim; aimMark(ctx, C, a.x * (POST - 0.7), g.k.type === 'low' ? 0.25 : lerp(0.3, BAR - 0.45, (a.y + 1) / 2)) }

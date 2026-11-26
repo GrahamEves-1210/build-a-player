@@ -2,7 +2,7 @@
 // Press that side: the jump takes a fixed time to reach the top and the hands stay up for a window
 // set by the trait, so the ball has to land in your hands. Too early and you're coming down, too
 // late and the other big, who goes up at a set moment, takes it. The wrong side has no chance.
-import { byV, clamp, lerp, prog, easeOut, rngOf, outcome, layer, text, themOf, nudge, reduceMotion, GOOD, BAD, GOLD, DISPLAY } from './kit.js'
+import { byV, clamp, lerp, prog, easeOut, rngOf, outcome, layer, text, themOf, nudge, reduceMotion, GOOD, BAD, GOLD, DISPLAY, faceHair } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, paintRoom, paintLines, paintHoop, rimHalf, netOf, ballIn, athleteFront, project, PT, FIG_FT, RIM_R, RIM_Y, BALL_R, SKINS, IN_HANDS, meterTag, warmCrowd, crowdUp, boardFlash, camFlashes, lightFx, R_UP } from './meter.js'
 import { castMen } from './read.js'
 
@@ -206,7 +206,7 @@ export function draw(ctx, g, view) {
   const ux = 180 + usFt * ppf, ry = (6.5 - clamp(US.j / 60, 0, 1) * 1.5) * U
   ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.beginPath(); ctx.ellipse(ux, floor + 3 * U, 47 * U, 11 * U + ry - 6.5 * U, 0, 0, Math.PI * 2); ctx.fill()
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 4 * U; ctx.stroke()
-    athleteFront(ctx, ux, floor, easedPose(usEase, US, g, CLK.dt, 20), { jersey: c.us, trim: c.trim, s, back: true, num: M?.us[0].number ?? 12, skin: M?.us[0].skin ?? SKINS[0], ball: has ? CARRY : null })
+    athleteFront(ctx, ux, floor, easedPose(usEase, US, g, CLK.dt, 20), { jersey: c.us, trim: c.trim, s, back: true, num: M?.us[0].number ?? 12, skin: M?.us[0].skin ?? SKINS[0], ...faceHair(M?.us[0]), ball: has ? CARRY : null })
   // (between their feet: the prompt sits right under his)
   if (M) { meterTag(ctx, view, 180 + opFt * opK, opFloor - 11, M.them[0].name, opK / FIG_FT); meterTag(ctx, view, ux, floor - 11, M.us[0].name, s) }
 

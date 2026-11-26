@@ -12,7 +12,7 @@
 // when. Where everyone is comes from formulas in the play's own time (scene), so the bot, the stamp and the
 // picture agree. We ride behind the ball, high, and the camera comes in with the finish.
 import { reactMs } from '../minigames.js'
-import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, onBoard, themOf, nudge, reduceMotion } from './kit.js'
+import { clamp, lerp, prog, easeOut, easeInOut, rngOf, outcome, onBoard, themOf, nudge, reduceMotion, faceHair } from './kit.js'
 import { pose, mixPose, copyPose, newPose, easedState, easedPose, smoothT, CLK, frontRun, ballIn, project, PT, FIG_FT, BALL_R, RIM_Y, IN_HANDS, SKINS, camFlashes, boardFlash, lightFx } from './meter.js'
 import { arenaCam, dolly, arenaStage, wallNow, manAt, POSE, tagAt, tagsDown, flyTo, dropThrough, hoopWith, AB } from './arena.js'
 import { crowdPop } from './art.js'
@@ -509,7 +509,7 @@ export function draw(ctx, g, view) {
   let ballDrawn = !ball || atIron
   for (const e of ARR) {
     if (!ballDrawn && AB.z > e.m.z) { ballIn(ctx, cam, AB.x, AB.y, AB.z, spin); ballDrawn = true }
-    if (!manAt(ctx, view, cam, e.m.x, e.m.z, e.P, { jersey: e.side.color, trim: e.side.trim, skin: e.who.skin, num: e.who.number, back: e.back, ball: e.ball, spin, live: true })) continue
+    if (!manAt(ctx, view, cam, e.m.x, e.m.z, e.P, { jersey: e.side.color, trim: e.side.trim, skin: e.who.skin, ...faceHair(e.who), num: e.who.number, back: e.back, ball: e.ball, spin, live: true })) continue
     if (M && PT.x > 6 && PT.x < view.w - 6) tagAt(PT.x, PT.y - 11 - (e.P.j ?? 0) * (PT.k / FIG_FT), e.who.name, PT.k / FIG_FT)
   }
   if (M) tagsDown(ctx, view)
