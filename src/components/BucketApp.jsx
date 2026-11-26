@@ -76,7 +76,7 @@ const uidFromVsId = id => (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[
 const btPageFor = phase => (phase === 'build' ? 'blacktop-build' : phase === 'game' || phase === 'result' ? 'blacktop-game' : 'blacktop')
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 import { isTester } from '../lib/mimic'
-import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
+import { routePage, pageAtLoad, onRoutePop, holdLiveGame, atRoot } from '../lib/routes'
 import { SOCCER_LIVE } from '../lib/soccerLive'
 import { BASEBALL_LIVE } from '../lib/baseballLive'
 
@@ -125,7 +125,13 @@ function enableAdFreeMode() {
 }
 
 // Early call — fires before Ramp initializes so forceUnits takes effect
-const START_ON_SALARY = window.location.pathname === '/bucket/salary'
+// the page the address names (lib/routes.js): /bucket/home, /bucket/ranks… (the old /bucket/salary, /bucket/simulate too)
+const WANT = pageAtLoad('bucket')
+const START_ON_SALARY = WANT === 'salarycap'
+// the pages a refresh opens straight from the address (the build pages come back through lib/buildSave.js; a Blacktop
+// build or game opens its hub; a season, a 1v1, Salary Cap's board need what the reload lost or start over)
+const OPEN_AT = ['leaderboard', 'auction', 'career-intro', 'squad', 'profile', 'privacy', 'blacktop', 'pvp-leaderboard'].includes(WANT) ? WANT
+  : ['blacktop-build', 'blacktop-game', 'btlive', 'koth', 'btlive-play'].includes(WANT) ? 'blacktop' : null
 // The app has no web ads (Ramp does not serve in-app), so it always runs ad-free here.
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
@@ -441,7 +447,7 @@ export default function BucketApp() {
       : { starters: false, oneTeam: null }
   })
   // a reload on the build page lands back on it (lib/buildSave.js); opened fresh, the build waits on Home's CONTINUE card
-  const [page, setPage]               = useState(() => { if (/[?&]bthub=1\b/.test(window.location.search)) return 'blacktop'; const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : NBA_FRANCHISE_LIVE && buildPageAtLoad('bucket') === 'nbafranchise' ? 'nbafranchise' : (IS_APP || APP_LOOK) && buildPageAtLoad('bucket') === 'career' ? 'career' : 'splash' })   // (the Career hub marks itself too: a reload there opens the career he was playing)   // (basketball Franchise marks itself during a key moment's mini game: a reload there comes back to it)
+  const [page, setPage]               = useState(() => { if (/[?&]bthub=1\b/.test(window.location.search)) return 'blacktop'; if (OPEN_AT) return OPEN_AT; if (WANT === 'career' && APP_LOOK) return 'career'; if (WANT === 'cbb' && CBB_LIVE) return 'cbb'; if (WANT === 'nbafranchise' && NBA_FRANCHISE_LIVE) return 'nbafranchise'; if (!atRoot('bucket') && !['game', 'squad-build', 'career-build', 'nbafranchise-build'].includes(WANT)) return 'splash'; const want = saved ? (saved.tk ? BUILD_PAGE_OF[saved.tk] : 'game') : null; return want && buildPageAtLoad('bucket') === want ? want : CBB_LIVE && buildPageAtLoad('bucket') === 'cbb' ? 'cbb' : NBA_FRANCHISE_LIVE && buildPageAtLoad('bucket') === 'nbafranchise' ? 'nbafranchise' : (IS_APP || APP_LOOK) && buildPageAtLoad('bucket') === 'career' ? 'career' : 'splash' })   // (the Career hub marks itself too: a reload there opens the career he was playing)   // (basketball Franchise marks itself during a key moment's mini game: a reload there comes back to it)
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? saved?.gameMode ?? null)
   const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; if (saved) return saved.position; try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
   const [build, setBuild]             = useState(() => liveAt?.build ?? saved?.build ?? {})
@@ -466,7 +472,6 @@ export default function BucketApp() {
   useLayoutEffect(() => {
     if (user) { hadUserRef.current = true; return }
     if (hadUserRef.current && page === 'profile') {
-      if (window.location.pathname.endsWith('/profile')) window.history.replaceState({}, '', window.location.pathname.slice(0, -8) || '/')
       setPage('splash')
     }
   }, [user, page])
@@ -614,50 +619,6 @@ export default function BucketApp() {
     return () => { bodyObs.disconnect(); if (elObs) elObs.disconnect() }
   }, [])
 
-  useEffect(() => {
-    const handlePop = () => {
-      const path = window.location.pathname
-      let changed = false
-      if (path !== '/profile') {
-        setPage(prev => prev === 'profile' ? 'game' : prev)
-        changed = true
-      }
-      if (path !== '/bucket/simulate') {
-        setPage(prev => prev === 'sim' ? 'game' : prev)
-        changed = true
-      }
-      if (path !== '/bucket/leaderboard') {
-        setPage(prev => prev === 'leaderboard' ? (IS_APP || APP_LOOK ? 'splash' : 'game') : prev)
-        changed = true
-      }
-      if (path === '/bucket/salary') {
-        // back from the leaderboard / profile / a sim opened from Salary Cap
-        setPage(prev => prev === 'splash' ? prev : 'salarycap')
-      } else {
-        setPage(prev => prev === 'salarycap' ? 'splash' : prev)
-      }
-      if (changed) window.scrollTo({ top: 0, behavior: 'instant' })
-    }
-    window.addEventListener('popstate', handlePop)
-    return () => window.removeEventListener('popstate', handlePop)
-  }, [])
-
-  // Dedicated URLs for the simulate/season/playoffs/final flow and the
-  // leaderboard — lets Playwire apply ad rules by path. Kept under /bucket
-  // so a refresh still resolves to BucketApp (main.jsx picks the app by
-  // whether the path starts with /bucket). Purely a URL sync layer; doesn't
-  // touch page state, the existing ramp queue calls, or any nav logic.
-  useEffect(() => {
-    const targetPath = page === 'sim' ? '/bucket/simulate' : page === 'leaderboard' ? '/bucket/leaderboard' : page === 'salarycap' ? '/bucket/salary' : null
-    if (targetPath) {
-      if (window.location.pathname !== targetPath) {
-        window.history.pushState({}, '', targetPath)
-      }
-    } else if (window.location.pathname === '/bucket/simulate' || window.location.pathname === '/bucket/leaderboard' || window.location.pathname === '/bucket/salary' || (page !== 'profile' && window.location.pathname === '/profile')) {
-      // (left the profile from the dock: drop /profile, or opening the site again lands there)
-      window.history.replaceState({}, '', '/bucket')
-    }
-  }, [page])
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
@@ -704,7 +665,7 @@ export default function BucketApp() {
       else if (to === 'squad') openSquadRef.current?.()
       else if (to === 'career') openCareerRef.current?.()
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
-      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
+      else if (to === 'profile') { if (user) setPage('profile'); else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') { window.location.href = '/?about' }
       else if (to === 'wiki') { window.location.href = '/wiki' }
       else if (to === 'auction' || to === 'compete') setPage('auction')   // (Compete is retired: an old link opens the auction)
@@ -715,22 +676,11 @@ export default function BucketApp() {
     return () => window.removeEventListener('bap:nav', onNav)
   }, [page, gameMode, user, position, simResult])
 
-  // Ads on every page change (lib/ads.js): destroy all units, then add this
-  // page's off-page units with the path set explicitly (the URL sync effect
-  // runs after this). A layout effect, so it's queued before the new page's
-  // own in-page units. Home runs the bottom rail only; the left rail only runs on
-  // the sim page and Salary Cap. Ad-free players keep forceUnits 'off'.
-  useLayoutEffect(() => {
-    // (DEV: Blacktop Live on a phone asks for no ads at all: components/btlive/BtLive.jsx)
-    if (BT_LIVE_OPEN && window.matchMedia?.('(pointer: coarse), (max-width: 899px)').matches) return
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/bucket', soft: true }); return }
-    const here = window.location.pathname
-    const path = page === 'sim' ? '/bucket/simulate'
-      : page === 'salarycap' ? '/bucket/salary'
-      : page === 'leaderboard' ? '/bucket/leaderboard'
-      : ['/bucket/simulate', '/bucket/leaderboard', '/bucket/salary'].includes(here) ? '/bucket' : here
-    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
-  }, [page])
+  // The address and the ads on every page change (lib/routes.js, lib/ads.js). A layout effect, so the ads are queued
+  // before the new page's own in-page units.
+  // (DEV: Blacktop Live on a phone asks for no ads at all: components/btlive/BtLive.jsx)
+  // (Blacktop Live, ?btlive=1, is its own page over whichever this is: its menu's address, King of the Hill's)
+  useLayoutEffect(() => { routePage('bucket', KOTH_OPEN ? 'koth' : BT_LIVE_OPEN ? 'btlive' : page, { ads: !(BT_LIVE_OPEN && window.matchMedia?.('(pointer: coarse), (max-width: 899px)').matches) }) }, [page])
 
   // Fetch my W-L record when entering the lobby or game
   useEffect(() => {
@@ -772,6 +722,7 @@ export default function BucketApp() {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
+      if (!u) setPage(p => (p === 'profile' ? 'splash' : p))   // (/profile opened signed out: Home)
       if (!u) { try { localStorage.removeItem('bap_subscribed') } catch {}; try { localStorage.removeItem('bap_ads_off') } catch {}; return }
       // back from Stripe: the webhook can land a few seconds after us, so ask again until it has
       let attempts = 0
@@ -1057,7 +1008,7 @@ export default function BucketApp() {
   // opened from the Daily screen on the football side (/bucket?daily=1)
   useEffect(() => {
     if ((!IS_APP && !APP_LOOK) || !new URLSearchParams(window.location.search).has('daily')) return
-    window.history.replaceState({}, '', '/bucket')
+    window.history.replaceState({}, '', window.location.pathname)
     startDaily()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // ── CAREER: one saved career per account; a fresh build starts one (lib/career.js) ──
@@ -1183,11 +1134,33 @@ export default function BucketApp() {
   // Home's CONTINUE card: which build it is
   const resumeKind = tkRef.current === 'career' ? 'Career' : tkRef.current === 'nbafranchise' ? 'Franchise' : tkRef.current === 'squad' ? 'Squad' : dailyRun ? 'Daily' : gameMode === 'all-time' ? 'All-Time' : 'Current'
 
-  // Opened (or refreshed) straight on /bucket/salary → go to Salary Cap. Read
-  // at load: the URL-sync effect resets the path to /bucket on the first render.
+  // Opened (or refreshed) straight on /bucket/salary-cap → go to Salary Cap (a fresh board)
   useEffect(() => {
     if (START_ON_SALARY) handleStart('salarycap')
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Back / Forward (lib/routes.js): the page the address names, when it can still be shown; Home when it needs what's
+  // gone (a season after a reload, a 1v1). The dock's screens (/bucket/daily…) are AppTabBar's: the page stays.
+  const popToRef = useRef(null)
+  popToRef.current = ({ page: want, screen }) => {
+    if (screen || want === page || BT_LIVE_OPEN) return          // (a live game's Back stays on its own address: LiveLeave, versus)
+    const built = !!gameMode && gameMode !== 'salarycap'
+    if (want && want.startsWith('blacktop')) { setPage(btPageFor(btPhaseRef.current)); return }
+    const ok = !want ? false
+      : want === 'profile' ? !!user
+      : want === 'sim' ? !!simResult && !!gameMode
+      : want === 'game' ? built
+      : want === 'squad-build' ? built && tkRef.current === 'squad'
+      : want === 'career-build' ? built && tkRef.current === 'career'
+      : want === 'nbafranchise-build' ? built && tkRef.current === 'nbafranchise' && NBA_FRANCHISE_LIVE
+      : want === 'career' ? !!careerRef.current && (IS_APP || APP_LOOK)
+      : want === 'cbb' ? CBB_LIVE
+      : want === 'nbafranchise' ? NBA_FRANCHISE_LIVE
+      : !(want === 'shared' || want.startsWith('versus') || ['wiki', 'about', 'terms', 'depth-chart', 'franchise', 'franchise-build', 'cfb'].includes(want))
+    if (ok && want === 'salarycap' && gameMode !== 'salarycap') { handleStart('salarycap', position); return }
+    setPage(ok ? want : 'splash')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  useEffect(() => onRoutePop('bucket', r => popToRef.current?.(r)), [])
 
   const handleSalaryCapConfirm = useCallback((capBuild, skipToEnd = false, dateStr = null, saveData = null, capPosition = null) => {
     if (dateStr) setSalaryReturnDate(dateStr)
@@ -1503,6 +1476,8 @@ export default function BucketApp() {
   // and leaving forfeits (lib/liveLock.js). 1v1 keeps its own sheet and back trap.
   const versusLive = !!versusRoom && page === 'versus-game'
   const btGameLive = page === 'blacktop-game' && bt.phase === 'game'
+  // an online Blacktop game being played: the corner video only, the rails would sit on the calls (lib/routes.js)
+  useLayoutEffect(() => (btGameLive ? holdLiveGame() : undefined), [btGameLive])
   useEffect(() => {
     if ((liveBuild || btGameLive) && bt.match && !bt.match.bots) {
       // the build and the game itself (a practice run against CPUs isn't locked)
@@ -1824,7 +1799,7 @@ export default function BucketApp() {
     onReset: dailyLocked ? undefined : () => guardedLeave(handleReset),   // the Daily: one run, no reset
     onHome: () => guardedLeave(handleHome),
     onSignIn: () => setShowAuth(true),
-    onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
+    onProfile: () => guardedLeave(() => user ? setPage('profile') : setShowAuth(true)),
     onAbout: () => guardedLeave(() => { window.location.href = '/?about' }),
     onLeaderboard: () => guardedLeave(() => setPage('leaderboard')),
     onSubscribe: async () => {
@@ -2327,7 +2302,7 @@ export default function BucketApp() {
             onBack={() => setPage('splash')}
             onLeaderboard={() => setPage('pvp-leaderboard')}
             onSignIn={() => setShowAuth(true)}
-            onProfile={() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)}
+            onProfile={() => user ? setPage('profile') : setShowAuth(true)}
             onAbout={() => { window.location.href = '/?about' }}
             onSwitchBucketPosition={(pos) => guardedLeave(() => handleNavPositionSwitch(pos))}
             user={user}
@@ -2483,7 +2458,7 @@ export default function BucketApp() {
           isPlus={isSubscribed}
           isBucket={true}
           // the new look: back always means Home (history could land anywhere)
-          onBack={() => { if (IS_APP || APP_LOOK) { window.history.pushState({}, '', '/bucket'); setPage('splash') } else window.history.back() }}
+          onBack={() => { if (IS_APP || APP_LOOK) setPage('splash'); else window.history.back() }}
           onSignOut={() => { setUser(null); window.location.href = '/bucket' }}
           onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
           onThemeChange={(themeId) => {

@@ -17,6 +17,10 @@
 
 import { IS_APP } from './platform'
 import { setRewardedTest } from './rewardedAd'
+import { parsePath } from './routes'
+
+// a page's address → the screen 'bap:nav' opens (lib/routes.js)
+const NAV_OF = { splash: 'home', leaderboard: 'leaderboard', profile: 'profile', career: 'career', 'career-intro': 'career', squad: 'squad', auction: 'auction', blacktop: 'blacktop', salarycap: 'salarycap', 'depth-chart': 'depth-chart', wiki: 'wiki', about: 'about' }
 
 const PENDING_KEY = 'bap_pending_nav'
 const SITE_HOST = /(^|\.)build-a-player\.com$/i
@@ -86,6 +90,12 @@ export function routeUrl(url) {
   if (path === '/daily' || q.has('daily')) { goNav('daily'); return true }
   if (path === '/shop') { goNav('shop'); return true }
   if (path === '/profile') { goNav('profile'); return true }
+  // every page's own address (lib/routes.js): /ranks, /bucket/daily, /bucket/career… on its own side
+  const r = parsePath(path, u.search)
+  if (r.sport === 'nfl' || r.sport === 'bucket') {
+    const to = r.screen === 'daily' || r.screen === 'shop' ? r.screen : NAV_OF[r.page]
+    if (to) { goNav(to, { sport: r.sport }); return true }
+  }
   if (path.startsWith('/bucket')) { if (!isBucketPage()) window.location.href = '/bucket'; return true }
   // soccer, once it's switched on (lib/soccerLive.js; main.jsx sends /soccer to football's Home until then)
   if (path.startsWith('/soccer')) { if (!window.location.pathname.startsWith('/soccer')) window.location.href = '/soccer'; return true }

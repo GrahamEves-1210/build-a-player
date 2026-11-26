@@ -48,7 +48,7 @@ import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { FORFEIT_RATING, dailyState } from '../lib/progress'
 import { setSandboxGate, sandboxItemFor, sandboxLocked, clearSandboxHint } from './app/AppSandbox'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
-import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
+import { routePage, pageAtLoad, onRoutePop } from '../lib/routes'
 import { BASEBALL_SILHOUETTE, BASEBALL_POOL, BASEBALL_POS, BASEBALL_MODES, BASEBALL_KEYS, BASEBALL_CATEGORIES, BASEBALL_SLOTS, baseballPoolOf, baseballPosOf, baseballArchetype, baseballHands } from '../lib/baseballUi'
 import { encodeBaseballBuild, decodeBaseballBuild } from '../lib/baseballShare'
 import { switchSport } from './app/AppHome'
@@ -91,7 +91,10 @@ function enableAdFreeMode() {
   hide()
   new MutationObserver(hide).observe(document.body, { childList: true, subtree: true })
 }
-const START_ON_SALARY = window.location.pathname === '/baseball/salary'
+// the page the address names (lib/routes.js): /baseball/home, /baseball/ranks… (the old /baseball/salary too)
+const WANT = pageAtLoad('baseball')
+const START_ON_SALARY = WANT === 'salarycap'
+const OPEN_AT = ['leaderboard', 'career-intro', 'squad', 'profile', 'privacy'].includes(WANT) ? WANT : WANT === 'career' ? 'career-intro' : null
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 // ── The rosters ──────────────────────────────────────────────────────────────
@@ -323,7 +326,7 @@ function saveBaseballSeason(args) {
 export default function BaseballApp() {
   // a season kept on the device (lib/seasonLive.js): after a reload its build, mode and season wait on CONTINUE
   const [liveAt] = useState(() => (SHARED ? null : readLive('baseball')))
-  const [page, setPage]               = useState(SHARED ? 'shared' : 'splash')
+  const [page, setPage]               = useState(SHARED ? 'shared' : OPEN_AT ?? 'splash')
   const [gameMode, setGameMode]       = useState(() => liveAt?.mode ?? null)   // 'classic' (Current) | 'all-time' | 'salarycap'
   const [position, setPosition]       = useState(() => { if (liveAt?.pos) return liveAt.pos; try { return baseballPosOf(localStorage.getItem('baseballPosition')) } catch { return 'bat' } })
   const pool = baseballPoolOf(gameMode)
@@ -340,7 +343,6 @@ export default function BaseballApp() {
   useLayoutEffect(() => {
     if (user) { hadUserRef.current = true; return }
     if (hadUserRef.current && page === 'profile') {
-      if (window.location.pathname.endsWith('/profile')) window.history.replaceState({}, '', window.location.pathname.slice(0, -8) || '/')
       setPage('splash')
     }
   }, [user, page])
@@ -420,31 +422,6 @@ export default function BaseballApp() {
     return () => { bodyObs.disconnect(); elObs?.disconnect() }
   }, [])
 
-  // back / forward between the baseball addresses
-  useEffect(() => {
-    const onPop = () => {
-      const path = window.location.pathname
-      if (path !== '/profile') setPage(p => (p === 'profile' ? 'game' : p))
-      if (path !== '/baseball/simulate') setPage(p => (p === 'sim' ? 'game' : p))
-      if (path !== '/baseball/leaderboard') setPage(p => (p === 'leaderboard' ? (IS_APP || APP_LOOK ? 'splash' : 'game') : p))
-      if (path === '/baseball/salary') setPage(p => (p === 'splash' ? p : 'salarycap'))
-      else setPage(p => (p === 'salarycap' ? 'splash' : p))
-      window.scrollTo({ top: 0, behavior: 'instant' })
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
-
-  // each page has its own address under /baseball (the ads follow the path; a refresh lands back in baseball)
-  useEffect(() => {
-    const target = page === 'sim' ? '/baseball/simulate' : page === 'leaderboard' ? '/baseball/leaderboard' : page === 'salarycap' ? '/baseball/salary' : null
-    const here = window.location.pathname
-    if (target) { if (here !== target) window.history.pushState({}, '', at(target)) }
-    else if (['/baseball/simulate', '/baseball/leaderboard', '/baseball/salary'].includes(here) || (page !== 'profile' && here === '/profile') || (page !== 'shared' && new URLSearchParams(window.location.search).has('b'))) {
-      window.history.replaceState({}, '', at('/baseball'))
-    }
-  }, [page])
-
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', page === 'splash' ? '#0b1220' : '#0a0f1a')
@@ -481,7 +458,7 @@ export default function BaseballApp() {
       else if (to === 'salarycap') handleStartRef.current?.('salarycap', positionRef.current)
       else if (to === 'squad') openSquadRef.current?.()
       else if (to === 'career') openCareerRef.current?.()
-      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
+      else if (to === 'profile') { if (user) setPage('profile'); else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') window.location.href = '/?about'
       else if (to === 'wiki') window.location.href = '/wiki'
       // the Daily Challenge is a football or basketball day: it opens on its own side
@@ -492,14 +469,8 @@ export default function BaseballApp() {
     return () => window.removeEventListener('bap:nav', onNav)
   }, [page, gameMode, user, simResult])
 
-  // ads on every page change (lib/ads.js), the paths under /baseball like basketball's under /bucket
-  useLayoutEffect(() => {
-    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/baseball', soft: true }); return }
-    const here = window.location.pathname
-    const path = page === 'sim' ? '/baseball/simulate' : page === 'salarycap' ? '/baseball/salary' : page === 'leaderboard' ? '/baseball/leaderboard'
-      : ['/baseball/simulate', '/baseball/leaderboard', '/baseball/salary'].includes(here) ? '/baseball' : here
-    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path , soft: page === 'leaderboard' || page === 'profile' })
-  }, [page])
+  // the address and the ads on every page change (lib/routes.js, lib/ads.js)
+  useLayoutEffect(() => { routePage('baseball', page) }, [page])
 
   // the account, and Pro / ad-free from it (as BucketApp)
   useEffect(() => {
@@ -509,6 +480,7 @@ export default function BaseballApp() {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
+      if (!u) setPage(p => (p === 'profile' ? 'splash' : p))   // (/profile opened signed out: Home)
       if (!u) { try { localStorage.removeItem('bap_subscribed'); localStorage.removeItem('bap_ads_off') } catch {}; return }
       let attempts = 0
       const check = () => supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
@@ -700,6 +672,22 @@ export default function BaseballApp() {
     }
   }, [])
   useEffect(() => { if (START_ON_SALARY) handleStart('salarycap') }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Back / Forward (lib/routes.js): the page the address names, when it can still be shown; Home when it needs what's gone
+  const popToRef = useRef(null)
+  popToRef.current = ({ page: want, screen }) => {
+    if (screen || want === page) return
+    const built = !!gameMode && gameMode !== 'salarycap'
+    const ok = !want ? false
+      : want === 'profile' ? !!user
+      : want === 'sim' ? !!simResult && !!gameMode
+      : want === 'game' || want === 'squad-build' || want === 'career-build' ? built
+      : want === 'career' ? !!careerRef.current
+      : ['leaderboard', 'career-intro', 'squad', 'privacy', 'salarycap', 'splash'].includes(want)
+    if (ok && want === 'salarycap' && gameMode !== 'salarycap') { handleStart('salarycap'); return }
+    setPage(ok ? want : 'splash')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  useEffect(() => onRoutePop('baseball', r => popToRef.current?.(r)), [])
 
   const handleDrop = useCallback(() => {
     const drag = activeDragRef.current
@@ -864,7 +852,7 @@ export default function BaseballApp() {
     onReset: handleReset,
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
-    onProfile: () => (user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
+    onProfile: () => (user ? setPage('profile') : setShowAuth(true)),
     onAbout: () => { window.location.href = '/?about' },
     onLeaderboard: () => setPage('leaderboard'),
     onSubscribe: async () => {
@@ -1016,7 +1004,7 @@ export default function BaseballApp() {
           <SharedBuildPage build={SHARED.build} types={SHARED.types} attrMap={ATTR} logoDir={LOGO_DIR}
             ovr={ovr} arch={archFor(SHARED.pos)(ovr, SHARED.build, SHARED.types)}
             height={sz?.height ?? null} weight={sz?.weight ?? null}
-            onPlay={() => { setPage('splash'); window.history.replaceState({}, '', at('/baseball')) }} />
+            onPlay={() => setPage('splash')} />
         </Suspense>
       </>
     )
@@ -1129,7 +1117,7 @@ export default function BaseballApp() {
         <Suspense fallback={null}>
           <ProfilePage
             user={user} build={build} types={activeTypes} isPlus={isSubscribed} isBaseball
-            onBack={() => { if (IS_APP || APP_LOOK) { window.history.pushState({}, '', at('/baseball')); setPage('splash') } else window.history.back() }}
+            onBack={() => { if (IS_APP || APP_LOOK) setPage('splash'); else window.history.back() }}
             onSignOut={() => { setUser(null); window.location.href = at('/baseball') }}
             onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
             onThemeChange={themeId => {

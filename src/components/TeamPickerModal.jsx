@@ -1,3 +1,4 @@
+import { rampNoLeftRail } from '../lib/ads'
 import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
 import { NFL_TEAMS } from '../data/nfl-teams'
 import { useTapGuard } from '../lib/tapGuard'
@@ -172,6 +173,7 @@ function SlotReel({ items, spinning, idle, onStop, target = null }) {
 // teams / teamOf (College Football): the schools on offer, and which of them a build's trait came from
 // onCancel (College Football's transfer): a way back out before a team is chosen; without it the modal is as it was
 export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, anyTeam = false, eyebrow = 'Simulate Season', teams = NFL_TEAMS, teamOf = c => c.team, onCancel = null }) {
+  useLayoutEffect(() => rampNoLeftRail(), [])   // (a spin: no left rail while it's up, lib/ads.js)
   const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase, setPhase]       = useState('idle')
   const [result, setResult]     = useState(null)

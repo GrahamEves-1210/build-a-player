@@ -57,7 +57,7 @@ export function startRailWatch() {
   if (started || typeof document === 'undefined') return
   started = true
   const root = document.documentElement
-  let last = -1, lastBox = '', watched = new Set(), queued = 0
+  let last = -1, lastLeft = -1, lastBox = '', watched = new Set(), queued = 0
   const ro = window.ResizeObserver ? new ResizeObserver(() => measure()) : null
   const measure = () => {
     let h = 0, box = 0, l = window.innerWidth, r = 0
@@ -82,6 +82,16 @@ export function startRailWatch() {
       root.style.setProperty('--web-rail-box', `${box}px`)
       root.style.setProperty('--web-rail-l', `${l}px`)
       root.style.setProperty('--web-rail-r', `${r}px`)
+    }
+    // the left rail (lib/ads.js: the dock's pages, Depth Chart, Career's hub; 1500 wide and up): how far in from the
+    // left edge it reaches, into --web-left, and html.has-left-rail while it's up (app-game.css moves the page over)
+    const lr = root.classList.contains('ads-hidden') ? null : [...document.querySelectorAll('[id^="pw-oop-left_rail"]')].find(el => el.isConnected && shown(el))
+    const lb = lr?.getBoundingClientRect()
+    const lw = lb && lb.width > 0 && lb.height > 0 && lb.left < 40 ? Math.ceil(Math.min(CAP + 40, lb.right) + 16) : 0
+    if (lw !== lastLeft) {
+      lastLeft = lw
+      root.style.setProperty('--web-left', `${lw}px`)
+      root.classList.toggle('has-left-rail', lw > 0)
     }
     if (h !== last) {
       last = h

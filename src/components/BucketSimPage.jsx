@@ -24,7 +24,7 @@ import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { savePos } from '../lib/seasonLive'
-import { rampAdd, useRailOn } from '../lib/ads'
+import { rampAdd, useRailOn, rampNoLeftRail } from '../lib/ads'
 import { IconBall } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
 import { useOnLeave } from './simFlow'
@@ -521,6 +521,7 @@ function NBAPlayoffGame({ gameNum, seriesName, oppShort, myColor, myShort, myFin
 // ─── ScreenTeamSpin ────────────────────────────────────────────────────────────
 // anyTeam: every team is on offer (Squad Builder), not only the build's
 export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTeam = false, eyebrow = 'Simulate Season', subheading = 'From the build', onCancel = null }) {
+  useLayoutEffect(() => rampNoLeftRail(), [])   // (a spin: no left rail while it's up, lib/ads.js)
   const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase,      setPhase]      = useState('idle')
   const [result,     setResult]     = useState(null)

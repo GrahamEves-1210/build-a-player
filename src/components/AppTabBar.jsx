@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from 'react'
 import LiveLeave from './app/LiveLeave'
 import { guardLeave } from '../lib/liveLock'
 import { IS_APP, APP_LOOK } from '../lib/platform'
@@ -13,6 +13,7 @@ import { startPresence } from '../lib/presence'
 import { AnimatePresence, motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../lib/motion'
 import { takeRewardedOpen } from '../lib/rewardedAd'
+import { routeScreen, screenAtLoad, parsePath } from '../lib/routes'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppCards = lazy(() => import('./app/AppCards'))
@@ -46,6 +47,8 @@ const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
 const WEB_DOCK_ON = new Set(['splash', 'profile', 'career', 'career-intro', 'squad', 'blacktop', 'blacktop-game', 'auction', 'leaderboard', 'pvp-leaderboard'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
+// the screens with an address of their own (lib/routes.js)
+const routeScreenOf = s => ['daily', 'shop', 'cards', 'achievements', 'locker', 'pass', 'online'].includes(s)
 
 // the dock's order, for which way a screen slides in (Home is PLAY, in the middle)
 const TAB_ORDER = { shop: 0, daily: 1, play: 2, leaderboard: 3, profile: 4, locker: 4, cards: 4, achievements: 4 }
@@ -81,7 +84,15 @@ export default function AppTabBar() {
   const [player, setPlayer]     = useState(null)    // { id, username }: their profile sheet
   const [shopTab, setShopTab]   = useState('featured')
   const [authOpen, setAuthOpen] = useState(false)
-  const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
+  const [screen, setScreen]     = useState(screenAtLoad)   // 'daily' | 'cards' | 'shop' | 'achievements' | null (a visit to /daily opens on it)
+  // its address and ads (lib/routes.js: /daily, /shop… over the page; a layout effect, as the games' page reports)
+  useLayoutEffect(() => { routeScreen(screen) }, [screen])
+  // Back / Forward onto a screen's address opens it; off one closes it
+  useEffect(() => {
+    const on = () => setScreen(s => { const want = parsePath().screen; return want ?? (s && routeScreenOf(s) ? null : s) })
+    window.addEventListener('popstate', on)
+    return () => window.removeEventListener('popstate', on)
+  }, [])
   const badge = useDailyBadge()
   const progress = useProgress()
   const claimable = (progress.claimable || 0) + (progress.setsReady || 0)
