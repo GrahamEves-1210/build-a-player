@@ -89,7 +89,7 @@ export function createGame({ teams, seed = 'bt', rules = RULES, mode = null }) {
     v: 1, seed: hashSeed(seed), rn: 0, tick: 0, size, rules, mode,
     players, score: teams.map(() => 0), poss: 0, phase: 'check', phaseT: ticks(rules.checkTime),
     king: null, sit: -1, mustClear: null,    // King of the Hill: the king, the man sitting out (indexes); 1v1/2v2: the side that must take it back (team)
-    clock: 0, next: null, winner: null, gamePoint: false, possN: 0,
+    clock: 0, next: null, winner: null, gamePoint: false, possN: 0, ck: 0, ckT: 0,   // (ck: King of the Hill's check, betweenPlays)
     ball: { st: 'held', holder: 0, x: 0, y: 0, z: 3, vx: 0, vy: 0, vz: 0, from: -1, to: -1, t: 0, n: 0, sx: 0, sy: 0, sz: 0, tx: 0, ty: 0, verdict: null, near: [], tried: [], lastTeam: 0, reb: false, grabAt: 0, speed: 0, kind: null,
       fd: -1, fD: 0, fl: false },            // a dead ball on its way to the man who checks it: to whom, from how far; has it hit the floor
     call: null,                              // a teammate calling for the ball: { pid (index), tick }
@@ -175,6 +175,8 @@ function endPossession(s, pts, nextTeam, carrier, why) {
     else if (c !== king) kingIs(s, c, king)
     else kingIs(s, c, sit)
     s.next.sit = s.sit
+    // the check: the ball goes to the man guarding the king, and he checks it up to him at the top (betweenPlays)
+    s.next.checker = kothDef(s)
     if (s.sit !== sit) s.events.push({ e: 'rotate', king: c, sit: s.sit, in: sit, why })
   }
   setSpots(s, nextTeam, c)
@@ -376,6 +378,8 @@ export function moveBegin(p, dir) {
   const m = ref.moveOf(p, dir), M = MOVES[m.kind]
   p.mv = M.n; p.bn = p.burst = ticks(M.time); p.bdx = m.x; p.bdy = m.y; p.bs = 0; p.fkx = dir.x; p.fky = dir.y
   if (m.swap) p.hand = -(p.hand || 1)
+  // a spin from the stick: it rolls round from the way the flick went (back, off his man) to the way it comes out
+  if (m.kind === 'spin') { let t = Math.atan2(m.y, m.x) - Math.atan2(dir.y, dir.x); if (t > Math.PI) t -= 2 * Math.PI; else if (t < -Math.PI) t += 2 * Math.PI; p.bs = t }
   // tired legs: a slower, shorter burst (never none)
   p.bk = (p.chn > 0 ? T.chainSlow : 1) * (T.staFloor + (1 - T.staFloor) * (p.sta ?? 1))
   p.sta = Math.max(0, (p.sta ?? 1) - T.staMove - (p.chn > 0 ? T.staChain : 0))
@@ -792,27 +796,44 @@ function betweenPlays(s) {
   for (const p of P) if (!p.out) keepIn(p, 0)
   if (b.st === 'held') holdBall(s)
   // (a dunk: the ball is left under the rim a beat longer, while the man who threw it down is still on his way down)
-  else if (b.st === 'dead') deadBall(s, dead ? s.next.carrier : b.fd, !dead || since >= ticks(b.kind === 'dunk' && b.verdict?.made ? 0.6 : 0.2))
+  else if (b.st === 'dead') deadBall(s, dead ? s.next.checker ?? s.next.carrier : b.fd, !dead || since >= ticks(b.kind === 'dunk' && b.verdict?.made ? 0.6 : 0.2))
   s.phaseT--
   if (dead) {
     if (s.phaseT > 0) return
     s.phase = 'check'; s.phaseT = ticks(s.rules.checkTime)
     s.poss = s.next.team
-    const c = s.next.carrier
+    const c = s.next.carrier, chk = s.next.checker ?? -1
     s.next = null
+    // King of the Hill: a dead ball goes to the man guarding the king, who checks it up to him (s.ck: 1 waiting for it)
+    s.ck = chk >= 0 ? 1 : 0
     if (b.st === 'held') holdBall(s)                       // (only ever in his hands: endPossession)
-    else if (b.fd < 0) feedStart(s, c)                     // still coming down: it goes to him from here
+    else if (b.fd < 0) feedStart(s, s.ck ? chk : c)        // still coming down: it goes to him from here
     s.events.push({ e: 'check', team: s.poss, pid: c })
     return
   }
   // the check
-  if (s.phaseT > 0) return
-  if (b.st !== 'held') {
-    if (s.phaseT > -ticks(T.checkWait + 2)) return
-    b.holder = b.fd; b.fd = -1; holdBall(s)                // (never: the ball is quicker than any man)
+  if (s.ck === 2) { checkPass(s); return }
+  if (s.ck === 3) { if (--s.ckT > 0) return; s.ck = 0 }
+  else {
+    if (s.phaseT > 0) return
+    if (b.st !== 'held') {
+      if (s.phaseT > -ticks(T.checkWait + 2)) return
+      b.holder = b.fd; b.fd = -1; holdBall(s)              // (never: the ball is quicker than any man)
+    }
+    const there = P.every(p => p.out || Math.hypot(p.sx - p.x, p.sy - p.y) <= T.spotNear)
+    if (!there && s.phaseT > -ticks(T.checkWait)) return
+    // King of the Hill: CHECK. The man guarding the king bounces it to him; a beat, and it's live
+    if (s.ck === 1) {
+      s.ck = 0
+      if (b.holder !== s.king) {
+        const d = P[b.holder], k = P[s.king]
+        s.ck = 2; b.st = 'check'; b.from = d.i; b.to = k.i; b.t = 0; b.n = ticks(T.checkPass)
+        b.sx = b.x; b.sy = b.y; b.sz = b.z
+        s.events.push({ e: 'checkup', pid: d.i, to: k.i })
+        return
+      }
+    }
   }
-  const there = P.every(p => p.out || Math.hypot(p.sx - p.x, p.sy - p.y) <= T.spotNear)
-  if (!there && s.phaseT > -ticks(T.checkWait)) return
   // the ball is live: everyone where he stands (on his spot, or a step from it), set
   for (const p of P) {
     p.vx = p.vy = 0; p.act = 'free'; p.actT = 0; p.noAct = 0; p.pb = 0; p.sq = -1
@@ -822,6 +843,22 @@ function betweenPlays(s) {
   s.phase = 'live'; s.clock = rticks(s.rules.shotClock[s.size - 1])
   holdBall(s)
   s.events.push({ e: 'live', team: s.poss })
+}
+
+// King of the Hill: the check, a bounce pass from the man guarding the king to the king's hands (down to the floor
+// half way, back up), then a beat (T.checkBeat) and the ball is live
+function checkPass(s) {
+  const b = s.ball, k = s.players[b.to]
+  b.t++
+  const f = clamp(b.t / b.n, 0, 1), tx = k.x + k.fx * 1.1, ty = k.y + k.fy * 1.1
+  b.vx = (tx - b.x) * HZ; b.vy = (ty - b.y) * HZ
+  b.x = b.sx + (tx - b.sx) * f; b.y = b.sy + (ty - b.sy) * f
+  b.z = f < 0.5 ? b.sz * (1 - f / 0.5) : 3 * (f - 0.5) / 0.5
+  if (b.t === Math.round(b.n / 2)) s.events.push({ e: 'checkbounce' })
+  if (b.t < b.n) return
+  b.holder = k.i; holdBall(s)
+  s.ck = 3; s.ckT = ticks(T.checkBeat)
+  s.events.push({ e: 'checked', pid: k.i })
 }
 
 // set for the check: the offense faces the rim, the defense faces his man (away from it)

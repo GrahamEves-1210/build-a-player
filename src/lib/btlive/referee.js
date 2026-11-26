@@ -197,7 +197,8 @@ export function moveOf(p, dir) {
   // (the hesitation goes at the basket by his man's hip on the ball's side, not into his chest)
   if (a <= T.hesiTo) return go('hesi', 0.88, 0.47, hand)
   if (a > T.btbTo) return go('back', -1, 0)
-  if (a > T.btlTo) return off ? go('btb', -0.45, 1) : go('back', -0.8, 0.6)
+  // (back and toward the ball hand: the spin, rolled off his man and out to that side)
+  if (a > T.btlTo) return off ? go('btb', -0.45, 1) : go('spin', 0.35, 0.94)
   if (!off) return go('inout', 0.6, 0.8)
   return a <= T.crossTo ? go('cross', 0.55, 1) : go('btl', 0.2, 1)
 }

@@ -64,69 +64,12 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 /* ── CONTROLS ──────────────────────────────────────────────────────────────────────────────────── */
 .btlv-ctl .btlv-menu-body { padding-bottom: calc(24px + var(--rail)); }
 .btlv-ctl .btlv-menu-body > * { flex: none; }
-.btlv-ctl-seg { margin-top: 14px; }
+.btlv-ctl .btlv-menu-body > section { max-width: 440px; width: 100%; margin: 0 auto; }
 .btlv-ctl h2 { margin-top: 22px; }
-.btlv-ctl-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.btlv-ctl-c { display: flex; align-items: center; justify-content: flex-start; min-height: 30px; }
-.btlv-ctl-t { display: grid; gap: 2px; min-width: 0; }
-.btlv-ctl-t b { font-weight: 400; font-size: 17px; letter-spacing: 1.2px; line-height: 1.1; }
-.btlv-ctl-t small { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; letter-spacing: 0; line-height: 1.35; color: var(--muted); }
+.btlv-ctl-row { display: grid; grid-template-columns: 104px minmax(0, 1fr); column-gap: 14px; align-items: center; min-height: 48px; border-bottom: 1px solid var(--line); }
+.btlv-ctl-c { display: flex; align-items: center; justify-content: flex-start; }
+.btlv .btlv-ctl-t { font-weight: 400; font-size: 17px; letter-spacing: 1.2px; line-height: 1.15; color: var(--text); }
 .btlv-ctl-pill { display: inline-block; padding: 5px 8px 4px; border-radius: 5px; border: 1px solid var(--line-hi); background: var(--panel); font-size: 13px; letter-spacing: 1px; line-height: 1; color: var(--text); white-space: nowrap; }
-.btlv-ctl-mv { font-size: 15px; letter-spacing: 1px; color: var(--acc); }
-.btlv .btlv-ctl-p { margin: 0 0 10px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; letter-spacing: 0; line-height: 1.45; color: var(--muted); }
-.btlv-ctl-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-.btlv-ctl-rules li { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; letter-spacing: 0; line-height: 1.45; color: var(--muted); }
-.btlv-ctl-rules b { font-family: var(--cap); font-weight: 400; font-size: 16px; letter-spacing: 1px; color: var(--text); }
-/* the pads, drawn as they are in a game */
-.btlv-ctl-pads { display: grid; gap: 10px; margin-top: 14px; }
-.btlv-demo { position: relative; margin: 0; height: 176px; border: 1px solid var(--line); border-radius: 8px; background: var(--asphalt); overflow: hidden; }
-.btlv-demo figcaption { position: absolute; left: 12px; top: 9px; font-size: 13px; letter-spacing: 2px; color: var(--muted); }
-.btlv-demo-stick { position: absolute; left: 6%; top: 34px; width: 92px; height: 92px; border-radius: 50%; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .035); }
-.btlv-demo-stick i { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px; border-radius: 50%; background: rgba(243, 246, 248, .3); border: 2px solid rgba(243, 246, 248, .55); }
-.btlv-demo-stick span { position: absolute; left: 50%; top: calc(100% + 7px); transform: translateX(-50%); font-size: 14px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
-.btlv-demo-pad { position: absolute; right: calc(14px + 80px + 10px); top: 50%; width: 138px; height: 138px; margin-top: -60px; border-radius: 50%; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); overflow: hidden; }
-.btlv-demo-pad { overflow: visible; }
-.btlv-demo-pad > i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%; background: rgba(243, 246, 248, .22); border: 2px solid rgba(243, 246, 248, .45); }
-.btlv-demo-pad > span { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: 14px; letter-spacing: 2px; color: var(--muted); white-space: nowrap; }
-.btlv-demo-pad.is-steal { display: grid; place-items: center; background: var(--panel-hi); border-color: rgba(243, 246, 248, .4); }
-.btlv-demo-pad.is-steal b { font-family: var(--num); font-weight: 400; font-size: 24px; letter-spacing: 1.4px; }
-.btlv-demo-a.is-def { background: var(--text); color: var(--ink); }
-.btlv-ctl-seg.is-side { margin-top: 8px; }
-.btlv-ctl-set h2 { margin-top: 16px; }
-.btlv-ctl-set + .btlv-demo { margin-top: 14px; }
-/* the move stick's gestures, drawn on a stick: the hold (a dot), the quick part (the arrow) */
-.btlv-gest { width: 76px; height: 76px; display: block; overflow: visible; }
-.btlv-gest-ring { fill: rgba(255, 255, 255, .035); stroke: var(--line-hi); stroke-width: 2.5; }
-.btlv-gest-mid { fill: var(--faint); }
-.btlv-gest-line { fill: none; stroke: var(--acc); stroke-width: 5.5; stroke-linecap: round; }
-.btlv-gest-tip { fill: var(--acc); }
-.btlv-gest-hold { fill: var(--text); }
-.btlv-ctl-gest .btlv-ctl-row { grid-template-columns: 112px minmax(0, 1fr); }
-/* on the move stick: no second pad with the ball, SHOOT bigger */
-.btlv-demo.is-one .btlv-demo-a { width: 100px; height: 100px; right: 18px; bottom: 16px; }
-.btlv-demo.is-one .btlv-demo-b { right: 136px; top: auto; bottom: 40px; width: 64px; height: 64px; }
-.btlv-ctl-stam { position: relative; display: block; width: 40px; height: 40px; }
-.btlv-ctl-stam::before { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 2px solid var(--text); }
-.btlv-ctl-stam i { position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; border-bottom-color: var(--warn, #f2b33d); transform: rotate(20deg); }
-.btlv-ctl .btlv-kk.is-arrows .btlv-key { min-width: 24px; padding: 1px 3px 0; }
-.btlv-demo-a { position: absolute; right: 14px; bottom: 14px; width: 80px; height: 80px; border-radius: 50%; display: grid; place-content: center; justify-items: center; gap: 2px; background: var(--acc); color: #140a02; border: 2px solid rgba(0, 0, 0, .35); }
-.btlv-demo-a b { font-family: var(--num); font-weight: 400; font-size: 19px; letter-spacing: 1px; line-height: 1; }
-.btlv-demo-a small { font-size: 13px; letter-spacing: .5px; opacity: .78; line-height: 1; }
-.btlv-demo-a.is-dim { opacity: .38; }
-.btlv-demo-b { position: absolute; right: 24px; top: 12px; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-hi); border: 2px solid var(--line-hi); font-size: 16px; letter-spacing: 1.2px; }
-@media (max-width: 360px) { .btlv-demo-pad { right: 96px; width: 126px; height: 126px; margin-top: -56px; } .btlv-demo-stick { left: 3%; } }
-/* the moves round the basket, big */
-.btlv-dial { display: grid; justify-items: center; gap: 6px; margin: 6px 0 10px; }
-.btlv-dial-rim { font-size: 13px; letter-spacing: 2px; color: var(--muted); padding-bottom: 12px; position: relative; }
-.btlv-dial-rim::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--muted); transform: rotate(180deg); transform-origin: 50% 50%; }
-.btlv-dial-pad { position: relative; width: 236px; height: 236px; border-radius: 50%; border: 2px solid var(--line-hi); background: rgba(255, 255, 255, .03); }
-.btlv-dial-w { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--wx), var(--wy)); display: grid; justify-items: center; gap: 3px; font-size: 14px; letter-spacing: .8px; line-height: 1.05; text-align: center; color: var(--text); white-space: nowrap; }
-.btlv-dial-w.is-0 { --wx: 0px; --wy: -82px; } .btlv-dial-w.is-2 { --wx: 72px; --wy: 0px; } .btlv-dial-w.is-4 { --wx: 0px; --wy: 82px; }
-.btlv-dial-w.is-5 { --wx: -56px; --wy: 58px; } .btlv-dial-w.is-6 { --wx: -70px; --wy: 0px; } .btlv-dial-w.is-7 { --wx: -56px; --wy: -58px; }
-.btlv-dial-man { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px; border-radius: 50%; border: 2px solid var(--line-hi); background: var(--panel-hi); }
-.btlv-dial-ball { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 16px; border-radius: 50%; background: #e9772c; border: 1.5px solid #2a1004; }
-.btlv-dial-cap { font-size: 13px; letter-spacing: 1.6px; line-height: 1.35; text-align: center; color: var(--muted); }
-.btlv-dial .btlv-key { min-width: 24px; height: 24px; font-size: 13px; }
 
 /* ── the game: scorebug, court, pad ────────────────────────────────────────────────────────────── */
 .btlv-game { --bug: 48px; --note: 24px; touch-action: none; }

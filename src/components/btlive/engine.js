@@ -496,7 +496,7 @@ export function createEngine({ setup, els, on, net = null }) {
     const kk = (ONE ? KEYS1.map(heldWay) : KEYWAY).map(d => ref.moveKind(p, d)).join()
     if (els.keys?.title && kk !== MV.keys) {
       MV.keys = kk
-      els.keys.title.textContent = ONE ? 'TAP TWICE' : 'DRIBBLE MOVES'
+      els.keys.title.textContent = ONE ? 'TAP A KEY' : 'DRIBBLE MOVES'
       els.keys.spinRow?.classList.toggle('is-off', !ONE)
       kk.split(',').forEach((kd, i) => { els.keys.arrows[i].textContent = NAME_KEY[kd]; els.keys.subs[i].textContent = ''; els.keys.rows[i].classList.remove('is-off') })
       if (els.keys.stealRow) els.keys.stealRow.classList.add('is-off')
@@ -1172,8 +1172,6 @@ export function createEngine({ setup, els, on, net = null }) {
     const g = G.feed(gT, x, y)
     if (import.meta.env.DEV) { GLOG.push([Math.round(gT), +x.toFixed(2), +y.toFixed(2), g ? g.kind + (hasBall() ? '' : ' (no ball)') : '']); if (GLOG.length > 600) GLOG.shift() }
     if (!g || !hasBall()) return
-    // a spin: the flick it rolls out of, then the way it ends (the game's spin: a second flick round from the first)
-    if (g.kind === 'spin') flick(g.via[0], g.via[1])
     flick(g.dir[0], g.dir[1])
   }
   // where the stick rests: the layout's marker for it (btlive.css .btlv-stick-home), else a quarter across
@@ -1302,9 +1300,12 @@ export function createEngine({ setup, els, on, net = null }) {
     if (e.metaKey || e.ctrlKey || e.altKey) return
     const kk = e.key.toLowerCase()
     if (DIR[kk]) {
-      e.preventDefault(); keys.add(kk); readKeys()
-      // tapped twice: the move that way
-      if (ONE && !e.repeat && TP.down(kk, performance.now()) && hasBall()) { const v = heldWay(kk); flick(v.x, v.y) }
+      e.preventDefault()
+      if (e.repeat) return
+      const before = [H.mx, H.my]
+      keys.add(kk); readKeys()
+      // a hard change of direction with it: the move the new way, now (a quick tap is one too, as it comes up: keyUp)
+      if (ONE && TP.down(kk, performance.now(), before, [H.mx, H.my]) && hasBall()) flick(H.mx, H.my)
     } else if (kk === 'shift') { if (ONE && !e.repeat && hasBall()) keySpin() }
     else if (kk === 'e') { e.preventDefault(); if (e.repeat) return; if (onDef()) stealKey(); else press('b', true) }
     else if (ARROW[kk]) {
@@ -1320,7 +1321,11 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   const keyUp = e => {
     const kk = e.key.toLowerCase()
-    if (DIR[kk]) { keys.delete(kk); readKeys(); TP.up(kk, performance.now()) }
+    if (DIR[kk]) {
+      const v = heldWay(kk)
+      keys.delete(kk); readKeys()
+      if (ONE && TP.up(kk, performance.now()) && hasBall()) flick(v.x, v.y)
+    }
     else if (ARROW[kk]) { if (!arrows.delete(kk)) return; if (!DS.kt) { tapped.clear(); arrowVec(arrows) } }
     else if (KEY[kk]) press(KEY[kk], false)
   }

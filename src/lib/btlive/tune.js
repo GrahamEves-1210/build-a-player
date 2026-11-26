@@ -202,7 +202,7 @@ export const T = {
   chainRec: 0.12, chainRecHnd: 0.06, // after a move, this long (less at Handles 11) before the next one starts
   chainSlow: 0.7, chainGap: 0.4,     // a move started this soon after the last one ended goes at this share of its speed
   moveSpeed: 1.95,                   // the fastest any move goes, x top speed (what a device's own position is held to)
-  moveCd: 3.4, moveCdHnd: 1.0,       // a move can freeze his man once in this long: 3.4 s at Handles 1, 2.4 s at 11
+  moveCd: 2.8, moveCdHnd: 1.0,       // a move can freeze his man once in this long: 2.8 s at Handles 1, 1.8 s at 11
   moveRange: 6.1,                    // his man has to be this close to be beaten by it
   moveBase: 0.15,                    // chance to freeze him...
   moveLean: 0.40,                    // ...plus this if he's leaning all the way the wrong way
@@ -252,6 +252,8 @@ export const T = {
   feedSpeed: 24,                     // a dead ball (through the net, out of bounds) goes back to whoever checks it this fast
   spotNear: 0.6,                     // the ball goes live when everyone is this close to his spot...
   checkWait: 0.6,                    // ...or this long past the check, wherever they are
+  checkPass: 0.32,                   // King of the Hill: the check, a bounce pass from the man guarding the king (s)...
+  checkBeat: 0.16,                   // ...and a beat with it in the king's hands before it's live
 
   // ── Online (a player on his own device: lib/btlive/net.js, live/src/btlive.js) ───────────────────
   remoteWaitMs: 650,                 // a shot waits this long past the end of the meter for his device's release
