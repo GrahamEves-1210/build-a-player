@@ -1,4 +1,4 @@
-// BLACKTOP LIVE online (a prototype: nothing in the app reaches it yet; tested only under `wrangler dev`): one room per
+// BLACKTOP LIVE online: one room per
 // game, and the room is the referee. Every device sends its stick, its buttons, the dribble moves its small stick
 // flicked (and which way), where it has its own player and, for a shot, the release quality its own meter timed; the room runs the one simulation (src/lib/btlive, the same code the
 // practice screen runs on a phone) at 30 ticks a second with those inputs and sends everyone the state about 15 times
@@ -7,18 +7,36 @@
 // by the CPU until it comes back. The wire is src/lib/btlive/proto.js. Today's Blacktop rooms (index.js Room) are
 // not touched.
 //
+// Two kinds of room. KING OF THE HILL online (since 2026-11-26): the queue (koth.js) makes the room with its three
+// seats (who, his seat key, the real player he picked); only those three can say hello, each with his own key, and
+// every build is read here from the rosters. It starts when all three are in (or after SHOW_MS without the missing
+// one: the CPU plays his seat), and the result is booked here when it's over (book). A DEV room (a ?btserver link):
+// what's below, and only for a page on this machine.
+//
 // The games (src/lib/btlive/modes.js): 1v1 (2 seats), 2v2 (4 seats: four people, each on his own man for the whole
 // game) and King of the Hill (3 seats, every man for himself). The first one in sets the game; it starts when every
 // seat has a person in it, or at once with CPUs in the empty seats when someone asks (practice: start). A rematch
 // (again) keeps every seat as it is (the same people, the same CPUs with the same builds) with a new seed, and starts
 // when every person still in has asked for it.
 //
-//   ws://127.0.0.1:8787/btlive/room/<CODE>   (btlive-dev.js routes it here under wrangler dev; index.js does not yet)
+//   wss://…/btlive/room/<CODE>   (index.js routes it here)
 import { createGame, step, cpuInput, HZ, GUARD_KEYS, BIG_KEYS, MODES, modeKey } from '../../src/lib/btlive/index.js'
 import { seatNew, seatMsg, seatInput, snapOf, SEND_EVERY, EVENT_KEEP, AWAY_MS } from '../../src/lib/btlive/proto.js'
+import { NBA_GUARD_PLAYERS } from '../../src/data/nba-guards.js'
+import { NBA_BIG_PLAYERS } from '../../src/data/nba-bigs.js'
+import { blacktopDelta } from '../../src/lib/rating.js'
+import { bookRatings, bookVs } from './rating.js'
+import { key, keyOk, reject } from './queue.js'
 
 const STEP_MS = 1000 / HZ
 const CPU_LEVEL = 'pro'
+// a room the queue made (King of the Hill online, koth.js): how long the room waits for a seat's device to show up
+// before the game starts without him (the CPU plays his seat, and it's a forfeit for him); and how long a man can be
+// away in all (his line quiet, the CPU on his seat) before the game counts as one he left
+const SHOW_MS = 20000
+const AWAY_FORFEIT_TICKS = 20 * HZ
+// a room nobody made (a dev link: ?btserver=…&btroom=…) only opens for a page on this machine
+const LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
 const str = (v, n = 40) => (typeof v === 'string' ? v.slice(0, n) : '')
 const send = (ws, m) => { try { ws.send(JSON.stringify(m)) } catch {} }
 const parse = d => { try { const m = JSON.parse(d); return m && typeof m === 'object' ? m : null } catch { return null } }
@@ -28,14 +46,27 @@ function cleanBuild(b, pos) {
   for (const k of pos === 'big' ? BIG_KEYS : GUARD_KEYS) { const v = b?.[k]; const n = typeof v === 'number' ? v : v?.val; out[k] = { val: Number.isFinite(+n) ? Math.min(11, Math.max(0, +n)) : 5 } }
   return out
 }
+// a real player's build, from the rosters (King of the Hill online: the pick names him, the ratings are his own)
+function realBuild(pick) {
+  const pos = pick?.pos === 'big' ? 'big' : 'guard'
+  const p = (pos === 'big' ? NBA_BIG_PLAYERS : NBA_GUARD_PLAYERS).find(x => x.name === pick?.name)
+  if (!p) return null
+  const build = Object.fromEntries((pos === 'big' ? BIG_KEYS : GUARD_KEYS).map(k => [k, { val: Math.min(11, Math.max(0, p.attrs?.[k] ?? 5)) }]))
+  // (the photo is the device's to find, by the player's name: lib's headshots, never a link from a phone)
+  return { pos, build, look: { photo: null, faceCenter: p.faceCenter ?? null, skin: p.skin ?? null, num: p.number != null ? String(p.number) : null, player: p.name } }
+}
 // (skin: his skin tone, num: his jersey number: what the screen draws his man with)
 const cleanLook = l => ({ photo: /^(https:\/\/|\/)[\w\-./%?=&:]{1,300}$/.test(l?.photo ?? '') ? l.photo : null, faceCenter: Array.isArray(l?.faceCenter) ? l.faceCenter.slice(0, 2).map(v => Math.min(100, Math.max(0, +v || 50))) : null,
   skin: /^#[0-9a-f]{6}$/i.test(l?.skin ?? '') ? l.skin : null, num: /^\d{1,2}$/.test(String(l?.num ?? '')) ? String(l.num) : null })
 
 export class BtLiveRoom {
   constructor(state, env) {
-    this.env = env
+    this.env = env; this.state = state
     this.conns = new Map()        // ws -> vid
+    this.made = null              // a room the queue made (koth.js): { code, mode, players, keys }; null: a dev room
+    this.booked = null            // the seed of the last game booked (once a game)
+    // (the queue's setup is kept, in case the room is put to sleep between the queue's call and the first hello)
+    state?.blockConcurrencyWhile(async () => { const m = await state.storage.get('made'); if (m) this.setUp(m) })
     this.mode = null              // '1v1' | '2v2' | 'koth' (the first hello sets it)
     this.need = 2                 // people before it starts on its own (every seat, unless a dev link says fewer)
     this.seats = []               // { vid, name, pos, team, slot, build, look, cpu, seat (proto), ws }, in the game's order
@@ -44,9 +75,36 @@ export class BtLiveRoom {
     this.loop = 0; this.t0 = 0; this.done = 0
     this.log = []; this.evq = 0   // what happened, numbered, for the snapshots
   }
+  // the queue's three: their seats, in the order they came in, each with the real player he picked
+  setUp(b) {
+    if (this.made) return
+    this.made = b
+    this.mode = modeKey(b.mode, 'koth')
+    this.keys = b.keys || {}
+    const M = MODES[this.mode]
+    this.need = M.seats
+    this.seats = []
+    b.players.slice(0, M.seats).forEach((p, i) => {
+      const r = realBuild(p.pick) ?? realBuild({ name: 'Stephen Curry', pos: 'guard' })
+      this.seats.push({ vid: str(p.vid, 64), uid: p.uid ?? null, name: str(p.name, 24) || 'Guest', pos: r.pos, team: i % M.teams, slot: Math.floor(i / M.teams), build: r.build, look: r.look, cpu: null, seat: seatNew(), ws: null, awayT: 0 })
+    })
+    // nobody's device shows in time: the game goes on without him
+    this.showTimer = setTimeout(() => { if (!this.g && this.seats.some(x => x.ws)) this.begin() }, Math.max(1000, (b.at ?? Date.now()) + SHOW_MS - Date.now()))
+  }
   async fetch(req) {
+    const url = new URL(req.url)
+    if (url.pathname === '/init' && req.method === 'POST') {
+      const b = await req.json().catch(() => null)
+      if (!b || !Array.isArray(b.players)) return new Response('bad', { status: 400 })
+      const made = { code: str(b.code, 8), mode: b.mode, players: b.players, keys: b.keys || {}, at: Date.now() }
+      await this.state.storage.put('made', made)
+      this.setUp(made)
+      return new Response('ok')
+    }
+    const local = LOCAL.test(req.headers.get('Origin') || '')
     const [client, server] = Object.values(new WebSocketPair())
     server.accept()
+    server.local = local
     server.addEventListener('message', e => this.onMessage(server, e.data))
     const bye = () => this.onClose(server)
     server.addEventListener('close', bye); server.addEventListener('error', bye)
@@ -58,8 +116,9 @@ export class BtLiveRoom {
     this.conns.delete(ws)
     const st = this.seats.find(x => x.vid === vid)
     if (st && st.ws === ws) st.ws = null
-    // nobody left: stop the clock (a room with no one in it costs nothing)
-    if (!this.conns.size) this.stop()
+    // nobody left: stop the clock (a room with no one in it costs nothing). A queue's game everyone walked out of
+    // is over for all of them: each one left it
+    if (!this.conns.size) { this.stop(); if (this.made && this.g && this.g.phase !== 'over') this.book(true) }
     else this.rematchCheck()
   }
   stop() { if (this.loop) { clearInterval(this.loop); this.loop = 0 } }
@@ -75,19 +134,31 @@ export class BtLiveRoom {
     const st = this.seats.find(x => x.vid === vid)
     if (m.t === 'ping') return send(ws, { t: 'pong', c: m.c, k: this.g?.tick ?? 0 })
     if (m.t === 'in' && st) { seatMsg(st.seat, m, now); return }
-    if (m.t === 'start' && !this.g && this.seats.some(x => x.vid)) return this.begin()
-    if (m.t === 'again' && st && this.g?.phase === 'over') { this.votes.add(vid); this.rematchCheck() }
+    if (m.t === 'start' && !this.made && !this.g && this.seats.some(x => x.vid)) return this.begin()
+    if (m.t === 'again' && st && this.g?.phase === 'over') {
+      // a queue's game runs it back only with all three still here; short a man, back to the queue
+      if (this.made && this.seats.some(x => !x.ws)) return send(ws, { t: 'requeue' })
+      this.votes.add(vid); this.rematchCheck()
+    }
   }
   // a rematch: when every person still in (a live line) has asked for it
   rematchCheck() {
     if (this.g?.phase !== 'over' || !this.votes.size) return
     const inRoom = this.seats.filter(x => x.vid && x.ws)
+    // (a queue's game: someone has gone since the asks began, so the ones who asked go back to the queue)
+    if (this.made && inRoom.length < this.seats.length) { for (const x of inRoom) if (this.votes.has(x.vid)) send(x.ws, { t: 'requeue' }); this.votes.clear(); return }
     const have = inRoom.filter(x => this.votes.has(x.vid)).length
     if (have >= inRoom.length) return this.begin()
     for (const x of inRoom) send(x.ws, { t: 'again', have, need: inRoom.length })
   }
   hello(ws, m) {
     const vid = str(m.vid, 64); if (!vid) return
+    if (this.made) {
+      // a queue's room: only its three, each with the key he queued with; his build, name and look are already here
+      const st = this.seats.find(x => x.vid === vid)
+      if (!st) { send(ws, { t: 'gone', why: 'full' }); return }
+      if (!keyOk(this.keys, vid, key(m))) return reject(ws)
+    } else if (ws.local === false) { send(ws, { t: 'gone', why: 'none' }); return }   // (fetch marks every socket; a headless check's own sockets are let in)
     for (const [w, v] of this.conns) if (v === vid && w !== ws) { this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
     this.conns.set(ws, vid)
     let st = this.seats.find(x => x.vid === vid)
@@ -114,7 +185,8 @@ export class BtLiveRoom {
     }
     st.ws = ws; st.seat.heard = Date.now()
     if (!this.g) {
-      const have = this.seats.filter(x => x.vid).length
+      // (a queue's room has its three seats named from the start: who's in is whose device is here)
+      const have = this.seats.filter(x => (this.made ? x.ws : x.vid)).length
       for (const [w] of this.conns) send(w, { t: 'wait', need: this.need, have, mode: this.mode })
       if (have >= this.need) this.begin()
       return
@@ -146,7 +218,8 @@ export class BtLiveRoom {
     const teams = [...Array(M.teams).keys()].map(t => this.seats.filter(x => x.team === t).map(x => ({ id: `t${t}p${x.slot}`, name: x.name, pos: x.pos, build: x.build })))
     this.g = createGame({ teams, seed: this.seed, mode: this.mode })
     this.log = []; this.evq = 0; this.votes.clear()
-    for (const x of this.seats) x.seat = { ...seatNew(), heard: x.seat.heard }
+    for (const x of this.seats) { x.seat = { ...seatNew(), heard: x.seat.heard }; x.awayT = 0 }
+    clearTimeout(this.showTimer)
     this.seats.forEach((x, i) => x.ws && send(x.ws, this.setupFor(i)))
     this.run()
   }
@@ -159,7 +232,11 @@ export class BtLiveRoom {
   // one tick: every seat's input (a person's own, or the CPU while his line is quiet or the seat has nobody in it)
   tickOnce(now = Date.now()) {
     const g = this.g
-    const inputs = this.seats.map((x, i) => (x.vid && now - x.seat.heard < AWAY_MS ? seatInput(x.seat, g, i) : cpuInput(g, i, CPU_LEVEL)))
+    const inputs = this.seats.map((x, i) => {
+      if (x.vid && now - x.seat.heard < AWAY_MS) return seatInput(x.seat, g, i)
+      if (x.vid) x.awayT = (x.awayT ?? 0) + 1
+      return cpuInput(g, i, CPU_LEVEL)
+    })
     step(g, inputs)
     for (const e of g.events) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
     if (g.tick % SEND_EVERY === 0 || g.phase === 'over') this.broadcast()
@@ -173,7 +250,22 @@ export class BtLiveRoom {
     const now = Date.now()
     while (due-- > 0 && g.phase !== 'over') this.tickOnce(now)
     while (this.log.length && this.log[0].k < g.tick - EVENT_KEEP) this.log.shift()
-    if (g.phase === 'over') { this.broadcast(); this.stop() }
+    if (g.phase === 'over') { this.broadcast(); this.stop(); if (this.made) this.book() }
+  }
+  // A queue's game is over (or everyone walked out of it): each man's rating (src/lib/rating.js, as in the lobbies:
+  // the king +20, the other two -12, a man who left -20) and the King of the Hill record (vs_results 'koth'), once a
+  // game. A man who left (his line gone at the end, or away 20 s in all) takes the forfeit. The ones on an account
+  // are told their new rating.
+  async book(walked = false) {
+    const g = this.g
+    if (!g || this.booked === this.seed) return
+    this.booked = this.seed
+    const people = this.seats.map((x, i) => ({ x, i })).filter(({ x }) => x.uid)
+    const out = ({ x }) => walked || !x.ws || (x.awayT ?? 0) > AWAY_FORFEIT_TICKS
+    const won = ({ i }) => !walked && g.phase === 'over' && g.winner === i
+    const ratings = await bookRatings(this.env, people.map(p => ({ vid: p.x.vid, uid: p.x.uid, delta: blacktopDelta({ won: won(p), forfeit: out(p) }) })))
+    await bookVs(this.env, people.map(p => ({ uid: p.x.uid, result: out(p) ? 'forfeit' : won(p) ? 'win' : 'loss', position: p.x.pos, match_type: this.mode })))
+    if (Object.keys(ratings).length) for (const [w] of this.conns) send(w, { t: 'rated', ratings })
   }
   broadcast() {
     const m = JSON.stringify(snapOf(this.g, this.log, this.acks()))

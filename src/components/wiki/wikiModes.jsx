@@ -37,10 +37,11 @@ export function ModesPage({ go }) {
       <p>The other half of Compete (the switch at the top). 1v1: two players, {usd(BUDGET)} each. A slot is drawn and a real player is spun for it, his grade face down until the gavel. Bids go up $1 at a time and every bid puts the clock back to {RESET_SECS} seconds. Each player always keeps $1 for every other empty slot, and a slot still empty at the end gets a free agent ({grade(FILLER_VAL)}). The best overall wins; money left over breaks a tie. Positions: football {andList(AUCTION_POS.nfl.map(p => POS[p]))}, basketball {andList(AUCTION_POS.bucket.map(p => POS[p]))}.</p>
 
       <h2 id="blacktop">Blacktop <span className="wk-tag">ONLINE · BASKETBALL</span></h2>
-      <p>Live streetball against real players: <b>1v1</b>, <b>2v2</b> (a guard and a big a side) and <b>3v3</b> (two guards and a big a side). Pick a spot in the lobby, then build together in {mins(BT_SECS)} with team chat and a role ({andList(ROLES.map(r => r.name.charAt(0) + r.name.slice(1).toLowerCase()))}). Anyone who walks away mid-build gets an automatic build.</p>
+      <p>Live streetball against real players: <b>1v1</b>, <b>2v2</b> (a guard and a big a side) and <b>King of the Hill</b> (three players, every man for himself). For a 1v1 or a 2v2, pick a spot in the lobby, then build together in {mins(BT_SECS)} with team chat and a role ({andList(ROLES.map(r => r.name.charAt(0) + r.name.slice(1).toLowerCase()))}). Anyone who walks away mid-build gets an automatic build.</p>
       <ul>
         <li><b>The game.</b> To 11, win by 2: ones inside, twos from beyond the arc, make it take it. Steals, blocks and rebounds change possession.</li>
         <li><b>Calls.</b> During the game a team can call its plays: {andList(OFF_CALLS.map(c => CALL[c]))} on offense, {andList(DEF_CALLS.map(c => CALL[c]))} on defense (no pass or help in a 1v1).</li>
+        <li><b>King of the Hill.</b> Pick a real player and play him at his own ratings, live. Two play one on one while the third sits; score and you keep the ball, get a stop and the crown is yours. Each man keeps his own score: first to 11, win by 2. It starts when the third player is in.</li>
         <li><b>Rating.</b> A win {signed(btWin)}, a loss {signed(btLoss)}, the MVP {signed(btMvp)} more. Games against bots don't move it.</li>
         <li><b>Watch.</b> The Blacktop menu lists the games being played; Watch takes a seat in the stands.</li>
       </ul>
@@ -81,7 +82,7 @@ export const MODES_TOC = [
   ['current-all-time', 'Current and All-Time', 'current all-time legends pool'],
   ['compete', 'Compete', 'online pool same spins rating tiers'],
   ['auction', 'Trait Auction', 'bid budget online 1v1'],
-  ['blacktop', 'Blacktop', '1v1 2v2 3v3 streetball online lobby calls watch'],
+  ['blacktop', 'Blacktop', '1v1 2v2 king of the hill koth streetball online lobby calls watch'],
   ['live', 'Leaving a live game', 'forfeit leave lock'],
   ['salary-cap', 'Salary Cap', 'daily grid budget board shuffle scout infinite'],
   ['squad-builder', 'Squad Builder', 'squad team lineup positions run it back season'],

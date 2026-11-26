@@ -81,7 +81,7 @@ const firstName = n => (n || '').trim().split(/\s+/)[0]
 // a grade's color, rounded like its letter (valToGrade): S purple, A blue, B green, C yellow, D orange, F red
 const gradeColor = spectrumColor   // one shade a step (lib/gradeColors.js)
 
-// ── Hub: the court you walk up to. Pick the game (3v3, 2v2, 1v1), then one way in ──
+// ── Hub: the court you walk up to. Pick the game (1v1, 2v2, King of the Hill), then one way in ──
 // 1v1's other ways in: pickup (where there's no live lobby), a friend's game, a friend's code
 export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) {
   const [code, setCode] = useState('')
@@ -123,21 +123,22 @@ function HubLive(props) {
   const waiting = useLiveCounts(true)
   return <BlacktopHubView {...props} rating={o.rating} live={live} onCourt={onCourt} waiting={waiting} />
 }
-// the games, biggest first: who's on a side, and who a practice game is played with
+// the games: one on one, two on two, and King of the Hill (three men, every man for himself: Blacktop Live, its own
+// queue, live/src/koth.js). 3v3 is gone (owner 11-26): its record and boards stay for the games already played.
 const HUB_MODES = [
-  { size: 3, line: '2 GUARDS · 1 BIG', cpus: 'WITH 5 CPUS' },
-  { size: 2, line: '1 GUARD · 1 BIG', cpus: 'WITH 3 CPUS' },
-  { size: 1, line: 'GUARD OR BIG', cpus: 'VS 1 CPU' },
+  { key: '1v1', tag: '1V1', line: 'GUARD OR BIG', count: 'bt:1', stats: 'bt1' },
+  { key: '2v2', tag: '2V2', line: '1 GUARD · 1 BIG', count: 'bt:2', stats: 'bt2' },
+  { key: 'koth', tag: 'KING OF THE HILL', line: '3 PLAYERS · EVERY MAN FOR HIMSELF', count: 'bt:koth', stats: 'btk', wide: true },
 ]
-const HUB_MODE_KEY = 'bap_bt_mode'   // the game picked last time (this browser only)
-export function BlacktopHubView({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null, onWatch = null, rating = 800, live = {}, onCourt = 0, waiting = null }) {
+const HUB_MODE_KEY = 'bap_bt_mode'   // the game picked last time (this browser only; an old '3', 3v3, opens 1v1)
+export function BlacktopHubView({ onJoin2v2 = null, onJoin1v1 = null, onJoinKoth = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null, onWatch = null, rating = 800, live = {}, onCourt = 0, waiting = null }) {
   const court = useCourt()
-  const join = { 3: onJoin3v3, 2: onJoin2v2, 1: onJoin1v1 }
-  const modes = HUB_MODES.filter(m => m.size !== 2 || onJoin2v2)
-  const [size, setSize] = useState(() => { let s = 3; try { s = Number(localStorage.getItem(HUB_MODE_KEY)) || 3 } catch {} return modes.some(m => m.size === s) ? s : 3 })
-  const pick = s => { if (s === size) return; setSize(s); sfx('tap'); try { localStorage.setItem(HUB_MODE_KEY, String(s)) } catch {} }
-  const mode = modes.find(m => m.size === size) ?? modes[0]
-  const go = join[mode.size]
+  const join = { '1v1': onJoin1v1, '2v2': onJoin2v2, koth: onJoinKoth }
+  const modes = HUB_MODES.filter(m => m.key === '1v1' || join[m.key])
+  const [key, setKey] = useState(() => { let s = '1v1'; try { s = localStorage.getItem(HUB_MODE_KEY) || '1v1' } catch {} return modes.some(m => m.key === s) ? s : '1v1' })
+  const pick = k => { if (k === key) return; setKey(k); sfx('tap'); try { localStorage.setItem(HUB_MODE_KEY, k) } catch {} }
+  const mode = modes.find(m => m.key === key) ?? modes[0]
+  const go = join[mode.key]
   return (
     <div className="ag-screen ag-screen--bucket bt-hub btl btl-hub">
       <header className="btl-stage">
@@ -161,13 +162,13 @@ export function BlacktopHubView({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null,
         <div className="btl-hub-main">
           <div className="btl-modes" role="radiogroup" aria-label="Game">
             {modes.map(m => {
-              const on = m.size === mode.size
-              // the spots taken in that lobby right now (1v1's lobby is only on the live server)
-              const n = m.size === 1 && !onJoin1v1 ? null : searching(waiting, `bt:${m.size}`)
+              const on = m.key === mode.key
+              // the spots taken in that lobby (or King of the Hill's queue) right now (1v1's lobby is only on the live server)
+              const n = !join[m.key] ? null : searching(waiting, m.count)
               return (
-                <button key={m.size} role="radio" aria-checked={on} className={`btl-mode${on ? ' is-on' : ''}`} onClick={() => pick(m.size)}>
+                <button key={m.key} role="radio" aria-checked={on} className={`btl-mode${on ? ' is-on' : ''}${m.wide ? ' btl-mode--wide' : ''}`} onClick={() => pick(m.key)}>
                   {on && <motion.span layoutId="btl-mode-lit" className="btl-mode-lit" transition={SPRING_LAYOUT} aria-hidden="true" />}
-                  <b className="btl-mode-tag">{m.size}V{m.size}</b>
+                  <b className="btl-mode-tag">{m.tag}</b>
                   <span className="btl-mode-txt">
                     <span className="btl-mode-line">{m.line}</span>
                     {n ? <span className="btl-mode-n"><i className="btl-dot" aria-hidden="true" />{n} SEARCHING</span> : null}
@@ -177,12 +178,12 @@ export function BlacktopHubView({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null,
             })}
           </div>
           <div className="btl-acts">
-            {go && <button className="ag-btn btl-btn btl-go" onClick={() => { sfx('tap'); go() }}>JOIN {mode.size}V{mode.size} LOBBY <IconArrow size={18} /></button>}
-            
+            {go && <button className="ag-btn btl-btn btl-go" onClick={() => { sfx('tap'); go() }}>{mode.key === 'koth' ? 'FIND A GAME' : `JOIN ${mode.tag} LOBBY`} <IconArrow size={18} /></button>}
+
             {onPractice && <button className="ag-btn btl-btn btl-btn--line" onClick={() => { sfx('tap'); onPractice() }}>PRACTICE</button>}
-            {mode.size === 1 && <OneOnOneOptions onPickup={go ? undefined : onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />}
+            {mode.key === '1v1' && <OneOnOneOptions onPickup={go ? undefined : onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />}
           </div>
-          <div className="btl-record"><ModeStats mode={mode.size === 3 ? 'bt' : mode.size === 2 ? 'bt2' : onJoin1v1 ? 'bt1' : 'h2hB'} /></div>
+          <div className="btl-record"><ModeStats mode={mode.key === '1v1' && !onJoin1v1 ? 'h2hB' : mode.stats} /></div>
         </div>
         <div className="btl-hub-side">
           <LiveGames live={live} onWatch={onWatch} />
@@ -190,9 +191,10 @@ export function BlacktopHubView({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null,
           <details className="btl-rules">
             <summary>HOUSE RULES</summary>
             <ol>
-              <li><span>Real players only. A 1v1 starts when both spots are taken, a 2v2 when all four are, a 3v3 when all six are. PRACTICE is your own run against CPUs: pick the game, your player and the level.</span></li>
-              <li><span>In a 1v1 you take your spot as a guard or a big. A 2v2 squad is a guard and a big; a 3v3 squad is two guards and a big. The spot you take is the build you make.</span></li>
-              <li><span>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</span></li>
+              <li><span>Real players only. A 1v1 starts when both spots are taken, a 2v2 when all four are, King of the Hill when the third man is in. PRACTICE is your own run against CPUs: pick the game, your player and the level.</span></li>
+              <li><span>In a 1v1 you take your spot as a guard or a big; a 2v2 squad is a guard and a big. The spot you take is the build you make. In King of the Hill you pick your player and play him at his own ratings.</span></li>
+              <li><span>1v1 and 2v2: 3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</span></li>
+              <li><span>King of the Hill: two play, one sits. Score and you stay on; get a stop and the crown is yours. Leaving counts as a loss.</span></li>
               <li><span>First to <b>11</b>, 1s and 2s, win by 2. Make it, take it.</span></li>
               <li><span>Chat is filtered, and anyone can be reported.</span></li>
             </ol>

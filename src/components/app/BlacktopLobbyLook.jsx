@@ -172,7 +172,7 @@ function Look({ look, q }) {
   const quiet = q.has('empty')
   return (
     <div className="btl-look">
-      <BlacktopHubView onBack={NO} onJoin3v3={NO} onJoin2v2={NO} onJoin1v1={NO} onPractice={NO} onPickup={NO} onFriend={NO} onJoinCode={NO}
+      <BlacktopHubView onBack={NO} onJoin2v2={NO} onJoin1v1={NO} onJoinKoth={NO} onPractice={NO} onPickup={NO} onFriend={NO} onJoinCode={NO}
         onWatch={NO} notice={notice} onNotice={() => setNotice(null)}
         rating={1184} live={quiet ? { 1: [], 2: [], 3: [] } : LIVE} onCourt={quiet ? 0 : 38} waiting={quiet ? null : { 'bt:3': 4, 'bt:1': 1 }} />
     </div>

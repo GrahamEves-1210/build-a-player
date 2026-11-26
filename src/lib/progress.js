@@ -237,6 +237,8 @@ const BLANK_STATS = {
   bt2: { games: 0, wins: 0, mvp: 0, streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
   // Blacktop 1v1 (the lobby and practice, on the Blacktop engine)
   bt1: { games: 0, wins: 0, mvp: 0, streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
+  // Blacktop King of the Hill (three men, every man for himself: Blacktop Live online)
+  btk: { games: 0, wins: 0, mvp: 0, streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
   h2h: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [] },
   // 1v1 by sport (h2h above is both together: achievements and the rating read it).
   // Basketball's is a game, so it keeps a line: points, shots, steals, blocks (games = games with a line)
@@ -245,7 +247,7 @@ const BLANK_STATS = {
   // Online rating across the live modes (see rateOnline)
   online: { rating: 800, best: 800, played: 0 },
 }
-const ONLINE_KEYS = ['compete', 'bt', 'bt2', 'bt1', 'h2h', 'h2hN', 'h2hB', 'online']
+const ONLINE_KEYS = ['compete', 'bt', 'bt2', 'bt1', 'btk', 'h2h', 'h2hN', 'h2hB', 'online']
 const fixStats = st => { for (const k of ONLINE_KEYS) st[k] = { ...BLANK_STATS[k], ...(st[k] || {}) }; return st }
 const keyFor = id => `bap_prog_${id || 'guest'}`
 function load(id) {
@@ -908,7 +910,8 @@ function onCompete(e) {
 function onBlacktop(e) {
   const d = e.detail || {}
   ev('blacktop_done', { size: d.size ?? 3, won: !!d.won, bots: !!d.bots, forfeit: !!d.forfeit, sport: 'bucket' })
-  const two = d.size === 2 || d.size === 1, key = d.size === 1 ? 'bt1' : 'bt2'
+  // (King of the Hill, size 'koth', keeps its own record too: stats.btk)
+  const two = d.size === 2 || d.size === 1 || d.size === 'koth', key = d.size === 'koth' ? 'btk' : d.size === 1 ? 'bt1' : 'bt2'
   let b
   if (two) {
     b = S.stats[key] = { ...BLANK_STATS[key], ...(S.stats[key] || {}) }
@@ -1546,8 +1549,8 @@ export function achStats() {
     // Blacktop is 3v3, 2v2 or 1v1, and each keeps its own record (stats.bt, bt2, bt1); its goals count all three, as the
     // trophy case does. 2026-11-19: they read the 3v3 record alone, so wins at 2v2 or 1v1 never earned Blacktop Debut.
     // (only ever up from before, so nothing already earned changes)
-    btWinsAll: (st.btWins ?? 0) + (st.bt2?.wins ?? 0) + (st.bt1?.wins ?? 0), btMvpAll: (st.btMvp ?? 0) + (st.bt2?.mvp ?? 0) + (st.bt1?.mvp ?? 0),
-    btStreak: Math.max(st.bt?.bestStreak ?? 0, st.bt2?.bestStreak ?? 0, st.bt1?.bestStreak ?? 0), btPts: (st.bt?.pts ?? 0) + (st.bt2?.pts ?? 0) + (st.bt1?.pts ?? 0),
+    btWinsAll: (st.btWins ?? 0) + (st.bt2?.wins ?? 0) + (st.bt1?.wins ?? 0) + (st.btk?.wins ?? 0), btMvpAll: (st.btMvp ?? 0) + (st.bt2?.mvp ?? 0) + (st.bt1?.mvp ?? 0),
+    btStreak: Math.max(st.bt?.bestStreak ?? 0, st.bt2?.bestStreak ?? 0, st.bt1?.bestStreak ?? 0, st.btk?.bestStreak ?? 0), btPts: (st.bt?.pts ?? 0) + (st.bt2?.pts ?? 0) + (st.bt1?.pts ?? 0) + (st.btk?.pts ?? 0),
     // (a Blacktop 1v1 is booked under bt1, never as an h2h: both count for the 1v1 goals)
     h2hWins: (st.h2h?.wins ?? 0) + (st.bt1?.wins ?? 0), h2hStreak: Math.max(st.h2h?.bestStreak ?? 0, st.bt1?.bestStreak ?? 0),
     onlineBest: st.online?.best ?? 0, onlinePlayed: st.online?.played ?? 0,

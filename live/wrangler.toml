@@ -53,6 +53,24 @@ class_name = "Games"
 tag = "v4"
 new_sqlite_classes = ["Games"]
 
+# Blacktop Live (the real-time game): its rooms, each one the referee of a game (src/btlive.js), and King of the
+# Hill's queue (src/koth.js). (v5 was the dev file's BtLiveRoom: the same tag, so a dev-run local state still lines up)
+[[durable_objects.bindings]]
+name = "BTLIVE_ROOM"
+class_name = "BtLiveRoom"
+
+[[migrations]]
+tag = "v5"
+new_sqlite_classes = ["BtLiveRoom"]
+
+[[durable_objects.bindings]]
+name = "KOTH_QUEUE"
+class_name = "KothQueue"
+
+[[migrations]]
+tag = "v6"
+new_sqlite_classes = ["KothQueue"]
+
 # the shared game rules come from the app (../src): they read import.meta.env
 [define]
 "import.meta.env" = '{"DEV":false,"PROD":true}'
