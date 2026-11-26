@@ -333,14 +333,13 @@ function tag(team, fill, ink, x, y, w, h, u, { lean = 0.24, shadow = true } = {}
   const sh = Math.max(2.5, h * 0.11)
   // letters that don't read on the plate (red on navy) go white; the team's second colour stays in the stripe
   if (contrast(ink, fill) < 3) ink = contrast('#ffffff', fill) >= 3 ? '#ffffff' : '#111111'
-  const lineCol = pale ? null : shade(fill, 0.42)
   return `<defs><linearGradient id="${u}tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(fill, '#fff', pale ? 0.12 : 0.2)}"/><stop offset=".6" stop-color="${fill}"/><stop offset="1" stop-color="${shade(fill, pale ? 0.88 : 0.75)}"/></linearGradient></defs>` +
     (shadow ? `<path d="${shape(0)}" fill="#000" opacity=".4" transform="translate(2.5 3.5)"/>` : '') +
     `<path d="${shape(0)}" fill="${rim}"/>` +
     `<path d="${shape(2)}" fill="url(#${u}tg)"/>` +
     `<path d="M${f1(x + d * (sh + 2) / h + 2)} ${f1(y + h - sh - 2)}H${f1(x + w + d * (sh + 2) / h - 2)}L${f1(x + w - 2)} ${f1(y + h - 2)}H${f1(x + 2)}Z" fill="${stripe}"/>` +
     `<path d="M${f1(x + d + 3)} ${f1(y + 3.2)}H${f1(x + w + d - 3)}" stroke="#fff" stroke-width="1.2" opacity="${pale ? 0.6 : 0.28}"/>` +
-    (t ? block(t, x + w / 2 + d * 0.5, y + (h - sh) / 2 + 0.5, (h - sh) * 0.64, w * 0.72, { wide: 1.22, fill: ink, line: lineCol, lw: 0.4, drop: pale ? 0.1 : 0.28 }) : '')
+    (t ? block(t, x + w / 2 + d * 0.5, y + (h - sh) / 2 + 0.6, (h - sh) * 0.56, w * 0.64, { wide: 1.1, fill: ink, line: null, drop: pale ? 0.08 : 0.22 }) : '')   // (owner 11-25: neater, more room round the letters, no heavy edge)
 }
 
 // the position: a short slanted chip in the rarity's metal

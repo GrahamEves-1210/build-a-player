@@ -85,6 +85,8 @@ function salaryArt(sport) {
 }
 
 // the address the app shows in place of a photo or a logo, or the address itself when it's neither
+const CONF3 = { sec: 'SEC', acc: 'ACC', bigten: 'B10', big10: 'B10', big12: 'B12', pac12: 'P12', mwc: 'MWC', mountainwest: 'MWC', sunbelt: 'SBC',
+  american: 'AAC', aac: 'AAC', cusa: 'CUS', mac: 'MAC', ind: 'IND', independents: 'IND', bigeast: 'BEC', wcc: 'WCC', a10: 'A10', mvc: 'MVC' }
 export function appImage(src) {
   if (typeof src !== 'string' || src.startsWith('data:') || src.length > 600) return src
   let out = cache.get(src)
@@ -100,8 +102,9 @@ export function appImage(src) {
     const key = m[1].replace(/^.*?public\/headshots\//, '')
     out = playerArt(key, key.split('/')[0])
   } else if ((m = LOGO.exec(src)) && m[2]) {
-    // a conference's mark: its name on a plain tag
-    out = svgUri(teamMark({ league: 'conf', team: m[3].toUpperCase().replace(/[-_]/g, ' ').slice(0, 6) }))
+    // a conference's mark: its three-letter abbreviation on a plain tag (owner 11-25: three letters, neater)
+    const k = m[3].toLowerCase().replace(/[-_ ]/g, '')
+    out = svgUri(teamMark({ league: 'conf', team: CONF3[k] ?? k.toUpperCase().slice(0, 3) }))
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
   } else if (CLEAN && (m = FIG.exec(src))) {
