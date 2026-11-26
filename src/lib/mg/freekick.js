@@ -17,8 +17,8 @@
 import { clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manOf } from './kit.js'
 import { placeStamp } from './read.js'
 import {
-  camOf, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, line,
-  shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, keeperShot, heldBall, parried, defenderBeaten, keeperRoar,
+  camOf, staticStadium, stadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, line,
+  shooter, strikeOf, shotAt, keeperSave, aimMark, celebration, scorerAt, mateAt, celebFx, celebLens, keeperShot, heldBall, parried, defenderBeaten, keeperRoar,
   strikerDenied, celebMs, skipOutro, POST, BAR, NET_D, P,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar,
 } from './soccer.js'
@@ -155,8 +155,8 @@ export function make({ v, seed, cast = null, situation = null }) {
     g.stamp = { text: goal ? 'GOAL' : s.kind === 'wall' ? 'BLOCKED' : s.kind === 'saved' ? 'SAVED' : s.kind === 'wood' ? (s.why === 'Off the bar' ? 'OFF THE BAR' : 'OFF THE POST') : 'MISSED', good: goal, at: g.t, size: 50, sub: s.kind === 'wood' ? null : s.why }
     if (goal) {
       g.popAt = g.t; g.fx.push('h:success'); g.nudge.kick(g.t, 2.5, 0, 1, 180)
-      // away to the corner on his side, his teammates after him
-      g.cel = celebration(`${seed}-fk`, { sit: g.sit, from: { x: bx - g.foot * 0.4, z: bz - 0.3 }, side: sgn, toward: { x: bx * 0.55 + sgn * 2.2, z: bz + 5.5 }, mates: [{ x: bx + sgn * 3, z: bz + 4, who: g.who.mates[0] }, { x: bx - sgn * 4, z: bz + 2, who: g.who.mates[1] }] })
+      // away from the wall and back toward the bench on his side, to slide in front of it; his teammates after him
+      g.cel = celebration(`${seed}-fk`, { sit: g.sit, from: { x: bx - g.foot * 0.4, z: bz - 0.3 }, side: sgn, toward: { x: bx + sgn * 3.4, z: bz - 2.2 }, mates: [{ x: bx + sgn * 3, z: bz + 4, who: g.who.mates[0] }, { x: bx - sgn * 4, z: bz + 2, who: g.who.mates[1] }] })
     } else g.fx.push(s.kind === 'saved' ? 'catchball' : 'deny', 'h:heavy')
   }
   return g
@@ -236,10 +236,12 @@ function ballNow(g) {
 }
 export function draw(ctx, g, view) {
   g.vh = view.h; g.keysView = !!view.keys; g.lastView = { w: view.w, h: view.h }
-  const C = lensOf(g, view), K = kitsOf(view)
+  const C0 = lensOf(g, view), C = g.res === 'goal' && g.cel ? celebLens(C0, g.cel, g.t - g.endAt, view) : C0, K = kitsOf(view)
   const team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim]
-  staticStadium(ctx, view, C, `fk${g.bx.toFixed(2)}`, { team, away, board: boardWords(g) })
-  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt); flashes(ctx, C, view, g.t - g.popAt) }
+  // (the lens moving in on the slide: the ground painted as it goes)
+  if (C !== C0) stadium(ctx, view, C, { team, away, board: boardWords(g), grain: true })
+  else staticStadium(ctx, view, C, `fk${g.bx.toFixed(2)}`, { team, away, board: boardWords(g) })
+  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, g.cel?.roar ?? 2400); flashes(ctx, C, view, g.t - g.popAt) }
   // the spray: the line the wall stands on
   ctx.fillStyle = 'rgba(250,252,250,.7)'; ctx.beginPath()
   for (let i = 0; i < 9; i++) { const x0 = g.span[0] - 0.4 + i * ((g.span[1] - g.span[0] + 0.8) / 9); line(ctx, C, x0, g.wz - 0.35, x0 + 0.24, g.wz - 0.35, 0.09) }
@@ -267,12 +269,15 @@ export function draw(ctx, g, view) {
   })
   if (b.z <= g.wz + 0.3) ball(ctx, C, b.x, b.y, b.z, b.spin)
   const sp = strikerAt(g)
-  man(ctx, C, sp.x, sp.z, sp.pose, dress(K.us, g.who.me ?? { number: 10, skin: '#8d5a3b' }), { name: g.res ? null : g.who.me?.name, lift: sp.lift ?? 0, turn: sp.turn ?? 0 })
-  // his teammates in after him
+  // (him and his teammates in after him, the far ones first: they pile in on him)
+  const men = [{ z: sp.z, fn: () => man(ctx, C, sp.x, sp.z, sp.pose, dress(K.us, g.who.me ?? { number: 10, skin: '#8d5a3b' }), { name: g.res ? null : g.who.me?.name, lift: sp.lift ?? 0, turn: sp.turn ?? 0 }) }]
   if (g.res === 'goal') for (let i = 0; i < g.cel.mates.length; i++) {
     const m = mateAt(g.cel, i, g.t - g.endAt)
-    man(ctx, C, m.x, m.z, m.pose, dress(K.us, g.cel.mates[i].who ?? { number: i ? 7 : 8, skin: i ? '#f0c4a0' : '#5e3c22' }), { lift: m.lift, turn: m.turn })
+    men.push({ z: m.z, fn: () => man(ctx, C, m.x, m.z, m.pose, dress(K.us, g.cel.mates[i].who ?? { number: i ? 7 : 8, skin: i ? '#f0c4a0' : '#5e3c22' }), { lift: m.lift, turn: m.turn }) })
   }
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
+  men.sort((p, q) => q.z - p.z); for (const m of men) m.fn()
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'over')
   // where it's going, the line as it's drawn (the power's set: the line's only the spot and the shape)
   const dr = g.k.drawn
   if (dr && (!g.shot || g.t - g.shot.at < 300)) aimMark(ctx, C, dr.x, dr.y, { alpha: g.shot ? 1 - (g.t - g.shot.at) / 300 : 1 })

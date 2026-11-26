@@ -10,8 +10,8 @@
 // window, shot power the strike, finishing how clean the volley has to be.
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, GOOD, GOLD, particles, nudge, manOf, lightMode } from './kit.js'
 import { placeStamp } from './read.js'
-import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperShot, heldBall, parried, defenderBeaten, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
+import { camOf, P, staticStadium, stadium, net, goalFrame, ball, man, POSE, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, celebFx, celebLens, keeperBeaten, keeperShot, heldBall, parried, defenderBeaten, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads } from './soccer.js'
 import { promptY } from './soccerPads.js'
 
 export const how = {
@@ -202,7 +202,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (k.phase === 'power') { k.phase = 'done'; k.strikeAt = g.t }   // (no bar left filling once it's decided)
     g.res = kind; g.why = why; g.resAt = g.t; g.endAt = g.t + (wait || (now ? 380 : kind === 'goal' ? 120 : 60))
     if (kind === 'goal') {
-      g.cel = celebration(`${seed}|vol`, { sit: g.sit, from: { x: g.me.x, z: g.me.z }, toward: { x: clamp(g.me.x + (g.me.x > -1 ? 2 : -2), -3.2, 1.5), z: g.me.z + 3.4 }, back: 1, side: g.me.x > -1 ? 1 : -1, athletic: v >= 8, mates: [{ x: 3.6, z: -5.1 }, { x: -5.6, z: -8.1 }, { x: 2, z: -20 }] })   // (the camera's fixed, close behind him: he goes away from it, toward the corner of the box on his side)
+      g.cel = celebration(`${seed}|vol`, { sit: g.sit, from: { x: g.me.x, z: g.me.z }, toward: { x: clamp(g.me.x + (g.me.x > -1 ? 2 : -2), -3.2, 1.5), z: g.me.z + 3.4 }, back: 1, side: g.me.x > -1 ? 1 : -1, athletic: v >= 8, mates: [{ x: 3.6, z: -5.1 }, { x: -5.6, z: -8.1 }, { x: 9, z: -12 }] })   // (the camera's fixed, close behind him: he goes away from it, toward the corner of the box on his side)
     }
   }
   function finish() {
@@ -274,9 +274,11 @@ function keeperAt(g) {
 const EXTRAS = [{ x: 0.6, z: -6.2, side: 'them', n: 15, header: true }, { x: -3.4, z: -4.2, side: 'them', n: 3 }, { x: 3.6, z: -5.1, side: 'us', n: 5 }, { x: -5.6, z: -8.1, side: 'us', n: 10 }, { x: 4.4, z: -3.0, side: 'them', n: 2 }]
 export function draw(ctx, g, view) {
   g.vh = view.h; g.hud.y = promptY(view)
-  const C = camFor(view), K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
-  staticStadium(ctx, view, C, 'volley', { team, away, board: boardWords(g) })
-  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
+  const C0 = camFor(view), C = g.res === 'goal' && g.cel ? celebLens(C0, g.cel, g.t - g.endAt, view) : C0, K = kitsOf(view), team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
+  // (the lens moving in on the slide: the ground painted as it goes)
+  if (C !== C0) stadium(ctx, view, C, { team, away, board: boardWords(g), grain: true })
+  else staticStadium(ctx, view, C, 'volley', { team, away, board: boardWords(g) })
+  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, g.cel?.roar ?? 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
   const b = ballNow(g), s = g.shot
   const ripple = g.res === 'goal' ? { x: s.to.x, y: s.to.y, at: s.at + s.T + 80 } : null
   net(ctx, C, ripple, g.t)
@@ -306,8 +308,10 @@ export function draw(ctx, g, view) {
     list.push({ z: e.z, fn: () => man(ctx, C, e.x, e.z, pose, dress(e.side === 'us' ? K.us : K.them, { number: e.n, skin: e.n % 2 ? '#7a5030' : '#f0c4a0' }, { front: e.side === 'them' }), { lift }) })
   })
   if (b && b.z <= 0.05 && !b.held) list.push({ z: b.z - 0.02, fn: () => ball(ctx, C, b.x, b.y, b.z, b.spin) })
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
   list.sort((p, q) => q.z - p.z)
   for (const m of list) m.fn()
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'over')
   if (b?.held) ball(ctx, C, b.x, b.y, b.z, b.spin, 0, false)
   // where it's dropping, and the ring closing on the moment
   if ((g.phase === 'drop' || g.phase === 'wait') && !g.res && g.t >= g.startAt) {

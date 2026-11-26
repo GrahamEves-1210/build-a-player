@@ -14,7 +14,7 @@ import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, particles, nudge, manO
 import { placeStamp } from './read.js'
 import {
   camOf, stadium, net, goalFrame, ball, man, POSE, mix, runPose, dribblePose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, aimTo, celebration, scorerAt, mateAt, keeperBeaten, keeperShot, keeperDive, keeperLanded, heldBall, defenderBeaten,
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, aimTo, celebration, scorerAt, mateAt, celebFx, celebLens, keeperBeaten, keeperShot, keeperDive, keeperLanded, heldBall, defenderBeaten,
   strikerDenied, celebMs, skipOutro, POST, BAR, NET_D, P,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar,
 } from './soccer.js'
@@ -286,10 +286,10 @@ function mePose(g) {
 }
 export function draw(ctx, g, view) {
   g.vh = view.h; g.keysView = !!view.keys; g.lastView = { w: view.w, h: view.h }
-  const C = camOf(view, { x: g.camX, y: 5.8, z: g.camZ, F: 440, hzAt: 0.15 }), K = kitsOf(view)
+  const C0 = camOf(view, { x: g.camX, y: 5.8, z: g.camZ, F: 440, hzAt: 0.15 }), C = g.res === 'goal' && g.cel ? celebLens(C0, g.cel, g.t - g.endAt, view) : C0, K = kitsOf(view)
   const team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim]
   stadium(ctx, view, C, { team, away, board: boardWords(g) })
-  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt); flashes(ctx, C, view, g.t - g.popAt) }
+  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, g.cel?.roar ?? 2400); flashes(ctx, C, view, g.t - g.popAt) }
   const b = ballNow(g), s = g.shot
   const ripple = g.res === 'goal' ? (g.assist ? { x: g.rs * -1.6, y: 0.2, at: g.pass.at + PASS_MS + TAP_MS } : { x: s.to.x, y: s.to.y, at: s.at + s.T + 60 }) : null
   net(ctx, C, ripple, g.t)
@@ -332,6 +332,7 @@ export function draw(ctx, g, view) {
   men.push({ x: mp.x, z: mp.z, pose: mp.pose, look: dress(K.us, g.who.mate ?? { number: 7, skin: '#f0c4a0' }), o: { lift: mp.lift, turn: mp.turn } })
   men.push({ x: me.x, z: me.z, pose: me.pose, look: dress(K.us, g.who.me ?? { number: 9, skin: '#8d5a3b' }), o: { name: g.res ? null : g.who.me?.name, lift: me.lift, turn: me.turn } })
   for (const [i, ch] of g.chase.entries()) men.push({ x: ch.x, z: ch.z, pose: g.res === 'goal' ? defenderBeaten(i + 1, age, runPose(ch.cyc % 1, 0.4)) : runPose(ch.cyc % 1, g.res ? 0.4 : 1), look: dress(K.them, { number: i ? 4 : 3, skin: i ? '#c09060' : '#3a2a1e' }) })
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
   men.sort((a, c2) => c2.z - a.z)
   let ballDone = b.z > 0.05
   for (const mm of men) {
@@ -339,6 +340,7 @@ export function draw(ctx, g, view) {
     man(ctx, C, mm.x, mm.z, mm.pose, mm.look, mm.o ?? {})
   }
   if (!ballDone) ball(ctx, C, b.x, b.y, b.z, b.spin)
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'over')
   // the aim on the goal, the shot's bar, the controls
   const dr = g.k.drawn
   if (!g.res && !g.shot && !g.pass && dr) aimMark(ctx, C, dr.x, dr.y)

@@ -16,8 +16,8 @@
 // one, or a shootout, is pressure, and pressure shrinks the window and costs accuracy (composure fights it).
 import { byV, clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, particles, nudge, manOf, lightMode } from './kit.js'
 import { placeStamp } from './read.js'
-import { camOf, P, staticStadium, net, goalFrame, ball, man, POSE, keeperReady, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
-  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, keeperBeaten, keeperDive, keeperLanded, keeperUp, heldBall, parried, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
+import { camOf, P, staticStadium, stadium, net, goalFrame, ball, man, POSE, keeperReady, mix, runPose, kickPose, kitsOf, dress, boardWords, flashes, crowdUp, POST, BAR, NET_D,
+  shooter, strikeOf, shotAt, keeperSave, shotHud, aimMark, celebration, scorerAt, mateAt, celebFx, celebLens, keeperBeaten, keeperDive, keeperLanded, keeperUp, heldBall, parried, strikerDenied, celebMs, skipOutro, padCtl, padInput, padStick, drawPads,
   stroke, strokeDown, strokeMove, strokeUp, readStroke, drawnShot, strokeTrail, ghostStroke, drawnSoFar, padLayout } from './soccer.js'
 import { tip } from './soccerPads.js'
 
@@ -192,7 +192,7 @@ export function make({ v, seed, cast = null, situation = null }) {
     if (g.res) return
     g.res = kind; g.why = why; g.resAt = g.t; g.endAt = g.t + (kind === 'goal' ? 120 : 60)
     if (kind === 'goal') {
-      g.cel = celebration(`${seed}|pen`, { sit: g.sit, from: { x: PLANT.x, z: PLANT.z }, toward: { x: (Math.sign(g.shot.to.x) || 1) * 0.9, z: -9 }, side: (Math.sign(g.shot.to.x) || 1), athletic: v >= 8, mates: [{ x: -6, z: -14.5 }, { x: -3.5, z: -16 }, { x: 4.5, z: -15 }] })
+      g.cel = celebration(`${seed}|pen`, { sit: g.sit, from: { x: PLANT.x, z: PLANT.z }, toward: { x: (Math.sign(g.shot.to.x) || 1) * 2.4, z: -8.2 }, side: (Math.sign(g.shot.to.x) || 1), athletic: v >= 8, mates: [{ x: -10, z: -13 }, { x: 10, z: -14 }, { x: -8.5, z: -16 }] })
     }
   }
   function finish() {
@@ -296,10 +296,12 @@ function ballNow(g) {
 }
 export function draw(ctx, g, view) {
   g.vh = view.h; g.keysView = !!view.keys; g.lastView = { w: view.w, h: view.h }
-  const C = camFor(view), K = kitsOf(view)
+  const C0 = camFor(view), C = g.res === 'goal' && g.cel ? celebLens(C0, g.cel, g.t - g.endAt, view) : C0, K = kitsOf(view)
   const team = [view.colors.us, view.colors.trim], away = [view.colors.them, view.colors.themTrim ?? '#f4efe6']
-  staticStadium(ctx, view, C, 'pen', { team, away, board: boardWords(g) })
-  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
+  // (the lens moving in on the slide: the ground painted as it goes)
+  if (C !== C0) stadium(ctx, view, C, { team, away, board: boardWords(g), grain: true })
+  else staticStadium(ctx, view, C, 'pen', { team, away, board: boardWords(g) })
+  if (g.popAt != null && !view.empty) { crowdUp(ctx, C, team, g.t - g.popAt, g.cel?.roar ?? 2400, away); flashes(ctx, C, view, g.t - g.popAt) }
   const b = ballNow(g)
   const ripple = g.res === 'goal' ? { x: g.shot.to.x, y: g.shot.to.y, at: g.shot.at + g.shot.T + 80 } : null
   net(ctx, C, ripple, g.t)
@@ -320,8 +322,10 @@ export function draw(ctx, g, view) {
     list.push({ z: sp.z, fn: () => man(ctx, C, sp.x, sp.z, sp.pose, meLook, { name: g.who.me?.name, lift: sp.lift ?? 0 }) })
   }
   if (b.z <= 0.05 && !b.held) list.push({ z: b.z + 0.01, fn: () => ball(ctx, C, b.x, b.y, b.z, b.spin) })
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'under')
   list.sort((p, q) => q.z - p.z)
   for (const m of list) m.fn()
+  if (g.res === 'goal' && g.cel) celebFx(ctx, C, g.cel, g.t - g.endAt, 'over')
   if (b.held) ball(ctx, C, b.x, b.y, b.z, b.spin, 0, false)
   // the spot: where it's drawn to (or where the stick's pointing, on the keys)
   const dr = g.k.drawn

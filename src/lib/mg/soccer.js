@@ -531,7 +531,7 @@ export function ball(ctx, C, X, Y, Z, spin = 0, roll = 0, shadow = true) {
 //   elbows bend toward or away from the camera (a runner's arms: foreshortened, not out to the sides)
 //   rot the whole man turned about his hips (a dive, a slide, a flip) · head the head turned (-1..1) · tilt up + / down -
 //   face 0 set, 1 a roar, 2 gutted, 3 a finger on the lips · fl / fr a finger out of that hand (pointing)
-const DEF = { hy: 53, hx: 0, lean: 0, bow: 0, lx: -8, ly: 0, rx: 8, ry: 0, lk: 0, rk: 0, hlx: -16.5, hly: -47.5, hrx: 16.5, hry: -47.5, elbow: 0, el: 0, er: 0, fore: 0, rot: 0, head: 0, tilt: 0, face: 0, fl: 0, fr: 0, hip: 0, zl: 0, zr: 0 }
+const DEF = { hy: 53, hx: 0, lean: 0, bow: 0, lx: -8, ly: 0, rx: 8, ry: 0, lk: 0, rk: 0, hlx: -16.5, hly: -47.5, hrx: 16.5, hry: -47.5, elbow: 0, el: 0, er: 0, fore: 0, rot: 0, head: 0, tilt: 0, face: 0, fl: 0, fr: 0, hip: 0, zl: 0, zr: 0, kn: 0, palm: 0 }
 const pz = o => ({ ...DEF, ...o })
 export const mix = (a, b, f) => {
   const o = {}
@@ -546,7 +546,7 @@ export const POSE = {
   ready: pz({ hy: 50, bow: 0.1, lx: -11, rx: 11, lk: 0.2, rk: 0.2, hlx: -17, hly: -53, hrx: 17, hry: -53, el: 0.15, er: 0.15, fore: 0.6 }),
   // a keeper set: feet a bit wider than his shoulders, knees bent, his weight forward on the balls of his feet, the
   // hands out in front of him at his hips, palms to the ball, elbows in and soft
-  set: pz({ hy: 45, bow: 0.2, lx: -14, rx: 14, lk: 0.42, rk: 0.42, hlx: -17.5, hly: -51, hrx: 17.5, hry: -51, elbow: 0.2, fore: 0.75, tilt: 0.12 }),
+  set: pz({ hy: 45, bow: 0.2, lx: -14, rx: 14, lk: 0.42, rk: 0.42, hlx: -15.5, hly: -53, hrx: 15.5, hry: -53, elbow: 0, fore: 0.9, tilt: 0.12, palm: 1 }),
   hips: pz({ lx: -9, rx: 9, hlx: -11, hly: -57, hrx: 11, hry: -57, elbow: 1 }),
   knees: pz({ hy: 41, bow: 0.5, lx: -11, rx: 11, lk: 0.5, rk: 0.5, hlx: -10, hly: -32, hrx: 10, hry: -32, elbow: 0.4, tilt: -0.6 }),
   headHands: pz({ lx: -8, rx: 8, hlx: -5, hly: -103, hrx: 5, hry: -103, elbow: 1, tilt: 0.3 }),
@@ -760,7 +760,7 @@ function band(x, ax, ay, bx, by, at, r, col, w) {
   x.beginPath(); x.moveTo(px + nx * r, py + ny * r); x.lineTo(px - nx * r, py - ny * r); x.stroke(); x.lineCap = 'round'
 }
 // One leg, hip to boot. From behind, a heel kicked up shows the sole and its studs.
-function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k, z = 0) {
+function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k, z = 0, kn = 0) {
   bw *= 1 + 0.16 * z   // (nearer the camera, a touch bigger)
   // the thigh: full at the top under the shorts, the quad's swell, in to the knee; the calf's swell high on the back
   const qm = [lerp(H[0], K[0], 0.55) - out * 0.3, lerp(H[1], K[1], 0.55)]
@@ -773,9 +773,20 @@ function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k, z = 0) {
   const sockC = [st[0], st[1], 4.15 * bw, lerp(K[0], A[0], 0.4), lerp(K[1], A[1], 0.4), 4.1 * bw]
   // the boot: the heel from behind, the toe from the front; a heel flicked up behind him shows the sole; a foot
   // swung at the camera is all toe
-  const up = -A[1] - 2.6, sole = !front && k < -0.25 && up > 7, atUs = z > 0.5
-  const bx0 = A[0], by0 = A[1] + 0.4, bx1 = A[0] + out * (sole ? 0.4 : atUs ? 0.3 : 1.7), by1 = sole ? A[1] - 2.6 : atUs ? A[1] + 1.6 : A[1] + 3.3
+  // (kneeling, from behind: the shin comes at us along the grass and the sole's up, toward us)
+  const up = -A[1] - 2.6, kneelB = !front && kn > 0.5, sole = !front && ((k < -0.25 && up > 7) || kneelB), atUs = z > 0.5
+  const bx0 = A[0], by0 = A[1] + 0.4, bx1 = A[0] + out * (sole ? 0.4 : atUs ? 0.3 : 1.7), by1 = kneelB ? A[1] + 2.8 : sole ? A[1] - 2.6 : atUs ? A[1] + 1.6 : A[1] + lerp(3.3, -1.5, kn)
   const bt = atUs ? [bx0, by0, 3.7 * bw, bx1, by1, 3.5 * bw] : [bx0, by0, 3.2, bx1, by1, 2.9]
+  // (kneeling, from the front: the shin and the boot go back behind the knee, so they're painted first, and the thigh
+  // and the knee over them)
+  const behind = front && kn > 0.05
+  if (behind) {
+    inkT(x, [calf, shin, sock, sockC, bt]); fillT(x, [shin, calf], skin); fillT(x, [sock, sockC], L.socks)
+    band(x, K[0], K[1], A[0], A[1], 0.235, 4.05 * bw, L.trim, 1.9); fillT(x, [bt], boot)
+    inkT(x, [thigh, thigh2]); fillT(x, [thigh, thigh2], skin)
+    x.strokeStyle = tone(skin, 0.7); x.lineWidth = 0.7; x.beginPath(); x.arc(K[0] - out * 0.3, K[1] - 0.4, 2.2, Math.PI * 0.15, Math.PI * 0.85); x.stroke()
+    return
+  }
   inkT(x, [thigh, thigh2, calf, shin, sock, sockC, bt])
   fillT(x, [thigh, thigh2, shin, calf], skin)
   // the knee: a soft crease, not a joint
@@ -793,9 +804,9 @@ function paintLeg(x, H, K, A, out, L, skin, bw, boot, front, k, z = 0) {
   } else if (atUs) {
     // the boot swung up at us: its sole and studs to the camera
     const cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2 + 0.4
-    x.fillStyle = INK; x.beginPath(); x.ellipse(cx, cy, 3.2 * bw + OL, 4.3 * bw + OL, out * 0.25, 0, 6.2832); x.fill()
-    x.fillStyle = boot === '#15181c' ? '#3a3f45' : tone(boot, 0.6); x.beginPath(); x.ellipse(cx, cy, 3.2 * bw, 4.3 * bw, out * 0.25, 0, 6.2832); x.fill()
-    x.fillStyle = '#d9dbd6'; for (const [sx, sy] of [[-1.2, -2.4], [1.2, -2.4], [-1.3, -0.4], [1.3, -0.4], [-0.8, 2.3], [0.8, 2.3]]) { x.beginPath(); x.arc(cx + sx * bw, cy + sy * bw, 0.55, 0, 6.2832); x.fill() }
+    x.fillStyle = INK; x.beginPath(); x.ellipse(cx, cy, 4.1 * bw + OL, 5.0 * bw + OL, out * 0.25, 0, 6.2832); x.fill()
+    x.fillStyle = boot === '#15181c' ? '#3a3f45' : tone(boot, 0.6); x.beginPath(); x.ellipse(cx, cy, 4.1 * bw, 5.0 * bw, out * 0.25, 0, 6.2832); x.fill()
+    x.fillStyle = '#d9dbd6'; for (const [sx, sy] of [[-1.5, -2.8], [1.5, -2.8], [-1.6, -0.5], [1.6, -0.5], [-1, 2.6], [1, 2.6]]) { x.beginPath(); x.arc(cx + sx * bw, cy + sy * bw, 0.55, 0, 6.2832); x.fill() }
   } else {
     // the sole's edge, and a flash of colour at the heel
     x.fillStyle = boot === '#15181c' ? '#f2f2ee' : '#15181c'; x.beginPath(); x.ellipse(bx1, by1 + 2.1, 2.6, 0.7, 0, 0, 6.2832); x.fill()
@@ -831,6 +842,15 @@ export function paintMan(x, o, L) {
   const atUs = (A, H, z, out) => { if (z <= 0) return; A[0] = lerp(A[0], H[0] - out * 3.5, z * 0.75); A[1] = lerp(A[1], H[1] + 6, z * 0.85) }
   atUs(lA, lH, zL, -1); atUs(rA, rH, zR, 1)
   const lK = knee(lH, lA, o.lk ?? 0, -1, zL), rK = knee(rH, rA, o.rk ?? 0, 1, zR)
+  // (on his knees (kn): the knees on the grass, the shins flat on it behind him: from behind they come at us, the
+  // soles up; from the front they go away behind his thighs, out of sight)
+  const kn = clamp(o.kn ?? 0, 0, 1)
+  if (kn > 0) for (const [H, K, A, out] of [[lH, lK, lA, -1], [rH, rK, rA, 1]]) {
+    const gx = lerp(K[0], H[0] + out * 2.4, kn), gy = lerp(K[1], -2.2, kn)
+    const tx = gx - H[0], ty = gy - H[1], tl = Math.hypot(tx, ty), kx = tl > TH ? H[0] + tx / tl * TH : gx, ky = tl > TH ? H[1] + ty / tl * TH : gy
+    K[0] = kx; K[1] = ky
+    A[0] = lerp(A[0], kx + out * (front ? 1.2 : 1.6), kn); A[1] = lerp(A[1], ky + (front ? -4.5 : 6.2), kn)
+  }
   const elL = clamp((o.elbow ?? 0) + (o.el ?? 0), 0, 1), elR = clamp((o.elbow ?? 0) + (o.er ?? 0), 0, 1)
   const pole = (S, hy, out, el) => { const up = clamp((S[1] - hy) / 28, 0, 1); return [out * lerp(0.3 + 0.5 * up, 1, el), lerp(0.95 - 0.55 * up, 0.1, el)] }
   const lp = pole(lS, o.hly, -1, elL), rp = pole(rS, o.hry, 1, elR)
@@ -853,9 +873,15 @@ export function paintMan(x, o, L) {
   const boot = L.boot ?? BOOTS[hashOf(`${L.number}|${L.skin}`) % BOOTS.length]
   const legs = [[lH, lK, lA, -1, o.lk ?? 0, zL], [rH, rK, rA, 1, o.rk ?? 0, zR]].sort((p, q) => (front ? p[4] + p[5] * 2 - q[4] - q[5] * 2 : q[4] - p[4]))
   const later = []
-  for (const g of legs) { if (front && (g[4] > 0.45 || g[5] > 0.3)) later.push(g); else paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5]) }
+  for (const g of legs) { if (front && ((g[4] > 0.45 && g[2][1] < -7) || g[5] > 0.3) && kn < 0.3) later.push(g); else paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], kn) }
   // the body: the shorts, the shirt and the sleeves, inked as one
-  const shortsL = [lH, rH].map((H, i) => { const K = i ? rK : lK; return [lerp(H[0], K[0], 0.08), lerp(H[1], K[1], 0.08), 5.6 * bw, lerp(H[0], K[0], 0.5), lerp(H[1], K[1], 0.5), 5.9 * bw, K] })
+  // (a thigh driven at us or away from us is short on the screen; the shorts still hang off it, so the leg of them goes
+  // on down over the top of it and isn't balled up at his hip)
+  const shortsL = [lH, rH].map((H, i) => {
+    const K = i ? rK : lK, f = clamp(1 - Math.hypot(K[0] - H[0], K[1] - H[1]) / (TH * 0.8), 0, 1), out = i ? 1 : -1
+    const ex = lerp(lerp(H[0], K[0], 0.5), H[0] + out * 0.6, f), ey = lerp(lerp(H[1], K[1], 0.5), H[1] + 10, f)
+    return [lerp(H[0], ex, 0.16), lerp(H[1], ey, 0.16), 5.6 * bw, ex, ey, 5.9 * bw, K]
+  })
   const waist = d => {
     const w0 = 6.6 * bw + d, w1 = HIPW + 4.6 * bw + d, nx = -sl, ny = cl
     x.moveTo(hipX - cl * w0 - nx * (5 + d), hipY - sl * w0 - ny * (5 + d)); x.lineTo(hipX + cl * w0 - nx * (5 + d), hipY + sl * w0 - ny * (5 + d))
@@ -880,9 +906,13 @@ export function paintMan(x, o, L) {
   }
   const sleeve = a => { const m = [lerp(a.sx, a.jx, SLEEVE[2]), lerp(a.sy, a.jy, SLEEVE[2])]; return [a.sx, a.sy, SLEEVE[0], m[0], m[1], SLEEVE[1], m] }
   const sides = arms.filter(r => r.at === 'side'), sleeves = sides.map(r => sleeve(r.a))
+  // (the armpit: the shirt's side carried on up into the sleeve, so a sleeve grows out of the shirt and isn't a tube
+  // stuck on its shoulder, and there's no notch of ink where they meet)
+  const tp = (X, Y) => [sxx + cl * X - sl * Y, syy + sl * X + cl * Y]
+  const webs = sides.map(r => { const S = r.out < 0 ? lS : rS, hang = clamp((r.a.jy - r.a.sy) / (Math.hypot(r.a.jx - r.a.sx, r.a.jy - r.a.sy) || 1), 0, 1), b = tp(r.out * (wa - 2.2), lerp(4.5, 12.5, smooth(hang * 1.15))), m = [lerp(r.a.sx, r.a.jx, 0.3), lerp(r.a.sy, r.a.jy, 0.3)]; return [[b[0], b[1], 3.2, m[0], m[1], 3.9], [b[0], b[1], 3.2, S[0], S[1], 4.2]] }).flat()
   x.fillStyle = INK
   x.beginPath(); waist(OL); x.fill()
-  inkT(x, shortsL.concat(sleeves))
+  inkT(x, shortsL.concat(sleeves, webs))
   x.save(); x.translate(sxx, syy); x.rotate(lean); x.beginPath(); shirt(); x.strokeStyle = INK; x.lineWidth = OL * 2; x.stroke(); x.fill(); x.restore()
   // the arms at his sides, under the sleeves' edges
   for (const r of sides) paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'bare')
@@ -890,6 +920,10 @@ export function paintMan(x, o, L) {
   fillT(x, shortsL, L.shorts)
   x.beginPath(); waist(0); x.fillStyle = L.shorts; x.fill()
   for (const s of shortsL) band(x, s[0], s[1], s[3], s[4], 0.93, 5.7 * bw, tone(L.shorts, 0.66), 0.9)
+  // the sleeves, under the shirt's own colour: the shirt goes over their tops (the far one in the shirt's shade), the
+  // cuff in the trim (a keeper's runs on down to the glove)
+  sides.forEach((r, i) => { const c = r.out > 0 ? tone(L.shirt, 0.8) : L.shirt; fillT(x, [sleeves[i]], c); fillT(x, webs.slice(i * 2, i * 2 + 2), c, false) })
+  if (!L.sleeves) for (const s of sleeves) band(x, s[0], s[1], s[3], s[4], 0.94, SLEEVE[1] - 0.2, L.trim, 1.3)
   // the shirt: fitted, in at the waist, hanging a touch loose over the shorts; the far side in shade
   x.save(); x.translate(sxx, syy); x.rotate(lean)
   const darkShirt = lumOf(L.shirt) < DARK
@@ -905,9 +939,6 @@ export function paintMan(x, o, L) {
   // where the shirt hangs over the shorts
   x.strokeStyle = INK; x.lineWidth = OL * 0.9; x.beginPath(); x.moveTo(-wh, T + 2.6); x.quadraticCurveTo(0, T + 3.7, wh, T + 2.6); x.stroke()
   x.restore()
-  // the sleeves over the arms at his sides, the cuff in the trim (a keeper's runs on down to the glove)
-  fillT(x, sleeves, L.shirt)
-  if (!L.sleeves) for (const s of sleeves) band(x, s[0], s[1], s[3], s[4], 0.94, SLEEVE[1] - 0.2, L.trim, 1.3)
   // the collar and the number
   x.save(); x.translate(sxx, syy); x.rotate(lean)
   if (L.number != null && bow < 0.55) {
@@ -921,7 +952,7 @@ export function paintMan(x, o, L) {
   }
   x.restore()
   // a knee coming up toward us, from the front, over the shorts
-  for (const g of later) paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5])
+  for (const g of later) paintLeg(x, g[0], g[1], g[2], g[3], L, skin, bw, boot, front, g[4], g[5], kn)
   // the arms across his front, the head, then any hand up at the head
   for (const r of arms) if (r.at === 'front') paintArm(x, r.a, r.out, L, skin, handR, gk, o, front, 'full')
   const collar = () => {
@@ -947,7 +978,12 @@ export function paintMan(x, o, L) {
 const SLEEVE = [5.0, 4.3, 0.56]   // a short sleeve: at the shoulder, at its cuff, how far down the upper arm
 function paintArm(x, a, out, L, skin, handR, gk, o, front, part = 'full') {
   const col = L.sleeves ? L.shirt : skin
-  const dx = a.ex - a.jx, dy = a.ey - a.jy, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl
+  const dx = a.ex - a.jx, dy = a.ey - a.jy, dl = Math.hypot(dx, dy) || 1
+  // (a keeper's glove turned up, palm to the ball: the fingers up whichever way the forearm goes)
+  const pm = gk ? clamp(o.palm ?? 0, 0, 1) : 0
+  const ux = dx / dl, uy = dy / dl
+  let gx = ux, gy = uy
+  if (pm > 0) { const vx = lerp(ux, out * 0.2, pm), vy = lerp(uy, -1, pm), vl = Math.hypot(vx, vy) || 1; gx = vx / vl; gy = vy / vl }
   // the upper arm: the deltoid round the shoulder, the biceps, in to the elbow; the forearm: full just below the elbow,
   // tapering to the wrist. Not a stick: the shape is what reads at 60 px
   const pu = [lerp(a.sx, a.jx, 0.42), lerp(a.sy, a.jy, 0.42)], pf = [lerp(a.jx, a.ex, 0.3), lerp(a.jy, a.ey, 0.3)]
@@ -955,7 +991,7 @@ function paintArm(x, a, out, L, skin, handR, gk, o, front, part = 'full') {
   const lower = [[a.sx, a.sy, 4.3, pu[0], pu[1], 3.75], [pu[0], pu[1], 3.75, a.jx, a.jy, 2.75], [a.jx, a.jy, 2.8, pf[0], pf[1], 3.2], [pf[0], pf[1], 3.2, wr[0], wr[1], 2.0]]
   const top = [a.sx, a.sy, SLEEVE[0], lerp(a.sx, a.jx, SLEEVE[2]), lerp(a.sy, a.jy, SLEEVE[2]), SLEEVE[1]]
   // the hand: a glove (a big mitt with its cuff) or a hand, flat along the forearm, wider at the knuckles than the wrist
-  const hand = gk ? [a.ex - ux * 1.2, a.ey - uy * 1.2, 3.3, a.ex + ux * 2.4, a.ey + uy * 2.4, 3.9] : [wr[0], wr[1], 2.05, a.ex + ux * 1.7, a.ey + uy * 1.7, 2.45]
+  const hand = gk ? [a.ex - gx * lerp(1.2, 0.2, pm), a.ey - gy * lerp(1.2, 0.2, pm), 3.3, a.ex + gx * lerp(2.4, 3.2, pm), a.ey + gy * lerp(2.4, 3.2, pm), 3.9] : [wr[0], wr[1], 2.05, a.ex + ux * 1.7, a.ey + uy * 1.7, 2.45]
   // the thumb, on the inside of the hand (from the front; from behind it's round the far side)
   const nx = -uy, ny = ux, sd = nx * -out >= 0 ? 1 : -1
   const thumb = !gk && front ? [a.ex - ux * 0.3 + nx * sd * 1.9, a.ey - uy * 0.3 + ny * sd * 1.9, 1.0, a.ex + ux * 1.4 + nx * sd * 2.1, a.ey + uy * 1.4 + ny * sd * 2.1, 0.85] : null
@@ -972,9 +1008,12 @@ function paintArm(x, a, out, L, skin, handR, gk, o, front, part = 'full') {
     fillT(x, [hand], L.gloves)
     // the strap at the wrist and the fingers' seams
     band(x, hand[0], hand[1], hand[3], hand[4], 0.12, 3.4, tone(L.gloves, 0.55), 1.6)
+    const nx = -gy, ny = gx
+    // (turned to us: the palm's grip, a shade darker, and the thumb out along its inside)
+    if (pm > 0.4 && front) { x.fillStyle = tone(L.gloves, 0.84); x.beginPath(); x.ellipse(a.ex + gx * 1.8, a.ey + gy * 1.8, 2.5, 2.9, Math.atan2(gy, gx) + Math.PI / 2, 0, 6.2832); x.fill() }
     x.strokeStyle = tone(L.gloves, 0.62); x.lineWidth = 0.55
-    const nx = -uy, ny = ux
-    x.beginPath(); for (const s of [-1.3, 0, 1.3]) { x.moveTo(a.ex + ux * 3.2 + nx * s, a.ey + uy * 3.2 + ny * s); x.lineTo(a.ex + ux * 5.6 + nx * s * 1.1, a.ey + uy * 5.6 + ny * s * 1.1) } x.stroke()
+    const f0 = lerp(3.2, 3.6, pm), f1 = lerp(5.6, 6.5, pm)
+    x.beginPath(); for (const s of [-1.3, 0, 1.3]) { x.moveTo(a.ex + gx * f0 + nx * s, a.ey + gy * f0 + ny * s); x.lineTo(a.ex + gx * f1 + nx * s * 1.1, a.ey + gy * f1 + ny * s * 1.1) } x.stroke()
   } else fillT(x, [hand], skin)
   const finger = out < 0 ? o.fl : o.fr
   if (finger > 0.5) {
@@ -1041,9 +1080,9 @@ function paintHead(x, sxx, syy, hx, hy, skin, skinD, hair, cut, front, o, tilt, 
     // from the front: the hairline across the forehead, down to the sideburns at the ears
     const line = hy - 3.4 + up * 1.2, sb = cut === 'fade' || cut === 'buzz' ? hy - 1.6 : hy + 0.6
     x.fillStyle = hair; x.globalAlpha = cut === 'buzz' ? 0.7 : 1
-    x.beginPath(); x.moveTo(hx - SK - 1, hy - 12); x.lineTo(hx + SK + 1, hy - 12); x.lineTo(hx + SK + 1, sb); x.lineTo(hx + SK - 1.3, sb)
+    x.beginPath(); x.moveTo(hx - SK - 1, hy - 12); x.lineTo(hx + SK + 1, hy - 12); x.lineTo(hx + SK + 1, sb); x.quadraticCurveTo(hx + SK - 0.7, sb + 0.3, hx + SK - 1.35, sb - 1.4)
     x.lineTo(hx + SK - 1.5, line + 1.2); x.quadraticCurveTo(hx + 2.4, line - 0.9, hx - 0.2, line + 0.1); x.quadraticCurveTo(hx - 3.2, line - 0.6, hx - SK + 1.5, line + 1.0)
-    x.lineTo(hx - SK + 1.3, sb); x.lineTo(hx - SK - 1, sb); x.closePath(); x.fill()
+    x.lineTo(hx - SK + 1.35, sb - 1.4); x.quadraticCurveTo(hx - SK + 0.7, sb + 0.3, hx - SK - 1, sb); x.closePath(); x.fill()
     x.globalAlpha = 1
     if (cut === 'fade') { x.globalAlpha = 0.4; x.fillRect(hx - SK - 1, sb, 2.6, 3.2); x.fillRect(hx + SK - 1.6, sb, 2.6, 3.2); x.globalAlpha = 1 }
   }
@@ -1100,7 +1139,7 @@ export function man(ctx, C, X, Z, pose, look, o = {}) {
     ctx.fillStyle = `rgba(2,10,6,${(0.42 * clamp(1 - lift / 2, 0.3, 1)).toFixed(3)})`
     ctx.beginPath(); ctx.ellipse(p.x + 2 * k, p.y + 0.5 * k, (lie ? 44 : 15) * k * clamp(1 - lift / 3, 0.5, 1), 3.6 * k, 0, 0, 6.2832); ctx.fill()
   }
-  const turn = o.turn ?? 0, sxk = Math.max(0.16, Math.abs(Math.cos(turn * Math.PI)))
+  const turn = o.turn ?? 0, sxk = Math.max(0.3, Math.abs(Math.cos(turn * Math.PI)))
   const L = turn > 0.5 ? { ...look, front: !look.front } : look
   ctx.save(); ctx.translate(p.x, p.y - lift * p.s); ctx.scale(k * sxk, k)
   paintMan(ctx, o.still ? pose : idlePose(o.t ?? now(), pose, X * 3.1 + Z * 1.7, lift), L)
@@ -1117,11 +1156,14 @@ export function scout(ctx, C, X, Z, look, t = 0, o = {}) {
 }
 
 // ── The moments after: what players really do ──────────────────────────────
-// A goal: the scorer peels away (a knee slide toward the corner, the airplane, the jump-turn landing with his arms
-// out, kissing the badge, pointing to the sky, a finger to the lips, off to the bench, a backflip if he's built for
-// it, or a plain run with a fist pumping), and his teammates chase him down: one jumps on his back, one ruffles his
-// hair, one points at him. The beaten keeper face-down or sat with his hands on his knees, then picking the ball out
-// of the net; their defenders hands on hips, on knees, or having a go at a teammate. Nobody beaten ever celebrates.
+// A goal: the knee slide, every time. The scorer peels away toward the corner and the crowd, his arms opening as he
+// goes; a last long stride and he drops on to both knees at full pace, shins flat on the grass, and slides on, leaning
+// back with his arms flung wide, the turf and the wet spraying off his knees and a skid left behind him. As he slows
+// the chest comes out, the head goes back, the fists come up and he roars. His teammates pile in: the first down on his
+// knees beside him with an arm round him, the next over the top of him, the last jumping on the lot. How much the goal
+// means (goalMood) only makes it bigger: a longer slide, more of them in on him, the whole ground up.
+// The beaten keeper face-down or sat with his hands on his knees, then picking the ball out of the net; their defenders
+// hands on hips, on knees, or having a go at a teammate. Nobody beaten ever celebrates.
 // A save: the keeper roars and pumps his fist; the striker's hands go to his head. A missed penalty: the keeper's
 // celebration, the taker's head drops. About 2.6 s, then the card (skippable; short under Reduce Motion / low power).
 export const CELEB_MS = 2600
@@ -1134,14 +1176,9 @@ export function skipOutro(g, a) {
   g.outro = Math.min(g.outro ?? 2400, g.t - g.doneAt + 90)
   return true
 }
-const KINDS = ['slide', 'plane', 'jumpturn', 'badge', 'sky', 'shush', 'bench', 'fist', 'slide', 'jumpturn', 'plane', 'flip']
-// The goal's weight in the game picks the celebration. A late winner or a late equaliser: the big ones (the knee
-// slide, the airplane, off to the bench, the backflip) and everybody on him. A goal that puts it out of reach: the
-// quiet ones (a fist, the badge, a point to the sky). A goal when they're still behind after it: none at all, he turns
-// and runs back to halfway, waving the others back with him for the restart.
-const KINDS_BIG = ['slide', 'plane', 'bench', 'jumpturn', 'slide', 'flip']
-const KINDS_CALM = ['fist', 'badge', 'sky', 'fist', 'shush', 'badge']
-// sit: { mine, opp, minute } before the goal → 'back' (still behind), 'big', 'calm', or null (any)
+// How much it means: 'big' a late winner or a late equaliser, 'calm' one that puts it out of reach, 'back' one when
+// they're still behind after it (the slide's short and he's straight up for the restart), null anything else.
+// sit: { mine, opp, minute } before the goal
 export function goalMood(sit) {
   if (!sit || sit.mine == null || sit.opp == null || sit.shootout) return null
   const after = sit.mine + 1 - sit.opp, late = (sit.minute ?? sit.clock ?? 90) >= 75
@@ -1149,140 +1186,199 @@ export function goalMood(sit) {
   if (after <= 1) return late ? 'big' : null
   return after >= 3 ? 'calm' : null
 }
-// seed: anything (the same goal always gets the same one). o: { from {x, z}, side (+1: he peels off to the screen's
-// right), athletic (a backflip's allowed), mates [{x, z, who}], toward {x, z} (where he runs, else off to the side), kind,
-// back (how far back up the pitch he can jog with no celebration, when the camera's close behind him: 3.4 m) }
+// len: the slide's length; mates: how many get to him; roar: how long the home end's up (ms)
+const SIZES = { big: { len: 1.25, mates: 3, roar: 3200 }, calm: { len: 0.8, mates: 2, roar: 1900 }, back: { len: 0.7, mates: 1, roar: 1500 } }
+const SIZE0 = { len: 1, mates: 3, roar: 2400 }
+const ACC = 0.32   // the part of his run he spends getting up to full pace
+// seed: anything (the same goal always plays the same way). o: { from {x, z}, toward {x, z} (where he runs to, and
+// drops: the slide carries on past it the same way), side (+1: he peels off to the screen's right, when there's no
+// toward), mates [{x, z, who}], sit (or mood) }
 export function celebration(seed, o = {}) {
   let h = 0; for (const ch of String(seed)) h = (h * 33 + ch.charCodeAt(0)) % 1000003
-  const mood = o.mood ?? goalMood(o.sit)
-  const list = mood === 'big' ? KINDS_BIG : mood === 'calm' ? KINDS_CALM : KINDS
-  let kind = o.kind ?? (mood === 'back' ? 'restart' : list[h % list.length])
-  if (kind === 'flip' && !o.athletic) kind = mood === 'big' ? 'slide' : 'fist'
+  const mood = o.mood !== undefined ? o.mood : goalMood(o.sit), sz = SIZES[mood] ?? SIZE0, pace = lightMode() ? 0.6 : 1
   const side = o.side ?? (h % 2 ? 1 : -1), from = o.from ?? { x: 0, z: -10 }
-  const dist = kind === 'bench' ? 9 : kind === 'plane' ? 7.5 : 6
-  // (no celebration: back up the pitch, toward halfway, whatever the game asked for)
-  const to = kind === 'restart' ? { x: from.x * 0.8, z: from.z - (o.back ?? 3.4) } : o.toward ?? { x: from.x + side * dist * 0.78, z: from.z - dist * 0.45 }
-  const roles = ['back', 'ruffle', 'point']
-  const mates = (o.mates ?? []).map((m, i) => ({ ...m, role: kind === 'restart' ? 'jog' : roles[(i + (h >> 3)) % 3], delay: 260 + i * 190 }))
-  return { kind, mood, side, from, to, mates, seed: h, keeper: h % 3 === 0 ? 'sit' : 'down', run: kind === 'restart' ? 2300 : kind === 'bench' ? 1900 : kind === 'plane' ? 1500 : 950 }
+  let to = o.toward ?? { x: from.x + side * 4.6, z: from.z - 2.6 }
+  let dx = to.x - from.x, dz = to.z - from.z, dl = Math.hypot(dx, dz)
+  if (dl < 0.05) { dx = side; dz = 0; dl = 1 }
+  const ux = dx / dl, uz = dz / dl
+  // (he needs a run at it: a few strides at least)
+  if (dl < 3) { dl = 3; to = { x: from.x + ux * 3, z: from.z + uz * 3 } }
+  const run = clamp((dl / 6.6) * 1000 * (1 + ACC / 2), 560, 1150) * pace
+  const v = dl / (run / 1000) / (1 - ACC / 2)                  // his pace as he goes down (m/s)
+  const len = clamp(v * 0.4 * sz.len, 1.4, 4.2)                 // the slide
+  const S = clamp((2 * len) / v * 1000, 520, 1200) * pace      // its ms, slowing all the way from his pace to nothing
+  const end = { x: to.x + ux * len, z: to.z + uz * len }
+  // he turns to the lens if he's coming toward it (or across it): a slide is to the crowd and the cameras
+  const face = uz < 0.35
+  // the pile: the nearest one in first, on his knees beside him; the next over the top of him; the last jumps on
+  const list = (o.mates ?? []).slice(0, sz.mates)
+  const order = list.map((m, i) => [i, Math.hypot(m.x - end.x, m.z - end.z)]).sort((p, q) => p[1] - q[1]).map(p => p[0])
+  const stop = run + S
+  const mates = list.map((m, i) => {
+    const rank = order.indexOf(i), role = ['kneel', 'over', 'jump'][rank], sd = Math.sign(m.x - end.x) || (rank % 2 ? -side : side)
+    const t = role === 'kneel' ? { x: end.x + sd * 0.5, z: end.z + 0.08 } : role === 'over' ? { x: end.x - sd * 0.12, z: end.z + 0.42 } : { x: end.x + sd * 0.18, z: end.z + 0.3 }
+    // (one coming from nearer the lens than the slide would run in across it, in front of the moment: he swings out
+    // wide and comes in from the side)
+    const wide = m.z < end.z - 1.2, q = wide ? { x: end.x + sd * Math.max(3.4, Math.abs(m.x - end.x)), z: lerp(m.z, t.z, 0.8) } : { x: (m.x + t.x) / 2, z: (m.z + t.z) / 2 }
+    const d = Math.hypot(q.x - m.x, q.z - m.z) + Math.hypot(t.x - q.x, t.z - q.z)
+    // (each in when he gets there: none of them stood about waiting for the slide to finish)
+    const arrive = Math.max(stop + (rank * 260 - 140) * pace, Math.min((d / 9.2) * 1000 * 1.2, stop + (rank * 260 + 450) * pace))
+    return { ...m, role, sd, tx: t.x, tz: t.z, qx: q.x, qz: q.z, arrive, delay: 0 }
+  })
+  return { kind: 'slide', mood, side, from, to, end, ux, uz, len, v, S, run, stop, face, pace, mates, roar: sz.roar, seed: h, keeper: h % 3 === 0 ? 'sit' : 'down' }
 }
 const ease = f => 1 - (1 - f) * (1 - f)
-// where the scorer is and what he's doing, age ms after the goal: { x, z, pose, lift, turn, rot }
+// the slide, as a man: on both knees, the shins flat on the grass behind him (kn), leaning back (bow), arms out wide
+const KNEE_SLIDE = pz({ hy: 27, bow: 0.24, lx: -11, ly: 0, rx: 11, ry: 0, lk: -1, rk: -1, kn: 1, hlx: -45, hly: -80, hrx: 45, hry: -80, elbow: 0, el: 0, er: 0, fore: 0, face: 1, tilt: 0.85 })
+// stopped: chest out, the head back, both fists up by his head, roaring
+const KNEE_ROAR = pz({ ...KNEE_SLIDE, hy: 28.5, bow: 0.18, hlx: -23, hly: -80, hrx: 23, hry: -80, elbow: 1, fore: 0, tilt: 1 })
+POSE.kneeSlide = KNEE_SLIDE; POSE.kneeRoar = KNEE_ROAR
+// how far along his line he is at age ms (the run, then the slide)
+function slideDist(c, a) {
+  const L = Math.hypot(c.to.x - c.from.x, c.to.z - c.from.z)
+  if (a < c.run) { const f = a / c.run; return (L * (f < ACC ? (f * f) / (2 * ACC) : f - ACC / 2)) / (1 - ACC / 2) }
+  const u = clamp((a - c.run) / c.S, 0, 1)
+  return L + c.len * (1 - (1 - u) * (1 - u))
+}
+// where the scorer is and what he's doing, age ms after the goal: { x, z, pose, lift, turn, low }
 export function scorerAt(c, age) {
-  const a = Math.max(0, age), R = c.run, f = clamp(a / R, 0, 1)
-  // the run off: quick away, easing off at the end (the airplane swings round in an arc)
-  const bend = c.kind === 'plane' ? Math.sin(f * Math.PI) * 1.6 * c.side : 0
-  let x = lerp(c.from.x, c.to.x, ease(f)), z = lerp(c.from.z, c.to.z, ease(f)) - bend
-  const phase = a / 255
-  const run = (k = 1, o = null) => runPose(phase, k * (1 - 0.6 * clamp((f - 0.85) / 0.15, 0, 1)), null, o)
-  let pose = run(), lift = 0, turn = 0
-  switch (c.kind) {
-    case 'slide': {
-      // the run, arms going wide as he picks his spot; a last long stride and down on to his knees, leaning back,
-      // arms out, carried on along the grass; when he stops, both fists up and a roar
-      const s = prog(a, R - 140, R + 650)
-      if (a < R - 140) pose = run(1, { arms: a > 380 ? 'wide' : 'pump' })
-      else {
-        const dx = c.to.x - c.from.x, dz = c.to.z - c.from.z, dl = Math.hypot(dx, dz) || 1, g = 1 - (1 - s) * (1 - s) * (1 - s)
-        x += (dx / dl) * 2.6 * g; z += (dz / dl) * 2.6 * g
-        const drop = smoothS(prog(a, R - 140, R + 60))
-        pose = drop < 1 ? mix(run(1, { arms: 'wide' }), { ...POSE.slide, hy: 30 }, drop) : mix(POSE.slide, POSE.slideRoar, smoothS(prog(a, R + 700, R + 950)))
-        // (the knees hit the grass and he sinks into the slide)
-        if (drop >= 1) pose = { ...pose, hy: pose.hy - Math.sin(prog(a, R + 60, R + 260) * Math.PI) * 2.5, lean: Math.sin(a / 160) * 0.02 }
-      }
-      break
-    }
-    case 'plane':
-      // the airplane: arms out, banking one way then the other as he swings round in his arc, then a glide to a stop
-      if (a < R) { const bank = Math.sin(f * Math.PI * 2.2) * 0.22; pose = run(1, { arms: 'out', lean: -c.side * 0.18 * Math.sin(f * Math.PI) + bank }); pose.hly += bank * 26; pose.hry -= bank * 26 }
-      else pose = mix(run(0.4, { arms: 'out' }), { ...POSE.plane, lean: Math.sin((a - R) / 300) * 0.05 * (1 - prog(a, R, R + 900)) }, ease(prog(a, R, R + 300)))
-      break
-    case 'jumpturn': {
-      // stops, a jump, spins round in the air and lands facing the crowd, legs wide, arms out and down, chest out
-      const up = prog(a, R + 150, R + 560)
-      if (a < R + 150) pose = a < R ? run() : mix(run(0.3), { ...POSE.ready, hy: 44, lk: 0.5, rk: 0.5, hlx: -20, hly: -60, hrx: 20, hry: -60 }, ease(prog(a, R, R + 150)))
-      else if (up < 1) { lift = Math.sin(up * Math.PI) * 0.62; turn = ease(up); pose = mix(POSE.jump, { ...POSE.jump, hlx: -26, hly: -104, hrx: 26, hry: -104 }, Math.sin(up * Math.PI)) }
-      else { turn = 1; const l = prog(a, R + 560, R + 820); pose = mix({ ...POSE.landed, hy: 38, lk: 0.6, rk: 0.6 }, POSE.landed, ease(l)) }
-      break
-    }
-    case 'badge': {
-      // turns to the camera on the run; takes the shirt by the crest and pulls it out, up to his lips, holds it there,
-      // then lets it go and his arms open out to the crowd
-      if (a < R - 100) { pose = run(); break }
-      turn = ease(prog(a, R - 100, R + 220))
-      const walk = runPose(a / 340, 0.3)
-      if (a < R + 260) pose = mix(walk, POSE.grab, ease(prog(a, R, R + 260)))
-      else if (a < R + 1150) pose = mix(POSE.grab, POSE.kiss, ease(prog(a, R + 260, R + 480)))
-      else pose = mix(POSE.kiss, { ...POSE.armsOut, hly: -70, hry: -70, face: 1, tilt: 0.4 }, ease(prog(a, R + 1150, R + 1500)))
-      break
-    }
-    case 'shush': {
-      // turns to the away end: a finger to his lips, a few walking steps, then the hand cupped to his ear
-      if (a < R - 100) { pose = run(); break }
-      turn = ease(prog(a, R - 100, R + 220))
-      const walk = runPose(a / 360, 0.25 * (1 - prog(a, R + 800, R + 1000)))
-      const sh = { ...walk, hlx: POSE.shush.hlx, hly: POSE.shush.hly, hrx: POSE.shush.hrx, hry: POSE.shush.hry, fr: 1, elbow: 0.5, el: 0, er: 0, fore: 0, face: 3, tilt: 0.1 }
-      pose = a < R + 1100 ? mix(run(0.3), sh, ease(prog(a, R, R + 260))) : mix(sh, POSE.ear, ease(prog(a, R + 1100, R + 1350)))
-      break
-    }
-    case 'sky':
-      // both fingers up to the sky, head back, walking on slowly
-      pose = a < R ? run() : (() => { const w = runPose(a / 380, 0.25 * (1 - prog(a, R + 900, R + 1200))); return mix(run(0.3), { ...w, hlx: POSE.sky.hlx, hly: POSE.sky.hly, hrx: POSE.sky.hrx, hry: POSE.sky.hry, fl: 1, fr: 1, el: 0, er: 0, elbow: 0, fore: 0, tilt: 1, face: 1 }, ease(prog(a, R, R + 280))) })()
-      break
-    case 'bench':
-      pose = run(1, { arms: 'fist' })
-      break
-    case 'restart': {
-      // turns, and back up the pitch at a jog, an arm out waving the others back with him
-      turn = ease(prog(a, 60, 380))
-      const wave = Math.sin(a / 130) * 5
-      pose = runPose(a / 320, 0.6)
-      if (a > 300 && a < 1900) { if (c.side > 0) { pose.hlx = -34; pose.hly = -80 + wave } else { pose.hrx = 34; pose.hry = -80 + wave } pose.fore = 0.2 }   // (turned to us: his own left is our right)
-      break
-    }
-    case 'flip': {
-      // a hop, then all the way over backwards, tucked, and up with his arms in the air
-      const s = prog(a, R + 120, R + 720)
-      if (a < R + 120) pose = a < R ? run() : mix(run(0.2), { ...POSE.ready, hy: 42 }, ease(prog(a, R, R + 120)))
-      else if (s < 1) { lift = Math.sin(s * Math.PI) * 1.25; pose = { ...mix(POSE.jump, POSE.tuck, Math.sin(s * Math.PI)), rot: -c.side * s * Math.PI * 2 } }
-      else pose = mix({ ...POSE.roar, hy: 40, lk: 0.6, rk: 0.6 }, POSE.roar, ease(prog(a, R + 720, R + 900)))
-      break
-    }
-    default: {
-      // a run with his fist going; turns to the camera, plants his feet and drags both fists down: "come on!", twice
-      if (a < R + 300) { pose = run(1, { arms: 'fist' }); break }
-      turn = ease(prog(a, R + 300, R + 550))
-      const k = a - R - 550, pump = k > 0 ? Math.abs(Math.sin(Math.min(k, 900) / 900 * Math.PI * 2)) : 0
-      const fl = { ...POSE.flex, hy: POSE.flex.hy - pump * 2.5, hly: POSE.flex.hly + pump * 6, hry: POSE.flex.hry + pump * 6, bow: 0.12 + pump * 0.1 }
-      pose = k < 0 ? mix(run(0.3, { arms: 'fist' }), POSE.flex, ease(prog(a, R + 300, R + 550))) : fl
+  const a = Math.max(0, age), d = slideDist(c, a), p = c.pace
+  const x = c.from.x + c.ux * d, z = c.from.z + c.uz * d
+  // (turned to the lens as he peels away, if that's the way he's going)
+  const turn = c.face ? smoothS(prog(a, 40 * p, 40 * p + Math.min(260, c.run * 0.35))) : 0
+  const down = c.run - 80 * p, hit = c.run + 70 * p
+  let pose
+  if (a < down) {
+    // the run: flat out, the arms opening wide as he picks his spot
+    const ph = a / 250, w = smoothS(prog(a, c.run * 0.35, c.run * 0.9))
+    pose = mix(runPose(ph, 1), runPose(ph, 1, null, { arms: 'wide' }), w)
+  } else if (a < hit) {
+    // the last stride: down on to both knees at full pace
+    const f = smoothS(prog(a, down, hit))
+    pose = mix(runPose(down / 250, 1, null, { arms: 'wide' }), KNEE_SLIDE, f)
+  } else {
+    // the slide: the knees take the grass (he sinks into it), the body shakes a touch over the turf, and as it runs
+    // out he comes up on his knees, the fists up and the roar
+    const u = clamp((a - c.run) / c.S, 0, 1), r = smoothS(prog(a, c.stop - 260 * p, c.stop + 120 * p))
+    pose = mix(KNEE_SLIDE, KNEE_ROAR, r)
+    pose.hy -= Math.sin(prog(a, hit - 40 * p, hit + 200 * p) * Math.PI) * 2.2
+    pose.lean = Math.sin(a / 47) * 0.014 * (1 - u)
+    // (held there, the fists shaking, the roar going on)
+    if (a > c.stop) { const k = Math.sin((a - c.stop) / 140) * (1 - prog(a, c.stop + 700, c.stop + 1400)); pose.hly += k * 2.5; pose.hry -= k * 2.5 }
+    // (the one down on his knees beside him: his arm comes down round him)
+    const kn = c.mates.find(m => m.role === 'kneel')
+    if (kn) {
+      const w = smoothS(prog(a, kn.arrive + 60 * p, kn.arrive + 300 * p)), ax = (kn.tx - c.end.x) / RIG_M * 0.85
+      if (kn.sd > 0) { pose.hrx = lerp(pose.hrx, ax + 6, w); pose.hry = lerp(pose.hry, -64, w); pose.er = lerp(pose.er, 0, w) } else { pose.hlx = lerp(pose.hlx, ax - 6, w); pose.hly = lerp(pose.hly, -64, w); pose.el = lerp(pose.el, 0, w) }
     }
   }
-  if (c.kind === 'bench' || c.kind === 'plane') { x = lerp(c.from.x, c.to.x, ease(f)); z = lerp(c.from.z, c.to.z, ease(f)) - bend }
-  return { x, z, pose, lift, turn, low: c.kind === 'slide' && a > R }
+  return { x, z, pose, lift: 0, turn, low: a > down + 60 }
 }
 // a teammate i: in from where he was, then on him
 export function mateAt(c, i, age, me = null) {
-  const m = c.mates[i], s = me ?? scorerAt(c, age)
-  const a = Math.max(0, age - m.delay)
-  // (no celebration: he turns and jogs back toward his own half with the scorer)
-  if (m.role === 'jog') { const f = clamp(a / 2400, 0, 1); return { x: lerp(m.x, m.x * 0.9, f), z: m.z - 3 * f, pose: runPose((age + i * 90) / 300, 0.65), lift: 0, turn: ease(prog(a, 0, 320)) } }
-  // (the one on his back is behind him, as we look: on the far side if he's turned to us, else he's in for a hug)
-  const facing = s.turn > 0.5, role = m.role === 'back' && !facing && !s.low ? 'hug' : m.role
-  const off = role === 'back' ? { x: 0.05, z: 0.3 } : role === 'hug' ? { x: c.side * 0.35, z: -0.4 } : role === 'ruffle' ? { x: -c.side * 0.62, z: -0.15 } : { x: c.side * 0.9, z: -0.7 }
-  const tx = s.x + off.x, tz = s.z + off.z, d = Math.hypot(tx - m.x, tz - m.z)
-  const T = Math.max(500, (d / 7.4) * 1000), f = clamp(a / T, 0, 1)
-  const x = lerp(m.x, tx, ease(f)), z = lerp(m.z, tz, ease(f))
-  const phase = (age + i * 90) / 250
-  if (f < 1) return { x, z, pose: runPose(phase, 1, null, m.role === 'point' && f > 0.5 ? { arms: 'pump' } : null), lift: 0, turn: 0 }
-  const on = age - m.delay - T
-  if (s.low) {
-    // he's down on his knees: in on top of him, arms round him
-    return { x, z, pose: mix(POSE.stand, { ...POSE.knees, hy: 40, hlx: c.side * 4 - 14, hly: -44, hrx: c.side * 4 + 14, hry: -44, face: 1 }, ease(prog(on, 0, 200))), lift: 0, turn: 0 }
+  const m = c.mates[i], s = me ?? scorerAt(c, age), a = Math.max(0, age), p = c.pace
+  // (up to speed in a few strides, flat out, and a last check as he gets to him)
+  const T = m.arrive, f = clamp(a / T, 0, 1), A0 = 0.2, A1 = 0.12, e = (f < A0 ? (f * f) / (2 * A0) : f > 1 - A1 ? 1 - A0 / 2 - A1 / 2 - ((1 - f) * (1 - f)) / (2 * A1) : f - A0 / 2) / (1 - A0 / 2 - A1 / 2)
+  const u = 1 - e, x = u * u * m.x + 2 * u * e * m.qx + e * e * m.tx, z = u * u * m.z + 2 * u * e * m.qz + e * e * m.tz
+  // (he faces the way he's running; once he's in on him, he's turned to us with him)
+  const dz = m.tz - m.z, runTurn = dz < -Math.abs(m.tx - m.x) * 0.5 ? 1 : 0, sp = (Math.hypot(m.tx - m.x, m.tz - m.z) / (T / 1000)) * clamp(Math.min(f / A0, (1 - f) / A1 + 0.3), 0, 1)
+  const k = clamp(sp / 7, 0.35, 1), ph = (age + i * 90) / 255
+  // in the last strides the arms go up, he's after him
+  const runP = () => mix(runPose(ph, k), runPose(ph, k, null, { arms: 'wide' }), smoothS(prog(f, 0.55, 0.9)))
+  const t = a - T
+  const dxr = (s.x - m.tx) / RIG_M   // (the scorer, across from him, in his own units)
+  const bob = Math.sin(Math.max(0, t) / 150) * 0.03 * (1 - prog(t, 600, 1400))
+  if (m.role === 'kneel') {
+    // in on his knees beside him, sliding into him, the arm round his back, the other fist up
+    // (the near arm round his shoulders, the other hand on his chest, the head in against his)
+    const hug = pz({ ...KNEE_SLIDE, hy: 28, bow: 0.22, lean: -m.sd * 0.16, hx: dxr * 0.06, elbow: 0.3, fore: 0.45, face: 1, tilt: 0.3, head: -m.sd * 0.6 })
+    const far = dxr - m.sd * 13, near = dxr * 0.45
+    if (m.sd > 0) { hug.hlx = far; hug.hly = -66; hug.hrx = near; hug.hry = -52 } else { hug.hrx = far; hug.hry = -66; hug.hlx = near; hug.hly = -52 }
+    if (t < -150 * p) return { x, z, pose: runP(), lift: 0, turn: runTurn }
+    const g = smoothS(prog(t, -150 * p, 90 * p))
+    return { x, z, pose: mix(runP(), hug, g), lift: 0, turn: lerp(runTurn, c.face ? 1 : 0, g) }
   }
-  if (role === 'back') { const j = ease(prog(on, 0, 220)); return { x, z, pose: mix(POSE.jump, POSE.piggy, j), lift: 0.55 * j + Math.sin(prog(on, 0, 220) * Math.PI) * 0.2, turn: 1, front: true } }
-  if (role === 'hug') return { x, z, pose: { ...POSE.stand, hlx: -c.side * 8 - 4, hly: -82, hrx: -c.side * 8 + 4, hry: -82, elbow: 0.8, fore: 0.5, face: 1, head: -c.side * 0.5 }, lift: Math.abs(Math.sin(on / 180)) * 0.08, turn: 0 }
-  if (role === 'ruffle') return { x, z, pose: { ...POSE.ruffle, hrx: c.side * -22, hlx: c.side * 15, hry: -101 + Math.sin(on / 60) * 2, hly: -50 }, lift: 0, turn: 0 }
-  return { x, z, pose: { ...POSE.pointAt, hrx: c.side * -40, hlx: c.side * 15, fr: c.side < 0 ? 1 : 0, fl: c.side < 0 ? 0 : 1 }, lift: 0, turn: 0 }
+  if (m.role === 'over') {
+    // over the top of him, bent down on to him, both arms round his shoulders; a little hop as he gets there
+    const over = pz({ hy: 50, bow: 0.42, lx: -10, rx: 10, lk: 0.3, rk: 0.3, hx: dxr * 0.1, hlx: dxr * 0.8 - 13, hly: -64, hrx: dxr * 0.8 + 13, hry: -64, elbow: 0.25, fore: 0.5, face: 1, tilt: -0.1 })
+    if (t < -120 * p) return { x, z, pose: runP(), lift: 0, turn: runTurn }
+    const g = smoothS(prog(t, -120 * p, 120 * p))
+    return { x, z, pose: mix(runP(), over, g), lift: Math.sin(prog(t, -120 * p, 200 * p) * Math.PI) * 0.18 + bob, turn: lerp(runTurn, 1, g) }
+  }
+  // the jump: a leap on to the top of the pile, arms round the lot, his legs up behind him
+  // (laid across the top of the pile, his arms down round the two under him, his legs bent up behind)
+  const top = pz({ hy: 50, bow: 0.12, lx: -6, ly: -8, lk: 0.8, rx: 7, ry: -16, rk: 0.9, hlx: -14, hly: -96, hrx: 14, hry: -96, elbow: 0.55, fore: 0.3, face: 1, tilt: 0.4 })
+  if (t < -260 * p) return { x, z, pose: runP(), lift: 0, turn: runTurn }
+  const j = prog(t, -260 * p, 180 * p), g = smoothS(j)
+  const lift = j < 1 ? lerp(0, 0.62, g) + Math.sin(j * Math.PI) * 0.4 : 0.62 + bob
+  return { x, z, pose: { ...mix(mix(runP(), POSE.jump, smoothS(prog(j, 0, 0.35))), top, smoothS(prog(j, 0.3, 1))), rot: -m.sd * 0.95 * g }, lift, turn: runTurn }
+}
+// The lens on the slide: once he's off, the camera eases in on where he'll go down (the end of the slide in the middle
+// of the picture, close enough that the slide and the pile on him fill it), and stays there. C: the game's camera.
+export function celebLens(C, c, age, view) {
+  if (!c || c.kind !== 'slide' || !C) return C
+  const k = smoothS(prog(age, 0, c.run * 0.7 + 200))
+  if (k <= 0) return C
+  // (with him as he goes, settling on where the slide ends)
+  const d = slideDist(c, age), w = smoothS(prog(age, 0, c.stop)), px = c.from.x + c.ux * d, pz0 = c.from.z + c.uz * d
+  const tx = lerp(px, c.end.x, w), tz = lerp(pz0, c.end.z, w)
+  // (down a little, and close: a man about a quarter of the picture high, his feet clear of the controls)
+  const y = lerp(C.y, Math.min(C.y, 3), k), fx = C.sn ?? 0, fz = C.cy ?? 1, want = 44 + (view.h - 140) * 0.72
+  const D = Math.max(4.2, (1.8 * C.F) / (view.h * 0.25), (y * C.F) / Math.max(30, want - C.hz))
+  return { ...C, y, x: lerp(C.x, tx - fx * D, k), z: lerp(C.z, tz - fz * D, k) }
+}
+// The slide's marks on the grass ('under': the skid, under the men) and the spray off his knees ('over': over them)
+const rnd = s => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+export function celebFx(ctx, C, c, age, layer = 'under') {
+  if (!c || c.kind !== 'slide') return
+  const hit = c.run + 40 * c.pace
+  if (age < hit) return
+  const at = a => { const d = slideDist(c, a); return [c.from.x + c.ux * d, c.from.z + c.uz * d] }
+  const nx = -c.uz, nz = c.ux
+  if (layer === 'under') {
+    // two strips of flattened, darker turf where his knees went, a scuffed lighter edge; they stay
+    const [x0, z0] = at(hit), [x1, z1] = at(Math.min(age, c.stop))
+    if (Math.hypot(x1 - x0, z1 - z0) < 0.05) return
+    ctx.save()
+    for (const sd of [-1, 1]) {
+      const o = sd * 0.15, w0 = 0.05, w1 = 0.1
+      ctx.fillStyle = 'rgba(8,38,18,.42)'; ctx.beginPath()
+      flat(ctx, C, [x0 + nx * (o - w0), z0 + nz * (o - w0), x1 + nx * (o - w1), z1 + nz * (o - w1), x1 + nx * (o + w1), z1 + nz * (o + w1), x0 + nx * (o + w0), z0 + nz * (o + w0)]); ctx.fill()
+      ctx.fillStyle = 'rgba(150,200,140,.16)'; ctx.beginPath()
+      flat(ctx, C, [x0 + nx * (o + w0), z0 + nz * (o + w0), x1 + nx * (o + w1), z1 + nz * (o + w1), x1 + nx * (o + w1 + 0.03), z1 + nz * (o + w1 + 0.03), x0 + nx * (o + w0 + 0.01), z0 + nz * (o + w0 + 0.01)]); ctx.fill()
+    }
+    ctx.restore()
+    return
+  }
+  if (lightMode()) return
+  // the spray: bits of turf and water thrown up off his knees, forward and out, falling back
+  ctx.save()
+  const n = Math.round(48 * c.len / 2.6)
+  for (let i = 0; i < n; i++) {
+    const r1 = rnd(c.seed * 31 + i * 7), r2 = rnd(c.seed * 17 + i * 13), r3 = rnd(c.seed * 7 + i * 29), r4 = rnd(c.seed + i * 41)
+    const ts = hit + r1 * r1 * c.S * 0.75, t = (age - ts) / 1000
+    if (t < 0) continue
+    const u = clamp((ts - c.run) / c.S, 0, 1), vs = c.v * (1 - u)   // (his pace when it came off)
+    const vy = 0.7 + r2 * r2 * 2.3, life = (2 * vy) / 9.8
+    if (t > life) continue
+    const sd = r3 < 0.5 ? -1 : 1, [kx, kz] = at(ts)
+    const fw = vs * (0.55 + 0.45 * r4), out = sd * (0.4 + 1.5 * r2)
+    const X = kx + nx * sd * 0.15 + c.ux * fw * t + nx * out * t, Z = kz + nz * sd * 0.15 + c.uz * fw * t + nz * out * t, Y = 0.05 + vy * t - 4.9 * t * t
+    const q = P(C, X, Math.max(0, Y), Z)
+    if (!q.ok) continue
+    const water = i % 2 === 0, sz = Math.max(1, q.s * (water ? 0.035 : 0.045)), fade = 1 - t / life
+    ctx.globalAlpha = 0.35 + 0.65 * fade
+    ctx.fillStyle = water ? '#e6f2f6' : ['#3f9a55', '#2c7a42', '#6bc47a', '#5a3e25'][i % 4]
+    if (water) { ctx.beginPath(); ctx.arc(q.x, q.y, sz * 0.6, 0, 6.2832); ctx.fill() }
+    else { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(r4 * 6 + t * 9); ctx.fillRect(-sz, -sz * 0.25, sz * 2, sz * 0.5); ctx.restore() }
+  }
+  // a low puff of spray at the knees while he's going quick
+  const u = clamp((age - c.run) / c.S, 0, 1)
+  if (u < 1) {
+    const [kx, kz] = at(age), q = P(C, kx + c.ux * 0.35, 0.08, kz + c.uz * 0.35)
+    if (q.ok) { ctx.globalAlpha = 0.28 * (1 - u); ctx.fillStyle = '#e8f4f0'; ctx.beginPath(); ctx.ellipse(q.x, q.y, q.s * (0.45 + 0.2 * u), q.s * 0.12, 0, 0, 6.2832); ctx.fill() }
+  }
+  ctx.restore()
 }
 // the beaten keeper: down where he landed (face-down, or sat up with his hands on his knees), then up, back into the
 // net for the ball, and out with it. at: { x, z, rot } where he finished. Returns { x, z, pose, lift, front, holds }
@@ -1346,7 +1442,7 @@ export function keeperReady(t, set = 0, lean = 0) {
   p.lk = p.rk = lerp(0.34, 0.45, set) + b * 0.1
   p.ly = -0.9 * b + (w > 0 ? -w * 1.2 : 0); p.ry = -0.9 * b + (w < 0 ? w * 1.2 : 0)
   p.hx = w * 1.1 + lean * 2.4; p.lean = -w * 0.02 + lean * 0.05
-  p.hlx = lerp(-19, -17.5, set) + p.hx * 0.8; p.hrx = lerp(19, 17.5, set) + p.hx * 0.8
+  p.hlx = lerp(-17, -15.5, set) + p.hx * 0.8; p.hrx = lerp(17, 15.5, set) + p.hx * 0.8
   p.hly = p.hry = -(p.hy + lerp(5, 6, set)) + b * 0.6
   p.fl = p.fr = 0
   return { pose: p, lift: 0 }
