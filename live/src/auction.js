@@ -1,15 +1,19 @@
 // TRAIT AUCTION on the live server: the server is the auctioneer.
-//   AuctionQueue (one per sport + position)  who's waiting; three starts it at once,
-//                 two start when the countdown (restarted by every join) runs out
+//   AuctionQueue (one per sport + position)  who's waiting; three start it at once,
+//                 two start when the countdown (restarted by every join) runs out,
+//                 or when one of them asks
 //   AuctionRoom   (one per auction)          picks every lot, takes the bids (each
 //                 one checked against the wallets and the rules), runs the going
-//                 once / going twice clock, sells, and ranks the builds at the end
+//                 once / going twice clock (called at once when nobody left can
+//                 bid), sells, puts unsold cards back in the deck face up, deals the
+//                 draw when somebody fills his build first, and ranks the builds
 // The rules are the app's own (src/lib/auctionCore.js), so the phones show exactly
 // what the server enforces. Phones only send: hello, bid, pass, quit.
 
 import {
-  AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BID_SECS, RESET_SECS, SPIN_MS, SOLD_MS, GRACE_MS,
-  AUCTION_POS, auctionCoreKit, freshLedger, canBidOn, minNext, maxBid, auctionOver, pickLot, rankAuction, lotEnd,
+  AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BID_SECS, RESET_SECS, SOLD_MS, DRAW_MS, DRAW_STEP_MS, GRACE_MS,
+  AUCTION_POS, auctionCoreKit, freshLedger, canTop, minNext, maxBid, auctionOver, pickLot, takeLot, returnLot,
+  finishedEarly, drawFor, applyDraw, rankAuction, lotEnd, spinOf,
 } from '../../src/lib/auctionCore.js'
 import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
 import { competeDelta } from '../../src/lib/rating.js'
@@ -31,7 +35,7 @@ export class AuctionRoom {
     this.env = env
     this.conns = new Map()      // ws → vid
     this.m = null               // { code, seed, created, sport, pos, types, bidSecs, reset, players }
-    this.st = null              // { n, stage: wait|lot|sold|done, lot, t0, last, high, passed, sold, soldAt, L }
+    this.st = null              // { n, stage: wait|lot|sold|draw|done, lot, t0, last, high, passed, sold, soldAt, draw, L }
     this.kit = null
     this.timer = null
     this.ranked = null
@@ -42,10 +46,12 @@ export class AuctionRoom {
     if (url.pathname === '/init' && req.method === 'POST') {
       const b = await req.json()
       if (!validSportPos(b.sport, b.pos)) return new Response('bad', { status: 400 })
+      const players = (Array.isArray(b.players) ? b.players : []).slice(0, AUCTION_SIZE)
+      if (players.length < AUCTION_MIN) return new Response('bad', { status: 400 })
       this.kit = auctionCoreKit(b.sport, b.pos)
-      this.m = { code: b.code, seed: `au-${b.code}`, created: Date.now(), sport: this.kit.sport, pos: this.kit.pos, types: this.kit.types, bidSecs: BID_SECS, reset: RESET_SECS, players: b.players }
+      this.m = { code: b.code, seed: `au-${b.code}`, created: Date.now(), sport: this.kit.sport, pos: this.kit.pos, types: this.kit.types, bidSecs: BID_SECS, reset: RESET_SECS, players }
       this.keys = b.keys || {}
-      this.st = { n: 0, stage: 'wait', lot: null, t0: Date.now(), last: 0, high: null, passed: [], sold: null, soldAt: 0, L: freshLedger(b.players) }
+      this.st = { n: 0, stage: 'wait', lot: null, t0: Date.now(), last: 0, high: null, passed: [], sold: null, soldAt: 0, draw: null, L: freshLedger(players) }
       this.at(WAIT_MS, () => this.nextLot())
       return new Response('ok')
     }
@@ -56,12 +62,13 @@ export class AuctionRoom {
   // what a phone needs: the times as "how long ago", so its own clock lines them up
   view() {
     const s = this.st, now = Date.now()
-    // a lot's grade stays with the server until it's sold: the phones only ever had it
-    // face down (AppAuction), so a look at the page or the connection gave it away
-    const lot = s.lot && !s.sold ? { ...s.lot, val: undefined, vals: undefined, extra: undefined } : s.lot
+    // a new card's grade stays with the server while it's being bid on (the phones show it
+    // face down, so a look at the page or the connection can't give it away). Sold or not,
+    // it turns over at the gavel; a card back from the deck was already turned over
+    const lot = s.lot && s.stage === 'lot' && !s.lot.known ? { ...s.lot, val: undefined, vals: undefined, extra: undefined } : s.lot
     return {
       t: 'state', m: this.m, here: this.here(), ranked: this.ranked,
-      st: { n: s.n, stage: s.stage, lot, high: s.high, passed: s.passed, sold: s.sold, L: s.L, el: now - s.t0, sinceLast: s.last ? now - s.last : null, sinceSold: s.soldAt ? now - s.soldAt : null },
+      st: { n: s.n, stage: s.stage, lot, high: s.high, passed: s.passed, sold: s.sold, draw: s.draw, L: s.L, el: now - s.t0, sinceLast: s.last ? now - s.last : null, sinceSold: s.soldAt ? now - s.soldAt : null },
     }
   }
   broadcast() { const v = this.view(); for (const ws of this.conns.keys()) send(ws, v) }
@@ -71,40 +78,61 @@ export class AuctionRoom {
     if (auctionOver(st.L, m, st.n)) return this.finish()
     const lot = pickLot(m, st.L, kit, st.n + 1)
     if (!lot) return this.finish()
-    Object.assign(st, { n: lot.n, stage: 'lot', lot, t0: Date.now(), last: 0, high: null, passed: [], sold: null })
+    Object.assign(st, { n: lot.n, stage: 'lot', lot, t0: Date.now(), last: 0, high: null, passed: [], sold: null, L: takeLot(st.L, lot) })
     this.broadcast()
-    this.at(lotEnd(st, m) - Date.now(), () => this.close())
+    this.arm()
   }
-  // who could still bid on this lot (here, the slot open, money left, not already high)
+  // the clock: at the end of the spin (somebody may already be the only one who could
+  // bid, or nobody), then when the hammer falls
+  arm() {
+    const { m, st } = this
+    if (st.stage !== 'lot') return
+    const open = st.t0 + spinOf(st.lot)
+    if (Date.now() < open) this.at(open - Date.now(), () => { this.maybeSettle(); this.arm() })
+    else this.at(lotEnd(st, m) - Date.now(), () => this.close())
+  }
+  // who could still bid on this lot: here, the slot open, the money to top the high
+  // bid, not already high and not out on it
   could() {
     const { m, st } = this
     const here = new Set(this.here())
-    return m.players.filter(p => here.has(p.vid) && canBidOn(st.L, p.vid, m.types, st.lot.trait) && p.vid !== st.high?.vid)
+    return m.players.filter(p => here.has(p.vid) && canTop(st.L, p.vid, m.types, st.lot.trait, st.high) && !st.passed.includes(p.vid))
   }
+  // nobody left who can bid: the clock doesn't run down for nothing, it's called now
   maybeSettle() {
     const st = this.st
-    if (st.stage !== 'lot' || Date.now() < st.t0 + SPIN_MS) return
-    const could = this.could()
-    // everyone who could raise has passed (or nobody can): call it now
-    if (could.every(p => st.passed.includes(p.vid)) && (st.high || could.length > 0 || Date.now() > st.t0 + SPIN_MS + 1200)) this.close()
+    if (st.stage !== 'lot' || Date.now() < st.t0 + spinOf(st.lot)) return
+    if (this.could().length === 0) this.close()
   }
   close() {
-    const { m, st } = this
+    const { m, st, kit } = this
     if (st.stage !== 'lot') return
     // a bid that came in at the buzzer: honoured if it's inside the grace
-    if (Date.now() < lotEnd(st, m) - 50 && !(this.could().every(p => st.passed.includes(p.vid)))) { this.at(lotEnd(st, m) - Date.now(), () => this.close()); return }
-    const L = { ...st.L, wallets: { ...st.L.wallets }, won: { ...st.L.won }, log: [...st.L.log] }
+    if (Date.now() < lotEnd(st, m) - 50 && this.could().length > 0) { this.arm(); return }
+    let L = { ...st.L, wallets: { ...st.L.wallets }, won: { ...st.L.won }, log: [...st.L.log] }
     let sold = null
     if (st.high) {
       const { vid, amount } = st.high
       L.wallets[vid] -= amount
       L.won[vid] = { ...L.won[vid], [st.lot.trait]: { val: st.lot.val, vals: st.lot.vals, extra: st.lot.extra, name: st.lot.name, team: st.lot.team, price: amount } }
       sold = { vid, amount }
-    }
+    } else L = returnLot(L, st.lot, m)
     L.log = [{ n: st.n, trait: st.lot.trait, name: st.lot.name, val: st.lot.val, vid: sold?.vid ?? null, amount: sold?.amount ?? 0 }, ...L.log].slice(0, 30)
     Object.assign(st, { stage: 'sold', sold, soldAt: Date.now(), high: null, L })
     this.broadcast()
+    // he's filled his build: the rest of the room's open slots go to the draw
+    if (sold && finishedEarly(L, m, sold.vid)) return this.at(SOLD_MS, () => this.draw(sold.vid))
     this.at(SOLD_MS, () => this.nextLot())
+  }
+  // the draw: every other bidder's open slots, one random card each (seeded: lib/auctionCore drawFor)
+  draw(by) {
+    const { m, st, kit } = this
+    if (st.stage === 'done' || st.stage === 'draw') return
+    const cards = drawFor(m, st.L, kit)
+    const count = Object.values(cards).reduce((n, c) => n + Object.keys(c).length, 0)
+    Object.assign(st, { stage: 'draw', draw: { by, cards }, t0: Date.now(), L: applyDraw(st.L, cards, by) })
+    this.broadcast()
+    this.at(DRAW_MS + count * DRAW_STEP_MS, () => this.finish())
   }
   finish() {
     clearTimeout(this.timer)
@@ -126,13 +154,15 @@ export class AuctionRoom {
     const { m, st } = this
     const now = Date.now()
     if (st.stage !== 'lot' || n !== st.n || !Number.isInteger(amount)) return
-    if (now < st.t0 + SPIN_MS - 300 || now > lotEnd(st, m) + GRACE_MS) return
-    if (!canBidOn(st.L, vid, m.types, st.lot.trait) || st.high?.vid === vid) return
+    if (now < st.t0 + spinOf(st.lot) - 300 || now > lotEnd(st, m) + GRACE_MS) return
+    if (!canTop(st.L, vid, m.types, st.lot.trait, st.high)) return
     if (amount < minNext(st.high) || amount > maxBid(st.L, vid, m.types)) return
     st.high = { vid, amount }; st.last = now
     st.passed = st.passed.filter(v => v !== vid)
     this.broadcast()
-    this.at(lotEnd(st, m) - now, () => this.close())
+    // nobody left who can top it: sold now, no clock to sit through
+    if (now >= st.t0 + spinOf(st.lot) && this.could().length === 0) return this.close()
+    this.arm()
   }
   onMessage(ws, data) {
     const msg = parse(data); if (!msg) return
@@ -157,6 +187,7 @@ export class AuctionRoom {
       st.L = { ...st.L, out: [...st.L.out, vid] }
       if (st.high?.vid === vid) st.high = null
       this.broadcast(); this.maybeSettle()
+      if (st.stage === 'draw') return
       if (auctionOver(st.L, this.m, st.n) && st.stage !== 'lot') this.finish()
     }
   }

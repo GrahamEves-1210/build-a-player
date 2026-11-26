@@ -18,7 +18,7 @@ function area() {
   const k = liveKind()
   if (k) return k === 'auction' ? 'auction' : k.startsWith('blacktop') || k === 'bt' ? 'blacktop' : k === 'compete' ? 'compete' : k
   const page = window.__bapPage?.page ?? 'splash'
-  if (page === 'compete') return 'compete'
+  if (page === 'auction') return 'auction'
   if (page.startsWith('blacktop') || page.startsWith('versus')) return 'blacktop'
   if (page === 'career' || page.startsWith('career')) return 'career'
   if (page === 'squad' || page.startsWith('squad')) return 'squad'

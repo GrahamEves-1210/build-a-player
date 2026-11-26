@@ -19,12 +19,10 @@ const AppLeaderboards = lazy(() => import('./app/AppLeaderboards'))
 const AppSquad = lazy(() => import('../lib/squadSeason').then(m => m.loadSquadBaseball?.()).then(() => import('./app/AppSquad')))
 const AppCareer = lazy(() => import('./app/AppCareer'))
 const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
-const AppCompete = lazy(() => import('./app/AppCompete'))
 // Salary Cap's board is its own file (components/BaseballSalaryCap.jsx, the parallel of SoccerSalaryCap): picked up
 // here as soon as it exists, so the Salary Cap agent only adds the file and turns BASEBALL_MODES.salary on
 const SALARY_FILE = import.meta.glob('./BaseballSalaryCap.jsx')
 const BaseballSalaryCap = lazy(() => (SALARY_FILE['./BaseballSalaryCap.jsx']?.() ?? Promise.resolve({ default: () => null })))
-import CompeteHud from './app/CompeteHud'
 import * as MLB_ATTRS from '../data/mlb-attrs'
 import { MLB_TEAMS } from '../data/mlb-teams'
 import { MLB_BATTERS } from '../data/mlb-batters'
@@ -46,7 +44,6 @@ import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { restorePro } from '../lib/webCheckout'
 import AppHome from './app/AppHomeSwitch'   // today's Home, or the classic one (Settings → Classic Home)
 import { BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
-import { useCompete, botBuild, competeQueue } from '../lib/compete'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { FORFEIT_RATING, dailyState } from '../lib/progress'
 import { setSandboxGate, sandboxItemFor, sandboxLocked, clearSandboxHint } from './app/AppSandbox'
@@ -69,7 +66,6 @@ import { pieceStyle } from './SplashScreen'   // (the figure's pieces: their sha
 // The modes still to come plug in here (lib/baseballUi.js BASEBALL_MODES says which are on):
 //   Career        → openCareer / startCareerBuild / enterDraft, pages 'career-intro' 'career' 'career-build'
 //                   (lib/career.js ensureSport('baseball'): lib/careerBaseball.js)
-//   Compete       → useCompete (sport 'baseball', pos 'bat' | 'pit'), page 'compete', lockInCompete
 //   Salary Cap    → page 'salarycap' + handleSalaryCapConfirm (picks up components/BaseballSalaryCap.jsx)
 //   Squad Builder → openSquad / buildSquad / squadNext, pages 'squad' 'squad-build' (lib/squadSeason loadSquadBaseball)
 //   Boards        → page 'leaderboard' (AppLeaderboards sport 'baseball') and saveBaseballSeason below
@@ -488,7 +484,6 @@ export default function BaseballApp() {
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') window.location.href = '/?about'
       else if (to === 'wiki') window.location.href = '/wiki'
-      else if (to === 'compete') setPage('compete')
       // the Daily Challenge is a football or basketball day: it opens on its own side
       else if (to === 'daily-challenge') window.location.href = dailyState().sport === 'bucket' ? '/bucket?daily=1' : '/?daily=1'
       window.scrollTo({ top: 0, behavior: 'instant' })
@@ -587,42 +582,6 @@ export default function BaseballApp() {
   }, [isCustomMode])
   handleStartRef.current = handleStart
 
-  // ── COMPETE (when BASEBALL_MODES.compete): five-player pools on the same spins (lib/compete.js) ──
-  // a queue per position and pool, the last one picked remembered
-  const [competeQ, setCompeteQRaw] = useState(() => { try { return JSON.parse(localStorage.getItem('baseballCompete')) ?? { pos: 'bat', mode: 'current' } } catch { return { pos: 'bat', mode: 'current' } } })
-  const setCompeteQ = q => { setCompeteQRaw(q); try { localStorage.setItem('baseballCompete', JSON.stringify(q)) } catch {} }
-  const cp = useCompete({
-    enabled: (IS_APP || APP_LOOK) && BASEBALL_MODES.compete, user, sport: 'baseball', pos: competeQ.pos, mode: competeQ.mode,
-    botFor: (seed, idx, skill) => botBuild({ seed, idx, skill, teams: MLB_TEAMS, pool: POOL_PLAYERS[competeQ.pos].current, types: TYPES_OF[competeQ.pos], calcOvr: b => ovrOf(b, TYPES_OF[competeQ.pos], competeQ.pos) }),
-  })
-  const competeOn = BASEBALL_MODES.compete && cp.phase === 'build' && !cp.results[cp.me.vid]
-  const competeKey = useRef(null)
-  useEffect(() => {
-    if (!competeOn || !cp.match || competeKey.current === cp.match.code) return
-    competeKey.current = cp.match.code
-    try { localStorage.setItem('bbb_custom_mode', '0') } catch {}
-    setIsCustomMode(false)
-    handleStart(cp.match.mode === 'alltime' ? 'all-time' : 'classic', cp.match.pos ?? competeQ.pos)
-    sandboxTainted.current = false
-  }, [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
-  const lockInCompete = useCallback(() => {
-    cp.submit(calcOvr(build, activeTypes), build)
-    setGameMode(null); setBuild({}); setSavedSpinResult(null)
-    setPage('compete')
-    window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, cp, calcOvr])
-  const seedBuildRef = useRef(null); seedBuildRef.current = build
-  const nextSeedSpin = useCallback(() => 1 + Math.max(-1, ...Object.values(seedBuildRef.current || {}).filter(Boolean).map(c => (Number.isInteger(c.spin?.i) ? c.spin.i : -1))), [])
-  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!competeOn) return
-    setLiveLock({
-      title: 'Leave the pool?',
-      body: `The pool plays on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
-      forfeit: () => { cp.forfeit(); setGameMode(null); setBuild({}); setSavedSpinResult(null) },
-    })
-    return () => setLiveLock(null)
-  }, [competeOn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── SQUAD BUILDER (when BASEBALL_MODES.squad): lib/squad.js with sport 'baseball' ──
   const openSquadRef = useRef(null)
@@ -860,7 +819,7 @@ export default function BaseballApp() {
   }, [isCustomMode])
 
   // Starters Only (Sandbox, a plain build): one wheel of the pool's starters (each club's cleanup hitter or ace)
-  const startersOk = !competeOn && page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
+  const startersOk = page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
   const startersOn = startersPick && isCustomMode && startersOk
   useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
   const startersProp = startersOk && page === 'game' ? { on: startersOn, locked: spinPhase !== 'idle' || activeTypes.some(t => build[t]), onToggle: setStartersPick } : null
@@ -868,7 +827,7 @@ export default function BaseballApp() {
     if (on || !startersOn) { handleSandboxToggle(on); return }
     handleSandboxToggle(false); setStartersPick(false); handleReset(); sandboxTainted.current = false
   }
-  const sandboxProp = !competeOn && buildPage && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined
+  const sandboxProp = buildPage && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined
 
   // the Custom Ratings sheet: both pools behind its toggle (Current / All-Time), each position its own
   const customModal = !showCustomModal ? null : (
@@ -889,7 +848,7 @@ export default function BaseballApp() {
     />
   )
 
-  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'privacy', 'compete'])
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'privacy'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
   const shareLink = useMemo(() => {
@@ -901,8 +860,8 @@ export default function BaseballApp() {
   const hands = baseballHands(build, position)
 
   const navbarProps = {
-    gradesToggle: drop && !competeOn,
-    onReset: competeOn ? undefined : handleReset,
+    gradesToggle: drop,
+    onReset: handleReset,
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
     onProfile: () => (user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
@@ -921,22 +880,20 @@ export default function BaseballApp() {
     isPlus: isSubscribed,
     isBaseball: true,
     baseballPosition: position,
-    // (a build in progress at the other position: the switch starts a new one, so not mid-squad, career or compete)
-    onSwitchBaseballPosition: page === 'game' && !competeOn ? switchPosition : null,
+    // (a build in progress at the other position: the switch starts a new one, so not mid-squad or career)
+    onSwitchBaseballPosition: page === 'game' ? switchPosition : null,
   }
 
   const renderGame = parked => (
     <>
       {!parked && baseballHead}
-      {!parked && !competeOn && <Navbar {...navbarProps} />}
+      {!parked && <Navbar {...navbarProps} />}
       <div className="game-page-scroll">
-        {competeOn && <CompeteHud cp={cp} />}
         {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {(squadLib.current?.spotsFor(squad)[squadLib.current.spotsOf(squad)[squadBuilding.current]]?.name ?? posMeta.short).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
         {IS_APP && !drop && <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={ATTR} onFlip={flip} waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
         {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={activeTypes} attrMap={ATTR} waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
         <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
           {(el => (drop ? <DropSheet open={dropOpen} setOpen={setDropOpen}>{el}</DropSheet> : el))(<SpinScreen
-            gradesHidden={competeOn}
             build={build}
             activeDrag={activeDrag}
             onDragStart={setActiveDrag}
@@ -950,12 +907,11 @@ export default function BaseballApp() {
             onSaveResult={setSavedSpinResult}
             onPhaseChange={setSpinPhase}
             gameKey={gameKey}
-            onReset={competeOn ? undefined : handleReset}
+            onReset={handleReset}
             adsDisabled={adsDisabled}
             cardMeta={BASEBALL_MODES.cards && (IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'baseball', pos: position, mode: gameMode } : null}
-            seedPlan={competePlan}
             startersOnly={startersOn}
-            key={competePlan ? `cp-${cp.match.code}` : `spin-${position}-${pool}`}
+            key={`spin-${position}-${pool}`}
             paused={parked}
             isBaseball
             baseballPos={position}
@@ -982,7 +938,7 @@ export default function BaseballApp() {
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
             types={activeTypes}
-            onReset={competeOn ? undefined : handleReset}
+            onReset={handleReset}
             isPlus={isSubscribed}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
@@ -998,9 +954,9 @@ export default function BaseballApp() {
             <ReportCard
               isBaseball baseballPos={position} calcOvr={calcOvr} calcArch={archOf} sizeSlot={slots.size} shareLink={shareLink} hands={hands}
               build={build}
-              onSimulate={page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
-              simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? 'START THE CAREER' : competeOn ? 'LOCK IN' : undefined}
-              onReset={competeOn ? undefined : handleReset}
+              onSimulate={page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : replayOrSpin}
+              simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? 'START THE CAREER' : undefined}
+              onReset={handleReset}
               types={activeTypes}
               isPlus={isSubscribed}
               isCustomMode={isCustomMode}
@@ -1079,10 +1035,9 @@ export default function BaseballApp() {
             squad={squad}
             onCareer={openCareer}
             career={career}
-            onCompete={() => setPage(BASEBALL_MODES.compete ? 'compete' : 'soon-compete')}
-            soon={{ career: !BASEBALL_MODES.career, compete: !BASEBALL_MODES.compete, salary: !BASEBALL_MODES.salary, squad: !BASEBALL_MODES.squad }}
+            soon={{ career: !BASEBALL_MODES.career, salary: !BASEBALL_MODES.salary, squad: !BASEBALL_MODES.squad }}
             faces={HOME_FACES}
-            resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${posMeta.label} · ${BASEBALL_POOL[pool].label}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+            resume={(gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${posMeta.label} · ${BASEBALL_POOL[pool].label}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
             footer={IS_APP ? null : <><SiteFeatures sport="baseball" /><SiteFooter sport="baseball" home /></>}
             renderBucketFigure={renderBaseballFigure}
           />
@@ -1095,22 +1050,10 @@ export default function BaseballApp() {
 
   // the modes still on their way to baseball: wired, with their page waiting (BASEBALL_MODES)
   if (page.startsWith('soon-')) {
-    const title = { career: 'CAREER', compete: 'COMPETE', salary: 'SALARY CAP', squad: 'SQUAD BUILDER', boards: 'RANKS' }[page.slice(5)] ?? 'COMING SOON'
+    const title = { career: 'CAREER', salary: 'SALARY CAP', squad: 'SQUAD BUILDER', boards: 'RANKS' }[page.slice(5)] ?? 'COMING SOON'
     return <BaseballSoon title={title} onBack={backHome} />
   }
 
-  if (page === 'compete') {
-    if (!BASEBALL_MODES.compete) return <BaseballSoon title="COMPETE" onBack={backHome} />
-    // the queues: a batter's or a pitcher's, Current or All-Time
-    const queues = ['bat', 'pit'].flatMap(p => ['current', 'alltime'].map(k => ({ pos: `${p}:${k}`, label: `${BASEBALL_POS[p].short} · ${BASEBALL_POOL[k].label}`, q: competeQueue('baseball', p, k) })))
-    return withGame(
-      <Suspense fallback={null}>
-        <AppCompete cp={cp} au={null} sport="baseball" position={`${competeQ.pos}:${competeQ.mode}`} positions={queues}
-          onPosition={k => { const [p, m] = String(k).split(':'); setCompeteQ({ pos: baseballPosOf(p), mode: m === 'alltime' ? 'alltime' : 'current' }) }}
-          onHome={backHome} onResumeBuild={() => setPage('game')} onPlayAgain={() => cp.join()} />
-      </Suspense>
-    )
-  }
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>

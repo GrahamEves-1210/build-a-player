@@ -230,11 +230,13 @@ function ModeCard({ gold = false, ucl = false, title, line, faces, on, onClick }
 const LiveLine = ({ n, line }) => (n > 0 ? <small className="ag-mc-live"><i aria-hidden="true" />{fmtCount(n)} playing</small> : line ? <small>{line}</small> : null)
 
 // A mode's card: its colour, its name, where it stands, and its art (public/modes)
-function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children, tag = null, soon = false }) {
+function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children, tag = null, soon = false, online = false }) {
   // (soon: a mode that's on its way to this sport. It shows, locked, with COMING SOON)
+  // (online: a live mode against real players; its ONLINE pill sits in the top-right corner, apart from NEW / POPULAR)
   return (
     <button className={`ag-way ag-mc ag-mc--${tone} ag-way--${kind}${small ? ' is-small' : ''}${color ? ' has-team' : ''}${soon ? ' is-soon' : ''}`} style={color ? { '--team': color } : undefined} onClick={soon ? undefined : onClick} disabled={soon} aria-disabled={soon || undefined}>
       <span className="ag-mc-head"><b>{title}{soon ? <i className="ag-mc-tag ag-mc-tag--soon"><IconLock size={11} /> COMING SOON</i> : tag && <i className="ag-mc-tag">{tag}</i>}</b>{!soon && <LiveLine n={live} line={line} />}</span>
+      {online && !soon && <i className="ag-mc-online"><span aria-hidden="true" />ONLINE</i>}
       {children}
     </button>
   )
@@ -302,11 +304,13 @@ function Rafters({ career, sport = null }) {
     </span>
   )
 }
-// Compete: a pool of five on the same spins, its board as it stands: five builds' scores, the leader in gold
-const POOL = [97, 93, 90, 87, 84]
-const Pool = () => (
-  <span className="ag-pool" aria-hidden="true">
-    {POOL.map((n, i) => <i key={i} className={i === 0 ? 'is-1' : undefined} style={{ height: `${Math.round(52 + (n - 84) / 13 * 48)}%` }}><b>{n}</b></i>)}
+// Trait Auction: the gavel (public/fx, the hammer and its block cut from one picture, so they line up),
+// the hammer up over the block, and the lot on the block: a card, its grade face down
+const GavelArt = () => (
+  <span className="ag-gavel" aria-hidden="true">
+    <span className="ag-gavel-lot"><b>?</b><small>LOT</small></span>
+    <img className="ag-gavel-block" src="/fx/gavel-block.webp" alt="" loading="lazy" decoding="async" draggable={false} />
+    <img className="ag-gavel-head" src="/fx/gavel-hammer.webp" alt="" loading="lazy" decoding="async" draggable={false} />
   </span>
 )
 // Squad Builder, football: the whole team, one at each position, side by side
@@ -429,7 +433,7 @@ let homeScroll = 0
 
 // `soon`: modes this sport shows locked as COMING SOON ({ career, compete, salary, squad }: soccer's
 // SOCCER_MODES). `faces`: soccer's strikers on its two pool cards ({ current, alltime }, headshot ids)
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null, onFranchise = null, onNbaFranchise = null }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onAuction, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null, soon = null, faces = null, onCFB = null, onCBB = null, onFranchise = null, onNbaFranchise = null }) {
   const prog = useProgress()
   // Back from a mode, home opens where it was left. The lists on it fill in as they load, so the
   // spot is put back as the page grows, for a moment, until the player moves it themselves.
@@ -455,7 +459,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     }
   }, [])
   const here = usePresence()?.areas ?? {}   // how many are in each online mode right now
-  const cpHere = (here.compete ?? 0) + (here.auction ?? 0)   // Compete counts its Trait Auction too
+  const auHere = here.auction ?? 0
   const cs = prog.stats?.compete
   const ol = prog.stats?.online ?? { rating: 800, played: 0 }
   const h2h = prog.stats?.h2h ?? {}
@@ -571,7 +575,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : career.phase === 'offseason' ? `Year ${career.year + 1} · offseason`
     : career.phase === 'retired' ? `Retired after ${career.seasons.length}`
     : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`
-  const cpLine = ''   // (Compete's card shows only how many are playing right now: owner 11-25)
+  const auLine = '2–3 bidders · $20 each'
   const btStatus = !btLive ? null : blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'Building' : 'Game on'
   const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, 3v3')
   const sqLine = !squad ? (isBaseball ? 'Build the lineup' : isSoccer ? 'Build the front line' : 'Build your whole team')
@@ -582,34 +586,32 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : squad.team ? 'Ready to play' : 'Needs a team'
 
   const sp = isBucket ? 'bucket' : 'nfl'
-  // Soccer and baseball: Career, Compete, Salary Cap and Squad Builder (no Blacktop, no Depth Chart)
-  // Salary Cap's card: in the card grid on football, the bottom row on basketball (beside Compete)
+  // Soccer and baseball: Career, Salary Cap and Squad Builder (no Blacktop, no Depth Chart, no auction)
+  // Salary Cap's card: in the card grid on football, the bottom row on basketball (beside the Trait Auction)
   const salary = (
     <button className={`ag-way ag-mc ag-mc--salary ag-way--quick${isBucket ? ' is-small' : ''}`} onClick={() => startRef.current('salarycap')}>
       <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily grid</small></span>
       <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
     </button>
   )
-  const competeCard = onCompete && (
-    <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete} soon={!!soon?.compete}>
-      <Pool />
+  // the Trait Auction (football and basketball; Compete's old place, owner 11-26)
+  const auctionCard = (small = false) => onAuction && (
+    <ModeArt small={small} online kind="auction" tone="auction" title="TRAIT AUCTION" line={auLine} live={auHere} onClick={onAuction}>
+      <GavelArt />
     </ModeArt>
   )
   const modes = useMemo(() => isSoccer || isBaseball ? (
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
-      <div className={`ag-cards${isSoccer ? ' ag-cards--soccer' : ''}`}>
+      <div className={`ag-cards ag-cards--duo${isSoccer ? ' ag-cards--soccer' : ''}`}>
         {onCareer && (
           <ModeArt kind="career" tone="career" title="CAREER" line={crLine} color={career?.fit?.color} onClick={onCareer} soon={!!soon?.career}>
             <Rafters career={career} sport={sport} />
           </ModeArt>
         )}
-        {/* (soccer: Career on its own line, then Salary Cap and Compete side by side, owner 11-25) */}
-        {!isSoccer && competeCard}
         <ModeArt kind="quick" tone="salary" title="SALARY CAP" line="Daily grid" onClick={() => startRef.current('salarycap')} soon={!!soon?.salary}>
           {isBaseball ? <BaseballFees /> : <Fees />}
         </ModeArt>
-        {isSoccer && competeCard}
       </div>
       <div className="ag-more ag-more--one">
         {onSquad && !isSoccer && (
@@ -622,9 +624,9 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   ) : (
     <section className="ag-ways" aria-label="More ways to play">
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
-      {/* football: Franchise on top, College Football in Compete's spot, Compete in the small row (owner 11-14).
-          Basketball the same (owner 11-24): Franchise, Career, then Blacktop and College Basketball, then Compete and
-          Salary Cap; no Squad Builder */}
+      {/* football: Franchise on top, College Football beside Career, the Trait Auction in the small row (owner 11-14;
+          the auction took Compete's places 11-26). Basketball the same (owner 11-24): Franchise, Career, then Blacktop
+          and College Basketball, then the Trait Auction and Salary Cap; no Squad Builder */}
       {!isBucket && (hasFranchise ? <FranchiseCard wide onClick={() => frRef.current?.()} /> : hasCFB && <CFBCard onClick={() => cfbRef.current?.()} />)}
       {isBucket && onNbaFranchise && <NbaFranchiseCard onClick={() => nbaRef.current?.()} />}
       <div className="ag-cards">
@@ -639,30 +641,18 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         {/* Basketball: Blacktop is the online hub, 2v2 / 3v3 lobbies and 1v1 from inside it */}
         {isBucket
           ? (onBlacktop && (
-            <ModeArt kind="blacktop" tone="blacktop" title="BLACKTOP" line={btLine} live={btLive ? 0 : here.blacktop} onClick={onBlacktop}>
+            <ModeArt online kind="blacktop" tone="blacktop" title="BLACKTOP" line={btLine} live={btLive ? 0 : here.blacktop} onClick={onBlacktop}>
               <img className="ag-mc-court" src="/courts/thumbs/ct-blacktop.webp" alt="" loading="lazy" decoding="async" draggable={false} />
               <span className="ag-paint" aria-hidden="true"><b>1V1</b><b>2V2</b><b>3V3</b></span>
             </ModeArt>
           ))
           : hasFranchise && hasCFB ? <CFBCard small onClick={() => cfbRef.current?.()} />
-          : (onCompete && (
-            <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
-              <Pool />
-            </ModeArt>
-          ))}
+          : auctionCard()}
         {isBucket ? hasCBB && <CBBCard small onClick={() => cbbRef.current?.()} /> : salary}
       </div>
       <div className="ag-more">
-        {isBucket && onCompete && (
-          <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
-            <Pool />
-          </ModeArt>
-        )}
-        {isBucket ? salary : hasFranchise ? (hasCFB && onCompete && (
-          <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
-            <Pool />
-          </ModeArt>
-        )) : onSquad && (
+        {isBucket && auctionCard(true)}
+        {isBucket ? salary : hasFranchise ? (hasCFB && auctionCard(true)) : onSquad && (
           <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad}>
             {isBucket
               ? <Lineup />
@@ -674,7 +664,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
       </div>
     </section>
-  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise, !!onNbaFranchise, !!squad])
+  ), [sp, sport, isBucket, isSoccer, isBaseball, soon, career, crLine, auLine, btLine, btLive, sqLine, here.blacktop, auHere, onCareer, onBlacktop, onAuction, onSquad, onDepthChart, hasCFB, hasCBB, hasFranchise, !!onNbaFranchise, !!squad])
 
   return (
     <div className={`ag-home ag-home--${sport}`} ref={homeRef}>

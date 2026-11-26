@@ -66,13 +66,13 @@ export const baseballPoolOf = gameMode => (gameMode === 'all-time' || gameMode =
 // Each one is wired in BaseballApp (Home's card, the dock's fan, the page and its handlers) and shows as
 // COMING SOON until its agent flips it on:
 //   career  → lib/career.js ensureSport('baseball') (lib/careerBaseball.js) + AppCareer / CareerIntro with sport 'baseball'
-//   compete → lib/competeCore.js COMPETE_POS.baseball / verifyCore.js / the worker's kits (lib/baseballKits.js) + AppCompete
+//   (compete: retired 11-26; the Trait Auction is football and basketball only)
 //   salary  → components/BaseballSalaryCap.jsx (the parallel of SoccerSalaryCap), lazy-loaded in BaseballApp
 //   squad   → lib/squad.js baseball spots + lib/squadBaseball.js (loadSquadBaseball in lib/squadSeason.js) + AppSquad
 //   boards  → lib/boards.js baseball boards + AppLeaderboards with sport 'baseball'; also turns on the season's save
 //             (BaseballApp saveBaseballSeason → lib/submit.js saveSeason('baseball', pos, …): the live worker must take it)
 //   cards   → the card binder (AppCards) knows baseball: until then a spin doesn't put a card in it
-export const BASEBALL_MODES = { career: true, compete: true, salary: true, squad: true, boards: true, cards: true }
+export const BASEBALL_MODES = { career: true, salary: true, squad: true, boards: true, cards: true }
 
 // ── The build's name: what kind of player it is ───────────────────────────
 // (a tier for the OVR, then the kind of player his best traits make him, as a scout or a broadcaster says it)

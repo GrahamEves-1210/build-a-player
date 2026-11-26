@@ -13,7 +13,7 @@ const avg = (n, d, f = 1) => (d ? (n / d).toFixed(f) : '–')
 const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
 
 export const MODES = {
-  compete: { label: 'Compete', Icon: IconPodium, sub: '5-player pools' },
+  compete: { label: 'Trait Auction', Icon: IconPodium, sub: '2–3 bidders · $20 each' },   // (Compete's old pools count here too)
   bt: { label: 'Blacktop 3v3', Icon: IconHoop, sub: 'Squads · first to 11' },
   bt2: { label: 'Blacktop 2v2', Icon: IconHoop, sub: 'Guard and a big · first to 11' },
   h2h: { label: '1v1', Icon: IconVersus, sub: 'Football and basketball' },

@@ -18,9 +18,7 @@ const AppLeaderboards = lazy(() => import('./app/AppLeaderboards'))
 const AppSquad = lazy(() => import('../lib/squadSeason').then(m => m.loadSquadSoccer()).then(() => import('./app/AppSquad')))
 const AppCareer = lazy(() => import('./app/AppCareer'))
 const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
-const AppCompete = lazy(() => import('./app/AppCompete'))
 const SoccerSalaryCap = lazy(() => import('./SoccerSalaryCap'))
-import CompeteHud from './app/CompeteHud'
 import { SOCCER_ATTR, SOCCER_TYPES, SOCCER_CATEGORIES } from '../data/soccer-attrs'
 import { SOCCER_STRIKERS, UCL_STRIKERS, WC_STRIKERS, WC2026_STRIKERS } from '../data/soccer-strikers'
 import { SOCCER_CLUBS, UCL_CLUBS, SOCCER_ALL_CLUBS } from '../data/soccer-clubs'
@@ -39,7 +37,6 @@ import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { restorePro } from '../lib/webCheckout'
 import AppHome from './app/AppHomeSwitch'   // today's Home, or the classic one (Settings → Classic Home)
 import { BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
-import { useCompete, botBuild, competeQueue } from '../lib/compete'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { FORFEIT_RATING, dailyState } from '../lib/progress'
 import { flagEmoji, ensureFlagFont } from '../lib/flagEmoji'
@@ -63,7 +60,6 @@ import SoccerComingSoon from './SoccerComingSoon'
 //
 // The modes still to come plug in here (lib/soccerUi.js SOCCER_MODES says which are on):
 //   Career        → openCareer / startCareerBuild / enterDraft, pages 'career-intro' 'career' 'career-build'
-//   Compete       → useCompete (sport 'soccer'), page 'compete', lockInCompete
 //   Salary Cap    → page 'salarycap' + handleSalaryCapConfirm (needs components/SoccerSalaryCap.jsx)
 //   Squad Builder → openSquad / buildSquad / squadNext, pages 'squad' 'squad-build'
 //   Boards        → page 'leaderboard' (AppLeaderboards sport 'soccer') and saveSoccerSeason below
@@ -471,7 +467,6 @@ export default function SoccerApp() {
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') window.location.href = '/?about'
       else if (to === 'wiki') window.location.href = '/wiki'
-      else if (to === 'compete') setPage('compete')
       // the Daily Challenge is a football or basketball day: it opens on its own side
       else if (to === 'daily-challenge') window.location.href = dailyState().sport === 'bucket' ? '/bucket?daily=1' : '/?daily=1'
       window.scrollTo({ top: 0, behavior: 'instant' })
@@ -566,44 +561,6 @@ export default function SoccerApp() {
     window.scrollTo(0, 0)
   }, [isCustomMode, activeTypes, activeCategories])
   handleStartRef.current = handleStart
-
-  // ── COMPETE (when SOCCER_MODES.compete): five-player pools on the same spins (lib/compete.js) ──
-  // two queues, one a pool: TOP DIVISIONS ('current') and WORLD CUP ('alltime'), the last one picked remembered
-  const [competePool, setCompetePoolRaw] = useState(() => { try { return localStorage.getItem('soccerCompetePool') === 'alltime' ? 'alltime' : 'current' } catch { return 'current' } })
-  const setCompetePool = k => { setCompetePoolRaw(k); try { localStorage.setItem('soccerCompetePool', k) } catch {} }
-  const cp = useCompete({
-    enabled: (IS_APP || APP_LOOK) && SOCCER_MODES.compete, user, sport: 'soccer', pos: 'st', mode: competePool,
-    botFor: (seed, idx, skill) => botBuild({ seed, idx, skill, teams: UCL_CLUBS, pool: POOL_PLAYERS.current, types: activeTypes, calcOvr: b => calcOvr(b, activeTypes) }),
-  })
-  const competeOn = SOCCER_MODES.compete && cp.phase === 'build' && !cp.results[cp.me.vid]
-  const competeKey = useRef(null)
-  useEffect(() => {
-    if (!competeOn || !cp.match || competeKey.current === cp.match.code) return
-    competeKey.current = cp.match.code
-    try { localStorage.setItem('bas_custom_mode', '0') } catch {}
-    setIsCustomMode(false)
-    // the pool's own players and teams: the clubs' (TOP DIVISIONS) or the nations' (WORLD CUP)
-    handleStart(cp.match.mode === 'alltime' ? 'all-time' : 'classic')
-    sandboxTainted.current = false
-  }, [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
-  const lockInCompete = useCallback(() => {
-    cp.submit(calcOvr(build, activeTypes), build)
-    setGameMode(null); setBuild({}); setSavedSpinResult(null)
-    setPage('compete')
-    window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, cp])
-  const seedBuildRef = useRef(null); seedBuildRef.current = build
-  const nextSeedSpin = useCallback(() => 1 + Math.max(-1, ...Object.values(seedBuildRef.current || {}).filter(Boolean).map(c => (Number.isInteger(c.spin?.i) ? c.spin.i : -1))), [])
-  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!competeOn) return
-    setLiveLock({
-      title: 'Leave the pool?',
-      body: `The pool plays on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
-      forfeit: () => { cp.forfeit(); setGameMode(null); setBuild({}); setSavedSpinResult(null) },
-    })
-    return () => setLiveLock(null)
-  }, [competeOn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── SQUAD BUILDER (when SOCCER_MODES.squad): lib/squad.js with sport 'soccer' ──
   const openSquadRef = useRef(null)
@@ -834,7 +791,7 @@ export default function SoccerApp() {
   }, [isCustomMode])
 
   // Starters Only (Sandbox, a plain build): one wheel of the pool's starters
-  const startersOk = !competeOn && page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
+  const startersOk = page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
   const startersOn = startersPick && isCustomMode && startersOk
   useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
   const startersProp = startersOk && page === 'game' ? { on: startersOn, locked: spinPhase !== 'idle' || activeTypes.some(t => build[t]), onToggle: setStartersPick } : null
@@ -842,7 +799,7 @@ export default function SoccerApp() {
     if (on || !startersOn) { handleSandboxToggle(on); return }
     handleSandboxToggle(false); setStartersPick(false); handleReset(); sandboxTainted.current = false
   }
-  const sandboxProp = !competeOn && buildPage && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined
+  const sandboxProp = buildPage && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined
 
   // the Custom Ratings sheet: both pools behind its toggle (Top Divisions / World Cup)
   const chipOf = (p, slot, val) => ({
@@ -867,7 +824,7 @@ export default function SoccerApp() {
     />
   )
 
-  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'privacy', 'compete'])
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'privacy'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
   const shareLink = useMemo(() => {
@@ -878,8 +835,8 @@ export default function SoccerApp() {
   const userName = getUsername(user) || 'Guest'
 
   const navbarProps = {
-    gradesToggle: drop && !competeOn,
-    onReset: competeOn ? undefined : handleReset,
+    gradesToggle: drop,
+    onReset: handleReset,
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
     onProfile: () => (user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
@@ -902,15 +859,13 @@ export default function SoccerApp() {
   const renderGame = parked => (
     <>
       {!parked && soccerHead}
-      {!parked && !competeOn && <Navbar {...navbarProps} />}
+      {!parked && <Navbar {...navbarProps} />}
       <div className="game-page-scroll">
-        {competeOn && <CompeteHud cp={cp} />}
         {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {squadSpotLabel(squad, squadBuilding.current)} · PLAYER {Math.min(squad.slots.length, squad.slots.length - squadLeft + 1)} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
         {IS_APP && !drop && <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={SOCCER_ATTR} onFlip={flip} waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
         {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={activeTypes} attrMap={SOCCER_ATTR} waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
         <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode soccer-wc' : ''}`}>
           {(el => (drop ? <DropSheet open={dropOpen} setOpen={setDropOpen}>{el}</DropSheet> : el))(<SpinScreen
-            gradesHidden={competeOn}
             build={build}
             activeDrag={activeDrag}
             onDragStart={setActiveDrag}
@@ -924,12 +879,11 @@ export default function SoccerApp() {
             onSaveResult={setSavedSpinResult}
             onPhaseChange={setSpinPhase}
             gameKey={gameKey}
-            onReset={competeOn ? undefined : handleReset}
+            onReset={handleReset}
             adsDisabled={adsDisabled}
             cardMeta={SOCCER_MODES.cards && (IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'soccer', pos: 'st', mode: gameMode } : null}
-            seedPlan={competePlan}
             startersOnly={startersOn}
-            key={competePlan ? `cp-${cp.match.code}` : `spin-${pool}`}
+            key={`spin-${pool}`}
             paused={parked}
             isSoccer
             isAllTime={pool === 'alltime'}
@@ -954,7 +908,7 @@ export default function SoccerApp() {
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
             types={activeTypes}
-            onReset={competeOn ? undefined : handleReset}
+            onReset={handleReset}
             isPlus={isSubscribed}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
@@ -970,9 +924,9 @@ export default function SoccerApp() {
             <ReportCard
               isSoccer calcOvr={calcOvr} calcArch={archOf} sizeSlot={SOCCER_SIZE_SLOT} shareLink={shareLink}
               build={build}
-              onSimulate={page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
-              simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : squad?.pool === 'alltime' ? 'PICK A NATION' : 'PICK A CLUB') : page === 'career-build' ? 'START THE CAREER' : competeOn ? 'LOCK IN' : pool === 'alltime' ? 'Play the World Cup' : undefined}
-              onReset={competeOn ? undefined : handleReset}
+              onSimulate={page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : replayOrSpin}
+              simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : squad?.pool === 'alltime' ? 'PICK A NATION' : 'PICK A CLUB') : page === 'career-build' ? 'START THE CAREER' : pool === 'alltime' ? 'Play the World Cup' : undefined}
+              onReset={handleReset}
               types={activeTypes}
               isPlus={isSubscribed}
               isCustomMode={isCustomMode}
@@ -1050,10 +1004,9 @@ export default function SoccerApp() {
             squad={squad}
             onCareer={openCareer}
             career={career}
-            onCompete={() => setPage(SOCCER_MODES.compete ? 'compete' : 'soon-compete')}
-            soon={{ career: !SOCCER_MODES.career, compete: !SOCCER_MODES.compete, salary: !SOCCER_MODES.salary, squad: !SOCCER_MODES.squad }}
+            soon={{ career: !SOCCER_MODES.career, salary: !SOCCER_MODES.salary, squad: !SOCCER_MODES.squad }}
             faces={HOME_FACES}
-            resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `ST · ${SOCCER_POOL[pool].label}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+            resume={(gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `ST · ${SOCCER_POOL[pool].label}`, sub: simResult ? 'SEASON' : 'BUILD', onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
             footer={IS_APP ? null : <><SiteFeatures sport="soccer" /><SiteFooter sport="soccer" home /></>}
             renderBucketFigure={renderSoccerFigure}
           />
@@ -1066,20 +1019,10 @@ export default function SoccerApp() {
 
   // the modes still on their way to soccer: wired, with their page waiting (SOCCER_MODES)
   if (page.startsWith('soon-')) {
-    const title = { career: 'CAREER', compete: 'COMPETE', salary: 'SALARY CAP', squad: 'SQUAD BUILDER', boards: 'RANKS' }[page.slice(5)] ?? 'COMING SOON'
+    const title = { career: 'CAREER', salary: 'SALARY CAP', squad: 'SQUAD BUILDER', boards: 'RANKS' }[page.slice(5)] ?? 'COMING SOON'
     return <SoccerSoon title={title} onBack={backHome} />
   }
 
-  if (page === 'compete') {
-    if (!SOCCER_MODES.compete) return <SoccerSoon title="COMPETE" onBack={backHome} />
-    return withGame(
-      <Suspense fallback={null}>
-        <AppCompete cp={cp} au={null} sport="soccer" position={competePool}
-          positions={['current', 'alltime'].map(k => ({ pos: k, label: SOCCER_POOL[k].label, q: competeQueue('soccer', 'st', k) }))}
-          onPosition={setCompetePool} onHome={backHome} onResumeBuild={() => setPage('game')} onPlayAgain={() => cp.join()} />
-      </Suspense>
-    )
-  }
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>

@@ -6056,8 +6056,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 /* Squad Builder: the same, its caption at the foot of the card like Career's */
 .ag-mc--squad .ag-mc-head { bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; }
 .ag-mc--squad .ag-mc-head small { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ag-mc--compete { background: #0c6656; }
-.ag-home--bucket .ag-mc--compete { background: #b8460f; }
+.ag-mc--auction { background: #0c6656; }
 .ag-mc--salary { background: linear-gradient(150deg, #7c3aed, #2e1065 80%); }
 .ag-mc--squad { background: linear-gradient(150deg, #a57f1e, #3a2b08 80%); }
 .ag-mc--blacktop { background: #1c1c1e; }
@@ -6775,9 +6774,6 @@ html.ag-sport-leaving .ag-home.ag-home--classic.ag-home--classic .agc-sport.agc-
 @media (hover: hover) { .ag-home--soccer .ag-start:hover { background: #d9d9d5; } }
 .ag-home--soccer .ag-mc--career { background: linear-gradient(100deg, rgba(8,9,11,.78) 30%, rgba(8,9,11,.12)), url('/soccerbackground-nolights.webp') center 44% / cover no-repeat, #0e0f11; }
 .ag-home--soccer .ag-mc--career.has-team { background: linear-gradient(120deg, var(--team), color-mix(in srgb, var(--team) 40%, #05090c)); }
-.ag-home--soccer .ag-mc--compete { background: linear-gradient(150deg, #ecece8, #8d8f94 88%); }
-.ag-home--soccer .ag-mc--compete .ag-mc-head :is(b, small) { color: #0b0c0e; text-shadow: none; }
-.ag-home--soccer .ag-mc--compete .ag-mc-tag--soon { background: #0b0c0e; color: #f2f2ee; }
 .ag-home--soccer .ag-rafters { left: 46%; right: 6%; gap: 9px; }
 .ag-home--soccer .ag-home-site { background: radial-gradient(ellipse 100% 280px at 50% 0%, rgba(242,242,238,.06) 0%, transparent 70%), #08090b; }
 /* a position on its way (GK): in the bar, locked */
@@ -8089,11 +8085,16 @@ html:not(#_) .smd-bx .bx-t-row { grid-template-columns: minmax(0, 1fr) 40px 28px
 /* WR / TE: the catch reaches up to the stage's top edge, his feet staying on the circle (scaled from the bottom) */
 :is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform-origin: center bottom; }
 @media (min-width: 1024px) { :is(.ag-figure--wr, .ag-figure--te) .splash-stack-figure { transform: scale(1.09) !important; } }   /* (the desktop stage is shorter for its width) */
-/* soccer's Home: Career a whole row, Salary Cap and Compete side by side under it (no Squad Builder card) */
+/* soccer's (and baseball's) Home: Career and Salary Cap (no auction, no Squad Builder card on soccer's). Phones: each a
+   whole row, Salary Cap's board beside its name; desktop: the two side by side */
 @media (max-width: 1023px) {
-  .ag-cards.ag-cards--soccer { grid-template-columns: 1fr 1fr !important; }
-  .ag-cards.ag-cards--soccer > .ag-mc--career, .ag-cards.ag-cards--soccer > :first-child { grid-column: 1 / -1 !important; }
-}   /* (desktop: the same row of three as football's cards) */
+  .ag-cards.ag-cards--duo { grid-template-columns: 1fr !important; }
+  .ag-cards.ag-cards--duo > .ag-mc { grid-column: 1 / -1 !important; }
+  .ag-cards--duo > .ag-mc--salary { min-height: 164px; }
+  .ag-cards--duo > .ag-mc--salary .ag-mc-shot { top: 14px; left: 46%; right: 14px; }
+  .ag-cards--duo > .ag-mc--salary .ag-mc-shot img { margin-top: -16%; }
+}
+@media (min-width: 1024px) { html.app-look .ag-cards.ag-cards--duo { grid-template-columns: 1.45fr 1fr; } }
 .ag-more:empty { display: none; }
 /* Phone Home: the sport bar and the stage (the figure and the position bar) sit in the same side gaps as the cards
    under them, not edge to edge (owner 11-25) */
@@ -8225,3 +8226,114 @@ html.is-soccer .bap-wm--img .wmi--soccer, [data-sport="soccer"] .bap-wm--img .wm
 /* Salary Cap cards: a FotMob face (headshots/soccer/fmr-*.webp, smaller and lower on ESPN's canvas) zoomed from its foot so it
    sits like the ESPN photos beside it (owner 11-25: soccer faces not centred on the cards) */
 .sc-card .sc-card-headshot[src*="/soccer/fmr-"] { object-position: 50% 82%; transform: scale(1.16); transform-origin: 50% 60%; }   /* (the face, 57% down the photo, held in the middle of the visible box at any shape) */
+
+/* ═══ TRAIT AUCTION: the Home card, the lobby, the draw, the deck (AppHome GavelArt, AppTraitAuction, AppAuction) ═══ */
+/* the Home card: the gavel raised over its block on the right, the lot on the table beside it, face down */
+.ag-mc--auction::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24%; z-index: 0; background: rgba(0,0,0,.24); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.ag-gavel { position: absolute; right: 4%; bottom: 7%; z-index: 1; width: 48%; max-width: 150px; aspect-ratio: 180 / 234; pointer-events: none; }
+.ag-gavel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ag-gavel-head { transform-origin: 4.8% 47.6%; }
+.ag-gavel-block { transform-origin: 70% 92%; }
+.ag-gavel-lot { position: absolute; right: 108%; bottom: 4%; display: grid; place-items: center; align-content: center; gap: 2px; width: 46px; height: 64px; border-radius: 6px; transform: rotate(-6deg);
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 5px, transparent 5px 10px), #0a2321; box-shadow: inset 0 0 0 1.5px rgba(134,236,186,.6), 0 4px 10px rgba(0,0,0,.4); }
+.ag-gavel-lot b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; color: #86ECBA; }
+.ag-gavel-lot small { font-family: var(--ag-font); font-size: 10px; letter-spacing: 1.5px; color: rgba(255,255,255,.7); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .ag-mc--auction:hover .ag-gavel-head { animation: au-hammer 1.1s both; }
+  html:not(.bap-reduce-motion) .ag-mc--auction:hover .ag-gavel-block { animation: au-block .3s .44s ease-out both; }
+}
+html.app-look .ag-more .ag-mc--auction .ag-gavel { width: auto; height: 84%; bottom: 6%; }
+@media (min-width: 1024px) {
+  html.app-look .ag-mc--auction.is-small .ag-gavel { right: 6%; height: 92%; bottom: 4%; }
+  html.app-look .ag-mc--auction .ag-gavel-lot { width: 54px; height: 74px; }
+}
+/* the classic Home's row */
+.ag-card-art--gavel { position: absolute; right: 10px; bottom: 6px; width: 74px; aspect-ratio: 180 / 234; opacity: .95; }
+.ag-card-art--gavel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+
+/* the lobby: the gavel beside the three rules */
+.au-intro { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: start; gap: 12px; padding: 14px 14px 14px 10px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--ag-a1) 45%, transparent); background: var(--ag-panel); }
+.au-mark { position: relative; display: block; width: 76px; aspect-ratio: 180 / 234; margin-top: 4px; }
+.au-mark img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.au-mark-head { transform-origin: 4.8% 47.6%; }
+.au-mark-block { transform-origin: 70% 92%; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .au-intro.ag-pop .au-mark-head { animation: au-hammer 1.1s .35s both; }
+  html:not(.bap-reduce-motion) .au-intro.ag-pop .au-mark-block { animation: au-block .3s .79s ease-out both; }
+}
+.au-intro-txt { display: grid; gap: 8px; min-width: 0; }
+.au-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; counter-reset: au; }
+.au-rules li { position: relative; padding-left: 24px; font-family: var(--ag-body); font-size: 14px; line-height: 1.4; color: var(--ag-text); counter-increment: au; }
+.au-rules li::before { content: counter(au); position: absolute; left: 0; top: 1px; font-family: var(--ag-display); font-size: 17px; line-height: 1; color: var(--ag-a1); }
+.au-rules b { color: #fff; font-weight: 700; }
+.au-seats { display: grid; grid-template-columns: 1fr; gap: 6px; }
+
+/* the floor's extras: who's done, a card back from the deck, the cards waiting in the deck */
+.au-grade.is-known .au-grade-in { transition: none; }
+.au-back { display: grid; gap: 6px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--ag-line-hi); }
+.au-back-cards { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.au-back-card { flex: 0 0 auto; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 6px; max-width: 150px; padding: 6px 9px; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--g) 55%, transparent); background: color-mix(in srgb, var(--g) 10%, transparent); }
+.au-back-card b { grid-row: span 2; font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; color: #fff; }
+.au-back-card small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.3px; color: var(--ag-text); }
+.au-back-card i { font-style: normal; font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-slot.is-drawn { border-style: dashed; }
+.au-final-traits i.is-drawn { outline: 1px dashed rgba(255,255,255,.35); outline-offset: -1px; }
+.au-tag { display: inline-block; margin-left: 8px; padding: 2px 5px 1px; border-radius: 3px; background: #f5dc8a; color: #1d1503; font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1px; line-height: 1.1; vertical-align: 2px; }
+.au-final-note { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
+
+/* the draw: a bidder's filled his build; every open slot left in the room gets a card off the deck */
+.au-draw { display: grid; gap: 10px; padding: 16px 14px; border-radius: 18px; border: 1.5px solid rgba(212,175,55,.8); background: var(--ag-panel); text-align: center; }
+.au-draw-head { font-family: var(--ag-display); font-weight: 400; font-size: 28px; line-height: 1.05; color: #fff; text-transform: uppercase; }
+.au-draw-head * { font: inherit !important; text-transform: uppercase !important; }
+.au-draw-sub { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.4px; color: var(--ag-gold-hi); text-transform: uppercase; }
+.au-draw-rows { display: grid; gap: 10px; margin-top: 4px; text-align: left; }
+.au-draw-row { display: grid; gap: 6px; }
+.au-draw-who { display: flex; align-items: center; gap: 8px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; color: var(--ag-text); }
+.au-draw-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.au-dcard { display: block; aspect-ratio: 3 / 4; perspective: 600px; }
+.au-dcard-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; animation: au-dturn .5s var(--at) cubic-bezier(.3,.7,.3,1.15) both; }
+.au-dcard-back, .au-dcard-face { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 2px; padding: 4px; border-radius: 9px; backface-visibility: hidden; -webkit-backface-visibility: hidden; text-align: center; }
+.au-dcard-back { font-family: var(--ag-display); font-size: 26px; color: color-mix(in srgb, var(--ag-a1) 80%, #fff); background: repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 6px, transparent 6px 12px), #0f2b29; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ag-a1) 55%, transparent); }
+.au-dcard-face { transform: rotateY(180deg); background: color-mix(in srgb, var(--g) 22%, #101614); box-shadow: inset 0 0 0 1.5px var(--g); }
+.au-dcard-face small { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1px; color: var(--ag-text); }
+.au-dcard-face b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; color: #fff; }
+.au-dcard-face i { max-width: 100%; font-style: normal; font-family: var(--ag-body); font-size: 10.5px; line-height: 1.15; color: var(--ag-muted); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+@keyframes au-dturn { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+html.bap-reduce-motion .au-dcard-in { animation-duration: .01s; }
+@media (min-width: 700px) {
+  .au-dcard-face i { font-size: 12px; }
+  .au-draw-cards { gap: 10px; }
+}
+
+/* the ONLINE pill on a live mode's Home card (Trait Auction, Blacktop): solid, in the top-right corner, apart from the
+   outline NEW / POPULAR tags under the name. Its dot pulses a few times when the card shows, then rests */
+.ag-mc-online { position: absolute; top: 11px; right: 11px; z-index: 4; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 3px 7px; border-radius: 999px; background: #0b0f0d; box-shadow: 0 0 0 1px rgba(255,255,255,.22), 0 2px 6px rgba(0,0,0,.35); font-family: var(--ag-font); font-style: normal; font-size: 13px; line-height: 1; letter-spacing: 1.4px; color: #fff; pointer-events: none; }
+.ag-mc-online span { flex: none; width: 7px; height: 7px; margin-top: -1px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.6); }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .ag-mc-online span { animation: ag-online-ping 1.6s ease-out 4; }
+}
+@keyframes ag-online-ping { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70%, 100% { box-shadow: 0 0 0 6px rgba(34,197,94,0); } }
+@media (min-width: 1024px) { html.app-look .ag-mc-online { top: 14px; right: 14px; font-size: 14px; padding: 5px 10px 4px 8px; } }
+
+/* readable at a glance (13px floor): the results' slot chips, the lot's small print, the draw's names */
+.au-final-traits i { font-size: 13px; padding: 2px 6px; }
+.au-final-row .cp-row-ovr small { font-size: 13px; }
+.au-lot-for, .au-lot-covers { font-size: 13px; }
+.au-dcard-face i { font-size: 12px; }
+.au-dcard-face small { font-size: 12px; }
+@media (min-width: 700px) {
+  .au-draw-cards { grid-template-columns: repeat(5, minmax(0, 120px)); justify-content: start; }
+  .au-dcard { aspect-ratio: 5 / 6; }
+  .au-dcard-face i { font-size: 13px; }
+}
+/* phones: a half-width card has no room beside its name, so the ONLINE pill takes the top-right corner and the name
+   starts just under it */
+@media (max-width: 1023px) {
+  .ag-mc:has(> .ag-mc-online) .ag-mc-head { top: 40px; }
+  .ag-mc-online { top: 10px; right: 10px; }
+}
+@media (max-width: 1023px) {
+  html.app-look .ag-more .ag-mc--auction .ag-gavel { height: 62%; bottom: 5%; right: 1%; }
+  .ag-mc--auction .ag-gavel-lot { width: 40px; height: 56px; }
+  .ag-mc--auction .ag-gavel-lot b { font-size: 22px; }
+}

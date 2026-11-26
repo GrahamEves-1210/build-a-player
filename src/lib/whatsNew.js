@@ -13,7 +13,7 @@ const NOV_26 = {
         'Build a striker from nine ratings, from Pace and Finishing to Heading and Composure',
         'Two pools: the Champions League\'s 36 clubs, and World Cup legends from Pelé and Maradona to Messi and Cristiano Ronaldo',
         'Simulate Season plays the Champions League or the World Cup live, match by match, with key moments as real chances: penalties, free kicks, one-on-ones, volleys and headers',
-        'Salary Cap, Compete and the leaderboards',
+        'Salary Cap and the leaderboards',
       ],
     },
     {
@@ -43,6 +43,16 @@ const NOV_26 = {
         'Play 1v1, 2v2 or King of the Hill against the CPU in Practice, at four levels, as any of 37 stars',
         'Flick the stick for crossovers, step-backs and spins; time the shot meter, where green goes in',
         'Real half-court lines on every court, and every rating counts: quick guards are quicker, bigs block shots',
+      ],
+    },
+    {
+      name: 'New Mode: Trait Auction',
+      items: [
+        'Its own card on football\'s and basketball\'s Home, in Compete\'s place: Compete is retired',
+        'Two or three bidders, $20 each: QB, RB or WR in football, guard or big in basketball',
+        'A card nobody bids on turns over anyway and goes back in the deck, its grade showing',
+        'No waiting out the clock when nobody left can bid on a lot',
+        'Fill your five slots first and the auction ends: everyone else\'s open slots go to a random draw',
       ],
     },
     {

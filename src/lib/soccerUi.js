@@ -33,13 +33,13 @@ export const soccerPoolOf = gameMode => (gameMode === 'all-time' || gameMode ===
 // Each one is wired in SoccerApp (Home's card, the dock's fan, the page and its handlers) and
 // shows as COMING SOON until its agent flips it on:
 //   career  → lib/career.js SPORT.soccer + AppCareer / CareerIntro with sport 'soccer'
-//   compete → lib/competeCore.js / verifyCore.js / live/ soccer kits + AppCompete with sport 'soccer'
+//   (compete: retired 11-26; the Trait Auction is football and basketball only)
 //   salary  → components/SoccerSalaryCap.jsx (the parallel of BucketSalaryCap), lazy-loaded in SoccerApp
 //   squad   → lib/squad.js SPOTS for soccer + AppSquad with sport 'soccer'
 //   boards  → lib/boards.js soccer boards + AppLeaderboards with sport 'soccer'; also turns on the season's save
 //             (SoccerApp saveSoccerSeason → lib/submit.js saveSeason('soccer', 'st', …): the live worker must take it)
 //   cards   → the card binder (AppCards) knows soccer: until then a spin doesn't put a card in it
-export const SOCCER_MODES = { career: true, compete: true, salary: true, squad: true, boards: true, cards: true }
+export const SOCCER_MODES = { career: true, salary: true, squad: true, boards: true, cards: true }
 
 // ── Home: the strikers on the pool cards (headshot files, see data/soccer-headshots.json) ──
 // Filled from the roster's own headshots (SoccerApp hands Home the ones it has); empty until then.

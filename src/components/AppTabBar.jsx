@@ -43,7 +43,7 @@ const TAB_FOR_PAGE = { splash: 'play', profile: 'profile', leaderboard: 'leaderb
 const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
 // Website: the game screens keep the site's navbar, so the dock is only on the
 // app-look pages (home, profile, Squad Builder, the Blacktop lobby + game)
-const WEB_DOCK_ON = new Set(['splash', 'profile', 'career', 'career-intro', 'squad', 'blacktop', 'blacktop-game', 'compete', 'leaderboard', 'pvp-leaderboard'])
+const WEB_DOCK_ON = new Set(['splash', 'profile', 'career', 'career-intro', 'squad', 'blacktop', 'blacktop-game', 'auction', 'leaderboard', 'pvp-leaderboard'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 

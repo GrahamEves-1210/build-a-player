@@ -899,7 +899,7 @@ function onCompete(e) {
   S.bonusXp += xp; tally(xp, 1)
   earn(coins, null, true)
   bumpMissions('compete', { place })
-  toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? `${what.toUpperCase()} WON` : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? `Won the ${what}` : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
+  toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? `${what.toUpperCase()} WON` : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? `Won the ${what}` : `${mode === 'auction' ? 'Trait Auction' : 'Compete'} · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
   emit(); syncRatingSoon()
 }
 
