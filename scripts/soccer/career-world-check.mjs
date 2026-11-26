@@ -419,5 +419,79 @@ for (const [from, to, kind] of [['BHA', 'FCB', 'bid'], ['SEV', 'BET', 'bid'], ['
   if (!files.length) say('old saves: none given (SOCCER_OLD_SAVES=<dir with the tester\'s save-*.json>)')
 }
 
+// ── The summer's tournament, played (2026-11-25): the knockouts are rounds after the club's nights ──
+{
+  let seen = 0, played = 0
+  for (const [nat, seed] of [['FRA', 'wc-fra'], ['BRA', 'wc-bra'], ['ENG', 'wc-eng']]) {
+    let c = fresh(11, 'ARS', nat, seed)
+    for (let y = 0; y < 5 && c.phase !== 'retired'; y++) {
+      let D; [c, D] = C.startSeason(c)
+      for (let g = 0; g < 600; g++) {
+        const a = c.active
+        if (a.moment) { [c] = C.chooseMoment(c, D, a.moment.options[0]); continue }
+        if (a.injury) { c = C.resolveInjury(c, D, false); if (Array.isArray(c)) c = c[0]; continue }
+        if (a.k >= D.total) break
+        const [n] = C.advanceWeek(c, D); if (n === c) break; c = n
+      }
+      const fin = D.finalize?.() ?? null
+      c = C.finishRegular(c, D)
+      const intl = (c.active?.po?.rounds ?? []).filter(x => x.intl)
+      if (intl.length) {
+        seen++
+        ok(intl.every(x => x.legs === 1 && x.home == null && x.oppName && x.p > 0 && x.p < 1), 'tournament: a knockout round should be one match at a neutral venue, a nation and a chance')
+        ok(new Set(intl.map(x => `${x.track}|${x.opp}`)).size === intl.length, 'tournament: the same nation twice on one road')
+        ok(intl.every(x => x.opp !== c.nation), 'tournament: his own country as the opponent')
+        ok(intl.filter(x => x.final).length <= 2 && intl.filter(x => x.key === 'sf' || x.final).every(x => x.close), 'tournament: a semi-final and a final should turn on his moment')
+        if (fin) ok(!!X.tourNights(c, fin), 'tournament: the hub should say the knockouts are still to play')
+      }
+      let k = 0
+      for (let g = 0; g < 20 && c.active?.po && c.active.po.stage !== 'done'; g++) { const sc = (k++ % 3) ? 0.7 : 0.3; c = C.playoffRound(c, sc, null, sc >= 0.5); if (Array.isArray(c)) c = c[0] }
+      const line = c.active?.po?.line ?? []
+      if (c.phase !== 'offseason') c = C.bookSeason(c)
+      const s = c.seasons.at(-1)
+      for (const [t, track] of [[s.wc, 'wc'], [s.cont, 'cont']]) {
+        const ties = line.filter(x => x.track === track)
+        if (!t?.called || !ties.length) continue
+        played++
+        const ko = (t.games ?? []).filter(g => g.stage !== 'group')
+        const last = ties.at(-1)
+        ok(t.played && !t.ko, `tournament ${track}: booked as played, without the engine's road`)
+        ok(ko.filter(g => g.stage !== 'third').length === ties.length, `tournament ${track}: ${ties.length} knockouts played, ${ko.length} in the record`)
+        ok((t.finish === 'Winners') === (last.final && last.won) && t.champion === (t.finish === 'Winners'), `tournament ${track}: finish ${t.finish} against the last tie (${last.stage} ${last.won ? 'W' : 'L'})`)
+        ok(t.champion ? t.winner === c.nation : t.winner && t.winner !== c.nation, `tournament ${track}: the winner ${t.winner} against the finish ${t.finish}`)
+        ok(!(s.rounds ?? []).some(x => x.track === track), `tournament ${track}: his country's ties counted among the club's big nights`)
+        ok(t.goals === (t.games ?? []).reduce((a, g) => a + (g.goals ?? 0), 0), `tournament ${track}: his goals and the matches' don't add up`)
+        if (!last.won && last.key === 'sf' && track === 'wc') ok(['Third place', 'Fourth place'].includes(t.finish) && ko.some(g => g.stage === 'third'), 'tournament: a beaten World Cup semi-finalist plays for third')
+        say(`${nat} ${t.year} ${track === 'wc' ? 'World Cup' : t.name}: ${(t.games ?? []).map(g => `${g.round?.replace(/ · Matchday \d/, '') ?? g.stage} ${g.mySc}-${g.oppSc} ${g.opp}${g.pens ? ` (${g.pens.join('-')} pens)` : ''}`).join(', ')} -> ${t.finish}, ${t.goals}g; winners ${t.winnerName}`)
+      }
+      if (C.mustRetire(c)) break
+      c = next(c)
+    }
+  }
+  ok(seen > 0 && played > 0, `tournament: no knockout road in ${seen} summers (${played} played)`)
+}
+
+// ── A career that doesn't end at 22 (2026-11-25): a weak build out of contract drops a division instead ──
+{
+  let early = 0, drops = 0, n = 0
+  for (let i = 0; i < 4; i++) {
+    let c = fresh(3, 'S04', 'BRA', `weak-${i}`)
+    for (let y = 0; y < 12 && c.phase !== 'retired'; y++) {
+      c = playSeason(c)
+      if (c.contract.left <= 0 && Array.isArray(c.offers)) {
+        n++
+        if (c.age < 31) ok(c.offers.length > 0, `a ${c.age}-year-old out of contract with no offers (${c.ovr})`)
+        const d = c.offers.find(o => o.kind === 'drop')
+        if (d) { drops++; c = C.signOffer(c, d); ok(c.down?.team === c.team && X.isDown(c), 'a move a division down should play the second tier') }
+        else if (c.offers.length) c = C.signOffer(c, c.offers[0])
+      }
+      if (C.mustRetire(c)) { if (c.age < 31) early++; break }
+      c = C.nextSeason(c.offers?.length ? SX.stayPut(c) : c)
+    }
+  }
+  say(`weak builds: ${n} times out of contract, ${drops} moves a division down, ${early} careers over before 31`)
+  ok(early === 0, `${early} weak careers ended before 31 with no club`)
+}
+
 if (errs.length) { console.log(`\n${errs.length} PROBLEM(S):`); for (const e of [...new Set(errs)].slice(0, 40)) console.log(' -', e); process.exit(1) }
 console.log('\ncareer world: OK')

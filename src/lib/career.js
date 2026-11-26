@@ -1152,9 +1152,11 @@ function xiWithMe(c, xi, me) {
 // (opp: the other team's short name; a camp plays against its own)
 // which rating gives a position its face (the same as its figure)
 export const FACE_RATING = { qb: 'processing', rb: 'vision', wr: 'awareness', te: 'awareness', db: 'zoneIQ', dl: 'playRecognition', lb: 'playRecognition', ol: 'blitzPickup', k: 'clutch', guard: 'basketballIQ', big: 'basketballIQ', st: 'heading' }
-export function gameCast(c, opp = null) {
+export function gameCast(c, opp = null, intl = false) {
   const S = sportOf(c)
-  const us = castTeam(c, S, c.team), them = castTeam(c, S, opp ?? c.team)
+  // (soccer, for his country: the nations' own men, S.x.castNation)
+  const nat = intl && S.x?.castNation ? short => { const n = S.x.castNation(short, c); return { st: n.st.map(p => castMan(S, 'st', p)), mates: n.mates.map(p => ({ ...castMan(S, 'st', p), role: p.role ?? null })) } } : null
+  const us = nat ? nat(c.nation) : castTeam(c, S, c.team), them = nat ? nat(opp) : castTeam(c, S, opp ?? c.team)
   const last = String(c.name ?? 'Guest').trim().split(/\s+/).slice(-1)[0].toUpperCase()
   const me = { name: last, number: jerseyOf(c), skin: c.face?.skin ?? c.skin ?? c.build?.[FACE_RATING[c.pos]]?.skinColor ?? c.build?.skin ?? CAST_SKIN[0], speed: Math.max(-1, Math.min(1, ((c.build?.speed?.val ?? c.build?.legs?.val ?? c.build?.pace?.val ?? 6) - 6) / 5)), me: true }
   const used = new Set([...Object.values(us).filter(Array.isArray).flat().filter(Boolean).map(m => String(m.number)), String(me.number)])
@@ -3195,7 +3197,7 @@ function momentCtx(c, po, allow, only = null) {
   if (!pool.length) pool = momentsOf(c.pos)
   const st = rd.series ? seriesState(c, po.idx, rd) : null
   const ctx = { sport, seed: `${c.seed}-${c.year}-${po.idx}`, pGame: Math.round((st ? st.g : rd.p) * 1000) / 1000, pool, used: po.line.map(x => x.game).filter(Boolean), hOf: g => momentHitRate(c, g), us: c.team, them: rd.opp }
-  if (sport === 'soccer') { ctx.legs = rd.legs ?? 1; ctx.home = rd.home ?? null; ctx.usName = S.teamOf?.(c.team)?.name ?? null; ctx.themName = S.teamOf?.(rd.opp)?.name ?? null }   // (the tie's line names the clubs: 'Brighton scored late', not 'BHA')
+  if (sport === 'soccer') { ctx.legs = rd.legs ?? 1; ctx.home = rd.home ?? null; ctx.usName = rd.intl ? S.x?.nationName?.(c.nation) ?? c.nation : S.teamOf?.(c.team)?.name ?? null; ctx.themName = rd.intl ? rd.oppName : S.teamOf?.(rd.opp)?.name ?? null; if (rd.intl) { ctx.us = c.nation } }   // (the tie's line names the clubs: 'Brighton scored late', not 'BHA')
   if (st) { const n = st.a + st.b + 1, hosts = SERIES_HOSTS[seriesLen(rd)] ?? SERIES_HOSTS[7]; ctx.gameNo = n; if (sport === 'baseball') ctx.home = rd.home === false ? !hosts.includes(n) : hosts.includes(n) }
   return { ctx, st }
 }

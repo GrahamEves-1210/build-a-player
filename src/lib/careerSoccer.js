@@ -25,7 +25,7 @@ import { SOCCER_CAREER_CLUBS as SOCCER_CLUBS } from '../data/soccer-clubs'
 // stayed at home, CAREER_NATIONS; years on they're read through lib/soccerIntl.js)
 import { CAREER_NATIONS } from '../data/soccer-nations'
 import { SOCCER_ALL_STRIKERS, WC2026_STRIKERS as WC_STRIKERS, ST_TYPES } from '../data/soccer-strikers'
-import { worldCupOf, continentalOf, continentalField, peckingOrder, intlNation } from './soccerIntl'
+import { worldCupOf, continentalOf, continentalField, peckingOrder, intlNation, nationPool } from './soccerIntl'
 import { SOCCER_ATTR } from '../data/soccer-attrs'
 import { soccerFaceKey } from './soccerFace'
 import { SOCCER_RESUMES } from '../data/legacy-resumes-soccer'
@@ -44,6 +44,36 @@ const WC_NATIONS = CAREER_NATIONS
 // ── Soccer: a striker at a club in Europe's top five leagues (the rest of the soccer career is below, "Soccer") ──
 // The club season is the soccer engine's (league, cup, Europe); Career plays the league match by match through the
 // season director, then the big nights (the cup final, the European knockouts) one at a time like a bracket.
+// A teenager's year, however good he is: the manager rations him (fewer starts, off before the hour, a smaller share
+// of the chances while the senior men take the penalties). Real wonderkids: Mbappé 15 league goals at 18, Yamal 7 at
+// 17, Haaland's breakout at 19-20; the 30-goal seasons come from 20 on, the 40s in his prime. (Before 2026-11-25 only
+// his share was cut, 0.86 to 19: a 99 build scored 35 league goals at 17)
+const YOUTH = { 16: [0.6, 0.55, 0.4], 17: [0.64, 0.62, 0.45], 18: [0.74, 0.74, 0.55], 19: [0.84, 0.86, 0.72], 20: [0.9, 0.95, 0.88], 21: [0.95, 1, 1], 22: [0.98, 1, 1] }
+const youthOf = age => { const v = YOUTH[Math.max(16, Math.min(23, age))] ?? [1, 1, 1]; return { usage: v[0], start: v[1], full: v[2] } }
+// The season's targets: what a No. 9 of his level scores in a full league season as a starter (the engine's own line,
+// a teenager's rationed year taken off), raised toward what he did the last two seasons, then a touch past it: a
+// 40-goal man is asked for the mid 30s, not the 25 every 92 was asked for before 2026-11-25. Assists the same way;
+// the match rating from his level and his recent average. (Out of the eleven, goalsFor sizes them for the minutes)
+const LG_AT = [[70, 5], [76, 7], [80, 9], [84, 11.5], [88, 15], [92, 20], [96, 25], [99, 28]]
+const AS_AT = [[70, 3], [80, 4.5], [88, 6.5], [92, 8.5], [96, 11], [99, 12.5]]
+const RT_AT = [[70, 6.5], [80, 6.7], [86, 6.95], [92, 7.2], [96, 7.35], [99, 7.45]]
+const lerp = (tbl, x) => { if (x <= tbl[0][0]) return tbl[0][1]; for (let i = 1; i < tbl.length; i++) if (x <= tbl[i][0]) { const [a, va] = tbl[i - 1], [b, vb] = tbl[i]; return va + (vb - va) * (x - a) / (b - a) } return tbl[tbl.length - 1][1] }
+function soccerGoals(ovr, c) {
+  const age = c?.age ?? 24, y = youthOf(age), teen = age <= 22 ? y.usage * (0.4 + 0.6 * y.start) : 1
+  const old = age >= 31 ? 1 - (age - 30) * 0.06 : 1
+  // (his last two league seasons, the latest counting double, a season he barely played left out; a second-tier year
+  // counts for less, Bundesliga and Ligue 1's 34 matches brought onto 38)
+  const recent = (c?.seasons ?? []).slice(-2).filter(s => (s.stats?.lgApps ?? 0) >= 15)
+  const wsum = recent.reduce((a, s, i) => a + (i === recent.length - 1 ? 2 : 1), 0)
+  const avgOf = f => (recent.length ? recent.reduce((a, s, i) => a + f(s) * (i === recent.length - 1 ? 2 : 1), 0) / wsum : null)
+  const per38 = s => 38 / Math.max(30, 2 * ((s.size ?? 20) - 1)) * (s.tier === 2 ? 0.75 : 1)
+  const lgG = avgOf(s => (s.stats?.lgGoals ?? 0) * per38(s)), lgA = avgOf(s => (s.stats?.assists ?? 0) * (s.tier === 2 ? 0.75 : 1)), rt = avgOf(s => s.stats?.avgRating ?? 6.8)
+  const lift = (base, rec) => (rec == null ? base : Math.max(base, 0.65 * rec + 0.35 * base))
+  const goals = Math.round(clamp(lift(lerp(LG_AT, ovr) * teen * old, lgG) * 1.02, 3, 46))
+  const assists = Math.round(clamp(lift(lerp(AS_AT, ovr) * Math.sqrt(teen) * old, lgA) * 0.95, 2, 22))
+  const rating = Math.round(clamp(lift(lerp(RT_AT, ovr) - (age <= 19 ? 0.15 : 0), rt == null ? null : rt - 0.05), 6.5, 8.1) * 10) / 10
+  return [['lgGoals', 'Score', goals, 'league goals'], ['assists', 'Make', assists, 'assists'], ['avgRating', 'Average a', rating, 'match rating']]
+}
 const SOCCER = {
   id: 'soccer', league: 'TOP DIVISIONS', isBucket: false, isSoccer: true, screen: 'ag-screen--soccer',
   teams: SOCCER_CLUBS, logo: s => `/logos/soccer/${s}.png`,
@@ -67,10 +97,11 @@ const SOCCER = {
     // (a great one gets the chances, but past 92 the engine's line runs far beyond any real No. 9's: he's marked
     // out of games, he shares the penalties and the box. A teenager gets fewer; the thirties take some away)
     const o = c.ovr ?? 80, age = c.age ?? 25
-    const usage = clamp(0.9 + (Math.min(o, 92) - 85) * 0.01 - Math.max(0, o - 92) * USAGE_TOP, 0.75, 1) * (age <= 19 ? 0.86 : age <= 21 ? 0.94 : age >= 31 ? 1 - (age - 30) * 0.03 : 1) * (role === 'Starter' ? 1 : role === 'Rotation' ? 0.8 : 0.9)
+    const y = youthOf(age)
+    const usage = clamp(0.9 + (Math.min(o, 92) - 85) * 0.01 - Math.max(0, o - 92) * USAGE_TOP, 0.75, 1) * (age >= 31 ? 1 - (age - 30) * 0.03 : y.usage) * (role === 'Starter' ? 1 : role === 'Rotation' ? 0.8 : 0.9)
     // (a relegated club he stayed with plays the second tier, and nothing in Europe: c.down)
     const down = c.down?.team === t.short
-    return { short: t.short, name: t.name, league: t.league, career: true, sched: `${c.seed}-y${(c.year ?? 0) + 1}`, yrs: Math.max(0, (c.season ?? FIRST_SEASON) - FIRST_SEASON), world: c.seed, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, ...(down ? { tier2: true, europe: null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
+    return { short: t.short, name: t.name, league: t.league, career: true, sched: `${c.seed}-y${(c.year ?? 0) + 1}`, yrs: Math.max(0, (c.season ?? FIRST_SEASON) - FIRST_SEASON), world: c.seed, off: clamp(fit.off + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10), usage, startK: y.start, fullK: y.full, bench: role === 'Bench', rotation: role === 'Rotation', age: c.age, ...(down ? { tier2: true, europe: null } : c.europeFor && c.europeFor === t.short ? { europe: c.europe ?? null } : {}) }   // (last season's place in Europe, when it was this club's)
   },
   // the attack around him: the forwards beside him (wingers and a No. 10 count) and the club itself
   // (years on, the real ones age: past 30 they fade, at 35 they're gone)
@@ -97,7 +128,7 @@ const SOCCER = {
   draft: { rounds: 1, stock: () => [1, 1], rookie: () => ({ kind: 'rookie', years: 3, left: 3, perYear: 0.5 }), posList: ['ST'] },
   combine: { st: [['sprint30', '30m sprint', 'pace'], ['slalom', 'Dribble slalom', 'dribbling'], ['finishing', 'Finishing drill', 'finishing'], ['first-touch', 'First touch', 'dribbling']] },
   goals: {
-    st: ovr => [['lgGoals', 'Score', ovr >= 92 ? 25 : ovr >= 86 ? 18 : ovr >= 80 ? 12 : 8, 'league goals'], ['assists', 'Make', ovr >= 92 ? 9 : ovr >= 86 ? 6 : 4, 'assists'], ['avgRating', 'Average a', ovr >= 92 ? 7.4 : ovr >= 86 ? 7.1 : 6.8, 'match rating']],
+    st: (ovr, c) => soccerGoals(ovr, c),
   },
   seasonStats: (pos, f) => soccerStats(f),
   rateKeys: ['avgRating'],
@@ -358,7 +389,7 @@ function standAt(c, short) {
   const ro = short === c.team && c.roster ? c.roster : rosterOf(c, short)
   const cc = { ...c, team: short, roster: ro, contract: {}, lastRole: short === c.team ? c.lastRole : null }
   const dc = depthChart(cc, ro)
-  return { starter: dc.starter, role: soccerRole(cc), behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label }
+  return { starter: dc.starter, role: soccerRole(cc), behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, gap: dc.starter ? 0 : (dc.ahead[dc.ahead.length - 1]?.ovr ?? 0) - (c.ovr ?? 0), label: dc.label }
 }
 // The offers: three clubs from his level (a club whose people liked him in the room is likelier to call)
 export function soccerOffers(c) {
@@ -469,7 +500,77 @@ function soccerBracket(c, f) {
     const at = rounds.findIndex(x => x.final)
     if (at >= 0) rounds.splice(at, 0, rd); else rounds.push(rd)
   }
+  // the summer's tournament: his country's knockout road, after the club's nights (the group stage is the engine's)
+  if (!c.active?.out) for (const x of tourRounds(c, f, r)) rounds.push(x)
   return { idx: 0, rounds, line: [], used: [], stage: 'round', won: false, out: false, trophies: [] }
+}
+// The World Cup and the continental championship his season ends with: called up, through the group, each knockout
+// match a round like a European night (a close one turns on his key moment, a semi-final and a final always do).
+// (Before 2026-11-25 the tournaments were a recap: the engine's result, nothing to play.)
+const INTL = new Map()
+function intlFor(c, f) {
+  const lg = soccerStats(f)
+  const id = `${c.seed}|${c.year}|${c.team}|${c.nation}|${c.ovr}|${c.age}|${lg.goals}|${lg.mins}|${c.down?.team === c.team ? 1 : 0}`
+  if (INTL.has(id)) return INTL.get(id)
+  const out = { wc: wcSummer(c) ? soccerWorldCup(c, lg) : null, cont: soccerContinental(c, lg) }
+  if (INTL.size > 12) INTL.clear()
+  INTL.set(id, out)
+  return out
+}
+const tourName = (t, track) => (track === 'wc' ? 'World Cup' : t.short ?? t.name)
+function tourRounds(c, f, r = seeded(`${c.seed}-po-${c.year}`)) {
+  const I = intlFor(c, f), out = []
+  for (const [track, t] of [['cont', I.cont], ['wc', I.wc]]) {
+    if (!t?.called || !t.ko?.rounds?.length) continue
+    const compName = tourName(t, track), grp = (t.games ?? []).filter(g => g.stage === 'group')
+    const w = grp.filter(g => g.won).length, d = grp.filter(g => g.drawn).length
+    t.ko.rounds.forEach((k, i) => out.push({ track, intl: true, comp: track === 'wc' ? 'wc' : t.id, compName, stage: k.stage, name: `${compName} ${k.stage}`, opp: k.opp, oppName: k.oppName, extra: false, legs: 1, home: null, final: k.key === 'final', key: k.key, p: k.p, played: false, close: k.key === 'final' || k.key === 'sf' || r() < closeChance(k.p), year: t.year, ...(i === 0 ? { group: { w, d, l: grp.length - w - d, pts: 3 * w + d } } : {}) }))
+  }
+  return out
+}
+// the hub's line for what's left (AppCareer: the league done): { what, go } when his country has a knockout to play
+export function soccerTourNights(c, f) {
+  if (c.active?.out) return null
+  const list = tourRounds(c, f)
+  if (!list.length) return null
+  const x = list[0], I = intlFor(c, f), t = x.track === 'wc' ? I.wc : I.cont
+  return { what: `the ${t.year} ${x.track === 'wc' ? 'World Cup' : t.name} knockouts`, go: `THE ${String(x.compName).toUpperCase()}` }
+}
+// The tournament as he played it: the group as the engine had it, then his knockout road (the rounds in po.line); the
+// finish, the goals, the champion, the Golden Boot and the Ball read again from there
+const FINISH_DEPTH = ['Group stage', 'Round of 32', 'Round of 16', 'Quarter-finals', 'Fourth place', 'Semi-finals', 'Third place', 'Runners-up', 'Winners']
+const OUT_AT = { r32: 'Round of 32', r16: 'Round of 16', qf: 'Quarter-finals', sf: 'Semi-finals', final: 'Runners-up' }
+const PENS = [[4, 3], [5, 4], [4, 2], [3, 2], [5, 3], [6, 5]]
+function playedTour(c, t, line, track) {
+  if (!t) return t
+  const { ko, ...base } = t
+  const ties = line.filter(x => x.track === track)
+  if (!t.called || !ties.length) return base
+  const r = seeded(`${c.seed}-tour-${track}-${c.year}`)
+  const grp = (base.games ?? []).filter(g => g.stage === 'group')
+  const penPair = (won, i) => { const p = PENS[Math.floor(r() * PENS.length)]; return won ? p : [p[1], p[0]] }
+  const kos = ties.map((x, i) => ({ stage: x.key, round: x.stage, opp: x.opp, oppName: x.oppName, mySc: x.mySc, oppSc: x.oppSc, goals: x.goals ?? 0, assists: x.assists ?? 0, app: !x.sat, won: x.won, drawn: x.mySc === x.oppSc, pens: x.mySc === x.oppSc ? penPair(x.won, i) : null }))
+  const last = ties[ties.length - 1]
+  let finish = last.won && last.final ? 'Winners' : last.won ? base.finish : OUT_AT[last.key] ?? base.finish
+  // (the World Cup's beaten semi-finalists play for third: the sides' chance, no moment in it)
+  if (!last.won && last.key === 'sf' && ko?.third) {
+    const won = r() < ko.third.p
+    const [legs] = autoLegs(r, false, won, ko.third.p)
+    kos.push({ stage: 'third', round: 'Third-place match', opp: ko.third.opp, oppName: ko.third.oppName, mySc: legs[0], oppSc: legs[1], goals: Math.min(legs[0], Math.floor(r() * 1.6)), assists: 0, app: true, won, drawn: false, pens: null })
+    finish = won ? 'Third place' : 'Fourth place'
+  }
+  const sum = (list, k) => list.reduce((a, g) => a + (g[k] ?? 0), 0)
+  const games = [...grp, ...kos]
+  const goals = sum(games, 'goals'), assists = sum(games, 'assists'), apps = games.filter(g => g.app).length
+  const champion = finish === 'Winners'
+  const beaten = new Set(ties.filter(x => x.won).map(x => x.opp))
+  const winner = champion ? c.nation : last.final && !last.won ? last.opp : base.winner && base.winner !== c.nation && !beaten.has(base.winner) ? base.winner : last.opp
+  const deeper = FINISH_DEPTH.indexOf(finish) - FINISH_DEPTH.indexOf(base.finish)
+  const b = base.boot ?? {}
+  const boot = b.won ? { ...b, won: goals >= Math.min(base.goals, 5) } : { ...b, won: b.goals != null && goals > b.goals }
+  if (!boot.won && b.won) boot.winner = null
+  const ball = deeper >= 0 ? (base.ball ?? (champion && goals >= 4 ? 'Golden Ball' : null)) : deeper >= -1 && base.ball === 'Golden Ball' ? 'Silver Ball' : deeper >= -1 ? base.ball : null
+  return { ...base, finish, champion, goals, assists, apps, games, winner, winnerName: winner ? nationName(winner) : null, boot, ball, played: true }
 }
 export function soccerFinishLeague(c, f) {
   const po = soccerBracket(c, f)
@@ -587,16 +688,52 @@ export function soccerCallUp(c, lg = null) {
   const order = [...rivals.slice(0, rank - 1), me, ...rivals.slice(rank - 1)].slice(0, Math.max(4, Math.min(rank, 6))).map(p => ({ name: p.name, ovr: Math.round(p.ovr), age: p.age, me: !!p.me }))
   return { called, role: !called ? null : rank === 1 ? 'Starter' : rank === 2 ? 'Rotation' : 'Bench', rank, score: r10(score), order }
 }
+// his country's men for a match's cast (an international's key moment: the strikers beside him and the rest up front)
+function castNation(short, c) {
+  const pool = nationPool(short, intlYear(c), c.seed).filter(p => p.name !== c.name)
+  const nines = pool.filter(p => isNine(p)).slice(0, 3), others = pool.filter(p => !isNine(p)).slice(0, 4)
+  return { st: nines, mates: others }
+}
 // one tournament with his country, played through the engine on its field for that year
 function playTournament(c, call, field, tag) {
   const r = runSoccerSimulation(c.build, ST_TYPES, { short: c.nation, field, usage: call.role === 'Starter' ? 1 : 0.8, bench: call.role === 'Bench', age: c.age }, 'alltime', `${c.seed}-${tag}-${c.year}`)
   return {
     role: call.role, finish: r.finish, champion: !!r.champion, goals: r.goals ?? 0, assists: r.assists ?? 0, apps: r.apps ?? 0,
-    games: (r.games ?? []).map(g => ({ stage: g.stage, round: g.round, opp: g.opponent, oppName: g.oppName, mySc: g.mySc, oppSc: g.oppSc, goals: g.goals, app: g.app, won: g.won, drawn: g.drawn, pens: g.shootout ? [g.shootout.my, g.shootout.opp] : null })),
+    games: (r.games ?? []).map(g => ({ stage: g.stage, round: g.round, opp: g.opponent, oppName: g.oppName, mySc: g.mySc, oppSc: g.oppSc, goals: g.goals, assists: g.assists ?? 0, app: g.app, won: g.won, drawn: g.drawn, pens: g.shootout ? [g.shootout.my, g.shootout.opp] : null })),
     boot: { won: !!r.goldenBoot?.won, rank: r.goldenBoot?.rank ?? null, winner: r.goldenBoot?.winner?.isPlayer ? null : r.goldenBoot?.winner?.name ?? null, goals: r.goldenBoot?.winner?.goals ?? null },
     ball: r.goldenBall?.medal ?? null, young: !!r.bestYoungPlayer?.won,
     winner: r.worldChampion ?? null, winnerName: r.worldChampion ? nationName(r.worldChampion) : null,
+    ko: koPath(c.nation, r, field),
   }
+}
+// The knockout road his country is on (Career plays it: soccerBracket's tournament rounds). The engine played the whole
+// bracket; his side takes the place of whoever won its tie there, so each round's opponent is the side that would be in
+// it: the one the engine's winner of his last tie met next. p: his country's chance in a single match (the sides'
+// ratings, extra time and penalties in it). third: a beaten semi-finalist's third-place match (the World Cup's).
+// → [{ key, stage, opp, oppName, p, eng (the engine's own result for his side: 'W' | 'L' | null, not there) }] or []
+const KO_KEYS = ['r32', 'r16', 'qf', 'sf', 'final']
+const KO_STAGE = { r32: 'Round of 32', r16: 'Round of 16', qf: 'Quarter-final', sf: 'Semi-final', final: 'Final' }
+function koPath(U, r, field) {
+  const B = r.bracket
+  if (!B) return { rounds: [], third: null }
+  const rate = s => (s === U ? r.team : field?.NATION_BY?.get(s)) ?? { att: 70, def: 70 }
+  const pOf = o => { const a = rate(U), b = rate(o); return Math.round(clamp(0.5 + 0.5 * Math.tanh(0.025 * ((a.att - b.att) + (a.def - b.def))), 0.2, 0.78) * 100) / 100 }
+  const list = k => (k === 'final' ? (B.final ? [B.final] : []) : B[k] ?? [])
+  const keys = KO_KEYS.filter(k => list(k).length)
+  const start = keys.findIndex(k => list(k).some(m => m.home === U || m.away === U))
+  if (start < 0) return { rounds: [], third: null }
+  const rounds = []
+  let occ = U, sfMatch = null
+  for (const k of keys.slice(start)) {
+    const m = list(k).find(x => x.home === occ || x.away === occ)
+    if (!m) break
+    const opp = m.home === occ ? m.away : m.home
+    rounds.push({ key: k, stage: KO_STAGE[k], opp, oppName: nationName(opp), p: pOf(opp), eng: occ === U ? (m.winner === U ? 'W' : 'L') : null })
+    if (k === 'sf') sfMatch = m
+    occ = m.winner
+  }
+  const T = B.third, tOpp = T && sfMatch ? [T.home, T.away].find(x => x !== sfMatch.home && x !== sfMatch.away) : null
+  return { rounds, third: tOpp ? { opp: tOpp, oppName: nationName(tOpp), p: pOf(tOpp) } : null }
 }
 // The World Cup: his nation's tournament. The field is that year's: 48 nations through qualifying (his has to get
 // there: a great No. 9 helps it), the squads aged, the retired gone (lib/soccerIntl.js worldCupOf)
@@ -667,7 +804,8 @@ const bdoCase = (goals, assists, trophies) => { const own = goals + 0.5 * assist
 function soccerSeason(c, f, po) {
   const S = SPORT.soccer
   const lg = soccerStats(f)
-  const line = po?.line ?? []
+  // (the club's nights; his country's knockouts are the tournament's, below)
+  const allLine = po?.line ?? [], line = allLine.filter(x => !x.intl)
   const played = line.filter(x => !x.sat)
   const cupPo = (po?.rounds ?? []).some(x => x.track === 'cup')
   // the cup and the league phase in Europe, as the engine played them (the knockouts and the cup final are Career's),
@@ -711,8 +849,9 @@ function soccerSeason(c, f, po) {
   if (cupWon && qualified !== 'ucl') qualified = 'uel'
   if (euroWon) qualified = comp === 'uecl' ? (qualified === 'ucl' ? 'ucl' : 'uel') : 'ucl'
   // international duty: the World Cup in a World Cup summer, the continental championship in its own
-  const wc = wcSummer(c) ? soccerWorldCup(c, lg) : null
-  const cont = soccerContinental(c, lg)
+  const I = intlFor(c, f)
+  const wc = wcSummer(c) ? playedTour(c, I.wc, allLine, 'wc') : null
+  const cont = playedTour(c, I.cont, allLine, 'cont')
   const intl = intlSeason(c, lg, [wc, cont])
   // the league's awards (the engine's, on his real league totals: lib/seasonDirector.js soccerFinal)
   // the Golden Boot and the Golden Shoe: the engine's field, and the year's best rival in his league (a top scorer
@@ -726,13 +865,16 @@ function soccerSeason(c, f, po) {
     + (cont?.called ? ((BDO_CONT[cont.finish] ?? 0) + (cont.ball === 'Golden Ball' ? 2 : 0)) * (cont.major ?? 0.5) : 0)
   // (goals in the second tier count for half with the voters)
   const k2 = tier2 ? 0.5 : 1
-  const mine = r10(bdoCase(goals * k2 + (wc?.goals ?? 0) + (cont?.goals ?? 0), assists * k2 + (wc?.assists ?? 0) + (cont?.assists ?? 0), tp) + (boot && !tier2 ? 2 : 0))
+  // (the voters and a teenager: nobody has won it before 21 (Ronaldo, 1997); Yamal's 2025 was second at 18. A case
+  // at 18 or under is read at 85%, at 19-20 at 88%, and 18 or under never wins it)
+  const young = c.age <= 18 ? 0.85 : c.age <= 20 ? 0.88 : 1
+  const mine = r10((bdoCase(goals * k2 + (wc?.goals ?? 0) + (cont?.goals ?? 0), assists * k2 + (wc?.assists ?? 0) + (cont?.assists ?? 0), tp) + (boot && !tier2 ? 2 : 0)) * young)
   // (and the year's best rival: most years a ~66 case, a 50-goal treble now and then, so it isn't his every year
   // he scores 40; the best man in the engine's field has that season)
   const field = (f.book?.bdo ?? f.ballonDor?.top ?? []).filter(x => !x.isPlayer).map(x => ({ ...x, score: r10(x.score - BDO_RIVAL.shift) })).sort((a, b) => b.score - a.score)
   const ru = clamp(seeded(`${c.seed}-bdo-${c.year}`)(), 0.001, 0.999), rival = BDO_RIVAL.mid + BDO_RIVAL.spread * Math.log(ru / (1 - ru))
   if (field[0] && field[0].score < rival) field[0].score = r10(rival)
-  const rank = 1 + field.filter(x => x.score > mine).length
+  const rank = Math.max(c.age <= 18 && field.length ? 2 : 1, 1 + field.filter(x => x.score > mine).length)
   const winner = rank === 1 ? null : field[0] ?? null
   // (rival: the best other case that year, and whose it was, so the screens can say who he beat or lost to)
   const bdo = { rank, finish: rank === 1 ? 'winner' : rank <= 3 ? 'top3' : rank <= 10 ? 'top10' : rank <= 30 ? 'nominated' : null, score: mine, winner: winner ? { name: winner.name, team: winner.team } : null, rival: field[0] ? { name: field[0].name, team: field[0].team, score: field[0].score } : null }
@@ -764,7 +906,7 @@ function soccerSeason(c, f, po) {
   s.goals = c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins, starts: lg.starts, startWins: 0 }) }))
   // the smaller honors: the Kopa Trophy (the best player 21 or under), man of the match in a final he won
   s.roy = c.age <= 21 && rank <= 12
-  s.fmvp = played.some(x => x.final && x.won && x.hit && (x.score ?? 0) >= 0.7)
+  s.fmvp = allLine.some(x => !x.sat && x.final && x.won && x.hit && (x.score ?? 0) >= 0.7)
   // the records only a whole season shows: all competitions, the Champions League, a calendar year
   const prev = c.seasons[c.seasons.length - 1]
   const half = (list, h1) => list.filter(g => (h1 ? (g.wk ?? 0) <= 19 : (g.wk ?? 0) > 19)).reduce((a, g) => a + (g.goals ?? 0), 0)
@@ -850,6 +992,13 @@ function suitors(c, { fee = 0, free = false, anyStep = false } = {}) {
   }
   return out
 }
+// (a club that pays a big fee buys a starter: past a quarter of what it can spend, or €25M, he walks into its eleven.
+// Within three points of its No. 9 it promises him the shirt (a first-team promise in the deal); further behind, it
+// doesn't bid that kind of money. City don't pay €200M for Haaland's understudy)
+const bigFee = (x, fee) => fee > Math.max(25, 0.25 * x.purse.fee)
+const bidFits = (x, fee) => x.st.starter || !bigFee(x, fee) || (x.st.gap ?? 99) <= 3
+const promised = (x, fee) => (!x.st.starter && bigFee(x, fee) ? { starter: true, stand: { ...x.st, starter: true, role: 'Starter', promised: true } } : {})
+const JAN_TOP = 120
 // n of them, the keener the likelier, no club twice
 const pickSome = (r, list, n) => list.map(x => ({ x, k: Math.pow(r(), 1 / Math.max(0.01, x.w)) })).sort((a, b) => b.k - a.k).slice(0, n).map(y => y.x)
 const dealYears = c => (c.age <= 26 ? 5 : c.age <= 29 ? 4 : c.age <= 31 ? 3 : 2)
@@ -870,8 +1019,8 @@ function windowState(c) {
   const fitAt = fitAtFor(c)
   const myStr = strength(soccerClub(c.team)), here = seasonsHere(c)
   const offers = [], rejected = []
-  const bid = (x, fee, more = {}) => ({ kind: 'bid', team: x.t, fit: fitAt(x.t), stand: x.st, years: dealYears(c), perYear: wageAt(c, x.t, r, { rise: true }), fee, pitch: bidPitch(x.st, x.step > 0.05), ...more })
-  const downNow = c.down?.team === c.team && c.down.year === last?.year
+  const bid = (x, fee, more = {}) => { const pr = promised(x, fee), st = pr.stand ?? x.st; return { kind: 'bid', team: x.t, fit: fitAt(x.t), stand: st, years: dealYears(c), perYear: wageAt(c, x.t, r, { rise: true }), fee, pitch: pr.starter ? 'They are paying for a No. 9: the shirt is his, in writing.' : bidPitch(st, x.step > 0.05), ...more, ...(pr.starter ? { starter: true } : {}) } }
+  const downNow = c.down?.team === c.team && c.down.year === last?.year && !c.down.signed
   if (downNow) {
     // relegated this summer
     if (c.down.clause) {
@@ -914,15 +1063,16 @@ function windowState(c) {
   let n = r() < heat ? 1 : 0
   if (n) n += (r() < heat * 0.6 ? 1 : 0) + (r() < heat * 0.3 ? 1 : 0)
   if (n) {
-    const pool = suitors(c, { fee: Math.min(value, clause ?? Infinity), anyStep: backup }).filter(x => !backup || x.st.role !== 'Bench')
+    const pool = suitors(c, { fee: Math.min(value, clause ?? Infinity), anyStep: backup }).filter(x => (!backup || x.st.role !== 'Bench') && bidFits(x, Math.min(value, x.purse.fee)))
     for (const x of pickSome(r, pool, n)) {
       let fee = Math.max(1, Math.round(Math.min(value * (0.9 + r() * 0.35), x.purse.fee)))
       // (a bid that reaches his release clause triggers it: the fee is the clause, and his club can't refuse)
       const meets = clause != null && x.purse.fee >= clause && fee >= clause * 0.92
       if (meets) fee = clause
+      if (!bidFits(x, fee)) continue
       const no = meets ? 0 : clamp((x.step > 0.05 ? 0.15 : 0.55) + (c.contract.left >= 4 ? 0.15 : 0) + (bought && here <= 1 ? 0.2 : 0) - (backup ? 0.4 : 0) - (c.contract.left <= 1 ? 0.3 : 0), 0, 0.85)
       if (r() < no) { rejected.push({ team: x.t, name: soccerClub(x.t).name, fee }); continue }
-      offers.push(bid(x, fee, meets ? { clause: 'release', pitch: x.st.starter ? 'They have met his release clause. The No. 9 shirt is his if he wants it.' : 'They have met his release clause. A fight for the shirt, if he wants the move.' } : {}))
+      offers.push(bid(x, fee, meets ? { clause: 'release', pitch: x.st.starter || bigFee(x, fee) ? 'They have met his release clause. The No. 9 shirt is his if he wants it.' : 'They have met his release clause. A fight for the shirt, if he wants the move.' } : {}))
     }
   }
   // his own club: a new deal with two years left or less, after a good season
@@ -975,7 +1125,24 @@ function soccerMarket(c, fresh = false, left = null) {
   const payer = two.length === 2 ? two[1] : contender ? null : two[0] ?? null
   if (contender) list.push(mk(contender.t, 0.85, years - 1, fresh ? 'A year at a big club. One more shot at a trophy.' : contender.st.starter ? 'Lower wages. A real shot at the title.' : 'Lower wages, a place in the squad, a real shot at the title.', 'contender'))
   if (payer) list.push(mk(payer.t, 1.15, years + (c.age < 29 ? 1 : 0), fresh ? 'The best money on the table for one more season.' : 'The top wages on offer. A club that wants a big name up front.', 'payer'))
+  // (a player under 31 nobody in the top flight wants still has a career: he drops a division, to a club just down
+  // or one of the smallest, and plays. Before 2026-11-25 a weak build out of contract at 20-26 got no calls and retired)
+  if (!fresh && !list.some(o => o.team !== c.team) && (c.age ?? 25) < 31) { const o = dropOffer(c, r, years); if (o) list.push(o) }
   return list
+}
+// A division down: one of the clubs his league just relegated (the table he played in), else one of the smallest clubs
+// on the ladder, in its second tier this season (c.down, as if it had gone down). Where he'd start, if there is one.
+function dropOffer(c, r, years) {
+  const last = c.seasons[c.seasons.length - 1]
+  const lgOf = short => CLUB_BY.get(short)?.league
+  const justDown = last && last.tier !== 2 ? (last.table ?? []).slice(-3).map(x => x[0]).filter(t => CLUB_BY.has(t) && t !== c.team && TIER2_NAME[lgOf(t)]) : []
+  const smallest = CLUB_RANK.slice(-14).filter(t => t !== c.team && t !== c.loan?.from && TIER2_NAME[lgOf(t)])
+  const pool = (justDown.length ? justDown : smallest).map(t => ({ t, st: standAt(c, t) }))
+  const pick = pickSome(r, pool.map(x => ({ ...x, w: x.st.starter ? 3 : x.st.role === 'Rotation' ? 1.5 : 0.5 })), 1)[0]
+  if (!pick) return null
+  const t = pick.t, fit = fitAtFor(c)(t)
+  return { team: t, fit, perYear: wageAt(c, t, r, { k: 0.7 }), years: Math.max(1, Math.min(3, years - 1)), kind: 'drop', tier2: TIER2_NAME[lgOf(t)], stand: pick.st,
+    pitch: justDown.includes(t) ? `Just relegated. Regular football in ${TIER2_NAME[lgOf(t)]}, and a club that wants to go straight back up.` : `A division down: regular football in ${TIER2_NAME[lgOf(t)]}.` }
 }
 // turn them all down: he stays on the deal he has
 export function stayPut(c) {
@@ -1001,8 +1168,10 @@ function soccerSign(c, o) {
   const how = !change ? `Signed a new deal at ${club.name}` : o.kind === 'bid' ? `Joined ${club.name} for ${feeText(o.fee ?? soccerValue(c), c.team)}${o.clause === 'release' ? ' (his release clause)' : o.clause === 'relegation' ? ' (his relegation clause)' : ''}` : `Signed for ${club.name} on a free transfer`
   return {
     ...c, team: o.team, roster, ...(change ? { kept: keepRoster(c), europe: null, europeFor: null, down: null } : {}), fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: 'soccer' }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, loan: null, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
+    // (a move a division down: the club plays its second tier this season, the way a relegated club does: c.down)
+    ...(o.tier2 && change ? { down: { team: o.team, year: c.seasons[c.seasons.length - 1]?.year ?? c.year, clause: false, fee: null, signed: true } } : {}),
     contract: { kind: change ? (o.kind === 'bid' ? 'transfer' : 'fa') : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter, release: cl.release, relClause: cl.relClause },
-    decisions: [...c.decisions, { year: c.year + 1, text: `${how}: ${o.years} ${o.years === 1 ? 'yr' : 'yrs'}, ${wageText(o.perYear, o.team)}${extras.length ? ` (${extras.join(', ')})` : ''}` }],
+    decisions: [...c.decisions, { year: c.year + 1, text: `${how}${o.tier2 && change ? ` in ${o.tier2}` : ''}: ${o.years} ${o.years === 1 ? 'yr' : 'yrs'}, ${wageText(o.perYear, o.team)}${extras.length ? ` (${extras.join(', ')})` : ''}` }],
   }
 }
 // A transfer request: the club can say no (a release clause in his deal means it can't); granted, he's sold: to a
@@ -1057,12 +1226,17 @@ function januaryOffers(c, D, k) {
   if (clause != null && clause <= value * 1.15) heat = Math.min(0.6, heat * 1.6)
   const n = (r() < heat ? 1 : 0) + (r() < heat * 0.35 ? 1 : 0)
   if (n) {
-    const pool = suitors(c, { fee: Math.min(value * 1.1, clause ?? Infinity), anyStep: share < 0.3 }).filter(x => share >= 0.3 || x.st.role !== 'Bench')
+    const pool = suitors(c, { fee: Math.min(value * 1.1, clause ?? Infinity), anyStep: share < 0.3 }).filter(x => (share >= 0.3 || x.st.role !== 'Bench') && bidFits(x, Math.min(value, x.purse.fee)))
     for (const x of pickSome(r, pool, n)) {
-      let fee = Math.max(1, Math.round(Math.min(value * (1.05 + r() * 0.3), x.purse.fee)))
+      let fee = Math.max(1, Math.round(Math.min(value * (1.02 + r() * 0.18), x.purse.fee)))
       const meets = clause != null && x.purse.fee >= clause && fee >= clause * 0.92
       if (meets) fee = clause
-      offers.push({ kind: 'bid', january: true, team: x.t, fit: fitAt(x.t), stand: x.st, years: dealYears(c), perYear: wageAt(c, x.t, r, { rise: true }), fee, ...(meets ? { clause: 'release' } : {}), pitch: meets ? 'They have met his release clause in the January window.' : x.st.starter ? 'A January move. They need a No. 9 now.' : 'A January move, and a fight for the shirt.' })
+      // (January money has a ceiling: the record is Enzo Fernández, €121M in 2023. A player worth more than that
+      // isn't sold mid-season unless a clause makes it so; a club paying real money wants him in its eleven)
+      if (!meets && fee > JAN_TOP) { if (value > JAN_TOP * 1.05) continue; fee = JAN_TOP }
+      if (!bidFits(x, fee)) continue
+      const pr = promised(x, fee)
+      offers.push({ kind: 'bid', january: true, team: x.t, fit: fitAt(x.t), stand: pr.stand ?? x.st, years: dealYears(c), perYear: wageAt(c, x.t, r, { rise: true }), fee, ...(meets ? { clause: 'release' } : {}), ...(pr.starter ? { starter: true } : {}), pitch: meets ? 'They have met his release clause in the January window.' : pr.starter ? 'A January move. They need a No. 9 now, and the shirt is his.' : x.st.starter ? 'A January move. They need a No. 9 now.' : 'A January move, and a fight for the shirt.' })
     }
   }
   return offers
@@ -1221,7 +1395,7 @@ SOCCER.x = {
   // the table: as it stands (table(c, D)), a booked season's (tableOf(s)); a row's zone: 'ucl' | 'uel' | 'uecl' | 'down' | 'playoff' | 'up' | null
   table: soccerTable, tableOf,
   // his country: the call-up and the pecking order (callUp(c)), the summer's tournaments (summer(c)), every nation's name
-  callUp: soccerCallUp, summer: soccerSummer, nationOf: short => intlNation(short),
+  callUp: soccerCallUp, summer: soccerSummer, tourNights: soccerTourNights, castNation, nationOf: short => intlNation(short),
   // the second tier's name for a club's league ('the Championship')
   tier2Name: short => TIER2_NAME[CLUB_BY.get(short)?.league] ?? 'the second tier', isDown: c => c?.down?.team === c?.team,
 }

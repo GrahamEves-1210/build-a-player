@@ -1017,9 +1017,13 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   // says what's left: a cup final, the European knockouts, or nothing but the wrap
   let fin = null
   if (S.isSoccer && seasonOver) { try { if (!D.current) D.current = resumeSeason(c); fin = D.current.finalize() } catch { fin = null } }
-  const nights = fin && S.made(fin) ? (() => {
+  // (and the summer's tournament: his country through the group, its knockouts to play, S.x.tourNights)
+  let tour = null
+  if (fin && !a?.out) { try { tour = S.x?.tourNights?.(c, fin) ?? null } catch { tour = null } }
+  const nights = fin && (S.made(fin) || tour) ? (() => {
     const cup = ['Winners', 'Runners-up'].includes(fin.cup?.result), euro = !!fin.europe && S.made({ europe: fin.europe })
-    return { what: [euro ? `The ${fin.europe.name} knockouts` : null, cup ? `${euro ? 'the' : 'The'} ${fin.cup.name} final` : null].filter(Boolean).join(' and '), go: cup && euro ? 'THE CUPS AND EUROPE' : cup ? `THE ${String(fin.cup.name).toUpperCase()} FINAL` : 'THE EUROPEAN NIGHTS' }
+    const what = [euro ? `the ${fin.europe.name} knockouts` : null, cup ? `the ${fin.cup.name} final` : null, tour?.what].filter(Boolean)
+    return { what: (what.length > 1 ? `${what.slice(0, -1).join(', ')} and ${what[what.length - 1]}` : what[0]).replace(/^t/, 'T'), go: cup && euro ? 'THE CUPS AND EUROPE' : cup ? `THE ${String(fin.cup.name).toUpperCase()} FINAL` : euro ? 'THE EUROPEAN NIGHTS' : tour.go, tour: !!tour }
   })() : null
   const cb = comebackYear(c)
   // basketball, in camp: the coach's question about a new spot, until it's answered (lib/career.js spotMove)
@@ -1142,7 +1146,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               <div className="ag-card cr-over ag-pop">
                 <span className="ag-eyebrow">{S.isSoccer ? <>THE LEAGUE IS DONE · <span className="cr-nb">{clubRec}</span> · <span className="cr-nb">{clubPts} PTS</span></> : `REGULAR SEASON OVER · ${wins}–${losses}`}</span>
                 {S.isSoccer ? <>
-                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.league?.tier === 2 ? (fin.promoted ? (fin.promotedHow === 'playoff' ? ' and go up through the play-offs' : fin.seed === 1 ? ' and go up as champions' : ' and go up') : ': no promotion this year') : fin.champion ? ': champions' : fin.relegated ? ` and go down to ${S.x?.tier2Name?.(c.team) ?? 'the second tier'}` : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}{summerLine(c)}</p>
+                  <p className="cr-note">{fin ? `${c.fit.name} finish ${ordinalOf(fin.seed)} in ${inLeague(fin.league?.name)}${fin.league?.tier === 2 ? (fin.promoted ? (fin.promotedHow === 'playoff' ? ' and go up through the play-offs' : fin.seed === 1 ? ' and go up as champions' : ' and go up') : ': no promotion this year') : fin.champion ? ': champions' : fin.relegated ? ` and go down to ${S.x?.tier2Name?.(c.team) ?? 'the second tier'}` : ''}. ` : 'The league is in. '}{!nights ? 'No cup final and no European knockouts this year.' : a.out ? `${c.name} is out for the season: the club plays ${nights.what.replace(/^T/, 't')} without him.` : `Still to play: ${nights.what.replace(/^T/, 't')}.`}{nights?.tour ? '' : summerLine(c)}</p>
                   <button className="ag-btn ag-btn--gold tk-intro-go" onClick={wrap}>{nights && !a.out ? nights.go : 'WRAP THE SEASON'} <IconArrow size={16} /></button>
                 </> : (() => { const pct = teamRec ? teamRec.wins / Math.max(1, teamRec.wins + teamRec.losses) : wins / Math.max(1, wins + losses); const sport = S.ui?.sportWord ?? (S.isBucket ? 'basketball' : 'football'); return <>
                   <p className="cr-note">{teamRec ? `The ${teamNick} finish ${teamRec.wins}–${teamRec.losses}. ` : ''}{pct >= 0.58 ? `Playoff ${sport}. Let's see how far it goes.` : pct >= 0.45 ? (S.ui?.bubble ?? (S.isBucket ? 'On the bubble. The play-in might decide it.' : 'On the bubble. The tiebreakers decide it.')) : 'No postseason this year. Book it and move on.'}</p>
@@ -2373,9 +2377,10 @@ export const ordinalOf = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['t
 export const seasonOf = y => `${y}-${String((y + 1) % 100).padStart(2, '0')}`
 // a club's crest (a side outside the data has none: its initials)
 export function ClubLogo({ S, short, extra, className = '' }) {
-  // (a crest that isn't on file falls back to the initials too, never a broken image)
+  // (a crest that isn't on file falls back to the initials, never a broken image. A club outside the data, extra,
+  // has its ESPN crest on file too since 2026-11-25: Basel, Benfica, the lower divisions' cup sides)
   const [bad, setBad] = useState(null)
-  if (extra || bad === short) return <span className={`cr-club-init ${className}`}>{String(short ?? '?').slice(0, 3)}</span>
+  if (bad === short) return <span className={`cr-club-init ${className}`}>{String(short ?? '?').slice(0, 3)}</span>
   return <img src={S.logo(short)} alt="" className={className} onError={() => setBad(short)} />
 }
 // a tie's score: one match, or both legs and the aggregate, and penalties when it went that far
