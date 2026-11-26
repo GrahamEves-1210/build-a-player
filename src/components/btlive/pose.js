@@ -32,15 +32,19 @@ export function createPoser(N) {
     ang: -Math.PI / 2, x: null, y: 0, run: 0, sp: 0, lx: 1, ly: 0, side: 1, from: 1, drib: 0,
     inMv: 0, mvT0: 0, gT0: -1, gKind: null, gSide: 1, gAir: 0,
     rel: null, swipe: null, pass: null, hit: null, wob: 1, cheer: false, land: 0, gOx: 0, gOy: 0,
+    swat: null, cele: null, sad: 0, dvx: 0, dvy: 0, cutAt: 0,
     // what is drawn: eased toward each frame's pose
     lh: null, rh: null, lf: null, rf: null,
   }))
-  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0], rh: [0, 0, 0], lf: [0, 0], rf: [0, 0], air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], bside: 1, two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0 }))
+  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0], rh: [0, 0, 0], lf: [0, 0], rf: [0, 0], air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], bside: 1, two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0, cut: false }))
   const TL = [0, 0, 0], TR = [0, 0, 0]
+  let lastMiss = null
 
   // what happened: the things a pose can't read off the state
   function on(e, s, now) {
     const p = e.pid != null ? A[e.pid] : null
+    // a big bucket (a dunk, a poster, a three): once he's down, a fist pump after a dunk, a point after a three
+    if (e.e === 'make' && p && (e.kind === 'dunk' || e.poster || e.deep || e.three)) p.cele = { t0: now + (e.kind === 'dunk' ? 560 : 420), pump: e.kind === 'dunk' || !!e.poster }
     if (e.e === 'release') p.rel = { t0: now, kind: e.kind, air: p.gAir, side: p.gSide, slam: 0, out: 0 }
     else if (e.e === 'make' || e.e === 'waved') {
       if (p.rel) { p.rel.out = now; if (e.kind === 'dunk') p.rel.slam = now }
@@ -49,8 +53,16 @@ export function createPoser(N) {
         const j = typeof e.on === 'number' ? e.on : s.players.findIndex(o => o.id === e.on)
         if (j >= 0) { const d = s.players[j], q = s.players[e.pid]; let ux = d.x - q.x, uy = d.y - q.y; const l = Math.hypot(ux, uy) || 1; A[j].hit = { t0: now, ux: ux / l, uy: l < 0.2 ? 1 : uy / l } }
       }
-    } else if (e.e === 'miss') { if (p.rel) p.rel.out = now }
-    else if (e.e === 'block') { const q = A[e.on]; if (q) { q.rel = { t0: now, kind: e.kind, air: q.gAir, side: q.gSide, slam: 0, out: now, blocked: true } } }
+    } else if (e.e === 'miss') { if (p.rel) p.rel.out = now; lastMiss = { pid: e.pid, t: now } }
+    else if (e.e === 'block') {
+      const q = A[e.on]; if (q) { q.rel = { t0: now, kind: e.kind, air: q.gAir, side: q.gSide, slam: 0, out: now, blocked: true } }
+      // the block itself: his arm swats through the ball, at the shooter
+      const d = s.players[e.pid], o = s.players[e.on]; if (d && o) p.swat = { t0: now, a: Math.atan2(o.y - d.y, o.x - d.x) }
+    }
+    // a miss the other side came down with: the shooter's head drops for a moment
+    else if (e.e === 'board') { if (lastMiss && now - lastMiss.t < 2500 && s.players[lastMiss.pid] && s.players[lastMiss.pid].team !== s.players[e.pid].team) A[lastMiss.pid].sad = now; lastMiss = null }
+    // King of the Hill's check: the bounce pass over to the king, both hands through it
+    else if (e.e === 'checkup') { const q = s.players[e.pid], to = s.players[e.to]; if (q && to) p.pass = { t0: now, a: Math.atan2(to.y - q.y, to.x - q.x) } }
     else if (e.e === 'swipe' || e.e === 'steal') {
       const h = e.e === 'steal' ? s.players[e.from] : s.ball.st === 'held' ? s.players[s.ball.holder] : null, q = s.players[e.pid]
       if (h) p.swipe = { t0: now, a: Math.atan2(h.y - q.y, h.x - q.x), miss: e.e === 'swipe' }
@@ -76,6 +88,17 @@ export function createPoser(N) {
     if (dist < 3) a.run += dist / STRIDE * TAU
     const amp = c01(a.sp / 9)
     let fast = false
+    // a hard cut: going fast and the way he goes swings round sharply, or a hard stop (a scuff on the floor: the screen
+    // draws it). A dribble move's first step and a pull-up's plant leave one too (dribble, gather)
+    z.cut = false
+    if (dist > 0.02 && dist < 3) {
+      const ux = mvx / dist, uy = mvy / dist
+      // (or a hard stop: from a run to half that in a moment, the plant foot taking it)
+      a.pk = Math.max(sp, (a.pk || 0) * Math.exp(-dt / 220))
+      if (now - a.cutAt > 300 && ((a.sp > 6.5 && (a.dvx || a.dvy) && ux * a.dvx + uy * a.dvy < 0.8) || (a.pk > 8.5 && sp < a.pk * 0.45))) { z.cut = true; a.cutAt = now; a.pk = 0 }
+      const kd = 1 - Math.exp(-dt / 260); a.dvx += (ux - a.dvx) * kd; a.dvy += (uy - a.dvy) * kd
+      const l = Math.hypot(a.dvx, a.dvy) || 1; a.dvx /= l; a.dvy /= l
+    }
 
     // ── which way he's turned ──
     let fa = Math.atan2(p.fy, p.fx), turn = 85
@@ -86,7 +109,18 @@ export function createPoser(N) {
     const man = p.man >= 0 ? P[p.man] : null
     const guarding = live && p.team !== s.poss && man && !has
     const M = has && p.burst > 0 ? p.mv : 0
+    // a shot up or a ball coming off the rim: a man between his man and the rim puts his back into him and faces the
+    // ball (the box-out)
+    let boxOn = null
+    if (live && !has && p.act === 'free' && (b.st === 'shot' || (b.st === 'loose' && b.reb))) {
+      for (const o of P) {
+        if (o.team === p.team || o.out) continue
+        const d = Math.hypot(o.x - env.x, o.y - env.y)
+        if (d < 4.6 && Math.hypot(RIM.x - o.x, RIM.y - o.y) > dRim + 0.6 && (!boxOn || d < boxOn.d)) boxOn = { d, o }
+      }
+    }
     if (shooting) { if (dRim > 1.2) fa = toRim; else fa = a.ang; turn = 60 }
+    else if (boxOn) { fa = toBall; turn = 80 }
     else if (a.pass && now - a.pass.t0 < 220) { fa = a.pass.a; turn = 40 }
     else if (a.swipe && now - a.swipe.t0 < 260) { fa = a.swipe.a; turn = 50 }
     else if (p.act === 'jump' || p.act === 'land') fa = (b.st === 'shot' || b.st === 'loose') && !guarding ? toBall : man && guarding ? Math.atan2(man.y - env.y, man.x - env.x) : toBall
@@ -130,28 +164,61 @@ export function createPoser(N) {
       const wide = c01((10 - dm) / 4) * (1 - c01((a.sp - 8) / 3))              // squared up on him; running when he chases
       z.lf[1] -= 0.1 * wide; z.rf[1] += 0.1 * wide; z.lf[0] *= 1 - 0.5 * wide; z.rf[0] *= 1 - 0.5 * wide
       z.toeL = -0.25 * wide; z.toeR = 0.25 * wide
-      mix3(TL, 0.26, -0.56, 0.36, wide); mix3(TR, 0.26, 0.56, 0.36, wide)
+      mix3(TL, 0.24, -0.36, 0.3, wide); mix3(TR, 0.24, 0.36, 0.3, wide)
       z.lean = Math.max(z.lean, 0.03 * wide)
+      // sliding with him: the feet never cross, the lead foot steps out and the trail foot closes to it (a shuffle);
+      // giving ground: short quick steps back, the weight on his heels
+      const lat = Math.abs(ly) * c01((a.sp - 1.5) / 3) * wide
+      if (lat > 0.05) {
+        const sh = 0.07 * Math.sin(a.run * 1.3)
+        z.lf[0] += (0.02 - z.lf[0]) * lat; z.rf[0] += (0.02 - z.rf[0]) * lat
+        z.lf[1] += (-(0.25 + sh) - z.lf[1]) * lat; z.rf[1] += ((0.25 + sh) - z.rf[1]) * lat
+        z.toeL = -0.35 * lat; z.toeR = 0.35 * lat
+      }
+      if (lx < -0.45 && a.sp > 1.5) { const bk = c01(-lx - 0.45) * wide; z.lf[0] *= 1 - 0.45 * bk; z.rf[0] *= 1 - 0.45 * bk; z.lean = -0.03 * bk }
+      // his man rising for a shot: a hand up at it (no jump: that's the button)
+      if (P[man.i].act === 'gather') {
+        const w = c01((8.5 - dm) / 3), toS = wrap(Math.atan2(man.y - env.y, man.x - env.x) - a.ang), sd = Math.sin(toS) >= 0 ? 1 : -1
+        mix3(sd > 0 ? TR : TL, 0.22, sd * 0.2, 1, w)
+      }
       if (onBall && dm < 8) {
         // the hand on the ball's side a little out in front of it, low (where a swipe comes from)
         const ballSide = (P[man.i].hand || 1) * (Math.cos(a.ang - A[man.i].ang) < 0 ? -1 : 1)
         const w = c01((8 - dm) / 2)
-        mix3(ballSide > 0 ? TR : TL, 0.4, ballSide > 0 ? 0.48 : -0.48, 0.4, w)
+        mix3(ballSide > 0 ? TR : TL, 0.32, ballSide > 0 ? 0.38 : -0.38, 0.34, w)
+        // the hands working, a little (a quick small in-and-out, never a wave)
+        const hw = 0.03 * w * Math.sin(now / 115)
+        TL[0] += hw; TR[0] -= hw
       }
+    }
+    // the box-out: wide and low, his arms out to feel for the man behind him, sat back into him
+    if (boxOn) {
+      const w = c01((4.6 - boxOn.d) / 1.2)
+      z.lf[1] -= 0.1 * w; z.rf[1] += 0.1 * w; z.lf[0] *= 1 - 0.6 * w; z.rf[0] *= 1 - 0.6 * w
+      z.toeL = -0.2 * w; z.toeR = 0.2 * w; z.lean = -0.04 * w; z.scale = 1 - 0.03 * w
+      mix3(TL, 0.04, -0.46, 0.42, w); mix3(TR, 0.04, 0.46, 0.42, w)
     }
     // off the ball, on offense: hands ready for a pass on its way; one arm up, held, when he calls for it
     if (live && !has && p.team === s.poss && p.act === 'free') {
       if (b.st === 'pass' && b.to === i) { set3(TL, 0.42, -0.17, 0.5); set3(TR, 0.42, 0.17, 0.5) }
       else if (s.call && s.call.pid === i && s.tick - s.call.tick < 40) set3(TR, 0.1, 0.42, 1)
     }
+    // the check coming to him: both hands out for it
+    if (b.st === 'check' && b.to === i) { set3(TL, 0.42, -0.17, 0.5); set3(TR, 0.42, 0.17, 0.5) }
 
     // ── the ball in his hands ──
     if (has && p.act !== 'gather') {
       z.ball = true
       if (!live) {
-        // between plays: held in both hands at his belt
-        set3(TL, 0.3, -0.12, 0.4); set3(TR, 0.3, 0.12, 0.4); set3(z.bl, 0.33, 0, 3.2); z.two = true
-        a.side = p.hand || 1
+        // between plays: in triple threat, the ball on his strong hip in both hands, knees bent, the foot on that side
+        // back (his pivot foot forward); while he's walking it up, at his belt
+        const hd = p.hand || 1, tt = c01(1 - (a.sp - 1) / 3)
+        set3(TL, 0.3, -0.12, 0.4); set3(TR, 0.3, 0.12, 0.4); set3(z.bl, 0.33, 0, 3.2)
+        mix3(hd > 0 ? TR : TL, 0.1, hd * 0.44, 0.36, tt); mix3(hd > 0 ? TL : TR, 0.2, hd * 0.2, 0.36, tt)
+        z.bl[0] += (0.16 - z.bl[0]) * tt; z.bl[1] += (hd * 0.36 - z.bl[1]) * tt; z.bl[2] += (3.0 - z.bl[2]) * tt
+        if (tt > 0.5) { const back = hd > 0 ? z.rf : z.lf, fr = hd > 0 ? z.lf : z.rf; back[0] = -0.08; fr[0] = 0.12; z.lf[1] = -0.19; z.rf[1] = 0.19; z.scale = 0.97 }
+        z.two = true
+        a.side = hd
       } else dribble(s, p, a, z, now, env, amp)
     } else { a.inMv = 0; a.side = p.hand || 1 }
 
@@ -166,7 +233,7 @@ export function createPoser(N) {
       if (t < dur) {
         const w = t < 90 ? out3(t / 90) : 1 - ease((t - 90) / (dur - 90))
         const la = wrap(a.swipe.a - a.ang), sd = Math.sin(la) >= 0 ? 1 : -1
-        mix3(sd > 0 ? TR : TL, 0.0 + Math.cos(la) * 0.5, sd * 0.36 + Math.sin(la) * 0.4, 0.4, w)
+        mix3(sd > 0 ? TR : TL, 0.04 + Math.cos(la) * 0.36, sd * 0.34 + Math.sin(la) * 0.28, 0.4, w)
         z.lean = Math.max(z.lean, 0.08 * w)
         fast = true
       } else a.swipe = null
@@ -192,6 +259,16 @@ export function createPoser(N) {
       z.scale = 0.96; z.lf[1] = -0.22; z.rf[1] = 0.22; set3(TL, 0.18, -0.5, 0.3); set3(TR, 0.18, 0.5, 0.3)
       if (p.act !== 'land' && now - a.land >= 150) a.land = 0
     }
+    // the block: the arm on the shooter's side goes through the ball at him and comes back (in the air or not)
+    if (a.swat) {
+      const t = now - a.swat.t0
+      if (t < 320) {
+        const w = t < 70 ? out3(t / 70) : 1 - ease((t - 70) / 250)
+        const la = wrap(a.swat.a - a.ang), sd = Math.sin(la) >= 0 ? 1 : -1
+        mix3(sd > 0 ? TR : TL, 0.18 + Math.cos(la) * 0.22, sd * 0.2 + Math.sin(la) * 0.18, 1.05, w)
+        fast = true
+      } else a.swat = null
+    }
 
     // ── beaten by a move: caught leaning, on his heels; or sat down ──
     if (p.act === 'frozen' && !(a.swipe && a.swipe.miss)) {
@@ -200,6 +277,10 @@ export function createPoser(N) {
       z.lean = -0.06
       set3(TL, 0.06, -0.53, 0.28); set3(TR, 0.06, 0.53, 0.28)
       z.lf[0] = 0.1 * a.wob; z.lf[1] = -0.17; z.rf[0] = -0.1 * a.wob; z.rf[1] = 0.17
+      // off balance: his weight goes the wrong way and a foot has to come across to catch it (a stagger, not a fall)
+      const st = Math.sin(Math.PI * c01((t - 60) / 380))
+      if (a.wob > 0) { z.rf[1] -= 0.16 * st; z.rf[0] += 0.08 * st } else { z.lf[1] += 0.16 * st; z.lf[0] += 0.08 * st }
+      z.oy = -Math.cos(a.ang) * a.wob * 0.35 * st; z.ox = Math.sin(a.ang) * a.wob * 0.35 * st
     } else if (p.act === 'down') floor(z, c01((p.actT + env.a) * STEP / 170), c01((p.actN - p.actT - env.a) * STEP / 220))
     // ── dunked on ──
     if (a.hit) {
@@ -210,6 +291,26 @@ export function createPoser(N) {
         z.ox = a.hit.ux * 1.7 * go; z.oy = a.hit.uy * 1.7 * go
         z.ang = Math.atan2(-a.hit.uy, -a.hit.ux)
         floor(z, c01(t / 150), c01((900 - t) / 300))
+      }
+    }
+    // ── after a big bucket, once he's down: a fist pump (a dunk, a poster) or a finger up (a three) ──
+    if (a.cele) {
+      const t = now - a.cele.t0
+      if (t > 900 || has || p.act === 'gather') { if (t > 900 || has) a.cele = null }
+      else if (t >= 0) {
+        const w = c01(t / 120) * (1 - ease((t - 700) / 200)), bh = (p.hand || 1) > 0 ? TR : TL, sd = (p.hand || 1) > 0 ? 1 : -1
+        if (a.cele.pump) { const pump = Math.abs(Math.sin(t / 900 * Math.PI * 2.5)); mix3(bh, 0.08 + 0.26 * pump, sd * 0.34, 0.95 - 0.45 * pump, w) }
+        else mix3(bh, 0.3, sd * 0.24, 1.05, w)
+      }
+    }
+    // ── a miss the other side came down with: his head drops a moment, a hand to it ──
+    if (a.sad) {
+      const t = now - a.sad
+      if (t > 1000) a.sad = 0
+      else if (!has && p.act === 'free' && a.sp < 6) {
+        const w = c01(t / 150) * (1 - ease((t - 750) / 250))
+        z.lean += 0.05 * w
+        mix3((p.hand || 1) > 0 ? TR : TL, 0.06, ((p.hand || 1) > 0 ? 1 : -1) * 0.12, 1, w * 0.9)
       }
     }
     // ── the final: the winners' arms go up ──
@@ -244,7 +345,7 @@ export function createPoser(N) {
   function dribble(s, p, a, z, now, env, amp) {
     const M = p.burst > 0 ? p.mv : 0, key = MOVE_KEYS[M], mv = MOVES[key]
     const hand = p.hand || 1
-    if (M && a.inMv !== M) { a.mvT0 = now; a.from = a.side >= 0 ? 1 : -1 }
+    if (M && a.inMv !== M) { a.mvT0 = now; a.from = a.side >= 0 ? 1 : -1; if (a.sp > 3 && now - a.cutAt > 200) { z.cut = true; a.cutAt = now } }   // (a move's first step bites the floor)
     a.inMv = M
     const f = M ? c01(1 - (p.burst - env.a) / Math.max(1, p.bn)) : 0
     // where the ball is across him: -1 his left hand, 1 his right; a move that changes hands takes it across
@@ -258,7 +359,8 @@ export function createPoser(N) {
     a.drib += env.dt / per
     const ph = a.drib % 1, up = Math.sin(Math.PI * ph)                            // 0 on the floor, 1 in his hand
     z.bounce = true; z.thud = Math.floor(a.drib) !== was
-    let bx = 0.34, by = side * 0.5, bz = 0.35 + 2.0 * up, hz = 0.26 + 0.1 * up
+    // (at a run the ball is pushed out ahead of him and bounces a touch lower)
+    let bx = 0.34 + 0.12 * amp * (M ? 0 : 1), by = side * 0.5, bz = 0.35 + (2.0 - 0.35 * amp) * up, hz = 0.26 + 0.1 * up
     if (key === 'cross') {
       // low and hard across in front of him, his shoulders dipping into it
       bx = 0.36 + 0.14 * mid; bz = 0.3 + 1.6 * up * (1 - 0.7 * mid); z.lean = 0.06
@@ -298,7 +400,7 @@ export function createPoser(N) {
     if (key === 'btb' && mid > 0.25) set3(bh, -0.12, sg * 0.42, 0.2)                       // reaching round behind him
     else if (key === 'btl' && mid > 0.25) set3(bh, 0.12, sg * 0.3, 0.12)                    // down through his legs
     if ((key === 'cross' || key === 'btl' || key === 'btb') && mid > 0.3) set3(oh, bx - 0.02, -sg * 0.34, 0.24)   // the other hand takes it
-    else set3(oh, 0.22, -sg * 0.44, 0.36)
+    else set3(oh, 0.2, -sg * 0.38, 0.34)
   }
 
   // rising for a shot: by its kind. g: 0 as he starts, 1 where the green is
@@ -307,6 +409,7 @@ export function createPoser(N) {
     if (a.gT0 < 0 || a.gKind !== kind) { a.gT0 = now; a.gKind = kind; a.gSide = kind === 'jumper' ? 1 : a.side >= 0 ? 1 : -1; a.rel = null }
     const ideal = sh.spec?.ideal || (kind === 'jumper' ? T.jIdealMs : T.lIdealMs)
     const g = Math.max(0, env.held) / ideal, sd = a.gSide
+    if (kind === 'jumper' && (sh.run ?? 0) > 0.45 && now - a.gT0 < 40 && now - a.cutAt > 200) { z.cut = true; a.cutAt = now }   // (a pull-up off the run: the plant)
     z.ball = true; z.two = true
     if (kind === 'jumper') {
       // the dip, then up: the ball over his forehead, his guide hand beside it, off the floor as it peaks
@@ -342,6 +445,22 @@ export function createPoser(N) {
       set3(bh, hx, hy, 0.4 + 0.6 * r); set3(oh, 0.2 - 0.1 * r, -sd * (0.3 + 0.2 * r), 0.36)
       z.lf[0] = sd > 0 ? 0.1 - 0.28 * r : 0.22 * (1 - r); z.rf[0] = sd > 0 ? 0.22 * (1 - r) : 0.1 - 0.28 * r
       z.lean = 0.06
+      // the two steps of the gather before he goes up: the foot on the ball's side, then the other one he jumps off.
+      // Coming across the lane on the move, the second step goes back the other way round his man (a euro step)
+      const st = c01(g / 0.42)
+      if (st < 1) {
+        const s1 = ease(c01(st / 0.5)), s2 = ease(c01((st - 0.5) / 0.5)), f1 = sd > 0 ? z.rf : z.lf, f2 = sd > 0 ? z.lf : z.rf
+        f1[0] = -0.1 + 0.36 * s1 - 0.3 * s2; f2[0] = 0.18 - 0.3 * s1 + 0.42 * s2
+        z.lean = 0.06 + 0.03 * Math.sin(Math.PI * st)
+      }
+      const run = sh.run ?? 0, mx = sh.mx ?? 0, my = sh.my ?? 0
+      const lat = -mx * Math.sin(a.ang) + my * Math.cos(a.ang)              // across him: + to his right
+      if (run > 0.4 && Math.abs(lat) > 0.45) {
+        const k = c01((Math.abs(lat) - 0.45) / 0.3) * c01((run - 0.4) / 0.3), sg = Math.sign(lat)
+        const off = sg * k * (0.9 * Math.sin(Math.PI * c01(st / 0.55)) - 0.6 * Math.sin(Math.PI * c01((st - 0.45) / 0.55))) * (1 - ease((g - 0.42) / 0.3))
+        z.ox = -Math.sin(a.ang) * off; z.oy = Math.cos(a.ang) * off
+        const f = off > 0 ? z.rf : z.lf; f[1] += Math.sign(off) * 0.1 * Math.min(1, Math.abs(off) / 0.6)
+      }
     } else {
       // THE DUNK. The gather: down into his legs with the ball in both hands. The takeoff: up hard, the ball cocked
       // back behind his head on one arm, his legs trailing
@@ -363,7 +482,7 @@ export function createPoser(N) {
   // court.js, so his body is drawn up there with it, less the height he's drawn at already)
   function glide(z, env, toRim, dRim, w) {
     if (dRim < 0.3 || w <= 0) return
-    const reach = 0.55 * env.sFt * (1 + 0.16 * z.air), lift = z.air * env.sFt * 0.2
+    const reach = 0.34 * env.sFt * (1 + 0.16 * z.air)   // (the hand as drawn: a raised arm is foreshortened, figure.js), lift = z.air * env.sFt * 0.2
     const cx = RIM.x - Math.cos(z.ang) * reach, cy = RIM.y - HOOP_LIFT - Math.sin(z.ang) * reach + lift
     z.ox = (cx - env.x) * w; z.oy = (cy - env.y) * w
   }
@@ -402,7 +521,7 @@ export function createPoser(N) {
     z.air = Math.max(z.air, R.air * (1 - ease(fall)))
     if (R.blocked) { mix3(bh, 0.28, sd * 0.3, 0.5, hold); return true }
     if (R.kind === 'jumper') {
-      mix3(bh, 0.28 + 0.26 * snap, 0.08, 1, hold); mix3(oh, 0.24, -0.34, 0.6 - 0.2 * snap, hold)
+      mix3(bh, 0.26 + 0.14 * snap, 0.1, 1, hold); mix3(oh, 0.16, -0.36, 0.4 - 0.1 * snap, hold)
       // a drifting jumper lands where the drift took him, and the body settles back over his feet
       if (a.gOx || a.gOy) { const back = 1 - ease(t / 260); z.ox = a.gOx * back; z.oy = a.gOy * back; if (back <= 0) a.gOx = a.gOy = 0 }
     }
