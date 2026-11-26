@@ -293,7 +293,7 @@ export function Game({ setup, name, onMenu, onRematch, link = null, again = null
     const eng = createEngine({
       setup, net: link?.net ?? null,
       els: { root: r.root, canvas: r.canvas, court: r.court, world: r.world, sides: r.sides, clock: r.clock, note: r.note, pad: r.pad, base: r.base, knob: r.knob, home: r.home, ds: r.ds, dk: r.dk,
-        steal: r.stl, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb, sa: r.sa },
+        steal: r.stl, net: r.net, btn: { a: r.a, b: r.b }, lab: { a: r.la, b: r.lb, sa: r.sa },
         keys: { pass: r.kpass, passRow: r.kpassRow, shoot: r.kshoot, shootRow: r.kshootRow, shootSub: r.ksub, title: r.ktitle, box: r.kbox, stealRow: r.kstealRow, spinRow: r.kspinRow,
           arrows: ARROWS.map((_, i) => r[`ka${i}`]), subs: ARROWS.map((_, i) => r[`ks${i}`]), rows: ARROWS.map((_, i) => r[`kr${i}`]) } },
       on: { final: res => { onFinal?.(res); setTimeout(() => { setAsk(false); setFinal(res) }, 900) } },
@@ -321,7 +321,7 @@ export function Game({ setup, name, onMenu, onRematch, link = null, again = null
       <div className="btlv-bug">
         <button className="btlv-quit" onClick={() => { sfx('tap'); setAsk(true) }} aria-label="Leave the game">QUIT</button>
         <div className="btlv-bug-sides" ref={set('sides')} />
-        <div className="btlv-bug-clock"><small>SHOT CLOCK</small><b ref={set('clock')} /></div>
+        <div className="btlv-bug-clock"><small>SHOT CLOCK</small><b ref={set('clock')} />{link && <i className="btlv-net" ref={set('net')} aria-label="Weak connection" />}</div>
         <p className="btlv-bug-note"><span ref={set('note')} /><span className="btlv-bug-goal">FIRST TO {RULES.goal} · WIN BY {RULES.winBy}</span></p>
       </div>
       <div className="btlv-stage">

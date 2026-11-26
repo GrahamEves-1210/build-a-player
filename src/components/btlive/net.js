@@ -4,25 +4,30 @@
 //   ?btserver=ws://localhost:8787   the referee (wrangler dev); never the deployed worker from here
 //   &btroom=TEST01                  the room code
 //   &btlag=150-400&btjit=60&btdrop=0.05   the harness (one way, each direction)
+import { WIRE } from '../../lib/btlive/proto.js'
+
 export function openNet({ server, room, hello, lag = null, onMsg, onState }) {
   const L = lag || { lo: 0, hi: 0, jit: 0, drop: 0 }
   const delay = () => (L.hi > 0 ? L.lo + Math.random() * (L.hi - L.lo) + (Math.random() - 0.5) * 2 * L.jit : 0)
   let ws = null, dead = false, tries = 0, timer = 0, hold = 0, heard = 0
-  const stats = { sent: 0, got: 0, dropped: 0, rtt: 0, open: false }
+  const stats = { sent: 0, got: 0, dropped: 0, rtt: 0, open: false, bin: 0, bout: 0 }   // (bin, bout: bytes heard and sent)
   const net = { stats, send, close, hello }
   // a message only gets dropped if it can be: inputs and snapshots carry everything since the last one; a hello can't
   const droppable = t => t === 'in' || t === 's'
   function connect() {
     if (dead) return
     const me = ws = new WebSocket(`${server.replace(/\/$/, '')}/btlive/room/${room}`)
-    me.onopen = () => { if (ws !== me) return; tries = 0; heard = performance.now(); stats.open = true; onState?.('open'); raw({ t: 'hello', ...net.hello }) }
+    me.onopen = () => { if (ws !== me) return; tries = 0; heard = performance.now(); stats.open = true; onState?.('open'); raw({ t: 'hello', v: WIRE, ...net.hello }) }
     me.onmessage = e => {
       if (ws !== me) return
-      heard = performance.now()
+      heard = performance.now(); stats.bin += e.data.length || 0
       let m; try { m = JSON.parse(e.data) } catch { return }
       if (droppable(m.t) && L.drop && Math.random() < L.drop) { stats.dropped++; return }
       const d = delay()
-      if (d > 0) setTimeout(() => { if (!dead) { stats.got++; onMsg(m) } }, d); else { stats.got++; onMsg(m) }
+      // the room timing the line (lag compensation, live/src/btlive.js): answered at once, never queued behind the
+      // game (through the harness's hold like any message, so a dev line's lag is measured as the lag it is)
+      const take = () => { if (dead) return; stats.got++; if (m.t === 'sp') { send({ t: 'spr', c: m.c }); return } onMsg(m) }
+      if (d > 0) setTimeout(take, d); else take()
     }
     me.onclose = () => { if (ws === me) lost() }
     me.onerror = () => {}
@@ -35,7 +40,7 @@ export function openNet({ server, room, hello, lag = null, onMsg, onState }) {
     clearTimeout(timer)
     if (!dead) { timer = setTimeout(connect, hold || Math.min(4000, 400 * 2 ** tries++)); hold = 0 }
   }
-  function raw(m) { try { if (ws?.readyState === 1) { ws.send(JSON.stringify(m)); stats.sent++ } } catch {} }
+  function raw(m) { try { if (ws?.readyState === 1) { const j = JSON.stringify(m); ws.send(j); stats.sent++; stats.bout += j.length } } catch {} }
   function send(m) {
     if (droppable(m.t) && L.drop && Math.random() < L.drop) { stats.dropped++; return }
     const d = delay()
@@ -44,7 +49,7 @@ export function openNet({ server, room, hello, lag = null, onMsg, onState }) {
   function close() { dead = true; clearTimeout(timer); const old = ws; ws = null; if (old) { old.onclose = null; try { old.close(1000, 'bye') } catch {} } }
   // the round trip, every 2 s (the referee answers at once)
   // ...and a socket that has said nothing for 3 s is taken for dead (a phone's line can die without closing)
-  const ping = setInterval(() => { send({ t: 'ping', c: performance.now() }); if (ws && stats.open && performance.now() - heard > 3000) lost() }, 1000)
+  const ping = setInterval(() => { send({ t: 'ping', c: performance.now(), r: stats.rtt || undefined }); if (ws && stats.open && performance.now() - heard > 3000) lost() }, 1000)
   const stop = net.close
   net.close = () => { clearInterval(ping); stop() }
   net.pong = m => { stats.rtt = Math.round(performance.now() - m.c) }
