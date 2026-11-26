@@ -484,7 +484,7 @@ export function Prospect({ F, p, act, onPick, sel = false }) {
     <div className={`nb-pros${sel ? ' is-sel' : ''}`}>
       <span className="nb-pros-rk">{p.rank}</span>
       <span className="nb-pros-txt"><b>{p.n}</b><small>{p.p} · {draftAge(p)} · {htText(p.ht)} · {p.c}</small></span>
-      <span className="nb-pros-gr"><b>{R.text}</b><small>{`${p.sc >= 2 ? R.tag : p.sc === 1 ? 'SCOUTED' : 'CEILING'} · OVR ${p.o}`}</small></span>
+      <span className="nb-pros-gr"><b>{R.text}</b><small>{`${p.sc >= 2 ? R.tag : p.sc === 1 ? 'SCOUTED' : 'CEILING'} · ${p.o} TODAY`}</small></span>
       <span className="nb-pros-acts">
         <button type="button" aria-pressed={star} className={star ? 'is-on' : ''} onClick={() => { act(X => { starProspect(X, p.i) }); sfx('tap') }} aria-label="Star">★</button>
         {canScout && p.sc < 2 && (F.sp ?? 0) > 0 && <button type="button" onClick={() => { act(X => { scout(X, p.i) }); sfx('flip') }}>Scout</button>}
@@ -623,6 +623,7 @@ function FreeAgency({ F, act, go }) {
   const [spot, setSpot] = useState('all')
   const [fits, setFits] = useState(true)
   const [news, setNews] = useState(null)   // the last move: { k: 'sign' | 'offer' | 'pull', id, d }
+  const [sure, setSure] = useState(false)   // (leaving for camp with offers out: a second tap, after the line that says what happens to them)
   const days = faDays()
   const day = faDayNow(F)
   const bids = bidsOn(F)
@@ -647,7 +648,7 @@ function FreeAgency({ F, act, go }) {
     if (r?.ok) { setNews({ k: 'offer', id: p.i, d }); setOpen(null); setWhy(null); sfx('claim'); haptic('light') } else { setWhy(r?.why ?? 'That offer can’t be made'); sfx('deny') }
   }
   const pull = p => { act(X => { if (CAP_SIM.pullOffer) CAP_SIM.pullOffer(X, p.i); else if (X.fao?.[p.i]) { const n = { ...X.fao }; delete n[p.i]; X.fao = n } }); setNews({ k: 'pull', id: p.i }); setOpen(null); sfx('tap') }
-  const next = () => { act(X => nextDay(X)); setNews(null); setOpen(null); setWhy(null); sfx('flip'); toTop() }
+  const next = () => { act(X => nextDay(X)); setNews(null); setOpen(null); setWhy(null); setSure(false); sfx('flip'); toTop() }
   const nm = id => manOf(F, id)?.n ?? ''
   return (
     <section className="nb-fa">
@@ -663,7 +664,7 @@ function FreeAgency({ F, act, go }) {
       )}
       {(F.off?.fres ?? []).length > 0 && (
         <div className="nbo-dev-box">
-          <b>{`The ${nick(F.team)} offers on day ${day}`}</b>
+          <b>{`The ${poss(nick(F.team))} offers on day ${day}`}</b>
           <ol className="nbo-dev-list">{F.off.fres.map(([i, s]) => { const p = manOf(F, i); return <li key={i} style={s ? fkVars(s) : undefined} {...tap(i)}>{s ? <KLogo s={s} size={20} /> : <i className="nbo-nologo" />}<span><b>{p?.n ?? '-'}</b><small>{s === F.team ? `SIGNED WITH THE ${nick(F.team).toUpperCase()}` : s ? `CHOSE THE ${TEAM[s].nick.toUpperCase()}` : 'STILL DECIDING · THE OFFER STANDS'}</small></span><em>{s && p?.y ? `${money(p.$)} × ${p.y}` : ''}</em></li> })}</ol>
         </div>
       )}
@@ -689,9 +690,10 @@ function FreeAgency({ F, act, go }) {
       </div>
       {why && <p className="nb-why">{why}</p>}
       <MinDeals F={F} act={act} />
+      {sure && pend > 0 && day < days && <p className="nb-why nb-fa-sure">{`${pend === 1 ? 'An offer is' : `${pend} offers are`} still out. Going to camp plays out the rest of free agency without you: each man answers on his own day, and the market's other offers can beat yours. Tap Go to camp to leave now.`}</p>}
       <ActionBar>
         {day < days && <Go onClick={next}>{`Play day ${day + 1} of ${days}`}</Go>}
-        <Go ghost={day < days} onClick={go}>Training camp</Go>
+        <Go ghost={day < days} onClick={() => { if (pend > 0 && day < days && !sure) { setSure(true); sfx('tap'); requestAnimationFrame(() => document.querySelector('.nb-fa-sure')?.scrollIntoView({ block: 'center', behavior: 'smooth' })); return } go() }}>{sure && pend > 0 && day < days ? 'Go to camp' : 'Training camp'}</Go>
       </ActionBar>
     </section>
   )
