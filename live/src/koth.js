@@ -11,6 +11,10 @@ import { NBA_GUARD_PLAYERS } from '../../src/data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../../src/data/nba-bigs.js'
 
 export const KOTH_SEATS = 3
+// what a man is called in the game: his account's username, or (no account) Guest and his place in the queue, so three
+// guests read Guest 1, Guest 2, Guest 3 in the queue, on the scoreboard and on the final (the queue's order is the
+// seat order, so his number stays the same from the queue to the final)
+const named = (p, i) => ({ ...pub(p), name: p.uid ? pub(p).name : `Guest ${i + 1}` })
 // a pick: a real player at his position, by name (the rosters say who's real); anything else is turned away
 export function kothPick(p) {
   const pos = p?.pos === 'big' ? 'big' : 'guard'
@@ -32,7 +36,7 @@ export class KothQueue extends BaseQueue {
   }
   // who's waiting, with the player each one picked (everyone sees the picks: nothing is hidden in this game)
   state() {
-    const list = this.waiting().map(p => ({ ...pub(p), pick: this.picks.get(p.vid) ?? null }))
+    const list = this.waiting().map((p, i) => ({ ...named(p, i), pick: this.picks.get(p.vid) ?? null }))
     return { t: 'queue', list, startsIn: null, size: KOTH_SEATS }
   }
   async onMessage(ws, data) {
@@ -59,7 +63,7 @@ export class KothQueue extends BaseQueue {
     const list = this.waiting().slice(0, KOTH_SEATS)
     if (list.length < KOTH_SEATS || list.some(p => !this.picks.get(p.vid))) return this.broadcast()
     const code = code6()
-    const players = list.map(p => ({ ...pub(p), pick: this.picks.get(p.vid) }))
+    const players = list.map((p, i) => ({ ...named(p, i), pick: this.picks.get(p.vid) }))
     const keys = Object.fromEntries(list.map(p => [p.vid, p.key || null]))
     const ns = this.env.BTLIVE_ROOM
     await ns.get(ns.idFromName(code)).fetch('https://btlive/init', { method: 'POST', body: JSON.stringify({ code, mode: 'koth', players, keys }) })

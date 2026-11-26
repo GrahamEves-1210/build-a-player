@@ -1,11 +1,13 @@
 // BLACKTOP LIVE: the games, the seats, the dribble moves and the pace, checked headless. King of the Hill's rules (make it take it, the clear,
 // out of bounds, the shot clock, 11 by 2 capped at 15, no passing), three-way win rates, 2v2 with four people each on
-// his own man, the call for the ball, the room's seats for 1v1 / 2v2 / King of the Hill, and the rematch.
+// his own man, the call for the ball, the room's seats for 1v1 / 2v2 / King of the Hill, and the rematch. King of the
+// Hill online: a man who leaves is out of it for good and can't win it; guests are numbered.
 // Bundle and run from the repo root (it imports the live room too):
 //   node_modules/.bin/esbuild scripts/btlive/modes-check.mjs --bundle --platform=node --format=esm --outfile=/tmp/mc.mjs \
 //     --define:import.meta.env='{"DEV":false}' --loader:.json=json && node /tmp/mc.mjs [--runs=300]
-import { createGame, step, cpuInput, flatBuild, referee as ref, passTarget, HZ, COURT, RULES, MODES, modeKey, MOVES, MOVE_KEYS, PACE, T, gticks, rticks, meterSpec, meterQuality, derive } from '../../src/lib/btlive/index.js'
+import { createGame, step, cpuInput, kothLeave, flatBuild, referee as ref, passTarget, HZ, COURT, RULES, MODES, modeKey, MOVES, MOVE_KEYS, PACE, T, gticks, rticks, meterSpec, meterQuality, derive } from '../../src/lib/btlive/index.js'
 import { BtLiveRoom } from '../../live/src/btlive.js'
+import { KothQueue } from '../../live/src/koth.js'
 
 const args = process.argv.slice(2)
 const RUNS = Number(args.find(a => a.startsWith('--runs='))?.slice(7)) || 300
@@ -650,6 +652,108 @@ head('Rematch: the same people in the same seats, the same CPUs, a new seed')
   ok(r.seed !== seed0 && r.g.phase !== 'over', 'both asked: a new game on a new seed')
   ok(JSON.stringify(before) === JSON.stringify(after), 'every seat as it was: the same people, the same CPUs with the same builds')
   ok(ws.every((w, j) => r.seats[last(w, 'seat').i].vid === `v${j}`), 'each device is told the same seat again')
+}
+
+// ── King of the Hill online: a man who leaves (sim.js kothLeave) ──────────────────────────────────────
+head('King of the Hill: a man who leaves is out for good, and his seat can never win it')
+{
+  // who leaves: the king, the man guarding him, the man sitting; at a random point of the game; many games
+  const roles = { king: s => s.king, guard: s => s.players.find(p => p.i !== s.king && !p.out).i, sitting: s => s.sit }
+  for (const [role, who] of Object.entries(roles)) {
+    let games = 0, bad = [], decided = 0
+    for (let g = 0; g < 60; g++) {
+      const s = koth(`lv-${role}-${g}`), inp = []
+      const at = gticks(20 + (g % 7) * 25)
+      while (s.phase !== 'over' && s.tick < at) { for (let i = 0; i < 3; i++) inp[i] = cpuInput(s, i, 'pro'); step(s, inp) }
+      if (s.phase === 'over') continue
+      games++
+      const k = who(s), pts = s.score[k]
+      kothLeave(s, k)
+      if (!s.players[k].out || s.sit !== k) bad.push(`g${g} he isn't sitting right after`)
+      while (s.phase !== 'over' && s.tick < 60 * 60 * HZ) {
+        for (let i = 0; i < 3; i++) inp[i] = cpuInput(s, i, 'pro')
+        step(s, inp)
+        if (!s.players[k].out || s.sit !== k) bad.push(`g${g} t${s.tick} he's back on the floor`)
+        if (s.players.filter(p => p.out).length !== 1) bad.push(`g${g} t${s.tick} not one man out`)
+        for (const e of s.events) if (e.pid === k && ['gather', 'steal', 'board', 'make'].includes(e.e)) bad.push(`g${g} t${s.tick} he played (${e.e})`)
+      }
+      if (s.phase !== 'over') bad.push(`g${g} never ended`)
+      if (s.winner === k) bad.push(`g${g} he won it`)
+      if (s.score[k] !== pts) bad.push(`g${g} his score moved`)
+      const two = s.players.filter(p => p.i !== k).map(p => s.score[p.i])
+      if (s.phase === 'over' && s.score[s.winner] !== Math.max(...two)) bad.push(`g${g} the winner isn't the top of the two`)
+      if (s.phase === 'over') decided++
+      if (bad.length > 8) break
+    }
+    ok(games > 30 && !bad.length && decided === games, `${role} leaves (${games} games): he sits for good, never plays or scores again, never wins; the two left play it to a winner${bad.length ? ` · ${bad.slice(0, 3).join(' · ')}` : ''}`)
+  }
+  const s = koth('lv-two'); toLive(s)
+  kothLeave(s, 0)
+  ok(s.phase !== 'over', 'one man leaving: the game goes on')
+  ok(kothLeave(s, 0) === false, 'leaving twice does nothing')
+  kothLeave(s, 1)
+  ok(s.phase === 'over' && s.winner === 2 && s.events.some(e => e.e === 'final' && e.winner === 2), 'two men leave: the one still in wins it')
+  const o = createGame({ teams: [[man('a')], [man('b')]], seed: 'x', mode: '1v1' })
+  ok(kothLeave(o, 0) === false && o.phase !== 'over', '1v1: no such thing (a 1v1 or 2v2 is never touched)')
+}
+head('King of the Hill online: the room (QUIT, gone too long, a man who never came)')
+{
+  const made = (n = 3) => {
+    // (the booking goes to a stand-in for Supabase: every call is kept in r.calls)
+    const r = new BtLiveRoom(null, { SUPABASE_URL: 'http://sb', SUPABASE_SERVICE_ROLE_KEY: 'k' })
+    r.setUp({ code: 'TEST01', mode: 'koth', at: Date.now(), keys: { v0: 'k0', v1: 'k1', v2: 'k2' },
+      players: [0, 1, 2].map(i => ({ vid: `v${i}`, name: `P${i}`, uid: `u${i}`, pick: { name: 'Stephen Curry', pos: 'guard' } })) })
+    clearTimeout(r.showTimer)
+    const ws = [0, 1, 2].map(() => fakeWs())
+    for (let i = 0; i < n; i++) r.onMessage(ws[i], JSON.stringify({ t: 'hello', vid: `v${i}`, key: `k${i}` }))
+    r.stop()
+    return { r, ws }
+  }
+  {
+    const { r, ws } = made()
+    ok(r.g && r.g.mode === 'koth' && !r.g.gone, 'all three in: it starts, nobody out')
+    const bad = fakeWs(); r.onMessage(bad, JSON.stringify({ t: 'hello', vid: 'v1', key: 'nope' }))
+    ok(last(bad, 'taken'), 'a hello for his seat without his key is turned away')
+    const k = r.seats.findIndex(x => x.vid === 'v0')
+    r.onMessage(ws[0], JSON.stringify({ t: 'quit' })); r.stop()
+    ok(r.g.gone?.[k] && r.g.players[k].out && r.log.some(e => e.e === 'left' && e.pid === k), 'QUIT: he is out of the game at once, and every device hears it')
+    // the other two stay on (the CPU plays their men here, as if their thumbs did; their lines never count as gone)
+    let n = 0
+    while (r.g.phase !== 'over' && n++ < 60 * 60 * HZ) { r.seats.forEach((x, i) => { if (i !== k) x.awayT = 0 }); r.tickOnce(Date.now()) }
+    const top = Math.max(...r.g.score.filter((_, i) => i !== k))
+    ok(r.g.phase === 'over' && r.g.winner !== k && r.g.score[r.g.winner] === top && top >= RULES.goal, `the two left play it out to ${RULES.goal}, and he can't win it (${r.g.score.join('-')})`)
+    const calls = []
+    globalThis.fetch = async (url, o) => { const b = JSON.parse(o.body); calls.push([url.split('/').pop(), b]); return { ok: true, json: async () => [{ rating: 800 + (b.p_delta ?? 0) }] } }
+    await r.book()
+    const delta = Object.fromEntries(calls.filter(c => c[0] === 'bump_rating').map(([, b]) => [b.p_user, b.p_delta]))
+    const res = Object.fromEntries(calls.filter(c => c[0] === 'vs_results').map(([, b]) => [b.user_id, b.result]))
+    const uw = r.seats[r.g.winner].uid, uk = r.seats[k].uid, uo = r.seats.find((x, i) => i !== k && i !== r.g.winner).uid
+    ok(delta[uw] === 20 && delta[uo] === -12 && delta[uk] === -20, `booked: the winner +20, the other -12, the man who left -20 (${JSON.stringify(delta)})`)
+    ok(res[uw] === 'win' && res[uo] === 'loss' && res[uk] === 'forfeit', `the record: win, loss, forfeit (${JSON.stringify(res)})`)
+  }
+  {
+    const { r } = made()
+    const k = 2
+    r.seats[k].seat.heard = 0                       // his line goes quiet for good
+    let n = 0
+    while (!r.g.gone?.[k] && r.g.phase !== 'over' && n++ < 30 * HZ) r.tickOnce(Date.now())
+    ok(r.g.gone?.[k] && n > 19 * HZ, `gone 20 s: he has left it (after ${(n / HZ).toFixed(1)} s)`)
+  }
+  {
+    const { r, ws } = made(2)
+    ok(!r.g, 'two of three in: it waits for the third')
+    r.begin(); r.stop()
+    const k = r.seats.findIndex(x => x.vid === 'v2')
+    ok(r.g && r.g.gone?.[k] && r.g.phase !== 'over', 'the third never came: the game goes on without him, and he is out of it from the tip')
+  }
+}
+head('King of the Hill online: guests are numbered by their place in the queue')
+{
+  const q = new KothQueue(null, {})
+  const ts = Date.now()
+  ;[['a', null, 'Guest'], ['b', 'u-b', 'Hooper'], ['c', null, 'Guest']].forEach(([vid, uid, name], i) => { q.conns.set({ id: vid }, { vid, uid, name, dev: `d${vid}`, ts: ts + i }); q.picks.set(vid, { name: 'Stephen Curry', pos: 'guard' }) })
+  const names = q.state().list.map(p => p.name)
+  ok(JSON.stringify(names) === JSON.stringify(['Guest 1', 'Hooper', 'Guest 3']), `queue: ${names.join(', ')} (a signed-in name stays his own)`)
 }
 
 console.log(`\n${fails ? `${fails} FAILED` : 'all ok'}`)

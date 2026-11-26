@@ -20,7 +20,7 @@
 // when every person still in has asked for it.
 //
 //   wss://…/btlive/room/<CODE>   (index.js routes it here)
-import { createGame, step, cpuInput, HZ, GUARD_KEYS, BIG_KEYS, MODES, modeKey } from '../../src/lib/btlive/index.js'
+import { createGame, step, cpuInput, kothLeave, HZ, GUARD_KEYS, BIG_KEYS, MODES, modeKey } from '../../src/lib/btlive/index.js'
 import { seatNew, seatMsg, seatInput, snapOf, SEND_EVERY, EVENT_KEEP, AWAY_MS } from '../../src/lib/btlive/proto.js'
 import { NBA_GUARD_PLAYERS } from '../../src/data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../../src/data/nba-bigs.js'
@@ -89,7 +89,13 @@ export class BtLiveRoom {
       this.seats.push({ vid: str(p.vid, 64), uid: p.uid ?? null, name: str(p.name, 24) || 'Guest', pos: r.pos, team: i % M.teams, slot: Math.floor(i / M.teams), build: r.build, look: r.look, cpu: null, seat: seatNew(), ws: null, awayT: 0 })
     })
     // nobody's device shows in time: the game goes on without him
-    this.showTimer = setTimeout(() => { if (!this.g && this.seats.some(x => x.ws)) this.begin() }, Math.max(1000, (b.at ?? Date.now()) + SHOW_MS - Date.now()))
+    // (one man alone is no game: he goes back to the queue, and nothing is booked)
+    this.showTimer = setTimeout(() => {
+      if (this.g) return
+      const here = this.seats.filter(x => x.ws)
+      if (here.length >= 2) return this.begin()
+      for (const x of here) send(x.ws, { t: 'requeue' })
+    }, Math.max(1000, (b.at ?? Date.now()) + SHOW_MS - Date.now()))
   }
   async fetch(req) {
     const url = new URL(req.url)
@@ -135,6 +141,12 @@ export class BtLiveRoom {
     if (m.t === 'ping') return send(ws, { t: 'pong', c: m.c, k: this.g?.tick ?? 0 })
     if (m.t === 'in' && st) { seatMsg(st.seat, m, now); return }
     if (m.t === 'start' && !this.made && !this.g && this.seats.some(x => x.vid)) return this.begin()
+    // a queue's game: he quit (QUIT on his device): out of it at once, the other two play on
+    if (m.t === 'quit' && st && this.made && this.g && this.g.phase !== 'over') {
+      this.leave(this.seats.indexOf(st))
+      if (this.g.phase === 'over') { this.broadcast(); this.stop(); this.book() } else this.broadcast()
+      return
+    }
     if (m.t === 'again' && st && this.g?.phase === 'over') {
       // a queue's game runs it back only with all three still here; short a man, back to the queue
       if (this.made && this.seats.some(x => !x.ws)) return send(ws, { t: 'requeue' })
@@ -219,11 +231,22 @@ export class BtLiveRoom {
     this.g = createGame({ teams, seed: this.seed, mode: this.mode })
     this.log = []; this.evq = 0; this.votes.clear()
     for (const x of this.seats) { x.seat = { ...seatNew(), heard: x.seat.heard }; x.awayT = 0 }
+    // a queue's game that starts a man short (his device never came): he's out of it from the tip (sim.js kothLeave)
+    if (this.made) this.seats.forEach((x, i) => { if (!x.ws) this.leave(i) })
     clearTimeout(this.showTimer)
     this.seats.forEach((x, i) => x.ws && send(x.ws, this.setupFor(i)))
     this.run()
   }
   acks() { return this.seats.map(x => x.seat.relDone) }
+  // King of the Hill online: man i is out of the game for good (sim.js kothLeave: he can't win it, the other two play
+  // on). log: put what it did in the snapshots' events now (a quit between ticks; a tick logs its own)
+  leave(i, log = true) {
+    const g = this.g
+    if (!g || g.mode !== 'koth' || g.gone?.[i]) return
+    const n = g.events.length
+    if (!kothLeave(g, i)) return
+    if (log) for (const e of g.events.slice(n)) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
+  }
   run() {
     this.stop()
     this.t0 = Date.now() - (this.g.tick * STEP_MS)
@@ -238,6 +261,8 @@ export class BtLiveRoom {
       return cpuInput(g, i, CPU_LEVEL)
     })
     step(g, inputs)
+    // a queue's game: a man whose line has been gone 20 s in all has left it (the other two play it out)
+    if (this.made) this.seats.forEach((x, i) => { if (x.vid && (x.awayT ?? 0) > AWAY_FORFEIT_TICKS) this.leave(i, false) })
     for (const e of g.events) this.log.push({ ...e, sq: ++this.evq, k: g.tick })
     if (g.tick % SEND_EVERY === 0 || g.phase === 'over') this.broadcast()
     return inputs
@@ -253,15 +278,17 @@ export class BtLiveRoom {
     if (g.phase === 'over') { this.broadcast(); this.stop(); if (this.made) this.book() }
   }
   // A queue's game is over (or everyone walked out of it): each man's rating (src/lib/rating.js, as in the lobbies:
-  // the king +20, the other two -12, a man who left -20) and the King of the Hill record (vs_results 'koth'), once a
-  // game. A man who left (his line gone at the end, or away 20 s in all) takes the forfeit. The ones on an account
+  // the winner +20, the other one still in -12, a man who left -20) and the King of the Hill record (vs_results 'koth'),
+  // once a game. A man who left (QUIT, his line away 20 s in all, or gone at the end) takes the forfeit, and since
+  // kothLeave takes him out of it, his seat can never be the one that wins. The ones on an account
   // are told their new rating.
   async book(walked = false) {
     const g = this.g
     if (!g || this.booked === this.seed) return
     this.booked = this.seed
     const people = this.seats.map((x, i) => ({ x, i })).filter(({ x }) => x.uid)
-    const out = ({ x }) => walked || !x.ws || (x.awayT ?? 0) > AWAY_FORFEIT_TICKS
+    // (out: he left it, sim.js s.gone, so he could never win it; or his line was gone at the end)
+    const out = ({ x, i }) => walked || !!g.gone?.[i] || !x.ws
     const won = ({ i }) => !walked && g.phase === 'over' && g.winner === i
     const ratings = await bookRatings(this.env, people.map(p => ({ vid: p.x.vid, uid: p.x.uid, delta: blacktopDelta({ won: won(p), forfeit: out(p) }) })))
     await bookVs(this.env, people.map(p => ({ uid: p.x.uid, result: out(p) ? 'forfeit' : won(p) ? 'win' : 'loss', position: p.x.pos, match_type: this.mode })))
