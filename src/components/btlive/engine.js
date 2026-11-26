@@ -5,7 +5,7 @@
 import { paintCourt, drawHoop, drawHoopShadow, VIEW_LIFT, HOOP_LIFT, RIM_DRAW } from './court.js'
 import { createGame, step, cpuInput, passTarget, meterQuality, meterGrade, meterSpec, moveLocal, moveInput, moveQueued, shotKindAt, shotWindow, referee as ref, HZ, COURT, T, MOVES, MOVE_KEYS, gticks, createGesture, createTaps } from '../../lib/btlive/index.js'
 import { applySnap, lerpAt, relMsg, SEND_EVERY, SNAP_ACT, MOVE_KEEP } from '../../lib/btlive/proto.js'
-import { drawFigure, drawShadow, pointAt, lookOf, ballHz } from './figure.js'
+import { drawFigure, drawHands, drawShadow, pointAt, lookOf, ballHz } from './figure.js'
 import { createPoser } from './pose.js'
 import { sfx, haptic } from '../../lib/juice'
 
@@ -1106,10 +1106,10 @@ export function createEngine({ setup, els, on, net = null }) {
       rimFx(now)
     }
     // up at the rim: off the floor about as high as a dunk or a layup takes him, in front of the board's face
-    const upAt = i => FIG[i].air >= UP_AIR && DY[i] > TOPY && Math.abs(DX[i] - RIM.x) < 8 && DY[i] < RIM.y + 9
+    const upAt = i => (FIG[i].air >= UP_AIR || FIG[i].lh[3] || FIG[i].rh[3]) && DY[i] > TOPY && Math.abs(DX[i] - RIM.x) < 8 && DY[i] < RIM.y + 9
     DOTS.length = 0
     const man = i => {
-      if (!ballDone && typeof ballK === 'number' && ballK >= 0 && ballK <= depth(i) && (upAt(i) || !ballUp)) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
+      if (!ballDone && typeof ballK === 'number' && ballK >= 0 && ballK <= depth(i) && !ballUp) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
       if (cut(i)) return
       const f = FIG[i]
       // (his own ball: under him on the dribble and held low, over him once it's up at his head)
@@ -1121,13 +1121,18 @@ export function createEngine({ setup, els, on, net = null }) {
       if (P[i].out) ctx.globalAlpha = 0.72
       drawFigure(ctx, f)
       ctx.globalAlpha = 1
-      if (mine && high) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
+      // (a man up at the rim: the ball in his raised hand goes over the rim with the hand, after the hoop)
+      if (mine && high) { if (upAt(i)) deferBall = true; else { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true } }
     }
-    for (const i of order) if (!upAt(i)) man(i)
+    // every man under the hoop, the men up at the rim too (a dunker rises in front of it, the rim and net over him);
+    // then the hoop; then only their raised hands over it (the dunking hand and the ball, hands on the rim, a block)
+    let deferBall = false
+    for (const i of order) man(i)
     // a ball still to draw that isn't up over the rim goes under the hoop too
-    if (!ballDone && typeof ballK === 'number' && !ballUp) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
+    if (!ballDone && !deferBall && typeof ballK === 'number' && !ballUp) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
     hoop()
-    for (const i of order) if (upAt(i)) man(i)
+    for (const i of order) if (upAt(i) && !cut(i)) drawHands(ctx, FIG[i])
+    if (deferBall && !ballDone) { drawBall(BX, BY, bsc, GX, GY, bz, false); ballDone = true }
     if (!ballDone) drawBall(BX, BY, bsc, GX, GY, bz, false)
     // the king's crown, and CLEAR IT over the man who has to take it out past the arc
     const marks = []

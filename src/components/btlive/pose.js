@@ -39,8 +39,8 @@ export function createPoser(N) {
     // what is drawn: eased toward each frame's pose
     lh: null, rh: null, lf: null, rf: null,
   }))
-  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0], rh: [0, 0, 0], lf: [0, 0, 0], rf: [0, 0, 0], tw: 0, hip: 0, air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], bside: 1, two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0, cut: false }))
-  const TL = [0, 0, 0], TR = [0, 0, 0], CL = [0, 0], CR = [0, 0], FW = [0, 0, 0]
+  const Z = Array.from({ length: N }, () => ({ ang: 0, lh: [0, 0, 0, 0], rh: [0, 0, 0, 0], lf: [0, 0, 0], rf: [0, 0, 0], tw: 0, hip: 0, air: 0, scale: 1, lean: 0, down: 0, ox: 0, oy: 0, ball: false, bl: [0, 0, 0], bside: 1, two: false, bounce: false, thud: false, under: false, toeL: 0, toeR: 0, cut: false }))
+  const TL = [0, 0, 0, 0], TR = [0, 0, 0, 0], CL = [0, 0], CR = [0, 0], FW = [0, 0, 0], RH = [0, 0, 0, 0], RO = [0, 0, 0, 0]
   let lastMiss = null
 
   // what happened: the things a pose can't read off the state
@@ -82,6 +82,7 @@ export function createPoser(N) {
     const p = s.players[i], a = A[i], z = Z[i], b = s.ball, P = s.players
     const live = s.phase === 'live', has = b.st === 'held' && b.holder === i
     const dt = env.dt
+    a.nowT = now; TL[3] = TR[3] = 0
     // how far he went since the last frame: his stride comes from the floor he covers
     if (a.x == null) { a.x = env.x; a.y = env.y }
     const mvx = env.x - a.x, mvy = env.y - a.y, dist = Math.hypot(mvx, mvy)
@@ -311,6 +312,8 @@ export function createPoser(N) {
       set3(TL, 0.08, -0.44, 1); set3(TR, 0.08, 0.44, 1); z.air = 0.2 * hop
     }
 
+    // ── after a dunk: from the spot in front of the rim he came down on back to where the game has him, eased ──
+    if (a.dT !== now && a.dT > 0 && now - a.dT < 360) { const k = 1 - ease((now - a.dT) / 360); z.ox += a.dox * k; z.oy += a.doy * k }
     // ── coming down: the knees take it (a dip, then back up), the feet a touch wider ──
     if (a.pAir > 0.2 && z.air < 0.05) a.landT = now
     a.pAir = z.air
@@ -349,7 +352,7 @@ export function createPoser(N) {
     toW(z.lf, FW); stepTo(a.lfW)
     toW(z.rf, FW); stepTo(a.rfW)
     a.tw += (z.tw - a.tw) * kf; a.hip += (z.hip - a.hip) * kf
-    set3(z.lh, a.lh[0], a.lh[1], a.lh[2]); set3(z.rh, a.rh[0], a.rh[1], a.rh[2])
+    set3(z.lh, a.lh[0], a.lh[1], a.lh[2]); set3(z.rh, a.rh[0], a.rh[1], a.rh[2]); z.lh[3] = TL[3] || Math.hypot(a.lh[0], a.lh[1]) > 0.6 ? 1 : 0; z.rh[3] = TR[3] || Math.hypot(a.rh[0], a.rh[1]) > 0.6 ? 1 : 0   // (a hand still coming back from the rim keeps its reach)
     z.lf[0] = a.lfW[0] * ca2 + a.lfW[1] * sa2; z.lf[1] = -a.lfW[0] * sa2 + a.lfW[1] * ca2; z.lf[2] = a.lfW[2]
     z.rf[0] = a.rfW[0] * ca2 + a.rfW[1] * sa2; z.rf[1] = -a.rfW[0] * sa2 + a.rfW[1] * ca2; z.rf[2] = a.rfW[2]
     z.tw = a.tw; z.hip = a.hip
@@ -517,7 +520,7 @@ export function createPoser(N) {
   // rising for a shot: by its kind. g: 0 as he starts, 1 where the green is
   function gather(p, a, z, now, env, dRim, toRim) {
     const sh = p.shot, kind = sh.kind
-    if (a.gT0 < 0 || a.gKind !== kind) { a.gT0 = now; a.gKind = kind; a.gSide = kind === 'jumper' ? 1 : a.side >= 0 ? 1 : -1; a.rel = null }
+    if (a.gT0 < 0 || a.gKind !== kind) { a.dU = null; a.gT0 = now; a.gKind = kind; a.gSide = kind === 'jumper' ? 1 : a.side >= 0 ? 1 : -1; a.rel = null }
     const ideal = sh.spec?.ideal || (kind === 'jumper' ? T.jIdealMs : T.lIdealMs)
     const g = Math.max(0, env.held) / ideal, sd = a.gSide
     if (kind === 'jumper' && (sh.run ?? 0) > 0.45 && now - a.gT0 < 40 && now - a.cutAt > 200) { z.cut = true; a.cutAt = now }   // (a pull-up off the run: the plant)
@@ -577,26 +580,43 @@ export function createPoser(N) {
       // back behind his head on one arm, his legs trailing
       const r = out3((g - 0.36) / 0.64)
       z.scale = 1 - 0.07 * Math.sin(Math.PI * c01(g / 0.5)) * (1 - r)
-      z.air = 1.15 * r
+      z.air = 0.75 * r
       const bh = sd > 0 ? TR : TL, oh = sd > 0 ? TL : TR
       const hx = 0.2 - 0.24 * r, hy = sd * (0.3 - 0.12 * r)
       set3(z.bl, hx - 0.03 * r, hy, 2.6 + 8 * r)
       set3(bh, hx + 0.04, hy, 0.38 + 0.62 * r); set3(oh, 0.14 - 0.04 * r, -sd * (0.3 + 0.08 * r), 0.38)
       z.lf[0] = 0.18 * (1 - r) - 0.22 * r; z.rf[0] = -0.04 * (1 - r) - 0.28 * r; z.lf[1] = -0.14; z.rf[1] = 0.14
       z.lean = 0.05 + 0.05 * r
-      glide(z, env, toRim, dRim, 0.55 * r * r)
+      glide(z, env, a, 0.55 * r * r)
     }
     a.gAir = z.air
   }
 
-  // a dunker goes to the rim: his hand ends up on it (the rim is drawn HOOP_LIFT up the screen from the floor under it:
-  // court.js, so his body is drawn up there with it, less the height he's drawn at already)
-  function glide(z, env, toRim, dRim, w) {
-    if (dRim < 0.3 || w <= 0) return
-    // (the hand as drawn: a raised arm is foreshortened, figure.js; lift: how far up the screen he's drawn for his height)
-    const reach = 0.26 * env.sFt * (1 + 0.16 * z.air), lift = z.air * env.sFt * 0.2
-    const cx = RIM.x - Math.cos(z.ang) * reach, cy = RIM.y - HOOP_LIFT - Math.sin(z.ang) * reach + lift
+  // A dunk from overhead (the owner, 11-26: "it should look like a real dunk"): he rises toward the rim from in front of
+  // it and his body stays there, on the court side, about a foot and a half short of the rim's middle (never over it or
+  // into the board), a touch up the screen for his height; only his arm and the ball go up over the rim (rimHand). The
+  // way in front is the way he came from (a.dU, kept from the gather), never round behind the rim
+  const FRONT = 1.5
+  function glide(z, env, a, w) {
+    if (w <= 0) return
+    if (!a.dU) { let ux = env.x - RIM.x, uy = env.y - RIM.y; const l = Math.hypot(ux, uy) || 1; ux /= l; uy /= l; if (uy < 0.45) { uy = 0.45; const m = Math.hypot(ux, uy); ux /= m; uy /= m } a.dU = [ux, uy] }
+    const cx = RIM.x + a.dU[0] * FRONT, cy = RIM.y + a.dU[1] * FRONT
     z.ox = (cx - env.x) * w; z.oy = (cy - env.y) * w
+    a.dox = z.ox; a.doy = z.oy; a.dT = a.nowT
+  }
+  // A hand up on the rim as drawn (the rim is drawn HOOP_LIFT up the screen: court.js), in the pose's own terms for that
+  // hand (figure.js draws a raised hand foreshortened and brought in across him: undone here), with its long-reach mark
+  // (h[3]: figure.js lets that one arm reach). back: ft short of the rim's middle toward him; side: ft along the rim
+  function rimHand(h, z, env, back = 0, side = 0) {
+    const air = z.air, uFt = env.sFt * BODY * (z.scale || 1) * (1 + 0.16 * air)
+    const bx = env.x + z.ox, by = env.y + z.oy - air * env.sFt * 0.2, rx = RIM.x, ry = RIM.y - HOOP_LIFT
+    const l = Math.hypot(rx - bx, ry - by) || 1, nx = (rx - bx) / l, ny = (ry - by) / l
+    const vx = rx - nx * back - ny * side - bx, vy = ry - ny * back + nx * side - by
+    const ca = Math.cos(z.ang), sa = Math.sin(z.ang)
+    const lx = (vx * ca + vy * sa) / uFt, ly = (-vx * sa + vy * ca) / uFt
+    const SHn = 0.255, m = Math.abs(ly)
+    h[0] = lx / 0.42; h[1] = Math.sign(ly) * (m <= SHn ? m * 0.33 / SHn : 0.33 + (m - SHn) / (0.62 * 0.42)); h[2] = 1; h[3] = 1
+    return h
   }
 
   // the ball gone: the follow-through, the dunk's throw-down, hang and landing. True while it's a quick motion
@@ -614,15 +634,29 @@ export function createPoser(N) {
       const total = slam ? DUNK.hang + DUNK.drop + DUNK.land : DUNK.drop + 40 + DUNK.land
       if (since > total) { a.rel = null; return false }
       const w = c01(t / fly), thr = out3(w)
-      z.air = Math.max(R.air, 1.15) * up + (slam && since < DUNK.hang ? 0.04 * Math.sin(since / 40) : 0)
-      // the arm comes over the top and down through the rim; on the hang his legs swing through under it
-      set3(bh, -0.04 + 0.5 * thr, sd * 0.18 * (1 - thr), 1); set3(oh, 0.1, -sd * 0.38, 0.4)
+      z.air = Math.max(R.air, 0.75) * up + (slam && since < DUNK.hang ? 0.03 * Math.sin(since / 40) : 0)
+      // his body: in front of the rim the whole way, up and down (glide), through the landing
+      glide(z, env, a, 0.55 + 0.45 * thr)
+      // the arm: from cocked by his head, up over the rim and down through it (the ball with it); on the hang both
+      // hands on the front of the rim; then they come down with him
+      set3(oh, 0.1, -sd * 0.38, 0.4)
+      rimHand(RH, z, env, 0.15, 0)
+      const c0 = -0.04, c1 = sd * 0.18
+      bh[0] = c0 + (RH[0] - c0) * thr; bh[1] = c1 + (RH[1] - c1) * thr; bh[2] = 1; bh[3] = thr > 0.05 ? 1 : 0
+      if (slam && since < DUNK.hang + DUNK.drop * 0.5) {
+        const k = since < DUNK.hang ? 1 : 1 - ease((since - DUNK.hang) / (DUNK.drop * 0.5))
+        rimHand(RH, z, env, 0.55, sd * 0.45); rimHand(RO, z, env, 0.55, -sd * 0.45)
+        for (let j = 0; j < 3; j++) { bh[j] = 0.1 + (RH[j] - 0.1) * k; oh[j] = 0.1 + (RO[j] - 0.1) * k }
+        bh[1] = sd * 0.3 + (RH[1] - sd * 0.3) * k; oh[1] = -sd * 0.3 + (RO[1] + sd * 0.3) * k; bh[2] = oh[2] = 0.4 + 0.6 * k
+        bh[3] = oh[3] = k > 0.3 ? 1 : 0
+      } else if (slam) { set3(bh, 0.12, sd * 0.42, 0.4); bh[3] = 0 }
+      else if (miss) { bh[3] = up > 0.5 ? 1 : 0 }
+      // on the hang his legs swing a little under him; coming down they reach for the floor
       const swing = slam ? Math.sin(Math.PI * c01(since / (DUNK.hang + DUNK.drop * 0.6))) : 0
-      z.lf[0] = -0.22 + 0.46 * swing; z.rf[0] = -0.28 + 0.5 * swing; z.lf[1] = -0.14; z.rf[1] = 0.14
-      z.lean = 0.08 - 0.14 * swing
-      if (up <= 0.02) { const l = c01((since - (total - DUNK.land)) / DUNK.land); z.scale = 0.93 + 0.07 * l; z.lf[0] = 0.06; z.rf[0] = 0.06; z.lf[1] = -0.24 + 0.08 * l; z.rf[1] = 0.24 - 0.08 * l; set3(bh, 0.18, sd * 0.5, 0.3); set3(oh, 0.18, -sd * 0.5, 0.3); z.lean = 0.04 }
-      glide(z, env, toRim, dRim, (0.55 + 0.45 * thr) * Math.min(1, up * 1.6))
-      if (!slam && !miss) { z.ball = true; z.two = false; set3(z.bl, -0.04 + 0.5 * thr + 0.05, sd * 0.18 * (1 - thr), 10.6) }
+      z.lf[0] = -0.1 + 0.2 * swing; z.rf[0] = -0.14 + 0.22 * swing; z.lf[1] = -0.14; z.rf[1] = 0.14
+      z.lean = 0.05 - 0.08 * swing
+      if (up <= 0.02) { const l = c01((since - (total - DUNK.land)) / DUNK.land); z.scale = 0.94 + 0.06 * l; z.lf[0] = 0.04; z.rf[0] = 0.04; z.lf[1] = -0.22 + 0.08 * l; z.rf[1] = 0.22 - 0.08 * l; set3(bh, 0.14, sd * 0.46, 0.3); set3(oh, 0.14, -sd * 0.46, 0.3); bh[3] = oh[3] = 0; z.lean = 0.03 }
+      if (!slam && !miss) { z.ball = true; z.two = false; set3(z.bl, bh[0] + 0.03, bh[1], 10.6) }
       a.gAir = z.air
       return true
     }

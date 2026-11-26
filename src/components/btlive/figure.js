@@ -162,7 +162,8 @@ export function armPts(side, hand) {
   let dx = FO[0] - sx, dy = FO[1] - sy
   // (no arm reads long from above: low, it reaches at most a third of a stride out; raised, it's mostly hidden in
   // its own foreshortening and shows no more than about 0.4 of his width out from the shoulder)
-  const h = Math.hypot(dx, dy) || 0.001, cap = REACH - 0.1 * clamp(((hand[2] || 0) - 0.35) / 0.15, 0, 1)
+  // (hand[3]: the one arm that reaches all the way, up to the rim on a dunk)
+  const h = Math.hypot(dx, dy) || 0.001, cap = hand[3] ? 1.4 : REACH - 0.1 * clamp(((hand[2] || 0) - 0.35) / 0.15, 0, 1)
   if (h > cap) { dx *= cap / h; dy *= cap / h }
   return [sx, sy, sx, sy, sx + dx, sy + dy]
 }
@@ -185,10 +186,10 @@ function arm(ctx, side, hand, L, ink, hi = false, deltOnly = false) {
 }
 
 // a raised hand, over his head and shoulders: small and round, its own outline
-function hand(ctx, side, hnd, L, ink) {
+function hand(ctx, side, hnd, L, ink, all = false) {
   const [, , , , hx, hy] = armPts(side, hnd)
   // (only a hand over his jersey or head: one out past them already shows on the end of its arm)
-  if (!(hx < 0.11 && hx > -0.13 && Math.abs(hy) < 0.23 * BW)) return
+  if (!all && !(hx < 0.11 && hx > -0.13 && Math.abs(hy) < 0.23 * BW)) return
   ovalS(ctx, hx, hy, R_HAND * AW * 0.98, R_HAND * AW * 0.9, L.skin, L.skinD, ink)
 }
 
@@ -333,5 +334,12 @@ export function drawFigure(ctx, f) {
     if (lz >= 0.6) hand(ctx, -1, f.lh, L, ink)
     if (rz >= 0.6) hand(ctx, 1, f.rh, L, ink)
   }
+}
+// A man up at the rim is drawn under the hoop (the rim and net are over him, up at 10 ft); his raised hands go over it,
+// drawn again after the hoop (engine.js): the dunking hand with the ball over the rim, hands hanging on it, a block
+export function drawHands(ctx, f) {
+  frame(f)
+  const L = f.look, ink = Math.max(1, FR.sc * 0.026)
+  for (PASS = 0; PASS < 2; PASS++) for (const [sd, h] of [[-1, f.lh], [1, f.rh]]) if ((h[2] || 0) >= 0.8 || h[3]) hand(ctx, sd, h, L, ink, true)
 }
 export { clamp }

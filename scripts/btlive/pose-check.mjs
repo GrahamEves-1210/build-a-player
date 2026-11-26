@@ -66,7 +66,7 @@ for (let g = 0; g < GAMES; g++) {
           const j = Math.max(Math.hypot(z.lf[0] - q.lf[0], z.lf[1] - q.lf[1]), Math.hypot(z.rf[0] - q.rf[0], z.rf[1] - q.rf[1]))
           if (j > maxFootJump) { maxFootJump = j; maxJumpAt = `${nm} tick ${t} ${p.act}` }
         }
-        maxReach = Math.max(maxReach, Math.hypot(z.lh[0], z.lh[1]), Math.hypot(z.rh[0], z.rh[1]))
+        maxReach = Math.max(maxReach, z.lh[3] ? 0 : Math.hypot(z.lh[0], z.lh[1]), z.rh[3] ? 0 : Math.hypot(z.rh[0], z.rh[1]))
         prev[i] = { lf: [...z.lf], rf: [...z.rf], air: z.air, ang: z.ang }
       }
     }
