@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { isClean } from './scripts/clean-flag.mjs'
 import { cleanHtml } from './scripts/clean-html.mjs'
 
@@ -38,7 +39,14 @@ RATINGS_DATES.st = lastChanged([d + 'soccer-strikers.js', d + 'soccer-legends.js
 export default defineConfig(({ mode }) => {
 // the clean build (scripts/clean-flag.mjs): off for main and app, on for app-clean / VITE_CLEAN=1 (shell or .env file)
 const CLEAN = isClean(loadEnv(mode, process.cwd(), ''))
+// each folder (the main checkout, every worktree: their node_modules are links to the same one) and each mode/flag
+// gets its own pre-bundle cache. One shared cache had the dev servers re-optimizing over each other forever
+const cacheTag = createHash('md5').update(`${process.cwd()}|${mode}|${CLEAN}`).digest('hex').slice(0, 8)
 return {
+  cacheDir: `node_modules/.vite-${cacheTag}`,
+  // (the dependency scan starts from the site's own page only: the native app folders hold a copy of a whole build,
+  // ios/ and android/, and scanning those had the dev server hang for minutes on its first page)
+  optimizeDeps: { entries: ['index.html'] },
   define: {
     __CLEAN__: JSON.stringify(CLEAN),
     __RATINGS_DATES__: JSON.stringify(RATINGS_DATES),

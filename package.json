@@ -9,7 +9,8 @@
     "build:app": "node scripts/build-jersey-index.mjs && node scripts/compress-images.mjs && vite build --mode app && node scripts/strip-dist-headshots.mjs && node scripts/strip-dist-app-art.mjs && node scripts/clean-dist.mjs && cap sync",
     "assets:app": "capacitor-assets generate --ios --android --iconBackgroundColor \"#090a0d\" --iconBackgroundColorDark \"#090a0d\" --splashBackgroundColor \"#090a0d\" --splashBackgroundColorDark \"#090a0d\"",
     "preview": "vite preview",
-    "headshots": "node scripts/fetch-headshots.js"
+    "headshots": "node scripts/fetch-headshots.js",
+    "app:dev": "zsh scripts/app-dev.sh"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",
