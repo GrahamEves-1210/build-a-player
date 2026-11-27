@@ -218,5 +218,17 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
   stats.soccerRange = [lo, hi]
 }
 console.log(JSON.stringify(stats))
+// basketball: a room deals only its own position's men (owner 11-27: a big room was dealing guards)
+{
+  const { NBA_GUARD_PLAYERS } = await import('../../src/data/nba-guards.js')
+  const { NBA_BIG_PLAYERS } = await import('../../src/data/nba-bigs.js')
+  const G = new Set(NBA_GUARD_PLAYERS.map(x => x.name)), B = new Set(NBA_BIG_PLAYERS.map(x => x.name))
+  for (const pos of ['guard', 'big']) {
+    const kit = auctionCoreKit('bucket', pos)
+    const wrong = kit.pool.filter(pl => (pos === 'big' ? !B.has(pl.name) && pl.posGroup !== 'big' : !G.has(pl.name) && pl.posGroup !== 'guard'))
+    if (wrong.length) { console.log('FAIL', pos, 'room pool has', wrong.slice(0, 3).map(x => x.name).join(', ')); fails++ }
+    else console.log(`bucket ${pos}: ${kit.pool.length} men, all ${pos}s`)
+  }
+}
 console.log(fails ? `${fails} FAILED` : 'all auction checks pass')
 process.exit(fails ? 1 : 0)

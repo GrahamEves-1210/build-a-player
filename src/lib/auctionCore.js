@@ -8,8 +8,8 @@ import { seeded } from './rng'
 import { calcOVR, calcOVRRB, calcOVRWR } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { ATTR } from '../data/qbs'
-import { GUARD_TYPES } from '../data/nba-guards'
-import { BIG_TYPES } from '../data/nba-bigs'
+import { GUARD_TYPES, NBA_GUARD_PLAYERS } from '../data/nba-guards'
+import { BIG_TYPES, NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { FB_SAL } from '../data/fb-salary'
 import { SAL_COLS, BUCKET_SAL_POOL } from '../data/nba-salary'
@@ -30,6 +30,7 @@ export const GRACE_MS = 450                // late bids still in flight when the
 export const FILLER_VAL = 3         // a slot nobody won by the end: a free agent
 
 // Football: QB, RB or WR (each on its Salary Cap board's five slots); basketball: guard or big; soccer: the striker
+const GUARDS = new Set(NBA_GUARD_PLAYERS.map(x => x.name)), BIGS = new Set(NBA_BIG_PLAYERS.map(x => x.name))
 export const AUCTION_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'], soccer: ['st'] }
 // One queue a sport (owner 11-26): nobody picks the position. When the room fills, its seed draws it, so every seat
 // gets the same one and any phone can check the server's word (posOk). The queue asks for pos 'any'; a phone from
@@ -64,7 +65,9 @@ export function auctionCoreKit(sport, pos) {
     : fb.cols.map(c => ({ key: c.key, label: c.label, types: c.types, alt: [] }))
   // the position's own OVR, the same function its builds use, unrounded (calcOvr takes it to one decimal)
   const ovr = bucket ? b => calcBucketOVR(b, posTypes, p, true) : b => NFL_OVR[p](b, posTypes, true)
-  return slotKit({ sport: bucket ? 'bucket' : 'nfl', pos: p, slots, posTypes, attr, pool: bucket ? BUCKET_SAL_POOL : fb.pool, ovr })
+  // (basketball: Salary Cap's pool holds both; the room's position deals only its own men: a big draws bigs, owner 11-27)
+  const pool = bucket ? BUCKET_SAL_POOL.filter(pl => (p === 'big' ? BIGS : GUARDS).has(pl.name) || pl.posGroup === p) : fb.pool
+  return slotKit({ sport: bucket ? 'bucket' : 'nfl', pos: p, slots, posTypes, attr, pool, ovr })
 }
 
 // The kit from a sport's five slots (each { key, label, types, alt }), its traits, their labels, the pool and its OVR
