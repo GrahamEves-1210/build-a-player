@@ -18,7 +18,7 @@ export const sportOfPath = p => (/^\/bucket(\/|$)/.test(p) ? 'bucket' : /^\/socc
 
 // page → address under the game's prefix
 const SLUG = {
-  splash: 'home', leaderboard: 'ranks', profile: 'profile',
+  splash: 'home', leaderboard: 'home', profile: 'profile',   // (Home, Daily, Shop and Ranks are all /home: owner 11-27)
   game: 'build', sim: 'simulate', salarycap: 'salary-cap', 'soon-salary': 'salary-cap', 'depth-chart': 'depth-chart',
   squad: 'squad', 'squad-build': 'squad/spin',
   career: 'career', 'career-intro': 'career/saves', 'career-build': 'career/spin',
@@ -31,14 +31,14 @@ const SLUG = {
   btlive: 'blacktop/practice', koth: 'blacktop/koth', 'btlive-play': 'blacktop/play',
 }
 // the dock's screens over the page (AppTabBar): their own addresses
-const SCREEN_SLUG = { daily: 'daily', shop: 'shop', cards: 'cards', achievements: 'achievements', locker: 'locker', pass: 'pass', online: 'online' }
+const SCREEN_SLUG = { daily: 'home', shop: 'home', cards: 'cards', achievements: 'achievements', locker: 'locker', pass: 'pass', online: 'online' }
 // address → page, per game (the slugs two pages share: basketball's Franchise and College are its own)
 const SPORT_PAGE = {
   bucket: { franchise: 'nbafranchise', 'franchise/spin': 'nbafranchise-build', college: 'cbb' },
   nfl: { college: 'cfb' },
 }
 // the addresses from before (and the plain ones people type)
-const ALIAS = { '': 'splash', leaderboard: 'leaderboard', simulate: 'sim', salary: 'salarycap', 'squad-build': 'squad-build', 'career-build': 'career-build' }
+const ALIAS = { '': 'splash', ranks: 'leaderboard', leaderboard: 'leaderboard', simulate: 'sim', salary: 'salarycap', 'squad-build': 'squad-build', 'career-build': 'career-build' }
 
 // The five dock pages, Depth Chart and Career (its hub and saves, not its spin: the rail would sit on the spin) run
 // the left rail (lib/ads.js DOCK_UNITS); every other page runs the corner video and the bottom rail
@@ -47,7 +47,7 @@ const LEFT_SCREENS = new Set(['daily', 'shop'])
 // the dock's pages: moving among them never reloads the rails (rampPage soft)
 const SOFT = new Set(['splash', 'leaderboard', 'profile'])
 
-const PAGE_OF_SLUG = Object.fromEntries(Object.entries(SLUG).filter(([p]) => !['soon-salary', 'nbafranchise', 'nbafranchise-build', 'cbb', 'cfb'].includes(p)).map(([p, s]) => [s, p]))
+const PAGE_OF_SLUG = Object.fromEntries(Object.entries(SLUG).filter(([p]) => !['leaderboard', 'soon-salary', 'nbafranchise', 'nbafranchise-build', 'cbb', 'cfb'].includes(p)).map(([p, s]) => [s, p]))
 
 // What an address names: { sport, page, screen } (page null on a screen's address; both null when it's unknown)
 export function parsePath(pathname = window.location.pathname, search = window.location.search) {
@@ -55,7 +55,8 @@ export function parsePath(pathname = window.location.pathname, search = window.l
   let rest = pathname.slice(PREFIX[sport].length).replace(/^\/+|\/+$/g, '')
   if (sport === 'nfl' && rest.startsWith('wiki')) return { sport, page: 'wiki', screen: null }
   if (sport === 'nfl' && !rest && new URLSearchParams(search).has('about')) return { sport, page: 'about', screen: null }
-  const screen = Object.keys(SCREEN_SLUG).find(k => SCREEN_SLUG[k] === rest) ?? null
+  // (/daily and /shop from before still open their screens; /home is Home)
+  const screen = rest === 'daily' || rest === 'shop' ? rest : rest !== 'home' ? Object.keys(SCREEN_SLUG).find(k => SCREEN_SLUG[k] === rest) ?? null : null
   if (screen) return { sport, page: null, screen }
   const page = SPORT_PAGE[sport]?.[rest] ?? PAGE_OF_SLUG[rest] ?? ALIAS[rest] ?? null
   return { sport, page, screen: null }
