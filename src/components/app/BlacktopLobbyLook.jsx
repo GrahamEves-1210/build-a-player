@@ -2,7 +2,7 @@
 // Blacktop on made-up data. Nothing here touches the live server, an account or a record: the
 // seats, the chat and the buttons only change this page's own state.
 //   /bucket?btlobby=hub        the hub with live games, players searching and a notice (&empty=1: a quiet night)
-//   /bucket?btlobby=queue      the 3v3 lobby, partly filled, seated   (&size=1|2|3, &open=1: not seated yet, &bumped=1, &link=local|connecting)
+//   /bucket?btlobby=queue      the 3v3 lobby, partly filled, seated   (&size=1|2|3|koth, &taken=N: King of the Hill's spots taken, &open=1: not seated yet, &bumped=1, &link=local|connecting)
 //   /bucket?btlobby=full       the lobby with every spot taken (the tip-off state)   (&size=1|2|3)
 //   /bucket?btlobby=chat       the lobby chat with messages   (&empty=1, &rules=1: before the rules are agreed)
 //   /bucket?btlobby=teamchat   the team chat over a build (the squad strip)
@@ -27,7 +27,7 @@ const person = (i, extra = {}) => ({ vid: `p-${i}`, name: PEOPLE[i].name, cos: P
 const buildOf = (types, n, base) => Object.fromEntries(types.map((t, j) => [t, j < n ? { val: Math.max(1, Math.min(12, base + ((j * 5) % 4) - 1)) } : null]))
 
 // a lobby that only lives on this page: tap a spot to take it, tap yours to leave it
-function useFakeLobby({ size, open, full, bumped, link }) {
+function useFakeLobby({ size, open, full, bumped, link, taken = null }) {
   const SLOTS = slotsFor(size)
   const [mine, setMine] = useState(open ? null : SLOTS[0].id)
   const [myPos, setMyPos] = useState('guard')
@@ -36,12 +36,12 @@ function useFakeLobby({ size, open, full, bumped, link }) {
     const out = {}
     SLOTS.forEach((sl, i) => {
       if (i === 0) return
-      const take = full || (size === 3 ? [2, 3] : size === 2 ? [3] : []).includes(i)
+      const take = full || (size === 'koth' ? i < (taken ?? 2) : (size === 3 ? [2, 3] : size === 2 ? [3] : []).includes(i))
       if (take) out[sl.id] = person(i, { pos: sl.pos === 'any' ? (i % 2 ? 'big' : 'guard') : sl.pos })
     })
     if (full && open) out[SLOTS[0].id] = person(0, { pos: SLOTS[0].pos === 'any' ? 'guard' : SLOTS[0].pos })
     return out
-  }, [size, full, open]) // eslint-disable-line
+  }, [size, full, open, taken]) // eslint-disable-line
   const held = { ...others, ...(mine && !others[mine] ? { [mine]: { ...ME, pos: SLOTS.find(s => s.id === mine)?.pos === 'any' ? myPos : SLOTS.find(s => s.id === mine)?.pos } } : {}) }
   return {
     slots: SLOTS, roomSize: SLOTS.length, size, held, me: ME, mySlot: mine && !others[mine] ? mine : null,
@@ -63,8 +63,8 @@ const CHAT = [
 ]
 
 function Queue({ q, full }) {
-  const size = Math.max(1, Math.min(3, Number(q.get('size')) || 3))
-  const bt = useFakeLobby({ size, open: q.has('open'), full, bumped: q.has('bumped'), link: q.get('link') })
+  const size = q.get('size') === 'koth' ? 'koth' : Math.max(1, Math.min(3, Number(q.get('size')) || 3))
+  const bt = useFakeLobby({ size, open: q.has('open'), full, bumped: q.has('bumped'), link: q.get('link'), taken: q.has('taken') ? Number(q.get('taken')) : null })
   return <BlacktopQueue bt={bt} user={null} onBack={NO} />
 }
 

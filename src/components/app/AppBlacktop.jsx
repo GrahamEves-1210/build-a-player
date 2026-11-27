@@ -345,6 +345,17 @@ export function BlacktopQueue({ bt, user, onBack }) {
                 {SLOTS.filter(sl => koth || sl.team === t).map(sl => {
                   const h = heldAt(sl.id)
                   const me = h?.vid === bt.me.vid
+                  // a King of the Hill spot, open: one row, guard or big chosen inside it
+                  if (koth && !h) return (
+                    <div key={sl.id} className="btl-seat is-open btl-seat--koth">
+                      <span className="btl-seat-plus">+</span>
+                      <span className="btl-seat-txt"><span className="btl-seat-name">OPEN SPOT</span><span className="btl-seat-role">TAKE IT AS</span></span>
+                      <span className="btl-seat-opts">
+                        <button className="btl-seat-opt" onClick={() => tap(sl, 'guard')}>GUARD</button>
+                        <button className="btl-seat-opt" onClick={() => tap(sl, 'big')}>BIG</button>
+                      </span>
+                    </div>
+                  )
                   // a 1v1 spot: open, you take it as a guard or a big
                   if (sl.pos === 'any' && !h) return (
                     <div key={sl.id} className="btl-seat is-open btl-seat--pick">

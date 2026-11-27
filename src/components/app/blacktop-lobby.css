@@ -478,4 +478,8 @@ html:is(.is-app, .app-look) .bt-av.is-bot.bt-av--t1 { --tc: var(--bt-t1); }
 }
 /* King of the Hill: three spots in one column, every man for himself (no sides, no VS) */
 .btl-teams.is-koth { grid-template-columns: minmax(0, 1fr); }
-.btl-teams.is-koth .btl-seat.btl-seat--pick { grid-template-columns: 1fr 1fr; }
+.btl-seat--koth { grid-template-columns: 40px minmax(0, 1fr) auto; }
+.btl-seat-opts { display: flex; gap: 6px; }
+.btl-seat-opt { min-width: 64px; height: 36px; padding: 0 10px; border: 0; border-radius: 4px; cursor: pointer; font-family: var(--bt-cap); font-size: 15px; letter-spacing: 1.4px; line-height: 1; color: var(--tc); background: var(--bt-panel); box-shadow: var(--bt-edge), inset 0 0 0 1.5px color-mix(in srgb, var(--tc) 55%, transparent); transition: transform var(--bt-fast) var(--bt-out); }
+.btl-seat-opt:active { transform: scale(.95); }
+@media (hover: hover) { .btl-seat-opt:hover { background: var(--bt-panel-hi); } }
