@@ -1931,6 +1931,18 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
   const lite = !!opts?.lite
   const R = simulateSeason(L, { seed, leagueSeed, user, teamAdj, forced, lite })
   const me = R.me
+  // his season's form, on his own lines only (the results above are already played): most years near his level, and
+  // a hot year runs further up than a cold one runs down, so the 2,000-yard, 25-touchdown seasons happen (owner 11-27:
+  // players couldn't get big numbers)
+  if (!DEF.has(pos) && user?.rates) {
+    const z = gauss(seeded(`${seed}|form`))
+    const f = clamp(0.88, 1.3, 1 + (z > 0 ? 0.14 : 0.06) * z)
+    const u = user.rates
+    // (yards move less than touchdowns: a hot year is more trips to the end zone, the records stay records)
+    if (pos === 'qb') { u.ypa *= f ** 0.55; u.passShare = clamp(0.2, 0.85, u.passShare + (f - 1) * 0.55); u.ypc = (u.ypc ?? 0) * f ** 0.5 }
+    else if (pos === 'rb') { u.ypc *= f ** 0.45; u.share = clamp(0.3, 0.8, u.share * f ** 0.3); u.tdShare = clamp(0.25, 0.95, u.tdShare * f ** 1.6 + 0.05) }
+    else { u.share = clamp(0.12, 0.42, u.share * f ** 0.45); u.ypr *= f ** 0.3 }
+  }
 
   // ── box scores: every team's regular season and title game (the award races), the build's postseason too ──
   const cands = new Map()
