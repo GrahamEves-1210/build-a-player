@@ -789,6 +789,8 @@ function timers(p, s) {
 function placeAt(s, p, pos) {
   const x = +pos.x, y = +pos.y
   if (!Number.isFinite(x) || !Number.isFinite(y)) return
+  // (going anywhere with it on his own device is dribbling it, as at home: a fake from here on picks it up)
+  if (s.ball.st === 'held' && s.ball.holder === p.i && p.act === 'free' && !p.pick && s.phase === 'live' && Math.hypot(x - p.x, y - p.y) > 0.05) p.dr = 1
   const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy)
   const max = p.R.top * T.moveSpeed * DT * T.remoteSlack + T.remoteStep
   const k = d > max ? max / d : 1
@@ -910,6 +912,8 @@ function move(s, p, inp) {
 // Picked up: his pivot foot stays down (pvx, pvy) and the other one steps round it, no farther than T.pivotR (a step
 // through, the up-and-under), turning him the way the stick points. Pushed off it by a body, the pivot goes with him
 function pivot(p, mx, my, m) {
+  // (a pivot foot that isn't his, or isn't anywhere: a device that never heard where it went down; he plants it here)
+  if (!Number.isFinite(p.pvx) || !Number.isFinite(p.pvy) || Math.hypot(p.x - p.pvx, p.y - p.pvy) > T.pivotR + 1.5) { p.pvx = p.x; p.pvy = p.y }
   let x = p.x + mx * T.pivotSpeed * DT, y = p.y + my * T.pivotSpeed * DT
   let dx = x - p.pvx, dy = y - p.pvy, d = Math.hypot(dx, dy)
   if (d > T.pivotR) { x = p.pvx + dx / d * T.pivotR; y = p.pvy + dy / d * T.pivotR }
@@ -1294,6 +1298,7 @@ export function step(s, inputs) {
   if (s.phase === 'over') return s
   const up = s.players.map(p => p.act === 'gather')
   tick(s, inputs)
+  for (const p of s.players) sane(p)
   // a shot that never left his hand (the shot clock, a steal, the possession over): no release, so no grade for it.
   // { e: 'noshot', pid } (the screen shows no meter grade for it)
   for (const p of s.players) {
@@ -1352,6 +1357,7 @@ function tick(s, inputs) {
 // referee settles real contact). Nothing else in the state changes.
 export function moveLocal(s, i, inp) {
   const p = s.players[i]
+  sane(p)
   burstTick(p)
   const wasRemote = p.remote
   move(s, p, { mx: inp.mx, my: inp.my })
@@ -1367,6 +1373,20 @@ export function moveLocal(s, i, inp) {
     const v = p.vx * nx + p.vy * ny
     if (v < 0 && p.burst <= 0) { p.vx -= nx * v; p.vy -= ny * v }
   }
+  sane(p)
+}
+
+// Never a man at a position that isn't one (or off in the stands): back to the last good one, standing. Whatever got
+// him there (the owner, 11-27: "my player jumped to top left corner like 0,0"), he's never drawn or stepped there
+export function sane(p) {
+  const ok = Number.isFinite(p.x) && Number.isFinite(p.y) && p.x > COURT.minX - 8 && p.x < COURT.maxX + 8 && p.y > COURT.minY - 8 && p.y < COURT.maxY + 8
+  if (ok) {
+    if (!Number.isFinite(p.vx) || !Number.isFinite(p.vy)) { p.vx = 0; p.vy = 0 }
+    p.gx = p.x; p.gy = p.y
+    return true
+  }
+  p.x = Number.isFinite(p.gx) ? p.gx : COURT.check.x; p.y = Number.isFinite(p.gy) ? p.gy : COURT.check.y; p.vx = 0; p.vy = 0
+  return false
 }
 
 // a copy of the state (it is plain data)

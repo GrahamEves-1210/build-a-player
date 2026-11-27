@@ -539,7 +539,19 @@ export function createEngine({ setup, els, on, net = null }) {
       DX[i] = tx + ex; DY[i] = ty + ey; NB.DP[i * 2] = DX[i]; NB.DP[i * 2 + 1] = DY[i]
     }
   }
+  // (never drawn at a position that isn't one: the last good one instead; the owner, 11-27, "jumped to top left corner")
+  const GD = new Float32Array(N * 2).fill(NaN)
   function places(a) {
+    places0(a)
+    for (let i = 0; i < N; i++) {
+      const okp = Number.isFinite(DX[i]) && Number.isFinite(DY[i]) && DX[i] > COURT.minX - 8 && DX[i] < COURT.maxX + 8 && DY[i] > COURT.minY - 8 && DY[i] < COURT.maxY + 8
+      if (okp) { GD[i * 2] = DX[i]; GD[i * 2 + 1] = DY[i] }
+      else { DX[i] = Number.isFinite(GD[i * 2]) ? GD[i * 2] : s.players[i].x; DY[i] = Number.isFinite(GD[i * 2 + 1]) ? GD[i * 2 + 1] : s.players[i].y; if (import.meta.env.DEV) BADPOS.push([clockNow | 0, i]) }
+    }
+    if (!Number.isFinite(DB[0]) || !Number.isFinite(DB[1]) || !Number.isFinite(DB[2])) { DB[0] = s.ball.x; DB[1] = s.ball.y; DB[2] = s.ball.z }
+  }
+  const BADPOS = []                                  // DEV: frames a man's drawn position had to be put back
+  function places0(a) {
     const P = s.players, b = s.ball
     if (online && NB.buf.length) {
       const now = performance.now(), dt = clamp(now - (NB.pt ?? now), 0, 100); NB.pt = now
@@ -1843,6 +1855,8 @@ export function createEngine({ setup, els, on, net = null }) {
     resync() { NB.wasLive = false; NB.local = null; NB.mv.hand = null },
     // DEV: where each player was drawn on the last frame (feet)
     get evlog() { return EVLOG },
+    // DEV: frames where a man's drawn position wasn't one (put back to his last good one)
+    get badpos() { return BADPOS },
     // DEV: the referee's snapshots as this device keeps them to draw from ({ k, p: x, y per player, b })
     get nbuf() { return NB.buf },
     // DEV: how each other man is drawn (wire 3): from his device's word (1) or the snapshots (0), the correction left

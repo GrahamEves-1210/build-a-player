@@ -114,6 +114,8 @@ export function snapOf(s, events, acks) {
   const p = s.players.map(o => {
     const a = PF.map(f => r2(o[f])).concat(PI.map(f => o[f]))
     a.push(o.act, o.shot ? [o.shot.kind, o.shot.three ? 1 : 0, o.shot.read, r2(o.shot.d), r2(o.shot.run ?? 0), r2(o.shot.mx ?? 0), r2(o.shot.my ?? 0)] : 0)
+    // (on the end, so a device that doesn't know them reads the row as before: his pivot foot, picked up)
+    a.push(r2(o.pvx ?? 0), r2(o.pvy ?? 0))
     return a
   })
   const b = s.ball
@@ -140,6 +142,10 @@ export function applySnap(s, m, me) {
     o.act = a[PF.length + PI.length]
     const sh = a[PF.length + PI.length + 1]
     o.shot = sh ? { kind: sh[0], three: !!sh[1], read: sh[2], d: sh[3], run: sh[4] ?? 0, mx: sh[5] ?? 0, my: sh[6] ?? 0, spec: meterSpec(sh[0], o.R, s.gamePoint) } : null
+    // his pivot foot (the referee's, picked up). Without it a device's own man pivoted round 0,0: the top left corner
+    // (the owner, 11-27: "my player jumped to top left corner ... after a pump fake")
+    const pv = PF.length + PI.length + 2
+    if (Number.isFinite(a[pv]) && Number.isFinite(a[pv + 1])) { o.pvx = a[pv]; o.pvy = a[pv + 1] }
   })
   const b = s.ball
   Object.assign(b, m.b)
