@@ -109,7 +109,7 @@ function kitFor(league, team, colors) {
   // the neck and armhole trim
   if (league === 'nba' && NBA_LOOKS[team]) {
     const k = NBA_LOOKS[team]
-    return { body: k.f, num: k.i, line: k.l, collar: k.r, sleeve: ['none'], badge: [k.f, k.i] }
+    return { body: k.f, num: k.i, line: k.l, collar: k.r, sleeve: ['none'], badge: [k.f, k.i], neck: k.n }
   }
   if (!colors || !colors[0]) return { body: '#5d6573', num: '#ffffff', line: null, collar: '#c4cad3', sleeve: ['stripes', '#c4cad3'], badge: null }
   const c = kitColors(colors[0], colors[1])
@@ -166,33 +166,6 @@ function sleeveTrim(kit, cuff) {
   return ''
 }
 
-// ── The jersey: a product shot ───────────────────────────────────────────────────────────────────────────────────
-// Front on, the way a team store photographs it: set-in short sleeves, a yoke across the shoulders, side panels a
-// shade darker, a clean V collar. One soft light from the upper left, the far side falling away, a faint knit, and
-// a soft shadow where it meets the tile: nothing drawn round it. 200 × 200, the shadow included.
-const TEE = {
-  body: 'M79 21C70 23 56 27 43 33C30 39 22 49 16 63L9 95C19 101 30 104 41 105L49 89C50 121 50 160 50 187C80 193 120 193 150 187C150 160 150 121 151 89L159 105C170 104 181 101 191 95L184 63C178 49 170 39 157 33C144 27 130 23 121 21L100 49Z',
-  sleeves: ['M43 33C30 39 22 49 16 63L9 95C19 101 30 104 41 105L49 89C49 67 52 48 59 29Z', 'M157 33C170 39 178 49 184 63L191 95C181 101 170 104 159 105L151 89C151 67 148 48 141 29Z'],
-  seams: ['M59 29C52 48 49 67 49 89', 'M141 29C148 48 151 67 151 89'],
-  cuffs: [[[9, 95], [41, 105]], [[159, 105], [191, 95]]],
-  panels: ['M49 89C50 121 50 160 50 187L63 189C63 160 62 124 59 93Z', 'M151 89C150 121 150 160 150 187L137 189C137 160 138 124 141 93Z'],
-  yoke: 'M58 30Q100 50 142 30',
-  back: 'M79 21Q100 11 121 21L100 49Z',
-  vee: 'M78 20L100 50L122 20',
-  backCollar: 'M80 20Q100 12 120 20',
-  num: [100, 122, 50, 84],
-}
-const TANK = {
-  body: 'M66 13Q100 64 134 13L151 11Q149 56 175 80L174 188Q100 196 26 188L25 80Q51 56 49 11Z',
-  sleeves: [],
-  panels: ['M25 80Q30 84 38 88L39 189L26 188Z', 'M175 80Q170 84 162 88L161 189L174 188Z'],
-  back: 'M66 13Q100 4 134 13Q100 64 66 13Z',
-  vee: 'M65 11Q100 68 135 11',
-  arms: 'M49 9Q51 56 25 80M151 9Q149 56 175 80',
-  backCollar: 'M67 12Q100 5 133 12',
-  num: [100, 128, 56, 92],
-}
-
 // a football club's shirt pattern (lib/teamLooks.js SOC_KITS), over the body, under the number
 function shirtPattern(pat) {
   if (!pat) return ''
@@ -207,60 +180,157 @@ function shirtPattern(pat) {
   return ''
 }
 
-// u: this picture's id prefix; small: drawn 44px or under (no knit, no folds, a bigger number)
-function jersey(kit, number, tank, u, { small = false } = {}) {
-  const S = tank ? TANK : TEE
+// ── The jersey: a product shot ───────────────────────────────────────────────────────────────────────────────────
+// Front on, the way a team store photographs it, with the cloth's form: light falling on the chest and the
+// shoulders, the sides turning away into shade, the hem a touch darker, side panels set in with stitched seams, a
+// collar and cuffs (or a tank's bindings) with real thickness, and a fine knit or mesh drawn at large sizes only.
+// Three cuts: a football jersey over pads ('tee'), a slim basketball tank ('tank'), a football club's shirt
+// ('soc'). 200 × 200, the shadow included.
+const TEE = {
+  body: 'M79 21C70 23 56 27 43 33C30 39 22 49 16 63L9 95C19 101 30 104 41 105L49 89C50 121 50 160 50 187C80 193 120 193 150 187C150 160 150 121 151 89L159 105C170 104 181 101 191 95L184 63C178 49 170 39 157 33C144 27 130 23 121 21L100 49Z',
+  sleeves: ['M43 33C30 39 22 49 16 63L9 95C19 101 30 104 41 105L49 89C49 67 52 48 59 29Z', 'M157 33C170 39 178 49 184 63L191 95C181 101 170 104 159 105L151 89C151 67 148 48 141 29Z'],
+  seams: ['M59 29C52 48 49 67 49 89', 'M141 29C148 48 151 67 151 89'],
+  cuffs: [[[9, 95], [41, 105]], [[159, 105], [191, 95]]],
+  panels: ['M49 89C50 121 50 160 50 187L63 189C63 160 62 124 59 93Z', 'M151 89C150 121 150 160 150 187L137 189C137 160 138 124 141 93Z'],
+  panelSeams: ['M59 93C62 124 63 160 63 189', 'M141 93C138 124 137 160 137 189'],
+  yoke: 'M58 30Q100 50 142 30',
+  back: 'M79 21Q100 11 121 21L100 49Z',
+  collar: 'M78 20L100 50L122 20',
+  backCollar: 'M80 20Q100 12 120 20',
+  hem: 'M50 187C80 193 120 193 150 187',
+  // where the light gathers: the chest, and each shoulder over its pad
+  vol: [[100, 92, 64], [66, 44, 34], [134, 44, 34]],
+  sides: [40, 160],
+  num: [100, 122, 50, 84],
+  collarW: 5.6,
+}
+// a modern basketball tank: narrow straps, deep armholes, a slim body that tapers a little to the hem
+const TANK = {
+  body: 'M82 14L64 15C63 52 56 86 42 98L46 186Q100 194 154 186L158 98C144 86 137 52 136 15L118 14L100 52Z',
+  bodyRound: 'M82 14L64 15C63 52 56 86 42 98L46 186Q100 194 154 186L158 98C144 86 137 52 136 15L118 14Q100 46 82 14Z',
+  sleeves: [],
+  panels: ['M42 98C47 100 52 102 56 105L58 188L46 186Z', 'M158 98C153 100 148 102 144 105L142 188L154 186Z'],
+  panelSeams: ['M56 105L58 188', 'M144 105L142 188'],
+  back: 'M82 14Q100 6 118 14L100 52Z',
+  backRound: 'M82 14Q100 6 118 14Q100 46 82 14Z',
+  collar: 'M81 13L100 53L119 13',
+  collarRound: 'M81 13Q100 48 119 13',
+  backCollar: 'M83 13Q100 7 117 13',
+  arms: ['M64 14C63 52 56 86 42 98', 'M136 14C137 52 144 86 158 98'],
+  hem: 'M46 186Q100 194 154 186',
+  vol: [[100, 96, 54], [72, 30, 16], [128, 30, 16]],
+  sides: [42, 158],
+  num: [100, 118, 44, 70],
+  collarW: 5,
+}
+// a football club's shirt: no pads, the sleeves set in and angled down, a crew collar
+const SOC = {
+  body: 'M80 20Q100 14 120 20L148 28C160 32 170 40 178 52L190 78C182 84 172 88 162 90L152 74C151 110 151 150 152 186Q100 193 48 186C49 150 49 110 48 74L38 90C28 88 18 84 10 78L22 52C30 40 40 32 52 28Z',
+  sleeves: ['M52 28C40 32 30 40 22 52L10 78C18 84 28 88 38 90L48 74C47 58 50 42 58 27Z', 'M148 28C160 32 170 40 178 52L190 78C182 84 172 88 162 90L152 74C153 58 150 42 142 27Z'],
+  seams: ['M58 27C50 42 47 58 48 74', 'M142 27C150 42 153 58 152 74'],
+  cuffs: [[[10, 78], [38, 90]], [[162, 90], [190, 78]]],
+  panels: ['M48 74C49 110 49 150 48 186L58 187C58 150 58 112 56 80Z', 'M152 74C151 110 151 150 152 186L142 187C142 150 142 112 144 80Z'],
+  panelSeams: ['M56 80C58 112 58 150 58 187', 'M144 80C142 112 142 150 142 187'],
+  back: 'M80 20Q100 14 120 20Q100 36 80 20Z',
+  collar: 'M79 20Q100 37 121 20',
+  backCollar: 'M80 20Q100 13 120 20',
+  hem: 'M48 186Q100 193 152 186',
+  vol: [[100, 92, 58], [64, 40, 26], [136, 40, 26]],
+  sides: [48, 152],
+  num: [100, 114, 44, 70],
+  collarW: 5,
+}
+const CUTS = { tee: TEE, tank: TANK, soc: SOC }
+
+// a hem or a cuff turned over: a dark line where it folds, a lit edge under it
+const fold = (d, dark) => `<path d="${d}" fill="none" stroke="#000" stroke-width="1.2" opacity="${dark ? 0.55 : 0.3}"/><path d="${d}" fill="none" stroke="#fff" stroke-width=".7" opacity="${dark ? 0.1 : 0.2}" transform="translate(0 1.3)"/>`
+// a seam: the join, and its stitches beside it
+const seam = (d, dark, stitch) => `<path d="${d}" fill="none" stroke="#000" stroke-width="1" opacity="${dark ? 0.55 : 0.26}"/>` +
+  (stitch ? `<path d="${d}" fill="none" stroke="#fff" stroke-width=".55" stroke-dasharray="1.6 1.5" opacity="${dark ? 0.16 : 0.26}" transform="translate(1.6 0)"/>` : '')
+
+// u: this picture's id prefix; cut: 'tee' | 'tank' | 'soc'; small: drawn 44px or under (flat light, no knit, no
+// folds, no stitches, a bigger number)
+function jersey(kit, number, cut, u, { small = false } = {}) {
+  const S = CUTS[cut] ?? TEE
+  const round = cut === 'tank' && kit.neck === 'round'
+  const bodyD = round ? S.bodyRound : S.body
   const L = lum(kit.body), dark = L < 0.04, pale = L > 0.6
   const n = String(number ?? '').slice(0, 2)
   const [nx, ny, nh, nw] = S.num
   // light and shade, scaled to the cloth: a black kit needs more light to show its form, a white one more shade
-  const hi = (dark ? 0.34 : pale ? 0.5 : 0.24) * (small ? 1.2 : 1), lo = (dark ? 0.45 : pale ? 0.16 : 0.36) * (small ? 0.55 : 1)   // (flatter drawn small: the shade would swallow a dark kit at 30px)
+  const hi = (dark ? 0.32 : pale ? 0.55 : 0.3) * (small ? 1 : 1), lo = (dark ? 0.55 : pale ? 0.24 : 0.5) * (small ? 0.55 : 1)
   const trim = kit.line ?? (contrast(kit.collar, kit.body) > 1.4 ? kit.collar : null)
-  const collarLo = shade(kit.collar, pale ? 0.82 : 0.7)
-  const out = [
-    `<defs><clipPath id="${u}b"><path d="${S.body}"/></clipPath>` +
-    `<filter id="${u}sh" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="5"/></filter>` +
-    (small ? '' : `<filter id="${u}sf" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.2"/></filter>`) +
-    // the light: from the upper left, across and down
-    `<linearGradient id="${u}lx" gradientUnits="userSpaceOnUse" x1="20" y1="30" x2="185" y2="120"><stop offset="0" stop-color="#fff" stop-opacity="${hi}"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".7" stop-color="#000" stop-opacity="${lo * 0.35}"/><stop offset="1" stop-color="#000" stop-opacity="${lo}"/></linearGradient>` +
-    `<linearGradient id="${u}ly" gradientUnits="userSpaceOnUse" x1="0" y1="20" x2="0" y2="192"><stop offset="0" stop-color="#fff" stop-opacity="${hi * 0.35}"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${lo * 0.55}"/></linearGradient>` +
-    `<radialGradient id="${u}ao" gradientUnits="userSpaceOnUse" cx="100" cy="30" r="40"><stop offset="0" stop-color="#000" stop-opacity="${dark ? 0.5 : 0.32}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>` +
-    (small ? '' : `<pattern id="${u}kn" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.3" height="2.6" fill="#fff" opacity="${dark ? 0.022 : 0.045}"/></pattern>`) +
-    `<linearGradient id="${u}cl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${mix(kit.collar, '#fff', 0.18)}"/><stop offset="1" stop-color="${collarLo}"/></linearGradient></defs>`,
-    // where it meets the tile
-    `<ellipse cx="100" cy="190" rx="62" ry="6" fill="#000" opacity=".55" filter="url(#${u}sh)"/>`,
-    `<path d="${S.body}" fill="${kit.body}"/>`,
-    `<g clip-path="url(#${u}b)">`,
-    ...(S.panels ?? []).map(pn => `<path d="${pn}" fill="${shade(kit.body, pale ? 0.9 : 0.8)}"/>`),
-    shirtPattern(kit.pat),
+  const collarHi = mix(kit.collar, '#fff', 0.25), collarLo = shade(kit.collar, pale ? 0.8 : 0.66)
+  const [sx0, sx1] = S.sides, mid = (sx0 + sx1) / 2, half = (sx1 - sx0) / 2
+  const defs = [
+    `<clipPath id="${u}b"><path d="${bodyD}"/></clipPath>`,
+    `<filter id="${u}sh" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="5"/></filter>`,
+    // the sides turning away from the light (the far side deeper), the hem a touch darker, the top lit
+    `<linearGradient id="${u}sd" gradientUnits="userSpaceOnUse" x1="${sx0 - 6}" y1="0" x2="${sx1 + 6}" y2="0"><stop offset="0" stop-color="#000" stop-opacity="${lo * 0.8}"/><stop offset=".22" stop-color="#000" stop-opacity="${lo * 0.12}"/><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset=".7" stop-color="#000" stop-opacity="${lo * 0.2}"/><stop offset="1" stop-color="#000" stop-opacity="${lo}"/></linearGradient>`,
+    `<linearGradient id="${u}ly" gradientUnits="userSpaceOnUse" x1="0" y1="14" x2="0" y2="194"><stop offset="0" stop-color="#fff" stop-opacity="${hi * 0.4}"/><stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".78" stop-color="#000" stop-opacity="${lo * 0.12}"/><stop offset="1" stop-color="#000" stop-opacity="${lo * 0.6}"/></linearGradient>`,
+    // the volumes: the chest and the shoulders catch the light, a little up and to the left
+    ...S.vol.map(([cx, cy, r], i) => `<radialGradient id="${u}v${i}" gradientUnits="userSpaceOnUse" cx="${cx - r * 0.12}" cy="${cy - r * 0.1}" r="${r}"><stop offset="0" stop-color="#fff" stop-opacity="${hi * (i ? 0.75 : 0.85)}"/><stop offset=".55" stop-color="#fff" stop-opacity="${hi * (i ? 0.25 : 0.3)}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`),
+    // under the collar, where the neck sits
+    `<radialGradient id="${u}ao" gradientUnits="userSpaceOnUse" cx="100" cy="${cut === 'tank' ? 22 : 28}" r="${cut === 'tank' ? 34 : 40}"><stop offset="0" stop-color="#000" stop-opacity="${dark ? 0.45 : 0.3}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>`,
+    `<linearGradient id="${u}cl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${collarHi}"/><stop offset=".5" stop-color="${kit.collar}"/><stop offset="1" stop-color="${collarLo}"/></linearGradient>`,
   ]
+  if (!small) defs.push(
+    `<filter id="${u}sf" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.2"/></filter>`,
+    // the knit (a football or club shirt) or the mesh (a tank)
+    cut === 'tank'
+      ? `<pattern id="${u}kn" width="3" height="3" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r=".55" fill="#000" opacity="${dark ? 0.35 : 0.13}"/><circle cx="0" cy="0" r=".35" fill="#fff" opacity="${dark ? 0.05 : 0.07}"/></pattern>`
+      : `<pattern id="${u}kn" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.3" height="2.6" fill="#fff" opacity="${dark ? 0.025 : 0.05}"/></pattern>`,
+  )
+  const out = [
+    `<defs>${defs.join('')}</defs>`,
+    // where it meets the tile
+    `<ellipse cx="100" cy="190" rx="${half + 12}" ry="6" fill="#000" opacity=".55" filter="url(#${u}sh)"/>`,
+    `<path d="${bodyD}" fill="${kit.body}"/>`,
+    `<g clip-path="url(#${u}b)">`,
+    shirtPattern(kit.pat),
+    // (the side panels a shade deeper, over a club's pattern too)
+    ...(S.panels ?? []).map(pn => `<path d="${pn}" fill="#000" opacity="${pale ? 0.1 : 0.2}"/>`),
+  ]
+  // a tank's side piping in the trim
+  if (cut === 'tank' && kit.collar && !small) S.panelSeams.forEach(d => out.push(`<path d="${d}" fill="none" stroke="${kit.collar}" stroke-width="2.2"/>`))
   S.sleeves.forEach((sl, i) => out.push(`<clipPath id="${u}c${i}"><path d="${sl}"/></clipPath><g clip-path="url(#${u}c${i})">${sleeveTrim(kit, S.cuffs[i])}</g>`))
-  // the number, sewn on: straight, centred, outlined in the trim
-  // (a collegiate block made heavy, outlined in the trim the way it's sewn; a football club's rounder face)
+  // the number, sewn on: a collegiate block (a club's rounder face), outlined in the trim, lit from above
   if (n) out.push(word(kit.face ?? 'num', n, nx, ny + (small ? 3 : 0), small ? nh * 1.25 : nh * 1.06, small ? nw * 1.2 : nw * 1.04,
-    { fill: kit.num, bold: kit.face === 'soc' ? 1 : small ? 2.6 : 2.2, line: kit.pat ? (lum(kit.num) > 0.5 ? '#111111' : '#ffffff') : trim && dist(trim, kit.num) > 40 ? trim : shade(kit.body, 0.5), lw: small || kit.pat ? 5 : 3.6, track: kit.face === 'soc' ? 3 : 4, shadow: small ? 0 : 0.18, id: u + 'n' }))
-  if (!small) out.push(`<rect x="0" y="0" width="200" height="200" fill="url(#${u}kn)"/>`)
+    { fill: kit.num, bold: kit.face === 'soc' ? 1 : small ? 2.6 : 2.2, line: kit.pat ? (lum(kit.num) > 0.5 ? '#111111' : '#ffffff') : trim && dist(trim, kit.num) > 40 ? trim : shade(kit.body, 0.5),
+      lw: small || kit.pat ? 5 : 3.6, track: kit.face === 'soc' ? 3 : 4, shadow: small ? 0 : 0.28, bevel: !small, id: u + 'n' }))
+  if (!small) out.push(`<rect width="200" height="200" fill="url(#${u}kn)"/>`)
+  // the form, over everything sewn on, so the number follows the cloth
   out.push(
-    `<rect x="0" y="0" width="200" height="200" fill="url(#${u}lx)"/>`,
-    `<rect x="0" y="0" width="200" height="200" fill="url(#${u}ly)"/>`,
-    `<rect x="0" y="0" width="200" height="200" fill="url(#${u}ao)"/>`,
+    ...S.vol.map((_, i) => `<rect width="200" height="200" fill="url(#${u}v${i})"/>`),
+    `<rect width="200" height="200" fill="url(#${u}sd)"/>`,
+    `<rect width="200" height="200" fill="url(#${u}ly)"/>`,
+    `<rect width="200" height="200" fill="url(#${u}ao)"/>`,
   )
-  if (!small) out.push(
+  if (!small) {
     // soft folds: from the armpits, and where it gathers at the waist
-    `<g filter="url(#${u}sf)" fill="#000"><path d="M50 96Q72 110 80 134L74 136Q66 116 49 104Z" opacity=".22"/><path d="M150 96Q128 110 120 134L126 136Q134 116 151 104Z" opacity=".3"/><path d="M58 168Q100 160 142 170L142 175Q100 167 58 174Z" opacity=".16"/></g>`,
-    `<path d="M66 112Q72 145 68 178" fill="none" stroke="#fff" stroke-width="5" opacity="${dark ? 0.06 : 0.08}" filter="url(#${u}sf)"/>`,
-  )
-  // the seams: the sleeves set in, the yoke across the shoulders
-  ;(S.seams ?? []).forEach(sm => out.push(`<path d="${sm}" fill="none" stroke="#000" stroke-width="1.1" opacity="${dark ? 0.5 : 0.22}"/><path d="${sm}" fill="none" stroke="#fff" stroke-width=".8" opacity="${dark ? 0.08 : 0.14}" transform="translate(-1.1 0)"/>`))
-  if (S.yoke && !small) out.push(`<path d="${S.yoke}" fill="none" stroke="#000" stroke-width="1" opacity="${dark ? 0.4 : 0.14}"/>`)
-  // the collar: the inside of the back, the back band, the V
+    const ax = cut === 'tank' ? 12 : 0
+    out.push(`<g filter="url(#${u}sf)" fill="#000"><path d="M${50 + ax} 96Q${72 + ax / 2} 110 80 134L74 136Q${66 + ax / 2} 116 ${49 + ax} 104Z" opacity=".2"/><path d="M${150 - ax} 96Q${128 - ax / 2} 110 120 134L126 136Q${134 - ax / 2} 116 ${151 - ax} 104Z" opacity=".28"/><path d="M${sx0 + 10} 168Q100 160 ${sx1 - 10} 170L${sx1 - 10} 175Q100 167 ${sx0 + 10} 174Z" opacity=".14"/></g>`)
+    ;(S.panelSeams ?? []).forEach(d => out.push(seam(d, dark, true)))
+    ;(S.seams ?? []).forEach(d => out.push(seam(d, dark, true)))
+    if (S.yoke) out.push(`<path d="${S.yoke}" fill="none" stroke="#000" stroke-width="1" opacity="${dark ? 0.4 : 0.14}"/>`)
+    out.push(fold(S.hem.replace(/(\d+(?:\.\d+)?) (\d+(?:\.\d+)?)/g, (m, x, y) => `${x} ${+y - 5}`), dark))
+    // the cuffs turned over
+    ;(S.cuffs ?? []).forEach(([[ax0, ay0], [bx, by]]) => {
+      const dx = bx - ax0, dy = by - ay0, len = Math.hypot(dx, dy), ox = (dy / len) * 4.5, oy = (-dx / len) * 4.5
+      out.push(fold(`M${f1(ax0 + ox - dx * 0.1)} ${f1(ay0 + oy - dy * 0.1)}L${f1(bx + ox + dx * 0.1)} ${f1(by + oy + dy * 0.1)}`, dark))
+    })
+  } else (S.seams ?? []).forEach(d => out.push(seam(d, dark, false)))
+  // the collar: the inside of the back, the back band, then the front band with its thickness, the shadow it casts
+  // on the chest and the lit edge along its top; a tank's armholes bound the same way
+  const band = (d, w) => (small ? '' : `<path d="${d}" fill="none" stroke="#000" stroke-width="${w}" opacity=".3" stroke-linejoin="round" transform="translate(0 2.6)"/>`) +
+    `<path d="${d}" fill="none" stroke="url(#${u}cl)" stroke-width="${w}" stroke-linejoin="round"/>` +
+    (small ? '' : `<path d="${d}" fill="none" stroke="#fff" stroke-width=".8" opacity="${pale ? 0.5 : 0.35}" stroke-linejoin="round" transform="translate(0 -${f1(w * 0.32)})"/><path d="${d}" fill="none" stroke="#000" stroke-width=".8" opacity=".35" stroke-linejoin="round" transform="translate(0 ${f1(w * 0.36)})"/>`)
   out.push(
-    `<path d="${S.back}" fill="${dark ? '#030404' : shade(kit.body, 0.38)}"/>`,
+    `<path d="${round ? S.backRound : S.back}" fill="${dark ? '#030404' : shade(kit.body, 0.34)}"/>`,
     `<path d="${S.backCollar}" fill="none" stroke="${collarLo}" stroke-width="3.2" stroke-linecap="round"/>`,
-    `<path d="${S.vee}" fill="none" stroke="url(#${u}cl)" stroke-width="${tank ? 6 : 5.4}" stroke-linejoin="miter" stroke-miterlimit="6"/>`,
-    `<path d="${S.vee}" fill="none" stroke="#000" stroke-width="1" opacity=".25" stroke-linejoin="miter" stroke-miterlimit="6" transform="translate(0 3)"/>`,
   )
-  if (S.arms) out.push(`<path d="${S.arms}" fill="none" stroke="${kit.collar}" stroke-width="5.4"/>`)
+  ;(S.arms ?? []).forEach(d => out.push(band(d, small ? 6 : 4.6)))
+  out.push(band(round ? S.collarRound : S.collar, small ? S.collarW + 1 : S.collarW))
   out.push('</g>')
   return out.join('')
 }
@@ -322,7 +392,8 @@ const STYLE = '<style>.sq,.sm,.xs{display:none}@media (max-aspect-ratio:6/5){.bi
 //   rank: 0-3 (Common, Rare, Epic, Legend), size (height in px), variant: 'auto' | 'card' | 'square' | 'small' }
 export function jerseySvg({ league = 'nfl', team = '', colors, number = '', pos = '', rank = 0, size = 240, variant = 'auto' } = {}) {
   const u = 'j' + (++seq).toString(36) + '_'
-  const tank = league === 'nba' || league === 'cbb'
+  // the cut: a slim tank for basketball, a club shirt for football clubs and nations, else a football jersey
+  const tank = league === 'nba' || league === 'cbb' ? 'tank' : league === 'soc' || league === 'nat' ? 'soc' : 'tee'
   const kit = kitFor(league, team, colors)
   if (league === 'soc' || league === 'nat') kit.face = 'soc'
   if (league === 'soc' && SOC_KITS[team]) kit.pat = SOC_KITS[team]

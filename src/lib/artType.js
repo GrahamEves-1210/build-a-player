@@ -47,7 +47,7 @@ export function layout(set, text, track = 0) {
 //   shadow   0–1, a soft drop under it  stretch  horizontal scale (1 = as drawn)
 // id: a unique id prefix, so the word is defined once and drawn by reference in every layer.
 export function word(set, text, cx, cy, h, maxW, o = {}) {
-  const { fill = '#fff', bold = 0, line = null, lw = 0, line2 = null, lw2 = 0, shadow = 0, stretch = 1, track = 0, id, opacity = 1 } = o
+  const { bevel = false, fill = '#fff', bold = 0, line = null, lw = 0, line2 = null, lw2 = 0, shadow = 0, stretch = 1, track = 0, id, opacity = 1 } = o
   const L = layout(set, text, track)
   if (!L.d) return ''
   const pad = bold + (line ? lw : 0) + (line2 ? lw2 : 0)
@@ -64,5 +64,8 @@ export function word(set, text, cx, cy, h, maxW, o = {}) {
   if (line2) out += use(`fill="${line2}" stroke="${line2}" ${sw(2 * (bold + lw + lw2))}`)
   if (line) out += use(`fill="${line}" stroke="${line}" ${sw(2 * (bold + lw))}`)
   out += use(`fill="${fill}"${bold ? ` stroke="${fill}" ${sw(2 * bold)}` : ''}`)
+  // bevel: the face lit along its top and shaded at its foot, the way a raised twill number catches the light
+  if (bevel) out += `<defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset=".75" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".14"/></linearGradient></defs>` +
+    use(`fill="url(#${id}g)"${bold ? ` stroke="url(#${id}g)" ${sw(2 * bold)}` : ''}`)
   return out + '</g>'
 }

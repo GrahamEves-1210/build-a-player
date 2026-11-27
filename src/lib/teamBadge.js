@@ -156,3 +156,27 @@ export function teamBadgeSvg({ league = 'nfl', team = '', colors, chip = '', siz
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">` +
     both(badge(kind, look, t, u + 'l', false), badge(kind, look, t, u + 's', true)) + '</svg>'
 }
+
+// A conference: its three letters on the slanted tag the app used before the badges (owner 11-25 and 11-27: a
+// conference must not look like a team), finished like the badges: a dark keyline, a brushed-silver rim, a graphite
+// plate lit from above, a silver stripe along its foot and the letters in the badges' face. Drawn 40px or under the
+// sheen and the stripe's highlight drop out.
+export function confTagSvg({ text = '', size = 200 } = {}) {
+  const u = 'f' + (++seq).toString(36) + '_'
+  const t = String(text).toUpperCase().replace(/[^A-Z0-9&]/g, '').slice(0, 4)
+  const x = 6, y = 28, w = 82, h = 44, d = h * 0.24
+  const plate = i => `M${f1(x + d + i)} ${f1(y + i)}H${f1(x + w + d - i)}L${f1(x + w - i)} ${f1(y + h - i)}H${f1(x + i)}Z`
+  const sh = 7
+  const body = small => `<path d="${plate(-1.6)}" fill="#0a0c0f"/>` +
+    `<path d="${plate(0)}" fill="url(#${u}r)"/>` +
+    `<path d="${plate(2.6)}" fill="url(#${u}f)"/>` +
+    // the stripe along the foot
+    `<path d="M${f1(x + 2.6 + d * (sh + 2.6) / h)} ${f1(y + h - 2.6 - sh)}H${f1(x + w + d * (sh + 2.6) / h - 2.6)}L${f1(x + w - 2.6)} ${f1(y + h - 2.6)}H${f1(x + 2.6)}Z" fill="url(#${u}r)"/>` +
+    (small ? '' : `<path d="M${f1(x + d + 4)} ${f1(y + 4.4)}H${f1(x + w + d - 4)}" stroke="#fff" stroke-width=".9" opacity=".4"/>` +
+      `<path d="M${f1(x + d + 2.6)} ${f1(y + 2.6)}H${f1(x + w + d - 2.6)}L${f1(x + w - 2.6 - d * 0.45)} ${f1(y + h * 0.45)}H${f1(x + 2.6 + d * 0.55)}Z" fill="#fff" opacity=".07"/>`) +
+    word('mono', t, x + w / 2 + d * 0.5, y + (h - sh) / 2 + 1, small ? 26 : 23, w * (small ? 0.74 : 0.66), { fill: '#eef1f3', line: '#0a0c0f', lw: small ? 4 : 3, bold: 0.6, track: 5, shadow: small ? 0 : 0.3, id: u + (small ? 's' : 'l') })
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}"><defs>` +
+    `<linearGradient id="${u}r" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#f1f4f6"/><stop offset=".45" stop-color="#b4bcc4"/><stop offset="1" stop-color="#6c747d"/></linearGradient>` +
+    `<linearGradient id="${u}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b434c"/><stop offset=".6" stop-color="#262c33"/><stop offset="1" stop-color="#191d22"/></linearGradient></defs>` +
+    `<style>.s{display:none}@media (max-width:40px){.l{display:none}.s{display:inline}}</style><g class="l">${body(false)}</g><g class="s">${body(true)}</g></svg>`
+}

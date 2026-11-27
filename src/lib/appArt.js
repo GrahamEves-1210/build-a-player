@@ -11,7 +11,7 @@
 import INDEX from '../data/jersey-index.json'
 import { jerseySvg, svgUri } from './jerseyArt'
 import { jerseySvg as classicJersey } from './jerseyArtClassic'
-import { teamBadgeSvg } from './teamBadge.js'
+import { teamBadgeSvg, confTagSvg } from './teamBadge.js'
 import { numberFor } from './jerseyNumber'
 import { CLEAN } from './platform'
 
@@ -108,7 +108,8 @@ export function appImage(src) {
   } else if ((m = LOGO.exec(src)) && m[2]) {
     // a conference's mark: its three-letter abbreviation on a plain tag (owner 11-25: three letters, neater)
     const k = m[3].toLowerCase().replace(/[-_ ]/g, '')
-    out = svgUri(teamMark({ league: 'conf', team: CONF3[k] ?? k.toUpperCase().slice(0, 3) }))
+    // (the slanted tag, not a badge: a conference shouldn't read as a team, owner 11-27)
+    out = svgUri(confTagSvg({ text: CONF3[k] ?? k.toUpperCase().slice(0, 3) }))
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
   } else if (CLEAN && (m = FIG.exec(src))) {
