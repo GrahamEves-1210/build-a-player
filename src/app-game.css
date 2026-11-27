@@ -8699,3 +8699,7 @@ button.au-paddle:focus-visible { outline: 2px solid var(--au-amber); outline-off
   html.is-app .ag-home .ag-brand { min-height: 0; margin: 0; padding: 0; gap: 0; }
   html.is-app .ag-home .ag-sport-wrap { margin-top: -6px; }
 }
+/* his face in a lineup or roster circle fills it the way a real player's photo does (it was a smaller ring inside the
+   ring, owner 11-27): the circle's own border and grade tab do the framing */
+.crl-face > .cr-me-face { width: 100% !important; height: 100% !important; border: 0 !important; box-shadow: none !important; }
+.crl-face > .cr-me-face img { width: 100%; height: 100%; object-fit: cover; }
