@@ -138,7 +138,8 @@ const roundName = (g, v) => (g.round === 'Conference Championship' ? (g.title ??
   : (g.bowl ?? g.label ?? 'Bowl'))
 const postLabel = g => (g.round === 'Conference Championship' ? (g.title ?? 'CONF TITLE') : g.round === 'National Championship' ? 'NATL TITLE' : g.bowl ?? g.label ?? g.round).toUpperCase()
 // his postseason as football's playoff log takes it (NCAA passer rating in the rating spot, as the box score shows it)
-const logRows = (games, v) => games.map(g => ({ ...g, round: roundName(g, v), opponent: v.school(g.oppShort), home: !!g.home || !!g.neutral, overtime: !!g.ot, rating: g.eff ?? g.rating }))
+// (a defender's line in his own words: the log reads football's stat names, a college defender's are tk, sck, pd...)
+const logRows = (games, v) => games.map(g => ({ ...g, round: roundName(g, v), opponent: v.school(g.oppShort), home: !!g.home || !!g.neutral, overtime: !!g.ot, rating: g.eff ?? g.rating, ...(g.tk != null ? { line: defLine(g) } : {}) }))
 
 // ── the AP poll: one line through the season, then where he stood week by week ──
 function RankPath({ ranks }) {

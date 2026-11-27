@@ -207,6 +207,7 @@ export function GameLog({ games, total, isOL, isK = false, isDB, isDL, isLB = fa
 
 // Your line in a playoff game, whatever the position (the round carries its own stats)
 export function poLine(r) {
+  if (typeof r.line === 'string' && r.line) return r.line   // (a line already written: College Football's defenders)
   if (r.fga != null && r.xpa != null) return `${r.fgm ?? 0}/${r.fga} FG${r.long ? ` (long ${r.long})` : ''} · ${r.xpm ?? 0}/${r.xpa} XP · ${r.pts ?? 0} pts${r.gw ? ' · game-winner' : ''}`
   if (r.passYds != null) return `${r.passYds} pass yds · ${r.tds ?? 0} TD · ${r.ints ?? 0} INT${r.rating != null ? ` · ${Math.round(r.rating)} rtg` : ''}`
   if (r.carries != null) return `${r.carries} car · ${r.rushYds ?? 0} rush yds · ${r.recs ?? 0} rec · ${r.recYds ?? 0} rec yds · ${(r.rushTDs ?? 0) + (r.recTDs ?? 0)} TD`
