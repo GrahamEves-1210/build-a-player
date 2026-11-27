@@ -150,7 +150,22 @@ const FRAME_CSS = [
   // the team's logo a photo stood in front of
   'html.app-art:not(#_) [data-art-frame]:has(img[data-art=p]) img[data-art=t]{display:none!important}',
   'html.app-art:not(#_) .qb-avatar:has(img[data-art=p]) .qb-avatar-logo{display:none}',
+  // where the jersey goes bare, a player's picture waits, unseen, until its bare art is set: never the tile
+  `html.app-art:not(#_) :is(${BARE}) img[data-art=p]:not([data-art-set]),html.app-art:not(#_) img:is(${BARE})[data-art=p]:not([data-art-set]){visibility:hidden!important}`,
 ].join('')
+
+// the classic art on the build figure's red cards, the bare jersey where it breaks out of its box. Tried the moment
+// the picture is in the page (a microtask after its src is set: React has put it there by then, before anything
+// paints), so the tiled jersey it starts as never shows (owner 11-27: Home's mode cards flashed a dark block for a
+// second on each toggle while the tile stood in for the bare jersey); fitSlot tries again for a picture placed later
+function swapAlt(img) {
+  if (!img.__artKey || img.__classic || !nativeSet || !img.isConnected) return
+  const alt = img.closest(CLASSIC) ? classicArt : img.closest(BARE) ? bareArt : null
+  const out = alt?.(img.__artKey)
+  img.__classic = true
+  if (out) { nativeSet.call(img, 'src', out); if (alt === bareArt) nativeSet.call(img, 'data-art-bare', '') }
+  nativeSet.call(img, 'data-art-set', '')
+}
 
 const pending = new Set()
 let queued = false
@@ -182,13 +197,7 @@ function waitForSize(img) {
 const pinned = k => { const p = getComputedStyle(k).position; return p === 'absolute' || p === 'fixed' }
 function fitSlot(img) {
   if (!img.isConnected) return
-  // the classic art on the build figure's red cards, the bare jersey where it breaks out of its box
-  if (img.__artKey && !img.__classic && nativeSet) {
-    const alt = img.closest(CLASSIC) ? classicArt : img.closest(BARE) ? bareArt : null
-    const out = alt?.(img.__artKey)
-    img.__classic = true
-    if (out) { nativeSet.call(img, 'src', out); if (alt === bareArt) nativeSet.call(img, 'data-art-bare', '') }
-  }
+  swapAlt(img)
   const r = img.getBoundingClientRect()
   // not laid out yet (a closed tab, a sheet still off screen): fitted the moment it gets a size
   if (r.width < 2 || r.height < 2) { waitForSize(img); return }
@@ -232,7 +241,9 @@ export function installAppArt() {
     img.__classic = false
     if (img.hasAttribute('data-art-bare')) img.removeAttribute('data-art-bare')
     const hm = k === 'p' && HEADSHOT.exec(src); img.__artKey = hm ? hm[1].replace(/^.*?public\/headshots\//, '') : null
-    if (k) { setAttr.call(img, 'data-art', k); fitLater(img) } else if (img.hasAttribute('data-art')) img.removeAttribute('data-art')
+    // (a picture with no headshot key keeps the art it has: it counts as set at once)
+    if (img.__artKey) { if (img.hasAttribute('data-art-set')) img.removeAttribute('data-art-set') } else if (k === 'p') setAttr.call(img, 'data-art-set', '')
+    if (k) { setAttr.call(img, 'data-art', k); fitLater(img); if (img.__artKey) queueMicrotask(() => swapAlt(img)) } else if (img.hasAttribute('data-art')) img.removeAttribute('data-art')
   }
   // <img src> (React sets it as an attribute) and img.src = … (new Image() for canvases and preloads)
   HTMLImageElement.prototype.setAttribute = function (name, value) {
