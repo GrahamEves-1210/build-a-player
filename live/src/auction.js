@@ -14,7 +14,7 @@
 import {
   AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BID_SECS, RESET_SECS, SOLD_MS, DRAW_MS, DRAW_STEP_MS, GRACE_MS,
   AUCTION_POS, AUCTION_ANY, auctionPosFor, auctionCoreKit, freshLedger, canTop, minNext, maxBid, auctionOver, pickLot, takeLot, returnLot,
-  finishedEarly, drawFor, applyDraw, rankAuction, lotEnd, spinOf,
+  finishedEarly, markCloser, stillBuilding, drawFor, applyDraw, rankAuction, lotEnd, spinOf,
 } from '../../src/lib/auctionCore.js'
 import '../../src/lib/soccerAuction.js'   // soccer's kit (the striker): added to the rules above
 import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
@@ -123,6 +123,7 @@ export class AuctionRoom {
       L.won[vid] = { ...L.won[vid], [st.lot.trait]: { val: st.lot.val, vals: st.lot.vals, extra: st.lot.extra, name: st.lot.name, team: st.lot.team, price: amount } }
       sold = { vid, amount }
     } else L = returnLot(L, st.lot, m)
+    if (sold) L = markCloser(L, m, sold.vid)
     L.log = [{ n: st.n, trait: st.lot.trait, name: st.lot.name, val: st.lot.val, vid: sold?.vid ?? null, amount: sold?.amount ?? 0 }, ...L.log].slice(0, 30)
     Object.assign(st, { stage: 'sold', sold, soldAt: Date.now(), high: null, L })
     this.broadcast()
@@ -195,6 +196,10 @@ export class AuctionRoom {
       // the last bidder left in the room: the auction's his, now (owner 11-27: an auto win). The ones who quit are
       // forfeits, ranked under him whatever their builds
       if (this.m.players.filter(p => !st.L.out.includes(p.vid)).length <= 1) return this.finish()
+      // one left building and someone done: he's bidding against nobody, so his open slots go to the draw
+      if (st.L.closer && stillBuilding(st.L, this.m).length === 1 && (st.stage === 'lot' || st.stage === 'sold')) {
+        st.high = null; this.broadcast(); return this.at(300, () => this.draw(st.L.closer))
+      }
       this.broadcast(); this.maybeSettle()
       if (st.stage === 'draw') return
       if (auctionOver(st.L, this.m, st.n) && st.stage !== 'lot') this.finish()

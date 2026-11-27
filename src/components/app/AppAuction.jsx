@@ -232,7 +232,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
             </div>
           ))}
         </div>
-        {closer && <span className="au-fine"><Name p={closer} me={mine} /> filled his build first. Every other open slot went to the draw.</span>}
+        {closer && <span className="au-fine"><Name p={closer} me={mine} /> filled his build first. The last open slots went to the draw.</span>}
         <div className="cp-actions au-actions">
           <button className="ag-btn" onClick={() => { sfx('tap'); onPlayAgain() }}>PLAY AGAIN</button>
           <button className="ag-btn ag-btn--ghost" onClick={() => { au.leave(); onHome() }}>HOME</button>

@@ -4,7 +4,7 @@
 import {
   AUCTION_POS, auctionCoreKit, freshLedger, pickLot, takeLot, returnLot, finishedEarly, drawFor, applyDraw,
   rankAuction, ledgerOk, canTop, maxBid, minNext, openSlots, auctionOver, BUDGET,
-  auctionPosFor, posOk, drawCard, setGradeTilt, GRADE_TILT,
+  auctionPosFor, posOk, drawCard, markCloser, stillBuilding, setGradeTilt, GRADE_TILT,
 } from '../../src/lib/auctionCore.js'
 import '../../src/lib/soccerAuction.js'   // (soccer's kit: the striker)
 import { seeded } from '../../src/lib/rng.js'
@@ -55,6 +55,11 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
     } else { L = returnLot(L, lot, m); stats.returned++ }
     ok(ledgerOk(prev, L, m, kit), `${sport} ${pos} lot ${k}: ledger`)
     for (const p of players) ok(L.wallets[p.vid] >= openSlots(L, p.vid, m.types).length, 'always $1 for every open slot')
+    if (high) L = markCloser(L, m, high.vid)
+    if (high && openSlots(L, high.vid, m.types).length === 0 && players.length === 3) {
+      const left = stillBuilding(L, m).length
+      ok(finishedEarly(L, m, high.vid) === (left === 1), 'three in: the draw only when one is left building')
+    }
     if (high && finishedEarly(L, m, high.vid)) {
       const cards = drawFor(m, L, kit)
       { const names = Object.values(cards).flatMap(c => Object.values(c).map(x => x.name))

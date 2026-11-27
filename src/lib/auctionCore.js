@@ -193,8 +193,13 @@ export function returnLot(L) { return L }
 // auction. Every other bidder's open slots are dealt a random card
 // (any player in the pool, by the grade-leaning odds, at no cost), one seeded draw a seat a slot, so it's
 // the same on every phone and the server's word can be checked
+// (owner 11-27: with three in, the first to fill is done and the other two keep bidding; the draw comes only when one
+// bidder is left building, and deals his open slots)
+export const stillBuilding = (L, m) => m.players.filter(p => !L.out.includes(p.vid) && openSlots(L, p.vid, m.types).length > 0)
 export const finishedEarly = (L, m, vid) => !!vid && !L.out.includes(vid) && openSlots(L, vid, m.types).length === 0
-  && m.players.some(p => p.vid !== vid && !L.out.includes(p.vid) && openSlots(L, p.vid, m.types).length > 0)
+  && stillBuilding(L, m).length === 1
+// the first to fill his build (the tiebreak's "filled first"), marked the moment he does
+export const markCloser = (L, m, vid) => (!L.closer && vid && openSlots(L, vid, m.types).length === 0 ? { ...L, closer: vid } : L)
 // (seen: the player-slots that already came up, or were dealt; the draw never repeats one)
 export function drawCard(m, kit, vid, t, seen = null) {
   const r = seeded(`${m.seed}:draw:${vid}:${t}`)
@@ -218,7 +223,7 @@ export function applyDraw(L, cards, by) {
     won[vid] = { ...won[vid] }
     for (const [t, c] of Object.entries(got)) won[vid][t] = { val: c.val, vals: c.vals, extra: c.extra, name: c.name, team: c.team, price: 0, drawn: true }
   }
-  return { ...L, won, closer: by }
+  return { ...L, won, closer: L.closer ?? by }
 }
 
 export function rankAuction(m, L, kit) {
