@@ -34,6 +34,13 @@ const BOT = `(() => {
     if (!R.b0 && s.phase === 'live') { R.b0 = { bin: net.stats.bin, bout: net.stats.bout }; R.s0 = net.stats.sent; R.t0 = now }
     const dr = eng.drawn, live = s.phase === 'live'
     R.frames++
+    // every man drawn, and his own man, at a real spot on the court (the owner, 11-27: "jumped to top left corner")
+    const onC = (x, y) => Number.isFinite(x) && Number.isFinite(y) && x > 0 && x < 56 && y > -1 && y < 52.5 && !(x < 4 && y < 4)
+    for (let i = 0; i < dr.length; i++) if (!onC(dr[i][0], dr[i][1])) { R.offC = (R.offC || 0) + 1; (R.offLog ??= []).length < 5 && R.offLog.push({ i, x: dr[i][0], y: dr[i][1], ph: s.phase, act: P[i].act, pick: P[i].pick }) }
+    if (!onC(p.x, p.y)) R.offOwn = (R.offOwn || 0) + 1
+    R.badpos = eng.badpos ? eng.badpos.length : 0
+    if (p.pick) R.pickF = (R.pickF || 0) + 1
+    if (p.act === 'fake') R.fakeF = (R.fakeF || 0) + 1
     R.own.push([wall, p.x, p.y]); R.drawn.push([wall, dr[o][0], dr[o][1]])
     const ni = eng.netInfo
     if (ni.rk != null && ni.k >= 0) R.rk.push(ni.k - ni.rk)
@@ -74,7 +81,9 @@ const BOT = `(() => {
         const w = Math.sin(now / 500) * 0.7
         eng.stick(dx / d - dy / d * w, dy / d + dx / d * w)
         if (now - lastFlick > 1300 && p.act === 'free' && d > 12) { lastFlick = now; const a = Math.random() * 6.283; eng.flick(Math.cos(a), Math.sin(a)); R.mine.push(['move', wall]); const b0 = p.burst; pend.push({ k: 'move', t: now, done: () => eng.state.players[me].burst > 0 }) }
-        if (!shootAt && p.act === 'free' && d < 16 && now - lastFlick > 500 && Math.random() < 0.02) { shootAt = now; eng.press('a', true); R.mine.push(['shot', wall]); pend.push({ k: 'shot', t: now, done: () => eng.state.players[me].act === 'gather' }) }
+        // (--fakes: after a move, pump fakes, then the pivot: picked up, the stick turns him on his pivot foot)
+        if (window.__fakes && !shootAt && p.act === 'free' && now - lastFlick > 250 && now - (R.lastFake || 0) > 700 && Math.random() < 0.08) { R.lastFake = now; R.fakes = (R.fakes || 0) + 1; eng.press('a', true); setTimeout(() => eng.press('a', false), 60) }
+        else if (!shootAt && p.act === 'free' && d < 16 && now - lastFlick > 500 && Math.random() < (window.__fakes ? 0.006 : 0.02)) { shootAt = now; eng.press('a', true); R.mine.push(['shot', wall]); pend.push({ k: 'shot', t: now, done: () => eng.state.players[me].act === 'gather' }) }
       } else if (def) {
         const hx = dr[o][0], hy = dr[o][1]
         const tx = hx + (rim.x - hx) * 0.18, ty = hy + (rim.y - hy) * 0.18
@@ -112,7 +121,8 @@ for (const v of ['AA', 'BB']) {
 }
 // both in: the game starts
 for (let i = 0; i < 120; i++) { const ok = await Promise.all(pages.map(c => c.evaluate('!!window.__btlive && window.__btlive.online', { soft: true }))); if (ok.every(x => x === true)) break; await sleep(500) }
-for (const c of pages) await c.evaluate(BOT)
+const FAKES = process.argv.includes('--fakes')
+for (const c of pages) await c.evaluate((FAKES ? 'window.__fakes = true;' : '') + BOT)
 if (SHOTS) mkdirSync(SHOTS, { recursive: true })
 const t0 = Date.now()
 let n = 0
@@ -182,4 +192,6 @@ out.msgsUpPerSec = res.map(r => Math.round(r.sentRate))
 out.rtt = res.map(r => r.rtt)
 if (errs.some(e => e.length)) out.pageErrors = errs
 out.fps = res.map(r => Math.round(r.frames / r.secs)); out.frameWorkMs = res.map(r => r.perf.workAvg)
+out.positions = res.map(r => ({ fakes: r.fakes || 0, fakeFrames: r.fakeF || 0, pickedUpFrames: r.pickF || 0, offCourtDrawn: r.offC || 0, offCourtOwn: r.offOwn || 0, putBack: r.badpos || 0, first: r.offLog || [] }))
 console.log(JSON.stringify(out, null, 1))
+if (process.argv.includes('--fakes') && res.some(r => (r.offC || 0) + (r.offOwn || 0) > 0)) { console.log('FAIL  a man drawn (or his own man) off the court'); process.exitCode = 1 }
