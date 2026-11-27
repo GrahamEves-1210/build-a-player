@@ -45,8 +45,10 @@ export const SLOTS = [
 export const SLOTS_2 = SLOTS.filter(sl => sl.id !== '0g1' && sl.id !== '1g1')
 // 1v1: one spot a side; you say guard or big as you take it
 export const SLOTS_1 = [{ id: '0x', team: 0, pos: 'any' }, { id: '1x', team: 1, pos: 'any' }]
-export const slotsFor = size => (size === 1 ? SLOTS_1 : size === 2 ? SLOTS_2 : SLOTS)
-export const slotById = id => SLOTS.find(x => x.id === id) ?? SLOTS_1.find(x => x.id === id) ?? null
+// King of the Hill (its own lobby): three spots, a side each, guard or big as he takes it (live/src/index.js SLOTS_K)
+export const SLOTS_K = [{ id: 'k0', team: 0, pos: 'any' }, { id: 'k1', team: 1, pos: 'any' }, { id: 'k2', team: 2, pos: 'any' }]
+export const slotsFor = size => (size === 1 ? SLOTS_1 : size === 2 ? SLOTS_2 : size === 'koth' ? SLOTS_K : SLOTS)
+export const slotById = id => SLOTS.find(x => x.id === id) ?? SLOTS_1.find(x => x.id === id) ?? SLOTS_K.find(x => x.id === id) ?? null
 // Who holds each spot: the earliest claim wins a tie (both see the same answer)
 export function holders(list) {
   const out = {}

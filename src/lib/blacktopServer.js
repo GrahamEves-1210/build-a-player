@@ -103,7 +103,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   const joinRef = useRef(null)
   // ── The room ───────────────────────────────────────────────────────────────
   const enterRoom = useCallback((code, players, practice) => {
-    const sz = players.length === 2 ? 1 : players.length === 4 ? 2 : 3
+    // (three: King of the Hill, every man for himself)
+    const sz = players.length === 2 ? 1 : players.length === 4 ? 2 : players.length === 3 ? 'koth' : 3
     sizeRef.current = sz; setSize(sz)
     lobbyRef.current?.close(); lobbyRef.current = null
     const mine = players.find(p => p.vid === meRef.current.vid)
@@ -155,10 +156,11 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   const join = useCallback((practice = false, sz = 3, mimic = null) => {
     if (!enabled) return
     if (!claimLive('blacktop')) { setPhase('busy'); return }
-    sz = sz === 1 || sz === 2 ? sz : 3
+    sz = sz === 1 || sz === 2 || sz === 'koth' ? sz : 3
     sizeRef.current = sz; setSize(sz)
     setPhase('queue'); setWaited(0); setLobbyChat([]); setKicked(false); setSpots({})
-    lobbyRef.current = liveSocket(sz === 1 ? '/lobby1' : sz === 2 ? '/lobby2' : '/lobby', () => ({ t: 'hello', ...meRef.current }), m => {
+    // (bl: this phone plays the game live: King of the Hill's lobby only seats one that can)
+    lobbyRef.current = liveSocket(sz === 1 ? '/lobby1' : sz === 2 ? '/lobby2' : sz === 'koth' ? '/lobbyk' : '/lobby', () => ({ t: 'hello', ...meRef.current, bl: 1 }), m => {
       if (m.t === 'lobby') { setSpots(m.spots ?? {}); setLobbyHere(m.here ?? []); return }
       // why: null (someone took it first), 'account' / 'device' (this account or device has a spot here already)
       if (m.t === 'bumped') { setBumped(m.why || true); setTimeout(() => setBumped(false), 3200); return }
@@ -205,7 +207,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     if (!sock || now - lastChat.current < MIN_GAP_MS) return false
     const t = clean(text); if (!t) return false
     lastChat.current = now
-    sock.send({ t: 'chat', text: t, all: phase === 'queue' || all })
+    sock.send({ t: 'chat', text: t, all: phase === 'queue' || all || sizeRef.current === 'koth' })
     return true
   }, [phase])
   const typing = useCallback(() => {
@@ -286,7 +288,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   return {
     server: true,
     phase, me, queue, waited, held, seated: Object.keys(held).length, mySlot: slotOf(me.vid), seat, bumped, link,
-    size, slots: slotsFor(size), roomSize: size * 2,
+    size, slots: slotsFor(size), roomSize: size === 'koth' ? 3 : size * 2,
     retry: () => { closeAll(); join(false, sizeRef.current) }, canFill: false, join, practice: (sz = 3) => join(true, sz), testFill: (sz, mimic) => { lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos, mimic }) }, leave: exit, leaveLobby: leave,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader: null, isLeader: false,
     final, game, changed, finish, rematchVotes: votes, voteRematch, exit,

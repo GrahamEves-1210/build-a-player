@@ -476,3 +476,6 @@ html:is(.is-app, .app-look) .bt-av.is-bot.bt-av--t1 { --tc: var(--bt-t1); }
   .btl-pips i { flex-basis: 34px; height: 10px; }
   .btl-faceoff { height: 232px; }
 }
+/* King of the Hill: three spots in one column, every man for himself (no sides, no VS) */
+.btl-teams.is-koth { grid-template-columns: minmax(0, 1fr); }
+.btl-teams.is-koth .btl-seat.btl-seat--pick { grid-template-columns: 1fr 1fr; }

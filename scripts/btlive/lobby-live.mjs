@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 
 const args = process.argv.slice(2)
 const arg = (k, d) => args.find(x => x.startsWith(`--${k}=`))?.slice(k.length + 3) ?? d
-const SERVER = arg('server', 'ws://127.0.0.1:8823'), STUB = Number(arg('stub', 8824)), SIZE = Number(arg('size', 1)), QUIT = args.includes('--quit')
+const SERVER = arg('server', 'ws://127.0.0.1:8823'), STUB = Number(arg('stub', 8824)), SIZE = arg('size', '1') === 'koth' ? 'koth' : Number(arg('size', 1)), QUIT = args.includes('--quit')
 const MAX_SECS = Number(arg('secs', 600))
 const log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(1)}s]`, ...a)
 const T0 = Date.now()
@@ -68,8 +68,8 @@ function player(n, pos, wantSlot) {
   users[token] = { id: `uid-${n}-${vid}`, name: `Tester${n}` }
   const P = { n, vid, uid: users[token].id, pos, done: null, seat: null, live: null, quit: false }
   P.ready = new Promise(res => { P.end = res })
-  const lobby = sock(SIZE === 1 ? '/lobby1' : '/lobby2')
-  lobby.onopen = () => send(lobby, { t: 'hello', vid, dev: `dev-${vid}`, name: 'x', pos, cos: null, key, token })
+  const lobby = sock(SIZE === 1 ? '/lobby1' : SIZE === 'koth' ? '/lobbyk' : '/lobby2')
+  lobby.onopen = () => send(lobby, { t: 'hello', vid, dev: `dev-${vid}`, name: 'x', pos, cos: null, key, token, bl: 1 })
   let seated = false
   lobby.onmessage = e => {
     const m = JSON.parse(e.data)
@@ -113,7 +113,7 @@ function player(n, pos, wantSlot) {
       const m = JSON.parse(e.data)
       if (m.t === 'seat') {
         P.seat = m; me = m.i
-        const teams = [0, 1].map(t => m.seats.filter(x => x.team === t).map((x, slot) => ({ id: `t${t}p${slot}`, name: x.name, pos: x.pos, build: x.build })))
+        const teams = (m.mode === 'koth' ? [0, 1, 2] : [0, 1]).map(t => m.seats.filter(x => x.team === t).map((x, slot) => ({ id: `t${t}p${slot}`, name: x.name, pos: x.pos, build: x.build })))
         g = bl.createGame({ teams, seed: m.seed, mode: m.mode })
         log(`P${n} seat ${me} (${m.seats[me].name}, ${m.seats[me].pos}, team ${m.seats[me].team}) build ${JSON.stringify(Object.fromEntries(Object.entries(m.seats[me].build).map(([k2, v]) => [k2, v.val])))}`)
         return
@@ -146,7 +146,7 @@ function player(n, pos, wantSlot) {
   return P
 }
 
-const slots = SIZE === 1 ? [['0x', 'guard'], ['1x', 'big']] : [['0g0', 'guard'], ['0b', 'big'], ['1g0', 'guard'], ['1b', 'big']]
+const slots = SIZE === 1 ? [['0x', 'guard'], ['1x', 'big']] : SIZE === 'koth' ? [['k0', 'guard'], ['k1', 'big'], ['k2', 'guard']] : [['0g0', 'guard'], ['0b', 'big'], ['1g0', 'guard'], ['1b', 'big']]
 // (--only=1: just those seats, the rest taken by someone else, a browser: scripts/btlive/lobby-live-shots.mjs)
 const only = arg('only', null)?.split(',').map(Number)
 const ps = slots.map(([sl, pos], i) => (only && !only.includes(i) ? null : player(i, pos, sl))).filter(Boolean)
@@ -167,7 +167,7 @@ let fails = 0
 const ok = (c, what) => { console.log(`${c ? 'ok  ' : 'FAIL'}  ${what}`); if (!c) fails++ }
 const fin = ps.find(p => p.done)?.done
 ok(!!fin, `the game ended (${fin ? fin.score.join('-') : 'no final'})`)
-const mt = SIZE === 1 ? '1v1' : '2v2'
+const mt = SIZE === 1 ? '1v1' : SIZE === 'koth' ? 'koth' : '2v2'
 ok(booked.vs.length === ps.length && booked.vs.every(r => r.match_type === mt), `one ${mt} record a player (${booked.vs.map(r => `${r.match_type}:${r.result}`).join(', ')})`)
 ok(booked.rating.length === ps.length, `one rating a player (${booked.rating.map(r => r.p_delta).join(', ')})`)
 for (const p of ps) {
@@ -179,7 +179,7 @@ for (const p of ps) {
   const sb = p.seat?.seats?.[p.seat.i]?.build
   ok(!!sb && core.seatKit(p.pos).types.every(t => sb[t]?.val === Math.min(11, p.build[t].val)), `P${p.n} played his own build`)
 }
-ok(booked.vs.filter(r => r.result === 'win').length === (SIZE === 1 ? 1 : 2) - (QUIT && SIZE === 2 && fin && ps[ps.length - 1].seat?.seats?.[ps[ps.length - 1].seat.i]?.team === fin.winner ? 1 : 0), 'the winning side booked its wins')
+ok(booked.vs.filter(r => r.result === 'win').length === (SIZE === 2 ? 2 : 1) - (QUIT && SIZE === 2 && fin && ps[ps.length - 1].seat?.seats?.[ps[ps.length - 1].seat.i]?.team === fin.winner ? 1 : 0), 'the winning side booked its wins')
 console.log(fails ? `\n${fails} failed` : '\nall good')
 await vite.close(); stub.close()
 process.exit(fails ? 1 : 0)

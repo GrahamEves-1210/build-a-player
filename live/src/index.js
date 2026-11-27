@@ -55,9 +55,13 @@ const SLOTS = [
 const SLOTS_2 = SLOTS.filter(sl => sl.id !== '0g1' && sl.id !== '1g1')
 // 1v1 (its own lobby): one spot a side, and you say guard or big as you take it
 const SLOTS_1 = [{ id: '0x', team: 0, pos: 'any' }, { id: '1x', team: 1, pos: 'any' }]
-const slotsFor = size => (size === 1 ? SLOTS_1 : size === 2 ? SLOTS_2 : SLOTS)
-const lobbyName = size => (size === 1 ? 'blacktop1' : size === 2 ? 'blacktop2' : 'blacktop')
-const sizeOf = v => (v === 1 || v === 2 ? v : 3)
+// King of the Hill (its own lobby, /lobbyk, since 2026-11-27): three spots, every man for himself (a side each), and
+// each says guard or big as he takes it, as in 1v1. Played live only (Blacktop Live: there's no simulated King of the
+// Hill), so only a phone that can play it live (bl in its hello) takes a spot
+const SLOTS_K = [{ id: 'k0', team: 0, pos: 'any' }, { id: 'k1', team: 1, pos: 'any' }, { id: 'k2', team: 2, pos: 'any' }]
+const slotsFor = size => (size === 1 ? SLOTS_1 : size === 2 ? SLOTS_2 : size === 'koth' ? SLOTS_K : SLOTS)
+const lobbyName = size => (size === 1 ? 'blacktop1' : size === 2 ? 'blacktop2' : size === 'koth' ? 'blacktopk' : 'blacktop')
+const sizeOf = v => (v === 1 || v === 2 || v === 'koth' ? v : 3)
 // the position a spot plays: its own, or (a 1v1 spot) the one asked for
 const posFor = (sl, asked) => (sl.pos === 'any' ? (asked === 'big' ? 'big' : 'guard') : sl.pos)
 const BOT_NAMES = ['Smoke', 'Shifty', 'Glass', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch']
@@ -115,6 +119,7 @@ export default {
     if (url.pathname === '/lobby') return env.LOBBY.get(env.LOBBY.idFromName('blacktop')).fetch(req)
     if (url.pathname === '/lobby2') return env.LOBBY.get(env.LOBBY.idFromName('blacktop2')).fetch(req)
     if (url.pathname === '/lobby1') return env.LOBBY.get(env.LOBBY.idFromName('blacktop1')).fetch(req)
+    if (url.pathname === '/lobbyk') return env.LOBBY.get(env.LOBBY.idFromName('blacktopk')).fetch(req)
     // the live games, for the Blacktop menu (games.js)
     if (url.pathname === '/games') return env.GAMES ? env.GAMES.get(env.GAMES.idFromName('blacktop')).fetch(req) : new Response('not found', { status: 404 })
     // how many are waiting in each Compete / Trait Auction queue and Blacktop lobby: numbers only (games.js)
@@ -178,6 +183,7 @@ export class Lobby {
     const url = new URL(req.url)
     if (url.pathname === '/lobby2' || url.searchParams.get('size') === '2') this.size = 2
     if (url.pathname === '/lobby1' || url.searchParams.get('size') === '1') this.size = 1
+    if (url.pathname === '/lobbyk' || url.searchParams.get('size') === 'koth') this.size = 'koth'
     // a squad running it back: hold a side for them (both guards and the big together)
     if (url.pathname === '/hold' && req.method === 'POST') {
       const { players, keys = {} } = await req.json()
@@ -232,7 +238,7 @@ export class Lobby {
       // the name and account come from the player's session, not from what the phone says
       const who = await whoIs(m.token, this.env)
       // (the device stays here: it's never in what anyone is sent, pub() leaves it out)
-      const p = { ...pub(m), uid: who.uid, name: who.name, key: key(m), dev: str(m.dev, 64) || null }; if (!p.vid) return
+      const p = { ...pub(m), uid: who.uid, name: who.name, key: key(m), dev: str(m.dev, 64) || null, bl: m.bl === 1 }; if (!p.vid) return
       // one connection a player: a reconnect replaces the old one (with the same key only)
       for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws && q.key && q.key !== p.key) return reject(ws)
       if (Object.values(this.spots).some(s => s.vid === p.vid && s.key && s.key !== p.key)) return reject(ws)
@@ -255,6 +261,8 @@ export class Lobby {
     const me = this.conns.get(ws); if (!me) return
     if (m.t === 'seat') {
       const want = this.slots.find(sl => sl.id === m.slot) ? m.slot : null
+      // (King of the Hill is live only: an app too old to play it live is told to update)
+      if (want && this.size === 'koth' && !me.bl) return send(ws, { t: 'bumped', why: 'update' })
       const heldFor = want && this.held[want] && this.held[want].until > Date.now() ? this.held[want].vid : null
       if (want && ((this.spots[want] && this.spots[want].vid !== me.vid) || (heldFor && heldFor !== me.vid))) return send(ws, { t: 'bumped' })
       // the same account (another phone, another tab) or the same device already has a spot here
@@ -272,7 +280,7 @@ export class Lobby {
       return this.broadcast({ t: 'chat', from: me.vid, name: me.name, uid: me.uid, cos: me.cos, text, ts: Date.now(), all: true })
     }
     if (m.t === 'typing') return this.broadcast({ t: 'typing', from: me.vid, name: me.name })
-    if (m.t === 'practice') {
+    if (m.t === 'practice' && this.size !== 'koth') {
       // you and CPUs, at once: you take a spot for your position, CPUs the rest
       const pos = m.pos === 'big' ? 'big' : 'guard'
       const code = code6()
@@ -458,10 +466,18 @@ export class Room {
     // 1v1 and 2v2 are played live (Blacktop Live, the real-time game: btlive.js), with the builds just made, when
     // every phone still in it can (a new app says bl in its hello; an older one plays the old game, as before)
     m.starting = true
-    if (!m.practice && m.size <= 2 && this.env.BTLIVE_ROOM) {
+    const koth = m.size === 'koth'
+    if (!m.practice && (m.size <= 2 || koth) && this.env.BTLIVE_ROOM) {
+      // (King of the Hill: a phone that can't play it live sits it out, a forfeit, as one that didn't finish)
+      if (koth) for (const p of this.humans()) if (!afk.includes(p.vid) && !this.bl?.has(p.vid)) afk.push(p.vid)
       const live = this.humans().filter(p => !afk.includes(p.vid))
-      if (live.length && live.every(p => this.bl?.has(p.vid))) m.final.live = await this.goLive(m.final).catch(() => null)
+      // (one man left of the three is no game: back to the lobby, nothing booked; the ones who left take theirs)
+      if (koth && live.length < 2) { m.starting = false; m.phase = 'over'; for (const [w, v] of this.conns) send(w, live.some(p => p.vid === v) ? { t: 'requeue' } : { t: 'final', final: m.final }); return }
+      if (live.length && live.every(p => this.bl?.has(p.vid))) {
+        for (let k = 0; k < (koth ? 3 : 1) && !m.final.live; k++) m.final.live = await this.goLive(m.final).catch(() => null)
+      }
       if (!m.final.live) delete m.final.live
+      if (koth && !m.final.live) { m.starting = false; m.phase = 'over'; for (const [w] of this.conns) send(w, { t: 'requeue' }); return }
     }
     m.starting = false
     if (m.phase !== 'build') return
@@ -479,13 +495,16 @@ export class Room {
     const m = this.m
     const geos = [...this.conns.keys()].map(w => w.geo ?? null)
     const hint = hintFor(geos)
-    const players = m.players.map(p => {
+    const koth = m.size === 'koth'
+    const players = m.players.map((p, i) => {
       const out = !!final.afk?.includes(p.vid) || !!p.bot
       const b = out ? null : final.builds[p.vid]
-      return { vid: p.vid, uid: p.uid ?? null, name: p.name, team: p.team, pos: p.pos, out, build: liveGrades(b, p.pos, `${m.code}-${p.vid}`), look: liveLook(b, p.pos) }
+      // (King of the Hill: a guest is Guest 1, 2 or 3 by his spot, as the queue named them)
+      const name = koth && !p.uid ? `Guest ${i + 1}` : p.name
+      return { vid: p.vid, uid: p.uid ?? null, name, team: p.team, pos: p.pos, out, build: liveGrades(b, p.pos, `${m.code}-${p.vid}`), look: liveLook(b, p.pos) }
     })
     const ns = this.env.BTLIVE_ROOM
-    const r = await ns.get(ns.idFromName(m.code), hint ? { locationHint: hint } : undefined).fetch('https://btlive/init', { method: 'POST', body: JSON.stringify({ code: m.code, mode: m.size === 1 ? '1v1' : '2v2', players, keys: this.keys, hint }) })
+    const r = await ns.get(ns.idFromName(m.code), hint ? { locationHint: hint } : undefined).fetch('https://btlive/init', { method: 'POST', body: JSON.stringify({ code: m.code, mode: koth ? 'koth' : m.size === 1 ? '1v1' : '2v2', players, keys: this.keys, hint }) })
     return r?.ok ? m.code : null
   }
   maybeStartEarly() {
@@ -605,7 +624,7 @@ export class Room {
       }
       case 'chat': {
         const text = str(msg.text, 120).trim(); if (!text) return
-        const line = { t: 'chat', from: vid, name: me.name, uid: me.uid, cos: me.cos, team: me.team, text, ts: Date.now(), all: !!msg.all }
+        const line = { t: 'chat', from: vid, name: me.name, uid: me.uid, cos: me.cos, team: me.team, text, ts: Date.now(), all: !!msg.all || m.size === 'koth' }
         for (const [w, v] of this.conns) { const p = m.players.find(x => x.vid === v); if (line.all || p?.team === me.team) send(w, line) }
         return
       }

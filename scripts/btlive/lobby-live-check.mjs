@@ -24,7 +24,7 @@ globalThis.fetch = async (url, init = {}) => {
 }
 
 try {
-  const { Room, liveGrades } = await vite.ssrLoadModule('/live/src/index.js')
+  const { Room, Lobby, liveGrades } = await vite.ssrLoadModule('/live/src/index.js')
   const { BtLiveRoom } = await vite.ssrLoadModule('/live/src/btlive.js')
   const core = await vite.ssrLoadModule('/src/lib/blacktopCore.js')
   const { dealTeam, dealPlayer } = await vite.ssrLoadModule('/src/lib/seatSpin.js')
@@ -149,6 +149,77 @@ try {
     await new Promise(res => setTimeout(res, 50))
     const vs = Object.fromEntries(booked.filter(x => x.vs).map(x => [x.vs.user_id, x.vs.result]))
     ok(vs.ua === 'win' && vs.ub === 'forfeit', `booked: ${JSON.stringify(vs)}`)
+    clearTimeout(r.showTimer)
+  }
+
+  // ── King of the Hill: its own lobby (three spots, live only), the same build, then a live room in mode koth ──
+  {
+    const E = env()
+    const made = []
+    E.ROOM = { idFromName: n => n, get: id => ({ fetch: async (u, init) => { made.push(JSON.parse(init.body)); return new Response('ok') } }) }
+    const lobby = new Lobby({}, E)
+    lobby.size = 'koth'   // (what /lobbyk sets: index.js routes it to the blacktopk lobby)
+    const ws = [fakeWs(), fakeWs(), fakeWs(), fakeWs()]
+    for (let i = 0; i < 4; i++) await lobby.onMessage(ws[i], JSON.stringify({ t: 'hello', vid: `v${i}`, dev: `d${i}`, key: `k${i}`, ...(i < 3 ? { bl: 1 } : {}) }))
+    await lobby.onMessage(ws[3], JSON.stringify({ t: 'seat', slot: 'k0', pos: 'guard' }))
+    ok(ws[3].got.some(m => m.t === 'bumped' && m.why === 'update') && !lobby.spots.k0, 'an app too old to play it live is told to update, and gets no spot')
+    await lobby.onMessage(ws[0], JSON.stringify({ t: 'seat', slot: 'k0', pos: 'guard' }))
+    await lobby.onMessage(ws[1], JSON.stringify({ t: 'seat', slot: 'k1', pos: 'big' }))
+    ok(lobby.state().size === 'koth' && Object.keys(lobby.state().spots).join() === 'k0,k1,k2' && !made.length, 'three spots; two in, no game yet')
+    await lobby.onMessage(ws[2], JSON.stringify({ t: 'seat', slot: 'k2', pos: 'guard' }))
+    const init = made[0]
+    ok(init?.size === 'koth' && init.players.length === 3 && init.players.map(p => `${p.team}${p.pos[0]}`).join() === '0g,1b,2g', `the third man in: a build room, a side each, his own position (${init?.players.map(p => `${p.team}${p.pos[0]}`).join()})`)
+    ok(ws[0].got.some(m => m.t === 'match' && m.players.length === 3), 'each one is sent to it')
+  }
+  {
+    const E = env(), code = 'KOTH01'
+    const room = new Room({}, E)
+    const players = [{ vid: 'a', name: 'Guest', uid: null, pos: 'guard', team: 0, slot: 'k0' }, { vid: 'b', name: 'Hooper', uid: 'ub', pos: 'big', team: 1, slot: 'k1' }, { vid: 'c', name: 'Guest', uid: null, pos: 'guard', team: 2, slot: 'k2' }]
+    await room.fetch(new Request('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: false, size: 'koth', keys: { a: 'ka', b: 'kb', c: 'kc' } }) }))
+    const w = { a: fakeWs(), b: fakeWs(), c: fakeWs() }
+    for (const v of 'abc') await room.onMessage(w[v], JSON.stringify({ t: 'hello', vid: v, key: `k${v}`, bl: 1 }))
+    const bs = Object.fromEntries(players.map(p => [p.vid, buildSeat(code, p.vid, p.pos)]))
+    for (const p of players) await room.onMessage(w[p.vid], JSON.stringify({ t: 'build', build: bs[p.vid], filled: 8, done: true }))
+    await new Promise(r => setTimeout(r, 20))
+    const init = E.inits[0]?.body
+    ok(init?.mode === 'koth' && w.a.got.find(m => m.t === 'final')?.final.live === code, 'tip-off: a live room in mode koth, final.live')
+    ok(init?.players.map(p => p.name).join() === 'Guest 1,Hooper,Guest 3', `guests named by their spot (${init?.players.map(p => p.name).join()})`)
+    ok(init?.players.every(p => core.seatKit(p.pos).types.every(t => p.build[t].val === Math.min(11, bs[p.vid][t].val))) && init.keys.c === 'kc', 'each plays the build his own spins dealt, with his seat key')
+    stopRoom(room)
+  }
+  {
+    // only one of the three finished: no game, he goes back to the lobby, nothing is made
+    const E = env(), code = 'KOTH02'
+    const room = new Room({}, E)
+    const players = [{ vid: 'a', name: 'A', pos: 'guard', team: 0, slot: 'k0' }, { vid: 'b', name: 'B', pos: 'big', team: 1, slot: 'k1' }, { vid: 'c', name: 'C', pos: 'guard', team: 2, slot: 'k2' }]
+    await room.fetch(new Request('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: false, size: 'koth', keys: {} }) }))
+    const wa = fakeWs()
+    await room.onMessage(wa, JSON.stringify({ t: 'hello', vid: 'a', bl: 1 }))
+    room.m.goneAt = { b: 0, c: 0 }
+    await room.onMessage(wa, JSON.stringify({ t: 'build', build: buildSeat(code, 'a', 'guard'), filled: 8, done: true }))
+    await room.start()
+    ok(wa.got.some(m => m.t === 'requeue') && !E.inits.length, 'one man left of the three: back to the lobby, no game')
+    stopRoom(room)
+  }
+  {
+    // the live room, King of the Hill from a lobby: a man out from the start sits it out; a quit; the booking
+    const r = new BtLiveRoom({ storage: { put: async () => {}, get: async () => null }, blockConcurrencyWhile: f => f(), waitUntil: () => {} }, { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'svc' })
+    const players = ['guard', 'big', 'guard'].map((pos, i) => ({ vid: `p${i}`, uid: `u${i}`, name: `P${i}`, team: i, pos, build: liveGrades(null, pos, `z${i}`) }))
+    await r.fetch(new Request('https://btlive/init', { method: 'POST', body: JSON.stringify({ code: 'KOTH03', mode: 'koth', players, keys: {} }) }))
+    const w = players.map(() => fakeWs())
+    players.forEach((p, i) => r.onMessage(w[i], JSON.stringify({ t: 'hello', vid: p.vid })))
+    ok(r.g?.mode === 'koth' && r.seats.map(x => x.team).join('') === '012', 'tip-off: King of the Hill, three seats, every man for himself')
+    r.stop()
+    booked.length = 0
+    r.onMessage(w[2], JSON.stringify({ t: 'quit' }))
+    ok(r.g.gone?.[2] && r.g.phase !== 'over', 'one quits: out of the rotation, the other two play on')
+    r.onMessage(w[1], JSON.stringify({ t: 'quit' }))
+    ok(r.g.phase === 'over' && r.g.winner === 0, 'the second quits: the last man in wins it')
+    await new Promise(res => setTimeout(res, 50))
+    const vs = Object.fromEntries(booked.filter(x => x.vs).map(x => [x.vs.user_id, x.vs]))
+    const rt = Object.fromEntries(booked.filter(x => x.rating).map(x => [x.rating.p_user, x.rating.p_delta]))
+    ok(vs.u0?.result === 'win' && vs.u1?.result === 'forfeit' && vs.u2?.result === 'forfeit' && Object.values(vs).every(v => v.match_type === 'koth'), `booked on the King of the Hill record: ${Object.values(vs).map(v => `${v.user_id}:${v.result}`).join(', ')}`)
+    ok(rt.u0 === 20 && rt.u1 === -20 && rt.u2 === -20, `ratings ${JSON.stringify(rt)}`)
     clearTimeout(r.showTimer)
   }
 } catch (e) { fails++; console.log('FAIL', e.stack) }

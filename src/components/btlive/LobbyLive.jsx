@@ -15,7 +15,10 @@ import './btlive.css'
 
 export default function LobbyLive({ bt, photoOf, onMenu }) {
   const code = bt.final.live
-  const size = bt.size === 2 ? 2 : 1
+  // (King of the Hill: three men, every man for himself; its own final, its own record, btk)
+  const koth = bt.size === 'koth'
+  const size = koth ? 'koth' : bt.size === 2 ? 2 : 1
+  const title = koth ? 'KING OF THE HILL' : size === 2 ? '2V2' : '1V1'
   const [seat, setSeat] = useState(null)
   const [line, setLine] = useState('connecting')
   const [over, setOver] = useState(false)
@@ -54,7 +57,7 @@ export default function LobbyLive({ bt, photoOf, onMenu }) {
   const live = !!seat && !over
   useEffect(() => {
     if (!live) return
-    setLiveLock({ title: 'Leave the game?', body: 'The game goes on without you and the CPU takes your man. It counts as a loss on your Blacktop record and your online rating.', forfeit: () => forfeit() })
+    setLiveLock({ title: 'Leave the game?', body: koth ? 'King of the Hill goes on without you. It counts as a loss on your Blacktop record and your online rating.' : 'The game goes on without you and the CPU takes your man. It counts as a loss on your Blacktop record and your online rating.', forfeit: () => forfeit() })
     const un = e => { e.preventDefault(); e.returnValue = '' }
     window.addEventListener('beforeunload', un)
     return () => { setLiveLock(null); window.removeEventListener('beforeunload', un) }
@@ -67,25 +70,26 @@ export default function LobbyLive({ bt, photoOf, onMenu }) {
     setOver(true)
     clearEntered(bt.match?.code)
     const i = seatRef.current?.i ?? 0, t = team()
-    const won = res.winner === t
+    const won = koth ? res.winner === i : res.winner === t
     const pts = (res.stats ?? []).map(s => s?.pts ?? 0)
-    const mvp = size > 1 && pts.length > 0 && pts[i] === Math.max(...pts) && pts[i] > 0
+    const mvp = size === 2 && pts.length > 0 && pts[i] === Math.max(...pts) && pts[i] > 0
     const xp = (won ? 40 : 15) + (mvp ? 20 : 0), coins = (won ? 35 : 15) + (mvp ? 10 : 0)
-    window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
-    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won, mvp, line: res.stats?.[i] ?? null, bots: false, score: res.score, team: t, size } }))
+    const label = koth ? (won ? 'King of the Hill win' : 'King of the Hill game') : won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game'
+    window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label } }))
+    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won, mvp, line: res.stats?.[i] ?? null, bots: false, score: res.score, team: koth ? i : t, size } }))
     bt.finish()
   }
 
   const setup = useMemo(() => {
     if (!seat) return null
-    const byTeam = [0, 1].map(t => seat.seats.map((x, i) => ({ ...x, i })).filter(x => x.team === t))
+    const byTeam = (koth ? [0, 1, 2] : [0, 1]).map(t => seat.seats.map((x, i) => ({ ...x, i })).filter(x => x.team === t))
     const teams = byTeam.map((list, t) => list.map((x, slot) => ({ id: `t${t}p${slot}`, name: x.name, pos: x.pos, build: x.build })))
     const looks = seat.seats.map(x => {
       const real = x.look?.player ? photoOf(x.look.player) : null
       return { label: x.name, photo: real?.photo ?? null, faceCenter: x.look?.faceCenter ?? real?.faceCenter ?? null, who: x.look?.player || x.name, skin: x.look?.skin ?? real?.skin ?? null, num: x.look?.num ?? null }
     })
     return {
-      online: true, mode: size === 2 ? '2v2' : '1v1', size, me: seat.i, seed: seat.seed,
+      online: true, mode: koth ? 'koth' : size === 2 ? '2v2' : '1v1', size: koth ? 1 : size, me: seat.i, seed: seat.seed,
       stick: (() => { try { return localStorage.getItem('bap_btlive_stick') === 'two' ? 'two' : 'one' } catch { return 'one' } })(),
       teams, levels: seat.seats.map(() => null), looks, names: byTeam.map(list => list.map(x => x.name).join(' & ') || 'CPU'),
     }
@@ -94,7 +98,7 @@ export default function LobbyLive({ bt, photoOf, onMenu }) {
   if (!setup) {
     return (
       <div className="btlv btlv-menu btlv-wait">
-        <header className="btlv-menu-head"><span /><h1>{size === 2 ? '2V2' : '1V1'}</h1><span className="btlv-tag">{code}</span></header>
+        <header className="btlv-menu-head"><span /><h1>{title}</h1><span className="btlv-tag">{code}</span></header>
         <div className="btlv-wait-body">
           <p className="btlv-wait-big">{line === 'gone' ? 'THIS GAME IS OVER' : line === 'open' ? 'TIPPING OFF' : 'CONNECTING'}</p>
           <p className="btlv-wait-n">{(bt.match?.players ?? []).map(p => p.name || 'Guest').join(' · ')}</p>
@@ -105,7 +109,7 @@ export default function LobbyLive({ bt, photoOf, onMenu }) {
   }
   return (
     <Game key={setup.seed} setup={setup} name={setup.looks[setup.me]?.label || 'Guest'} link={link.current} onFinal={onFinal}
-      again={asked ? { have: bt.rematchVotes?.size ?? 1, need: (bt.match?.players ?? []).filter(p => p.team === team() && !p.bot).length } : null}
+      again={asked ? { have: bt.rematchVotes?.size ?? 1, need: koth ? 1 : (bt.match?.players ?? []).filter(p => p.team === team() && !p.bot).length } : null}
       onMenu={() => { if (!over) forfeit(); onMenu() }}
       onRematch={() => { setAsked(true); bt.voteRematch() }} />
   )

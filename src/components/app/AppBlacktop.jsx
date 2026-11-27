@@ -123,8 +123,8 @@ function HubLive(props) {
   const waiting = useLiveCounts(true)
   return <BlacktopHubView {...props} rating={o.rating} live={live} onCourt={onCourt} waiting={waiting} />
 }
-// the games: one on one, two on two, and King of the Hill (three men, every man for himself: Blacktop Live, its own
-// queue, live/src/koth.js). 3v3 is gone (owner 11-26): its record and boards stay for the games already played.
+// the games: one on one, two on two, and King of the Hill (three men, every man for himself), each its own lobby, a
+// build, then played live (Blacktop Live: components/btlive/LobbyLive.jsx). 3v3 is gone (owner 11-26): its record and boards stay for the games already played.
 const HUB_MODES = [
   { key: '1v1', tag: '1V1', line: 'GUARD OR BIG', count: 'bt:1', stats: 'bt1' },
   { key: '2v2', tag: '2V2', line: '1 GUARD · 1 BIG', count: 'bt:2', stats: 'bt2' },
@@ -178,7 +178,7 @@ export function BlacktopHubView({ onJoin2v2 = null, onJoin1v1 = null, onJoinKoth
             })}
           </div>
           <div className="btl-acts">
-            {go && <button className="ag-btn btl-btn btl-go" onClick={() => { sfx('tap'); go() }}>{mode.key === 'koth' ? 'FIND A GAME' : `JOIN ${mode.tag} LOBBY`} <IconArrow size={18} /></button>}
+            {go && <button className="ag-btn btl-btn btl-go" onClick={() => { sfx('tap'); go() }}>{`JOIN ${mode.tag} LOBBY`} <IconArrow size={18} /></button>}
 
             {onPractice && <button className="ag-btn btl-btn btl-btn--line" onClick={() => { sfx('tap'); onPractice() }}>PRACTICE</button>}
             {mode.key === '1v1' && <OneOnOneOptions onPickup={go ? undefined : onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />}
@@ -275,6 +275,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
   const SLOTS = bt.slots ?? ALL_SLOTS
   const ROOM_SIZE = bt.roomSize ?? ALL_SIZE
   const size = bt.size ?? 3
+  const koth = size === 'koth'        // three spots, every man for himself: one column, no sides
   // TEST: made-up players (lib/mimic.js) take the open spots one by one, as if a real
   // lobby were filling, then the run starts: a practice game whose CPUs wear them
   const tester = isTester(user)
@@ -317,7 +318,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
       <header className="btl-top">
         <div className="btl-top-txt">
           <span className="btl-eyebrow">BLACKTOP · FIRST TO 11</span>
-          <h1 className="btl-h1">{size}v{size} lobby</h1>
+          <h1 className="btl-h1">{koth ? 'King of the Hill' : `${size}v${size} lobby`}</h1>
         </div>
         <button className="ag-round-btn btl-x" onClick={() => { (bt.leaveLobby ?? bt.leave)(); onBack() }} aria-label="Leave the lobby"><IconClose size={16} /></button>
       </header>
@@ -328,7 +329,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
             <span className="btl-count"><b>{taken}</b><i>/{ROOM_SIZE}</i><small>SPOTS<br />TAKEN</small></span>
             {/* a pip a spot: the left side's, then the right side's */}
             <span className="btl-pips" aria-hidden="true">
-              {[0, 1].flatMap(t => [
+              {koth ? SLOTS.map(sl => <i key={sl.id} className={`bt-t0${heldAt(sl.id) ? ' is-on' : ''}`} />) : [0, 1].flatMap(t => [
                 ...(t === 1 ? [<i key="gap" className="is-gap" />] : []),
                 ...SLOTS.filter(sl => sl.team === t).map(sl => <i key={sl.id} className={`bt-t${t}${heldAt(sl.id) ? ' is-on' : ''}`} />),
               ])}
@@ -337,11 +338,11 @@ export function BlacktopQueue({ bt, user, onBack }) {
           </div>
           {/* off the live server (or still connecting): said on its own line, with the way to retry */}
           {bt.link !== 'live' && <div className="btl-linkrow"><LinkPill link={bt.link} onRetry={bt.retry} /></div>}
-          <div className="btl-teams">
-            {[0, 1].map(t => (
-              <div key={t} className={`btl-team bt-t${t}${SLOTS.some(sl => sl.team === t && bt.mySlot === sl.id) ? ' is-mine' : ''}`}>
-                <span className="btl-team-name">{squadName(t)}</span>
-                {SLOTS.filter(sl => sl.team === t).map(sl => {
+          <div className={`btl-teams${koth ? ' is-koth' : ''}`}>
+            {(koth ? [0] : [0, 1]).map(t => (
+              <div key={t} className={`btl-team bt-t${t}${SLOTS.some(sl => (koth || sl.team === t) && bt.mySlot === sl.id) ? ' is-mine' : ''}`}>
+                <span className="btl-team-name">{koth ? 'EVERY MAN FOR HIMSELF' : squadName(t)}</span>
+                {SLOTS.filter(sl => koth || sl.team === t).map(sl => {
                   const h = heldAt(sl.id)
                   const me = h?.vid === bt.me.vid
                   // a 1v1 spot: open, you take it as a guard or a big
@@ -368,10 +369,10 @@ export function BlacktopQueue({ bt, user, onBack }) {
                 })}
               </div>
             ))}
-            <span className="btl-vs" aria-hidden="true">VS</span>
+            {!koth && <span className="btl-vs" aria-hidden="true">VS</span>}
           </div>
-          {bt.bumped && <div className="btl-bumped">{bt.bumped === 'account' ? `${bt.me.name} already has a spot in this lobby on another device or tab.` : bt.bumped === 'device' ? 'This device already has a spot in this lobby, in another tab.' : 'Someone grabbed that spot first. Pick another.'}</div>}
-          {tester && <button className="ag-btn btl-btn btl-test" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
+          {bt.bumped && <div className="btl-bumped">{bt.bumped === 'account' ? `${bt.me.name} already has a spot in this lobby on another device or tab.` : bt.bumped === 'device' ? 'This device already has a spot in this lobby, in another tab.' : bt.bumped === 'update' ? 'King of the Hill needs the latest version of the app. Update it, then come back.' : 'Someone grabbed that spot first. Pick another.'}</div>}
+          {tester && !koth && <button className="ag-btn btl-btn btl-test" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
           <div className="btl-board-foot" role="status">
             {!bt.mySlot
               ? <span className="btl-hint"><b>TAKE AN OPEN SPOT</b>{waiting > 0 && <small>{waiting} WATCHING</small>}</span>
@@ -387,7 +388,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
           {unread > 0 ? <span className="ag-tab-badge">{unread}</span> : <span className="btl-chatbar-open">OPEN</span>}
         </button>
 
-        <OnlineRecord modes={[size === 1 ? 'bt1' : size === 2 ? 'bt2' : 'bt']} title={`${size}V${size} RECORD`} />
+        <OnlineRecord modes={[koth ? 'btk' : size === 1 ? 'bt1' : size === 2 ? 'bt2' : 'bt']} title={koth ? 'KING OF THE HILL RECORD' : `${size}V${size} RECORD`} />
 
       </div>
       {chatOpen && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}
@@ -398,7 +399,9 @@ export function BlacktopQueue({ bt, user, onBack }) {
 // ── HUD over the build: one slim bar, tap to open the squads ────────────────
 export function BlacktopHud({ bt, onOpenChat, unread, devOpen = false }) {
   const [open, setOpen] = useState(import.meta.env.DEV && devOpen)
-  const squads = [0, 1].map(t => bt.match.players.filter(p => p.team === t))
+  // (King of the Hill: the three men in one list, no sides)
+  const koth = bt.size === 'koth'
+  const squads = koth ? [bt.match.players] : [0, 1].map(t => bt.match.players.filter(p => p.team === t))
   const ready = t => squads[t].filter(p => p.bot || bt.builds[p.vid]?.done).length
   const urgent = bt.clock <= 20
   return (
@@ -406,9 +409,11 @@ export function BlacktopHud({ bt, onOpenChat, unread, devOpen = false }) {
       <button className="bt-hud-bar" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="bt-hud-clock">{fmt(bt.clock)}</span>
         <span className="bt-hud-mini">
+          {koth ? <span className="bt-t0"><b>KING OF THE HILL</b> {ready(0)}/3 READY</span> : <>
           <span className="bt-t0"><b>{teamName(bt.match, 0).replace(/^TEAM /, '')}</b> {ready(0)}/{bt.size ?? 3}</span>
           <i>vs</i>
           <span className="bt-t1"><b>{teamName(bt.match, 1).replace(/^TEAM /, '')}</b> {ready(1)}/{bt.size ?? 3}</span>
+          </>}
         </span>
         <span className={`bt-hud-caret${open ? ' is-open' : ''}`}>▾</span>
       </button>
@@ -418,8 +423,8 @@ export function BlacktopHud({ bt, onOpenChat, unread, devOpen = false }) {
         <div className="bt-hud-panel">
           <div className="bt-hud-teams">
             {squads.map((sq, t) => (
-              <div key={t} className={`bt-hud-team bt-t${t}${t === bt.myTeam ? ' is-mine' : ''}`}>
-                <span className="bt-hud-team-name">{teamName(bt.match, t)}</span>
+              <div key={t} className={`bt-hud-team bt-t${t}${!koth && t === bt.myTeam ? ' is-mine' : ''}`}>
+                <span className="bt-hud-team-name">{koth ? 'EVERY MAN FOR HIMSELF' : teamName(bt.match, t)}</span>
                 {sq.map(p => {
                   const b = bt.builds[p.vid] ?? (p.mimic ? fakeBuild(p, bt.match?.created) : undefined)
                   const here = p.bot || bt.present.some(q => q.vid === p.vid)
