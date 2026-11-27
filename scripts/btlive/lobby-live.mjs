@@ -63,28 +63,37 @@ const sock = path => new WebSocket(`${SERVER}${path}`)
 const send = (ws, m) => { if (ws.readyState === 1) ws.send(JSON.stringify(m)) }
 
 // one player: lobby → spot → room → build → live game, a bot at the stick
-function player(n, pos, wantSlot) {
+// (table: the lobby he takes a spot in, LOBBY 1, 2…; sitter: he takes it and stays, never matched)
+function player(n, pos, wantSlot, table = 1, sitter = false) {
   const vid = `lv${n}-${Math.random().toString(36).slice(2, 8)}`, key = `k-${vid}`, token = `tok-${vid}`
   users[token] = { id: `uid-${n}-${vid}`, name: `Tester${n}` }
-  const P = { n, vid, uid: users[token].id, pos, done: null, seat: null, live: null, quit: false }
+  const P = { n, vid, uid: users[token].id, pos, table, done: null, seat: null, live: null, quit: false, lobbyAt: null }
   P.ready = new Promise(res => { P.end = res })
   const lobby = sock(SIZE === 1 ? '/lobby1' : SIZE === 'koth' ? '/lobbyk' : '/lobby2')
   lobby.onopen = () => send(lobby, { t: 'hello', vid, dev: `dev-${vid}`, name: 'x', pos, cos: null, key, token, bl: 1 })
   let seated = false
   lobby.onmessage = e => {
     const m = JSON.parse(e.data)
-    if (m.t === 'lobby' && !seated && Object.values(m.spots ?? {}).filter(Boolean).length >= 0) {
-      const mine = Object.entries(m.spots ?? {}).find(([, p]) => p?.vid === vid)
-      if (!mine && !m.spots?.[wantSlot]) send(lobby, { t: 'seat', slot: wantSlot, pos })
-      if (mine) seated = true
+    if (m.t === 'lobby') {
+      // (the lobby he's in, as the server says: tables, or an older server's one set of spots)
+      const tables = m.tables ?? [{ id: 1, spots: m.spots }]
+      const at = tables.find(x => Object.values(x.spots ?? {}).some(p => p?.vid === vid))
+      P.lobbyAt = at?.id ?? null; P.lastTables = tables
+      if (!seated) {
+        const T = tables.find(x => x.id === table)
+        if (!at && !T?.spots?.[wantSlot]) send(lobby, { t: 'seat', slot: wantSlot, pos, table })
+        if (at) { seated = true; log(`P${n} sits in lobby ${at.id} (${tables.map(x => `${x.id}:${Object.values(x.spots).filter(Boolean).length}`).join(' ')})`); if (sitter) setTimeout(() => P.end(), 100) }
+      }
     }
-    if (m.t === 'match') { lobby.close(); room(m.code, m.players) }
+    if (m.t === 'match') { P.matched = true; P.matchTable = m.table ?? 1; if (sitter) return; lobby.close(); room(m.code, m.players) }
   }
   function room(code, players) {
     P.code = code
     log(`P${n} matched in ${code}: ${players.map(p => `${p.name}/${p.pos}/t${p.team}`).join(', ')}`)
     const ws = sock(`/room/${code}`)
     P.room = ws
+    ws.onerror = e => log(`P${n} room socket error ${e.message ?? ''}`)
+    ws.onclose = e => { if (args.includes('--v')) log(`P${n} room closed ${e.code} ${e.reason}`) }
     ws.onopen = () => {
       send(ws, { t: 'hello', vid, bl: 1, key, token })
       const build = buildSeat(code, vid, pos)
@@ -94,6 +103,7 @@ function player(n, pos, wantSlot) {
     }
     ws.onmessage = e => {
       const m = JSON.parse(e.data)
+      if (args.includes('--v')) log(`P${n} room: ${m.t}${m.t === 'room' ? ` ${m.phase}` : ''}`)
       if (m.t === 'final' || (m.t === 'room' && m.final)) {
         if (P.live) return
         P.final = m.final
@@ -149,7 +159,18 @@ function player(n, pos, wantSlot) {
 const slots = SIZE === 1 ? [['0x', 'guard'], ['1x', 'big']] : SIZE === 'koth' ? [['k0', 'guard'], ['k1', 'big'], ['k2', 'guard']] : [['0g0', 'guard'], ['0b', 'big'], ['1g0', 'guard'], ['1b', 'big']]
 // (--only=1: just those seats, the rest taken by someone else, a browser: scripts/btlive/lobby-live-shots.mjs)
 const only = arg('only', null)?.split(',').map(Number)
-const ps = slots.map(([sl, pos], i) => (only && !only.includes(i) ? null : player(i, pos, sl))).filter(Boolean)
+// (--table=2: every scripted player takes lobby 2; --sitter: a man first sits alone in lobby 1 and stays there, never
+// matched; --groups=2: two games at once, one in lobby 1 and one in lobby 2)
+// (--sitter=2: he sits in lobby 2 instead; with --groups=0 the script only sits there, for --secs: a screenshot's other man)
+const TABLE = Number(arg('table', 1)), GROUPS = Number(arg('groups', 1)), SITTER = Number(arg('sitter', args.includes('--sitter') ? 1 : 0))
+let sitter = null
+if (SITTER) { sitter = player(90, 'guard', slots[0][0], SITTER, true); await sitter.ready; await new Promise(r => setTimeout(r, 500)) }
+if (SITTER && !GROUPS) { await new Promise(r => setTimeout(r, MAX_SECS * 1000 - 2000)); process.exit(0) }
+const ps = []
+for (let g = 0; g < GROUPS; g++) {
+  slots.forEach(([sl, pos], i) => { if (!only || only.includes(i)) ps.push(Object.assign(player(g * 10 + i, pos, sl, GROUPS > 1 ? g + 1 : TABLE), { group: g })) })
+  if (GROUPS > 1) await new Promise(r => setTimeout(r, 600))
+}
 const timeout = setTimeout(() => { console.log('FAIL timed out'); process.exit(1) }, MAX_SECS * 1000)
 if (QUIT) {
   // the last man in quits 20 s into the game
@@ -165,21 +186,25 @@ if (only) { console.log('done'); await vite.close(); stub.close(); process.exit(
 // ── what was booked ──
 let fails = 0
 const ok = (c, what) => { console.log(`${c ? 'ok  ' : 'FAIL'}  ${what}`); if (!c) fails++ }
+const finOf = p => ps.find(q => q.group === p.group && q.done)?.done
+const codes = [...new Set(ps.map(p => p.code))]
+ok(codes.length === GROUPS && ps.every(p => finOf(p)), `${GROUPS} game(s), each its own room, each played to the end (${codes.map(c => `${c}: ${ps.find(p => p.code === c && p.done)?.done.score.join('-')}`).join(', ')})`)
+ok(ps.every(p => p.matchTable === (GROUPS > 1 ? p.group + 1 : TABLE)), `each game came from its own lobby (${ps.map(p => p.matchTable).join(',')})`)
+if (sitter) ok(sitter.lobbyAt === SITTER && !sitter.matched, `the man in lobby 1 is still there, waiting (lobby ${sitter.lobbyAt}, ${sitter.lastTables?.map(x => `${x.id}:${Object.values(x.spots).filter(Boolean).length}`).join(' ')})`)
 const fin = ps.find(p => p.done)?.done
-ok(!!fin, `the game ended (${fin ? fin.score.join('-') : 'no final'})`)
 const mt = SIZE === 1 ? '1v1' : SIZE === 'koth' ? 'koth' : '2v2'
 ok(booked.vs.length === ps.length && booked.vs.every(r => r.match_type === mt), `one ${mt} record a player (${booked.vs.map(r => `${r.match_type}:${r.result}`).join(', ')})`)
 ok(booked.rating.length === ps.length, `one rating a player (${booked.rating.map(r => r.p_delta).join(', ')})`)
 for (const p of ps) {
   const r = booked.vs.find(x => x.user_id === p.uid)
   const team = p.seat?.seats?.[p.seat.i]?.team
-  const want = p.quit ? 'forfeit' : fin?.winner === team ? 'win' : 'loss'
+  const want = p.quit ? 'forfeit' : finOf(p)?.winner === team ? 'win' : 'loss'
   ok(r?.result === want && r?.position === p.pos, `P${p.n} (${p.pos}, team ${team}): booked ${r?.result}, wants ${want}`)
   // every seat played his own checked build: the grades are his spins' real ratings
   const sb = p.seat?.seats?.[p.seat.i]?.build
   ok(!!sb && core.seatKit(p.pos).types.every(t => sb[t]?.val === Math.min(11, p.build[t].val)), `P${p.n} played his own build`)
 }
-ok(booked.vs.filter(r => r.result === 'win').length === (SIZE === 2 ? 2 : 1) - (QUIT && SIZE === 2 && fin && ps[ps.length - 1].seat?.seats?.[ps[ps.length - 1].seat.i]?.team === fin.winner ? 1 : 0), 'the winning side booked its wins')
+ok(booked.vs.filter(r => r.result === 'win').length === (SIZE === 2 ? 2 : 1) * GROUPS - (QUIT && SIZE === 2 && fin && ps[ps.length - 1].seat?.seats?.[ps[ps.length - 1].seat.i]?.team === fin.winner ? 1 : 0), 'the winning side booked its wins')
 console.log(fails ? `\n${fails} failed` : '\nall good')
 await vite.close(); stub.close()
 process.exit(fails ? 1 : 0)
