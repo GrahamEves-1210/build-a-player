@@ -4,7 +4,7 @@
 // the referee to check a quality against the press and release stamps. Pure.
 import { T } from './tune.js'
 
-const clampN = v => Math.min(1, Math.max(0, v))
+const clampN = v => Math.min(1.3, Math.max(0, v))   // (an S reads past 1)
 
 // kind: 'jumper' | 'layup' | 'dunk'. R: the shooter's ratings (ratings.js). gamePoint: either side a basket from winning.
 export function meterSpec(kind, R, gamePoint = false, bnc = 1) {

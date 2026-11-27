@@ -30,7 +30,8 @@ export const inPaint = (x, y) => x >= COURT.paint.x0 && x <= COURT.paint.x1 && y
 export const inBounds = (x, y, pad = 0) => x >= COURT.minX - pad && x <= COURT.maxX + pad && y >= COURT.minY - pad && y <= COURT.maxY + pad
 
 // How far up the Bounce scale a man is for dunking: 0 at T.dunkBounce (the least that can get up there), 1 at the top
-export const dunkLift = R => clamp(((R.bncRaw ?? R.bnc) - T.dunkBounce) / (1 - T.dunkBounce), 0, 1)
+// (an S goes past the top: dunks from farther, over more)
+export const dunkLift = R => clamp(((R.bncRaw ?? R.bnc) - T.dunkBounce) / (1 - T.dunkBounce), 0, 1.3)
 // How far out a dunker takes off: a man who can only just get up there from right under it (T.dunkNear), a great
 // leaper from the normal range, and with the lane open in front of him from farther out (a long gather step, a long
 // takeoff: up to 8-10 ft, more with size)

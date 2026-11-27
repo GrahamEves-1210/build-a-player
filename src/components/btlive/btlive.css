@@ -302,3 +302,32 @@ html.btlv-playing, html.btlv-playing body { overflow: hidden; overscroll-behavio
 .btlv-wait-body { flex: 1; display: grid; place-content: center; gap: 12px; padding: 24px 16px calc(var(--rail) + 24px); text-align: center; }
 .btlv-wait-big { margin: 0; font-family: var(--num); font-size: 26px; letter-spacing: 1px; }
 .btlv-wait-n { margin: 0; font-size: 15px; letter-spacing: 2px; color: var(--muted); }
+
+/* ── the other men's builds (scout.js; the owner, 11-27). The note bar's right side: his matchup's 2 best and 2 worst
+   grades; a tap on it or a side opens every man's build. The tip's matchup card a moment; nothing covers the controls */
+.btlv-sc-strip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+.btlv-sc-strip em { font-style: normal; font-size: 13px; letter-spacing: 1px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+.btlv-sc-up, .btlv-sc-dn { display: inline-flex; gap: 3px; }
+.btlv-sc-dn { padding-left: 6px; border-left: 1px solid var(--line-hi); }
+.btlv-sc-chip { display: inline-flex; align-items: baseline; gap: 3px; padding: 1px 5px 0; border-radius: 3px; background: rgba(5, 7, 10, .7); font-size: 13px; letter-spacing: .8px; color: var(--muted); line-height: 1.25; }
+.btlv-sc-chip b { font-weight: 400; color: var(--g); }
+.btlv-sc-sheet { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(5, 7, 10, .72); padding: 70px 16px 120px; }
+.btlv-sc-card { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 8px; max-width: 100%; justify-content: center; }
+.btlv-sc-card.is-three { grid-template-columns: repeat(3, minmax(0, 200px)); }
+.btlv-sc-card section { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--tc); border-radius: 6px; padding: 8px 10px; }
+.btlv-sc-card h3 { margin: 0 0 6px; font-family: var(--num); font-weight: 400; font-size: 18px; letter-spacing: 1px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btlv-sc-card p { display: flex; justify-content: space-between; gap: 6px; margin: 0; padding: 2px 0; font-size: 13px; letter-spacing: .8px; color: var(--muted); border-top: 1px solid var(--line); }
+.btlv-sc-card p span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btlv-sc-card p b { font-family: var(--num); font-weight: 400; font-size: 17px; color: var(--g); }
+@media (max-width: 560px) { .btlv-sc-card.is-three { grid-template-columns: repeat(2, minmax(0, 1fr)); } .btlv-sc-card { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; } .btlv-sc-sheet { padding: 58px 12px 96px; } }
+.btlv-sc-sheet small { font-size: 13px; letter-spacing: 1.6px; color: var(--faint); }
+.btlv-sc-tip { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(5, 7, 10, .86); border: 1px solid var(--line-hi); border-radius: 6px; pointer-events: none; transition: opacity .25s; max-width: calc(100% - 32px); }
+.btlv-sc-tip.is-out { opacity: 0; }
+.btlv-sc-tip > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.btlv-sc-tip > div > b { font-family: var(--num); font-weight: 400; font-size: 17px; letter-spacing: 1px; color: var(--tc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btlv-sc-tip > i { font-style: normal; font-size: 13px; letter-spacing: 2px; color: var(--faint); }
+.btlv-sc-tip .btlv-sc-dn { padding-left: 0; border-left: 0; }
+@media (prefers-reduced-motion: reduce) { .btlv-sc-tip { transition: none; } }
+.bap-reduce-motion .btlv-sc-tip { transition: none; }
+/* (on a phone the bar is narrow: the chips only, his name is in his colour on the court; the ball line gives way) */
+@media (max-width: 560px) { .btlv-sc-strip em { display: none; } .btlv-bug-note > span:first-child { flex: 0 1 auto; min-width: 0; } .btlv-sc-strip { flex: none; } }

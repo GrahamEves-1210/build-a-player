@@ -48,6 +48,9 @@ const ROWS = [
   ['a big on a big, both Size 8', ['big', { size: 8 }], ['big', { size: 8 }]],
   ['a big (Size 5) on a big (Size 10)', ['big', { size: 5 }], ['big', { size: 10, interiorDefense: 9 }]],
   ['a strong wing (Size 9) on a small guard (Size 4)', ['guard', { size: 9 }], ['guard', { size: 4 }]],
+  ['a big A (Size 9) on a big A (Size 9)', ['big', { size: 9 }], ['big', { size: 9 }]],
+  ['a big A+ (Size 10) on a big A (Size 9)', ['big', { size: 10 }], ['big', { size: 9 }]],
+  ['a big S (Size 11) on a big A (Size 9)', ['big', { size: 11 }], ['big', { size: 9 }]],
 ]
 console.log('POST-UPS (a kid backs his man down 2 s, then the shot; an average kid\'s timing on it; the man on him a pro CPU)')
 console.log('who'.padEnd(46) + 'in the post  ground  hook made   drop step: got by  then made')
