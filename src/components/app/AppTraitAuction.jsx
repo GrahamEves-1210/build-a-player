@@ -166,7 +166,7 @@ export default function AppTraitAuction({ au, sport, onHome }) {
             {collegeKey && (
               <div className="au-hub-col">
                 {nCollege && <span className="au-hub-n"><i aria-hidden="true" />{nCollege} SEARCHING</span>}
-                <button className="ag-btn au-hub-college" onClick={joinCollege} disabled={joining}><span className="au-varsity au-varsity--sm">COLLEGE</span>FIND A COLLEGE AUCTION <IconArrow size={16} /></button>
+                <button className="ag-btn au-hub-college" onClick={joinCollege} disabled={joining}><span>COLLEGE AUCTION</span><IconArrow size={18} /></button>
               </div>
             )}
             <AuctionRecord />
