@@ -117,6 +117,9 @@ function kitFor(league, team, colors) {
   return { body: c.body, num: c.num, line, collar: c.trim, sleeve: ['stripes', c.trim, c.trim], badge: [c.body, c.tagText] }
 }
 
+// a team's kit colours alone (lib/appArt.js appTile: a tile too small for a jersey, the number on the body colour)
+export const kitOf = (league, team, colors) => kitFor(league, team, colors)
+
 // ── Tiers (lib/progress.js RARITIES: Common, Rare, Epic, Legend) ─────────────────────────────────────────────────
 // A tier is a hairline across the top of the tile and a small word, never a coloured frame.
 const TIERS = [

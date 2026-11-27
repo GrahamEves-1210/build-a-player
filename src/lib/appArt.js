@@ -9,11 +9,12 @@
 //
 // Drawn faces (Franchise's generated players, the generic silhouettes) aren't photos and are left alone.
 import INDEX from '../data/jersey-index.json'
-import { jerseySvg, svgUri } from './jerseyArt'
+import { jerseySvg, svgUri, kitOf } from './jerseyArt'
 import { jerseySvg as classicJersey } from './jerseyArtClassic'
 import { teamBadgeSvg, confTagSvg } from './teamBadge.js'
 import { numberFor } from './jerseyNumber'
 import { CLEAN } from './platform'
+import { trophySvg } from './trophyArt'
 
 const cache = new Map()
 const HEADSHOT = /\/headshots\/(.+?)\.(?:webp|png|jpe?g)(?:[?#&].*)?$/i
@@ -36,6 +37,16 @@ export function playerArt(key, folderHint, variant = 'auto', teamAs = null) {
   if (pos === 'HC') return svgUri(teamMark({ league: lg, team: team || 'HC', colors: colorsOf(lg, team), badge: team ? 'HC' : '' }))
   // (every jersey carries a number: lib/jerseyNumber.js picks one for his position when the index has none)
   return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number: numberFor(key, pos, number, lg), pos, rank: +rank || 0, variant }))
+}
+// A slot too small for a jersey (Blacktop's name tags, ~20px): his number on his team's colour, the jersey's own
+// body and number colours. { bg, fg, line, text } for a headshot's address, null for anything else.
+export function appTile(src) {
+  const m = HEADSHOT.exec(String(src ?? ''))
+  if (!m) return null
+  const key = m[1].replace(/^.*?public\/headshots\//, ''), row = INDEX.p[key]
+  const [lg, team, number, pos] = row ? row.split('|') : [key.split('/')[0] === 'nba' || /^cbb_/.test(key) ? 'nba' : 'nfl', '', '', '']
+  const kit = kitOf(lg, team, colorsOf(lg, team))
+  return { bg: kit.body, fg: kit.num, line: kit.line ?? null, text: numberFor(key, pos, number, lg) }
 }
 // a team's mark: its badge (lib/teamBadge.js: an original crest per league in the team's colours and uniform stripes,
 // its abbreviation as the monogram; owner 11-27). A coach's carries HC on a plate.
@@ -65,6 +76,8 @@ export function teamArt(folder, team) {
 // draws the board instead, five rows of five jerseys under the column heads, one of each row picked
 // Home's painted figures wear real teams' helmets and sleeves: the clean build shows them with the marks painted out
 const FIG = /\/modes\/fig-(qb|qb2|wr)\.webp$/
+// the leagues' own trophies (renders of the Lombardi and the Larry O'Brien): the clean build's own cup (lib/trophyArt.js)
+const TROPHY = /^(?:https?:\/\/[^/]+)?\/trophy(basketball)?\.webp(?:[?#].*)?$/
 const SALARY = /\/modes\/(nfl|bucket|soccer|baseball)-salary\.webp$/
 function salaryArt(sport) {
   const lg = sport === 'bucket' ? 'nba' : sport === 'baseball' ? 'mlb' : sport === 'soccer' ? 'soc' : 'nfl'
@@ -112,6 +125,8 @@ export function appImage(src) {
     out = svgUri(confTagSvg({ text: CONF3[k] ?? k.toUpperCase().slice(0, 3) }))
   } else if (m && /^[A-Z0-9&]{2,6}$/i.test(m[3])) {
     out = teamArt((m[1] ?? '').toLowerCase(), m[3].toUpperCase())
+  } else if (CLEAN && (m = TROPHY.exec(src))) {
+    out = svgUri(trophySvg(m[1] ? 'basketball' : 'football'))
   } else if (CLEAN && (m = FIG.exec(src))) {
     // the clean build's Home figures: the same art with the teams' marks painted out (scripts/clean-art)
     out = `/modes/clean/fig-${m[1]}.webp`
@@ -128,7 +143,7 @@ export function appImage(src) {
 const FOREIGN = /^(?:https?:)?\/\/[^/]*\b(?:espncdn\.com|espn\.com|fotmob\.com|nfl\.com|nba\.com|ncaa\.com|mlbstatic\.com|wikimedia\.org|wikipedia\.org)\//i
 const FOREIGN_LOGO = /^(?:https?:)?\/\/[^/]*\bespncdn\.com\/.*?teamlogos\/(nfl|nba|ncaa|soccer)\/\d+\/(?:scoreboard\/)?([A-Za-z0-9]{2,5})\.png/i
 // what an address became: 'p' a player's art, 't' a team's tag, '' neither
-const kindOf = (src, out) => (out === src || SALARY.test(src) || FIG.test(src) ? '' : HEADSHOT.test(src) || (FOREIGN.test(src) && !FOREIGN_LOGO.test(src)) ? 'p' : 't')   // (the board's picture is no logo: its card keeps its frame)
+const kindOf = (src, out) => (out === src || SALARY.test(src) || FIG.test(src) || TROPHY.test(src) ? '' : HEADSHOT.test(src) || (FOREIGN.test(src) && !FOREIGN_LOGO.test(src)) ? 'p' : 't')   // (the board's picture is no logo: its card keeps its frame)
 
 // ── Fitting the slot ───────────────────────────────────────────────────────────────────────────────────────────
 // The places a photo used to sit were made for a face: a circle crop, a ring in the team's colour, the team's logo
@@ -228,6 +243,7 @@ export function installAppArt() {
   // a canvas can't pick its picture by the slot's size: it asks for the one it wants ('small', 'square', 'card')
   // a team's jersey with a given number, for a canvas (the share card's backdrop)
   globalThis.__appTeamJersey = (league, team, number) => svgUri(jerseySvg({ league, team, colors: colorsOf(league, team), number: String(number ?? ''), variant: 'bare', size: 800 }))
+  globalThis.__appTile = appTile
   globalThis.__appArtVariant = (src, variant) => { const m = HEADSHOT.exec(String(src)); if (!m) return null; const key = m[1].replace(/^.*?public\/headshots\//, ''); return playerArt(key, key.split('/')[0], variant) }
   const st = document.createElement('style')
   st.textContent = FRAME_CSS

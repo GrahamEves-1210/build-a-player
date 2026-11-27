@@ -40,6 +40,10 @@ export function RollingNumber({ value, from = null, format = n => Math.round(Num
   )
 }
 
+// The words a letter at a time: the app's words first (lib/appTerms.js swaps whole phrases, "Super Bowl Champions" →
+// "Champions"; split into letters, no piece of it reads as the phrase). Nothing on the website, which never sets it.
+const wordsOf = text => { const t = String(text ?? ''); return globalThis.__appSafe ? globalThis.__appSafe(t) : t }
+
 const CHAR = {
   in: { y: '105%', opacity: 0 },
   show: { y: 0, opacity: 1, transition: { duration: 0.34, ease: EASE_OUT } },
@@ -47,7 +51,7 @@ const CHAR = {
 }
 const WORD = { show: { transition: { staggerChildren: 0.028 } }, out: { transition: { staggerChildren: 0.018 } } }
 export function RollText({ text, className = '' }) {
-  const t = String(text ?? '')
+  const t = wordsOf(text)
   return (
     <span className={`rt${className ? ` ${className}` : ''}`}>
       <AnimatePresence mode="popLayout" initial={false}>
@@ -66,7 +70,7 @@ const randomLike = c => {
 }
 // The final text holds the space, so nothing around it shifts while the letters flicker
 export function Scramble({ text, ms = 750, delay = 0, className = '' }) {
-  const t = String(text ?? '')
+  const t = wordsOf(text)
   const reduce = useReducedMotionApp()
   const [shown, setShown] = useState(reduce ? t : '')
   useEffect(() => {
@@ -95,7 +99,7 @@ export function Scramble({ text, ms = 750, delay = 0, className = '' }) {
 
 // Words stay whole (they wrap as words); each letter rises on its own beat
 export function RiseText({ text, delay = 0, step = 32, className = '' }) {
-  const t = String(text ?? '')
+  const t = wordsOf(text)
   let i = 0
   return (
     <span className={`rise${className ? ` ${className}` : ''}`} role="text" aria-label={t} style={{ '--rise-d': `${delay}ms`, '--rise-step': `${step}ms` }}>

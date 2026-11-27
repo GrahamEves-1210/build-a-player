@@ -27,3 +27,7 @@ await import('./strip-dist-app-art.mjs')
 let figs = 0
 for (const f of ['qb', 'qb2', 'wr', 'te', 'db']) { const p = `dist/modes/fig-${f}.webp`; if (existsSync(p)) { rmSync(p); figs++ } }
 console.log(`clean-dist: removed ${figs} figure pictures that wear team marks`)
+// the leagues' own trophies (renders of them): the clean build draws its own cup (lib/trophyArt.js)
+let cups = 0
+for (const f of ['trophy', 'trophybasketball']) { const p = `dist/${f}.webp`; if (existsSync(p)) { rmSync(p); cups++ } }
+console.log(`clean-dist: removed ${cups} trophy pictures of the leagues' trophies`)

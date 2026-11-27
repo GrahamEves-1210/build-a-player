@@ -45,7 +45,10 @@ export function createEngine({ setup, els, on, net = null }) {
   const inputs = []
   const fx = []                                   // { text, x, y, t0, dur, color, big } and { rim, t0, dur }
   const CLR = { team: -1, t0: 0 }                 // the side taking it back after a stop (the arc lit), since when
-  const imgs = setup.looks.map(l => { if (!l.photo) return null; const im = new Image(); im.src = l.photo; return im })
+  // (the app shows no photos: where a photo stood, his number on his team's colour, lib/appArt.js appTile. A crop of
+  // the jersey art round where a face would be came out an empty dark box)
+  const tiles = setup.looks.map(l => (l.photo && globalThis.__appTile ? globalThis.__appTile(l.photo) : null))
+  const imgs = setup.looks.map((l, i) => { if (!l.photo || tiles[i]) return null; const im = new Image(); im.src = l.photo; return im })
   let w = 0, h = 0, k = 1, dpr = 1
   let raf = 0, last = 0, acc = 0, paused = false, dead = false, clockNow = 0
   let shown = { clock: null, idle: null, poss: null, note: null, mode: null, gp: false, bug: null, sc: [] }
@@ -980,7 +983,15 @@ export function createEngine({ setup, els, on, net = null }) {
     rr(rc[0], rc[1], rc[2] - rc[0], rc[3] - rc[1], 2)
     ctx.fillStyle = fill ? col : 'rgba(5,7,10,.84)'; ctx.fill()
     let x0 = rc[0]
-    if (face >= 0) {
+    if (face >= 0 && tiles[face]) {
+      // the app: his number on his team's colour, the square the photo had
+      const t = tiles[face], hh = rc[3] - rc[1]
+      rr(rc[0] + 1, rc[1] + 1, hh - 2, hh - 2, 2); ctx.fillStyle = t.bg; ctx.fill()
+      if (t.line) { ctx.lineWidth = 1; ctx.strokeStyle = t.line; ctx.stroke() }
+      ctx.font = `${Math.round(hh * 0.74)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = t.fg
+      ctx.fillText(t.text, rc[0] + hh / 2, (rc[1] + rc[3]) / 2 + 0.5)
+      x0 += hh
+    } else if (face >= 0) {
       // a square of the photo around the face (object-fit: cover; object-position: the face)
       const im = imgs[face], hh = rc[3] - rc[1], side = Math.min(im.naturalWidth, im.naturalHeight), fc = setup.looks[face].faceCenter || [50, 30]
       const sx = clamp(im.naturalWidth * fc[0] / 100 - side * 0.3, 0, im.naturalWidth - side * 0.6), sy = clamp(im.naturalHeight * fc[1] / 100 - side * 0.28, 0, im.naturalHeight - side * 0.6)
@@ -1423,7 +1434,7 @@ export function createEngine({ setup, els, on, net = null }) {
     for (const i of names) {
       if (cut(i)) continue
       const cx = FIG[i].x, cy = FIG[i].cy, hs = FIG[i].hs
-      const im = imgs[i], face = im && im.complete && im.naturalWidth ? i : -1
+      const im = imgs[i], face = tiles[i] || (im && im.complete && im.naturalWidth) ? i : -1
       // (the man sitting out: UP NEXT with his name)
       const nm = setup.looks[i].label.toUpperCase() + (s.gone?.[i] ? ' · LEFT' : P[i].out && s.phase !== 'over' ? ' · UP NEXT' : ''), bw = ctx.measureText(nm).width + 10 + (face >= 0 ? bh : 0)
       const crown = i === king ? tk * 0.36 : 0

@@ -116,7 +116,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki, home = false }) {
       {PP_LIVE && !home && <PartnerBanner sport={sport} low />}
       <div className="splash-site-footer-bottom">
         <img className="splash-site-footer-maker" src="/playmaker-games.png" alt="A Playmaker Games game" width="168" height="56" loading="lazy" draggable={false} />
-        <span className="splash-site-footer-legal">© {new Date().getFullYear()} Playmaker Games LLC. An independent fan project. Not affiliated with or endorsed by any professional sports league, team or players' association{SOCCER_LIVE ? ', by FIFA or UEFA,' : ','} or by the NCAA, any college conference or any university.</span>
+        <span className="splash-site-footer-legal">{`© ${new Date().getFullYear()} Playmaker Games LLC. An independent fan project. Not affiliated with or endorsed by any professional sports league, team or players' association${SOCCER_LIVE ? ', by FIFA or UEFA,' : ','} or by the NCAA, any college conference or any university.`}</span>
         <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="splash-site-footer-playwire">
           <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="140" height="39" loading="lazy" />
         </a>

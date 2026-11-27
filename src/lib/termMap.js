@@ -5,7 +5,7 @@ const LEAGUE_SPORT = { NFL: 'football', NBA: 'basketball', MLB: 'baseball' }
 const FLIGHT = { 'Premier League': 'English', Bundesliga: 'German', 'Serie A': 'Italian', 'Ligue 1': 'French', 'La Liga': 'Spanish' }
 
 // (a disclaimer names the leagues to say who we're not: it keeps every name)
-export const DISCLAIMER = /affiliated|endorsed|trademark|licensed/i
+export const DISCLAIMER = /affiliated|endorsed|trademark|licensed|n't connected to|not connected to|commercial relationship/i
 
 // The rules marked CLEAN_ONLY came with the clean build (soccer's and college's marks, lists of leagues): the app
 // (lib/appTerms.js) uses them only when it's the clean build, so the app's own copy stays as it was.
@@ -25,9 +25,15 @@ export const TERM_MAP = [
   [/\bBallon d['’]Ors?\b/g, m => (m.endsWith('s') ? 'Player of the Year awards' : 'Player of the Year'), CLEAN_ONLY],
   [/\bBALLON D['’]ORS?\b/g, m => (m.endsWith('S') ? 'POY AWARDS' : 'PLAYER OF THE YEAR'), CLEAN_ONLY],
   // (a noun after it makes it an adjective: "a Premier League club" → "an English top-flight club")
+  // (the second tier first: "the 2. Bundesliga")
+  [/\b(?:([Tt]he) )?2\. Bundesliga\b/g, (m, the) => (the ? the + ' ' : '') + 'German second division', CLEAN_ONLY],
+  [/\b(?:THE )?2\. BUNDESLIGA\b/g, m => (m.startsWith('THE') ? 'THE ' : '') + 'GERMAN SECOND DIVISION', CLEAN_ONLY],
   [/\b(?:(an?|An?) )?(?:the )?(Premier League|Bundesliga|Serie A|Ligue 1|La Liga)\b( (?=(?:clubs?|titles?|sides?|teams?|seasons?|records?|champions?|history|debut|careers?|football|goals|games?|match(?:es)?|winners?|play|defenders?|strikers?|players?|form|table|race|minutes|starts?)\b)[a-z])?/g, (m, a, l, next) =>
     (a ? (/[AEIOU]/.test(FLIGHT[l][0]) ? a[0] + 'n ' : a[0] + ' ') : /^[Tt]he|^La/.test(m) || !next ? 'the ' : '') + FLIGHT[l] + (next ? ' top-flight' + next : ' top flight'), CLEAN_ONLY],
   [/\b(PREMIER LEAGUE|BUNDESLIGA|SERIE A|LIGUE 1|LA LIGA)\b/g, (m, l) => `${FLIGHT[l.replace(/\w+/g, w => w[0] + w.slice(1).toLowerCase())]?.toUpperCase() ?? 'TOP'} TOP FLIGHT`, CLEAN_ONLY],
+  // (the Ballon d'Or's young player's award)
+  [/\b(?:the )?Kopa Trophy\b/g, m => (m.startsWith('the') ? 'the ' : '') + 'Young Player of the Year', CLEAN_ONLY],
+  [/\bKOPA TROPHY\b/g, 'YOUNG PLAYER OF THE YEAR', CLEAN_ONLY],
   [/\bUEFA\b/g, 'European', CLEAN_ONLY],
   [/\bFIFA\b/g, (m, i, s) => (/[a-z]/.test(s) ? 'world' : 'WORLD'), CLEAN_ONLY],
   // college football and basketball's marks
@@ -38,8 +44,10 @@ export const TERM_MAP = [
   [/\bSWEET (?:16|SIXTEEN)\b/g, 'REGIONAL SEMIS', CLEAN_ONLY],
   [/\bElite (?:Eight|8)\b/g, 'regional final', CLEAN_ONLY],
   [/\bELITE (?:EIGHT|8)\b/g, 'REGIONAL FINAL', CLEAN_ONLY],
-  [/\b(?:Naismith|Wooden)(?: Award| Trophy)?(?: winners?)?\b/g, m => (/winners$/.test(m) ? 'Players of the Year' : 'Player of the Year'), CLEAN_ONLY],
-  [/\b(?:NAISMITH|WOODEN)(?: AWARD| TROPHY)?\b/g, 'PLAYER OF THE YEAR', CLEAN_ONLY],
+  // (an award named for him with its own title after it: "Naismith Defensive Player of the Year" keeps only the title)
+  [/\b(?:Naismith|Wooden) (?=(?:Defensive|Coach|Men's|Women's|College|Prep|Legends)\b)/g, '', CLEAN_ONLY],
+  [/\b(?:John R\. )?(?:Naismith|Wooden)(?: Award| Trophy)?(?: winners?)?\b/g, m => (/winners$/.test(m) ? 'Players of the Year' : 'Player of the Year'), CLEAN_ONLY],
+  [/\b(?:JOHN R\. )?(?:NAISMITH|WOODEN)(?: AWARD| TROPHY)?\b/g, 'PLAYER OF THE YEAR', CLEAN_ONLY],
   [/\bRose Bowl\b/g, "New Year's Day bowl", CLEAN_ONLY],
   // the conferences by their abbreviations only (owner 11-25), the full name first
   [/\b(?:the )?Southeastern Conference\b/gi, 'SEC', CLEAN_ONLY],
@@ -63,23 +71,37 @@ export const TERM_MAP = [
   [/\bFBS\b/g, (m, i, s) => (/[a-z]/.test(s) ? 'top-division' : 'TOP-DIVISION'), CLEAN_ONLY],
   [/\bAll-(NBA|NFL)\b/g, 'All-League', CLEAN_ONLY],
   [/\bALL-(NBA|NFL)\b/g, 'ALL-LEAGUE', CLEAN_ONLY],
-  [/\bSuper Bowl (champions?|winners?|titles?|rings?|MVPs?)\b/g, (m, w) => (/^MVP/.test(w) ? `Championship ${w}` : w === 'titles' ? 'championships' : w === 'title' ? 'championship' : w === 'rings' ? 'championship rings' : w === 'ring' ? 'championship ring' : w)],
-  [/\bSUPER BOWL (CHAMPIONS?|WINNERS?|MVPS?)\b/g, (m, w) => (/^MVP/.test(w) ? `CHAMPIONSHIP ${w}` : w)],
+  // (the word after it in any case, and past its number: "Super Bowl Champions", "SUPER BOWL LXII CHAMPIONS" → "Champions",
+  // never "Championship Champions")
+  [/\bSuper Bowl (?:[IVXLC]+ )?([Cc]hampions?|[Cc]hamps?|[Ww]inners?|[Tt]itles?|[Rr]ings?|MVPs?)\b/g, (m, w) => {
+    const cap = /^[A-Z]/.test(w), l = w.toLowerCase(), C = t => (cap ? t.replace(/\b[a-z]/g, c => c.toUpperCase()) : t)
+    return /^mvp/.test(l) ? `Championship ${w}` : /^title/.test(l) ? C(l === 'titles' ? 'championships' : 'championship') : /^ring/.test(l) ? C(`championship ${l}`) : w
+  }],
+  [/\bSUPER BOWL (?:[IVXLC]+ )?(CHAMPIONS?|CHAMPS?|WINNERS?|TITLES?|RINGS?|MVPS?)\b/g, (m, w) => (/^MVP/.test(w) ? `CHAMPIONSHIP ${w}` : /^TITLE/.test(w) ? w.replace('TITLE', 'CHAMPIONSHIP') : /^RING/.test(w) ? `CHAMPIONSHIP ${w}` : w)],
+  [/\b(?:Super Bowl|NFL|NBA) Trophy\b/g, 'Championship Trophy'],
+  // a league's champions are the league's: "NBA Champions" → "League Champions" (not "Pro Champions")
+  [/\b(?:NFL|NBA|MLB) ([Cc]hampions?|[Cc]hamps?)\b/g, (m, w) => (/^C/.test(w) ? 'League ' : 'league ') + w],
+  [/\b(?:NFL|NBA|MLB) (CHAMPIONS?|CHAMPS?)\b/g, 'LEAGUE $1'],
   [/\bSuper Bowls\b/g, 'Championships'],
   [/\bSuper Bowl\b/g, 'Championship'],
   [/\bSUPER BOWLS?\b/g, m => (m.endsWith('S') ? 'CHAMPIONSHIPS' : 'CHAMPIONSHIP')],
+  [/\b([Aa]) Pro Bowl\b(?!ers?\b|s\b)/g, '$1n All-Star'],
   [/\bPro Bowlers?\b/g, m => (m.endsWith('s') ? 'All-Stars' : 'All-Star')],
   [/\bPro Bowls\b/g, 'All-Star selections'],
   [/\bPro Bowl\b/g, 'All-Star'],
-  [/\bPRO BOWLS?\b/g, 'ALL-STAR'],
+  [/\bPRO BOWLS\b/g, 'ALL-STAR SELECTIONS'],
+  [/\bPRO BOWL\b/g, 'ALL-STAR'],
   [/\b(?:the )?NBA Finals\b/g, m => (m.startsWith('the') ? 'the Finals' : 'Finals')],
   [/\bNBA FINALS\b/g, 'FINALS'],
   [/\bMarch Madness\b/g, 'the tournament'],
   [/\bMARCH MADNESS\b/g, 'THE TOURNAMENT'],
+  [/\bFinal Four Most Outstanding Player\b/g, 'Tournament Most Outstanding Player'],
+  [/\b([Aa]) Final Four\b/g, '$1 semifinal'],
   [/\b(?:the )?Final Four\b/g, m => (m.startsWith('the') ? 'the semifinals' : 'semifinals')],
   [/\bFINAL FOUR\b/g, 'SEMIFINALS'],
   [/\bHeisman(?: Trophy)?(?: winners?)?\b/g, m => (/winners$/.test(m) ? 'Players of the Year' : 'Player of the Year')],
   [/\bHEISMAN(?: TROPHY)?\b/g, 'PLAYER OF THE YEAR'],
+  [/\bLombardi Gold\b/g, 'Trophy Gold'],
   [/\b(?:Vince )?Lombardi(?: Trophy)?\b/g, 'championship trophy'],
   [/\bLarry O'Brien(?: Trophy)?\b/g, 'championship trophy'],
   [/\bWorld Series\b/g, 'Championship Series'],
