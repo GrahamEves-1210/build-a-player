@@ -298,20 +298,11 @@ export function BlacktopQueue({ bt, user, onBack }) {
     })
     setTimeout(() => bt.testFill(size, people), wait + 700)
   }
-  const squadName = t => {
-    const first = SLOTS.filter(sl => sl.team === t).map(sl => heldAt(sl.id)).find(Boolean)
-    return first ? `TEAM ${firstName(first.name)}` : t === 0 ? 'TEAM A' : 'TEAM B'
-  }
-  const tap = (sl, pos = null) => {
-    const h = bt.held[sl.id]
-    if (h && h.vid !== bt.me.vid) { sfx('deny'); haptic('light'); return }
-    if (bt.mySlot === sl.id && !pos) { bt.seat(null); sfx('tap'); return }
-    bt.seat(sl.id, pos); sfx('slot'); haptic('medium')
-  }
   const waiting = bt.queue.filter(p => !p.slot || bt.held[p.slot]?.vid !== p.vid).length
   const unread = Math.max(0, bt.chat.length - seenChat)
-  const taken = Math.min(ROOM_SIZE, bt.seated + Object.keys(fill).length)
-  const full = bt.seated === ROOM_SIZE
+  // the lobbies (LOBBY 1, 2…: every one someone's in, then an empty one); an older server, or the dev look: one
+  const boards = bt.lobbies?.length ? bt.lobbies : [{ id: 1, held: bt.held }]
+  const multi = boards.length > 1
   const last = bt.chat[bt.chat.length - 1]
   return (
     <div className="ag-screen ag-screen--bucket bt-lobby btl btl-lobby">
@@ -323,8 +314,29 @@ export function BlacktopQueue({ bt, user, onBack }) {
         <button className="ag-round-btn btl-x" onClick={() => { (bt.leaveLobby ?? bt.leave)(); onBack() }} aria-label="Leave the lobby"><IconClose size={16} /></button>
       </header>
       <div className="btl-body">
-        <section className={`btl-board${full ? ' is-full' : ''}`}>
+        {boards.map((L, li) => {
+          const first = li === 0
+          const heldAt = id => L.held[id] ?? (first ? fill[id] : undefined)
+          const mySlot = bt.myTable == null ? (L.id === 1 && !bt.lobbies ? bt.mySlot : null) : bt.myTable === L.id ? bt.mySlot : null
+          const seated = Object.keys(L.held).length
+          const taken = Math.min(ROOM_SIZE, seated + (first ? Object.keys(fill).length : 0))
+          const full = seated === ROOM_SIZE
+          const tap = (sl, pos = null) => {
+            const h = L.held[sl.id]
+            if (h && h.vid !== bt.me.vid) { sfx('deny'); haptic('light'); return }
+            if (mySlot === sl.id && !pos) { bt.seat(null); sfx('tap'); return }
+            bt.seat(sl.id, pos, L.id); sfx('slot'); haptic('medium')
+          }
+          const squadName = t => {
+            const one = SLOTS.filter(sl => sl.team === t).map(sl => heldAt(sl.id)).find(Boolean)
+            return one ? `TEAM ${firstName(one.name)}` : t === 0 ? 'TEAM A' : 'TEAM B'
+          }
+          const fresh = multi && !taken
+          return (
+        <section key={L.id} className={`btl-board${full ? ' is-full' : ''}${multi ? ' is-multi' : ''}${fresh ? ' is-fresh' : ''}`}>
           <div className="btl-board-lines" aria-hidden="true" />
+          {/* (more than one lobby: each is named, the empty one last, for whoever wants a table of his own) */}
+          {multi && <p className="btl-board-label"><b>{fresh ? 'NEW LOBBY' : `LOBBY ${L.id}`}</b>{fresh && <small>TAKE A SPOT</small>}{bt.myTable === L.id && <small className="is-mine">YOURS</small>}</p>}
           <div className="btl-board-head">
             <span className="btl-count"><b>{taken}</b><i>/{ROOM_SIZE}</i><small>SPOTS<br />TAKEN</small></span>
             {/* a pip a spot: the left side's, then the right side's */}
@@ -334,13 +346,13 @@ export function BlacktopQueue({ bt, user, onBack }) {
                 ...SLOTS.filter(sl => sl.team === t).map(sl => <i key={sl.id} className={`bt-t${t}${heldAt(sl.id) ? ' is-on' : ''}`} />),
               ])}
             </span>
-            <span className="btl-board-meta"><span className="btl-timer">{fmt(bt.waited)}</span>{bt.link === 'live' && <LinkPill link={bt.link} onRetry={bt.retry} />}</span>
+            {first && <span className="btl-board-meta"><span className="btl-timer">{fmt(bt.waited)}</span>{bt.link === 'live' && <LinkPill link={bt.link} onRetry={bt.retry} />}</span>}
           </div>
           {/* off the live server (or still connecting): said on its own line, with the way to retry */}
-          {bt.link !== 'live' && <div className="btl-linkrow"><LinkPill link={bt.link} onRetry={bt.retry} /></div>}
+          {first && bt.link !== 'live' && <div className="btl-linkrow"><LinkPill link={bt.link} onRetry={bt.retry} /></div>}
           <div className={`btl-teams${koth ? ' is-koth' : ''}`}>
             {(koth ? [0] : [0, 1]).map(t => (
-              <div key={t} className={`btl-team bt-t${t}${SLOTS.some(sl => (koth || sl.team === t) && bt.mySlot === sl.id) ? ' is-mine' : ''}`}>
+              <div key={t} className={`btl-team bt-t${t}${SLOTS.some(sl => (koth || sl.team === t) && mySlot === sl.id) ? ' is-mine' : ''}`}>
                 <span className="btl-team-name">{koth ? 'EVERY MAN FOR HIMSELF' : squadName(t)}</span>
                 {SLOTS.filter(sl => koth || sl.team === t).map(sl => {
                   const h = heldAt(sl.id)
@@ -382,16 +394,18 @@ export function BlacktopQueue({ bt, user, onBack }) {
             ))}
             {!koth && <span className="btl-vs" aria-hidden="true">VS</span>}
           </div>
-          {bt.bumped && <div className="btl-bumped">{bt.bumped === 'account' ? `${bt.me.name} already has a spot in this lobby on another device or tab.` : bt.bumped === 'device' ? 'This device already has a spot in this lobby, in another tab.' : bt.bumped === 'update' ? 'King of the Hill needs the latest version of the app. Update it, then come back.' : 'Someone grabbed that spot first. Pick another.'}</div>}
-          {tester && !koth && <button className="ag-btn btl-btn btl-test" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
+          {first && bt.bumped && <div className="btl-bumped">{bt.bumped === 'account' ? `${bt.me.name} already has a spot in this lobby on another device or tab.` : bt.bumped === 'device' ? 'This device already has a spot in this lobby, in another tab.' : bt.bumped === 'update' ? 'King of the Hill needs the latest version of the app. Update it, then come back.' : 'Someone grabbed that spot first. Pick another.'}</div>}
+          {first && tester && !koth && <button className="ag-btn btl-btn btl-test" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
           <div className="btl-board-foot" role="status">
-            {!bt.mySlot
-              ? <span className="btl-hint"><b>TAKE AN OPEN SPOT</b>{waiting > 0 && <small>{waiting} WATCHING</small>}</span>
+            {!mySlot
+              ? <span className="btl-hint"><b>{full ? 'FULL' : 'TAKE AN OPEN SPOT'}</b>{first && waiting > 0 && <small>{waiting} WATCHING</small>}</span>
               : full
                 ? <span className="btl-tip"><b>TIP-OFF</b><small>LACING UP…</small></span>
-                : <span className="btl-hint"><b>{ROOM_SIZE - bt.seated} TO GO</b><small>STARTS AT {ROOM_SIZE}/{ROOM_SIZE} · REAL PLAYERS ONLY</small></span>}
+                : <span className="btl-hint"><b>{ROOM_SIZE - seated} TO GO</b><small>STARTS AT {ROOM_SIZE}/{ROOM_SIZE} · REAL PLAYERS ONLY</small></span>}
           </div>
         </section>
+          )
+        })}
 
         <button className="btl-chatbar" onClick={() => { setChatOpen(true); setSeenChat(bt.chat.length) }}>
           <IconChat size={18} />
