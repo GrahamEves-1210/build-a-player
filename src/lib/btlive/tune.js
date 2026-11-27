@@ -58,6 +58,9 @@ export const T = {
   // (the owner, 11-26: "make grades matter a little more across the board": 0.24 to 0.29, and every coefficient on a
   // plain grade about a fifth wider, the base moved so a middling grade plays as before; scripts/btlive/grades-check.mjs)
   spread: 0.29,
+  // (the owner, 11-27: "slightly increase variance ... an S should be apparent in game": the grades played a little
+  // wider round a C+, and an S as far past an A+ as this many grades more; ratings.js eff)
+  gradeStretch: 1.05, sKick: 1.2,
 
   // ── Movement (slow on purpose: a late update from a laggy phone is a small error) ──────────────
   // REAL WEIGHT (the owner, 11-26: "players all seem the same speed and there's no acceleration aspect, or sprint"):
@@ -207,9 +210,9 @@ export const T = {
   contestRate: 0.34, contestRateDef: 0.50, contestRateIq: 0.20,   // x (0.30 + 0.5 * his defense + 0.2 * his IQ): Perimeter D on jumpers, Interior D in the paint and at the rim
   contestSize: 0.30,                 // x (1 + this * (his Size n - the shooter's Size n)): shoot over small men, not over big ones
   contestSecond: 0.28,               // a second man in it adds this share of his own contest (help at the rim, two on the king)
-  contestMaxJ: 0.92,                 // a perfect contest takes this share off a jumper
+  contestMaxJ: 0.88,                 // a perfect contest takes this share off a jumper
   jsThrough: 0.33,                   // Jump Shot 11 shoots over this share of a jumper's contest (Jump Shot 1 none of it)
-  contestMaxL: 0.90,                 // ...off a layup
+  contestMaxL: 0.86,                 // ...off a layup
   contestMaxD: 0.55,                 // ...off a dunk...
   dunkThrough: 0.35,                 // ...less this share at Bounce 11
   finThrough: 0.40,                  // Finishing 11 shrugs off this share of a layup's contest
@@ -317,8 +320,9 @@ export const T = {
   postLose: 0.4,                     // his man gone off him (past postDef + 1.5) this long: he's out of it
   postBump: 0.44,                    // a bump step: one this often while he backs down...
   postPush: 0.45,                    // ...the first share of it the shove, the rest settling
-  postGain: 1.25,                    // ft a bump takes off his man, even Size...
-  postSize: 1.15,                    // ...x (1 + this x (his Size - his man's), the plain grades)...
+  postGain: 0.95,                    // ft a bump takes off his man, even Size (the owner, 11-27: the post a little
+                                     // overpowered: from 1.25; the hook and the drop step down too, Size counting more)...
+  postSize: 1.5,                     // ...x (1 + this x (his Size - his man's), the plain grades)...
   postStr: 0.25,                     // ...x (1 + this x (his Finishing - 0.75))...
   postInt: 0.55,                     // ...x (1 - this x (his man's Interior D - 0.5), the plain grade)
   postGainMin: 0.12, postGainMax: 2.0,
@@ -327,12 +331,12 @@ export const T = {
   postSta: 0.03,                     // his legs: a bump costs this
   postAway: 0.45,                    // the stick held away from the rim this long: he faces up and leaves the post
   postLay: 4.6,                      // SHOOT in the post this close: the layup or the dunk (the power move), not the hook
-  dropBase: 0.34, dropSize: 0.55, dropIq: 0.3, dropInt: 0.5, dropSpd: 0.3,   // the drop step or the spin gets by him: base + Size
+  dropBase: 0.25, dropSize: 0.7,  dropIq: 0.3, dropInt: 0.5, dropSpd: 0.3,   // the drop step or the spin gets by him: base + Size
                                      // edge + IQ - his man's Interior D + the first step (the plain grades), 0.08-0.8
   dropFreeze: 0.5,                   // got by: his man sealed off this long
   dropCut: 0.55,                     // read: the burst goes this share (his man cuts it off)
   // the hook and the fadeaway: on the jumper's meter (the green window is the shot, as every shot)
-  hookBase: 0.16, hookFin: 0.34, hookSize: 0.14, hookIq: 0.1,   // a hook from 6-8 ft: about 60% for a skilled big open, 35% for a stiff
+  hookBase: 0.06, hookFin: 0.34, hookSize: 0.16, hookIq: 0.1,   // a hook from 6-8 ft: about 60% for a skilled big open, 35% for a stiff
   hookFar: 0.035,                    // ...less this a foot past 6 ft
   contestMaxH: 0.62,                 // a perfect contest takes this share off a hook (it's shot away from his body)...
   hookThrough: 0.35,                 // ...less this share of it at Size 11 (over the top)

@@ -6,7 +6,11 @@ import { T } from './tune.js'
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 const val = (b, k) => { const x = b?.[k]; return x == null ? null : typeof x === 'number' ? x : (x.val ?? null) }
-const n = g => 1 - (1 - clamp((g - 1) / 10, 0, 1)) * T.spread   // a grade as 0..1 (an 11 is 1; a 1 is 1 - spread)
+// The grade the game plays: a little wider than the letter (T.gradeStretch round a C+), and an S a real step past an
+// A+ (T.sKick: the owner, 11-27, "when you get an S in something it should be like 'let's go'")
+const eff = g => 6 + (g - 6) * T.gradeStretch + T.sKick * clamp(g - 10, 0, 1)
+// a grade as 0..1 (an A+ about 0.94, a 1 is about 1 - spread); an S is past 1
+const n = g => 1 - (1 - Math.max(-0.1, (eff(g) - 1) / 10)) * T.spread
 
 // Every rating as 0..1, whichever list the build came from
 export function derive(build, pos = 'guard') {
@@ -31,7 +35,10 @@ export function derive(build, pos = 'guard') {
   // the body runs on the plain grades (not squeezed by spread): Speed is how fast and how quick he is, Size how
   // heavy and how much slower. With the ball he keeps most of it (Handles keeps more), so a quick handler beats a
   // slow defender and a quick defender stays in front of a slow handler
-  const raw = g => clamp((g - 1) / 10, 0, 1)
+  // (the plain grade: 0 at a 1, 1 at an A+-and-a-bit, an S past it)
+  const raw = g => Math.max(-0.1, (eff(g) - 1) / 10)
+  R.S = {}                                                  // the S grades he has (the screen's moment: engine.js)
+  for (const [k, v] of [['js', js], ['fin', fin], ['spd', spd], ['bnc', bnc], ['size', size], ['iq', iq], ['clutch', clutch], ['hnd', handles], ['per', perD], ['int', intD], ['reb', rebounding], ['pas', passing]]) if (v >= 10.5) R.S[k] = 1
   const spdRaw = raw(spd), sizeRaw = raw(size)
   const top = T.speedMin * (1 + T.speedBand * spdRaw) * (1 - T.sizeSlow * sizeRaw)
   R.top = top                                               // ft/s without the ball

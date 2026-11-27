@@ -8,6 +8,7 @@ import { applySnap, lerpAt, relMsg, snapIn, cosOf, cosApply, ACTS, SHOT_KINDS, S
 import { DT } from '../../lib/btlive/tune.js'
 import { drawFigure, drawHands, drawShadow, pointAt, lookOf, ballHz } from './figure.js'
 import { createPoser } from './pose.js'
+import { createScout, sMoment } from './scout.js'
 import { sfx, haptic } from '../../lib/juice'
 
 const STEP = 1000 / HZ
@@ -89,6 +90,8 @@ export function createEngine({ setup, els, on, net = null }) {
   const EVLOG = [], PFN = SNAP_ACT                 // (PFN: where a snapshot row keeps the act: proto.js snapOf)
   // the men as they're drawn: each one's look (his side's colour, his skin and number) and his pose (pose.js)
   const poser = createPoser(N)
+  let scout = null
+  const SC = { tipped: false }
   const MOVE_WORD = { cross: 'CROSSOVER', hesi: 'HESITATION', back: 'STEP-BACK', btb: 'BEHIND THE BACK', spin: 'SPIN MOVE', inout: 'IN AND OUT', btl: 'BETWEEN THE LEGS', drop: 'DROP STEP' }
 
   // The court is a window onto the half court: its height shows the whole depth (baseline to half court); on a
@@ -151,6 +154,10 @@ export function createEngine({ setup, els, on, net = null }) {
     const P = s.players
     for (const e of s.events) {
       const p = e.pid != null ? P[e.pid] : null
+      // the tip: the matchup card; an S that made the play: its moment (scout.js)
+      if (e.e === 'live' && !SC.tipped) { SC.tipped = true; scout?.tip(s) }
+      const sw = sMoment(e, s, clockNow)
+      if (sw && p) fx.push({ text: `S  ${sw}`, x: p.x, y: p.y < 9 ? p.y + 6.2 : p.y - 6.2, t0: clockNow, dur: 1100, color: '#f2c14e', big: false, small: true })
       // (his own swipe, already shown on this device: a steal only makes it a hit)
       const shownSw = online && (e.e === 'swipe' || e.e === 'steal') && e.pid != null && clockNow - (e.pid === me ? NB.swT : NB.swO[e.pid]) < 1500
       if (!shownSw) poser.on(e, s, clockNow)
@@ -618,6 +625,7 @@ export function createEngine({ setup, els, on, net = null }) {
   }
   function hud() {
     const p = s.players[me], b = s.ball
+    scout?.update(s)
     if (shown.bug !== koth()) buildBug()
     // the shot clock: counting while the ball is live; between plays the next one's full clock, dimmed
     const live = s.phase === 'live', sc = s.rules?.shotClock
@@ -1839,6 +1847,8 @@ export function createEngine({ setup, els, on, net = null }) {
     if (floorImg.complete && floorImg.naturalWidth) paint(); else floorImg.addEventListener('load', paint, { once: true })
   }
   if (els.root) els.root.dataset.stick = ONE ? 'one' : 'two'
+  // the other men's builds: the note bar, the tip's matchup card, the sheet (scout.js)
+  try { scout = createScout({ setup, els, nameOf: i => (setup.looks[i]?.label || '?').toUpperCase(), colOf }); scout.update(s) } catch (e) { console.warn('scout', e) }
   document.fonts?.load?.(`16px ${FONT}`).catch(() => {})
   for (let i = 0; i < N; i++) { prev[i * 2] = s.players[i].x; prev[i * 2 + 1] = s.players[i].y }
   hud()
@@ -1855,6 +1865,8 @@ export function createEngine({ setup, els, on, net = null }) {
     resync() { NB.wasLive = false; NB.local = null; NB.mv.hand = null },
     // DEV: where each player was drawn on the last frame (feet)
     get evlog() { return EVLOG },
+    // DEV: the builds sheet (scout.js)
+    scout(i = -1) { scout?.open(i) },
     // DEV: frames where a man's drawn position wasn't one (put back to his last good one)
     get badpos() { return BADPOS },
     // DEV: the referee's snapshots as this device keeps them to draw from ({ k, p: x, y per player, b })
@@ -1885,6 +1897,7 @@ export function createEngine({ setup, els, on, net = null }) {
     // DEV: frame work (ms) and the gap between frames over the last 240 frames
     perf() { const n = Math.min(pn, 240), a = [...PERF.slice(0, n)].sort((x, y) => x - y), g = [...GAP.slice(0, n)].sort((x, y) => x - y); const q = (v, f) => +v[Math.min(v.length - 1, Math.floor(v.length * f))].toFixed(2); return { frames: n, workAvg: +(a.reduce((x, y) => x + y, 0) / n).toFixed(2), work95: q(a, 0.95), workMax: q(a, 1), gap50: q(g, 0.5), gap95: q(g, 0.95) } },
     destroy() {
+      scout?.destroy()
       dead = true; cancelAnimationFrame(raf); ro.disconnect()
       els.pad.removeEventListener('pointerdown', padDown); els.pad.removeEventListener('pointermove', padMove)
       els.pad.removeEventListener('pointerup', padUp); els.pad.removeEventListener('pointercancel', padUp)
