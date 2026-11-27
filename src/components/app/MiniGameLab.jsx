@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import MiniGame from './MiniGame'
 import MiniGameSimple from './MiniGameSimple'
 import MgStage from './MgStage'
+import { minigameOpen } from '../../lib/ads'
 import { DUNKS } from '../../lib/mg/dunkcontest'
 import { GAMES, PLAYOFF_GAMES, COMBINE_GAMES, momentsOf } from '../../lib/minigames'
 import { GAME_IDS } from '../../lib/mg'
@@ -214,6 +215,7 @@ export default function MiniGameLab({ onClose }) {
 // one); AGAIN opens the board on the last one
 function DunkLab({ v, go, cast, run, q, back, again, onDone, res }) {
   const last = useRef(DUNKS.some(d => d.id === q.get('dunk')) ? q.get('dunk') : null)
+  useEffect(() => minigameOpen(), [])   // (no ads while the dunk contest is up, like every other mini game)
   const label = String(getUsername(getProgress().user) || 'Guest').toUpperCase()
   const def = { ...DUNK_DEF, dunk: last.current, attempt: Number(q.get('attempt')) || 1, tries: Number(q.get('tries')) || 3, label, onPick: id => { last.current = id } }
   return (
