@@ -44,7 +44,7 @@ export const NFL_LOOKS = {
 // the NBA: a roundel, so a pin line instead of a band; k a pattern ('pin': pinstripes, 'diag': diagonal stripes)
 export const NBA_LOOKS = {
   ATL: { f: '#E03A3E', r: '#26282A', i: '#FFFFFF', l: '#26282A', p: '#C1D32F' },
-  BOS: { f: '#007A33', r: '#FFFFFF', i: '#FFFFFF', l: '#BA9653', p: '#BA9653' },
+  BOS: { f: '#007A33', r: '#FFFFFF', i: '#FFFFFF', l: '#BA9653', p: '#BA9653', n: 'round' },
   BKN: { f: '#000000', r: '#FFFFFF', i: '#FFFFFF', l: '#777D84', p: '#777D84' },
   CHA: { f: '#00788C', r: '#1D1160', i: '#FFFFFF', l: '#1D1160', p: '#A1A1A4', k: 'pin' },
   CHI: { f: '#CE1141', r: '#000000', i: '#FFFFFF', l: '#000000', p: '#FFFFFF' },
