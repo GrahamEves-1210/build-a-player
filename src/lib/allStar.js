@@ -106,15 +106,23 @@ export function dunkField(c) {
   const M = mates(c), gone = new Set(c.gone ?? [])
   const mine = c.roster ? c.team : null
   const season = c.season ?? 2026
-  const cands = pool().filter(p => {
-    const { bounce: b, finishing: f } = p.attrs
-    if (!(b >= 8 || (b >= 7 && f >= 8)) || b + f < 13) return false
-    if (gone.has(p.name) || p.name === c.name || ageIn(p.name, season) > 33) return false
-    // (his own team's man only while he's still on its roster)
-    if (mine && teamOf(c, p) === mine && !M.has(p.name)) return false
-    return true
-  })
-  const picks = draw(cands, DUNK_FIELD - 1, p => dunkWeight(p, ageIn(p.name, season)), r, oneMate(c, M))
+  // the field: the league's best young leapers. Late in a long career the real league ages out (in 2040 only one man
+  // fit), so the rules widen a step at a time until there are three to dunk with him (owner 11-27: careers stuck after
+  // the dunk contest with no one to face)
+  let cands = []
+  for (const [hops, age] of [[2, 33], [2, 35], [1, 35], [1, 38], [0, 99]]) {
+    cands = pool().filter(p => {
+      const { bounce: b, finishing: f } = p.attrs
+      if (hops === 2 && (!(b >= 8 || (b >= 7 && f >= 8)) || b + f < 13)) return false
+      if (hops === 1 && (b < 6 || b + f < 11)) return false
+      if (gone.has(p.name) || p.name === c.name || ageIn(p.name, season) > age) return false
+      // (his own team's man only while he's still on its roster)
+      if (mine && teamOf(c, p) === mine && !M.has(p.name)) return false
+      return true
+    })
+    if (cands.length >= DUNK_FIELD - 1) break   // (only widened when short: a field that filled before stays the same)
+  }
+  const picks = draw(cands, DUNK_FIELD - 1, p => Math.max(0.01, dunkWeight(p, ageIn(p.name, season))), r, oneMate(c, M))
   const rows = picks.map(p => ({ name: p.name, team: teamOf(c, p), v: (p.attrs.bounce + p.attrs.finishing) / 2, bounce: p.attrs.bounce, fin: p.attrs.finishing, me: false }))
   const at = Math.floor(r() * DUNK_FIELD)
   rows.splice(at, 0, meRow(c, { v: dunkV(c), bounce: gradeVal(c, 'bounce'), fin: gradeVal(c, 'finishing') }))
