@@ -122,7 +122,10 @@ export function dunkField(c) {
     })
     if (cands.length >= DUNK_FIELD - 1) break   // (only widened when short: a field that filled before stays the same)
   }
-  const picks = draw(cands, DUNK_FIELD - 1, p => Math.max(0.01, dunkWeight(p, ageIn(p.name, season))), r, oneMate(c, M))
+  // (the weights as they always were; only a field of men the weights all zero out falls back to an even draw)
+  const wt = p => dunkWeight(p, ageIn(p.name, season))
+  const even = cands.filter(p => wt(p) > 0).length < DUNK_FIELD - 1
+  const picks = draw(cands, DUNK_FIELD - 1, even ? p => Math.max(0.01, wt(p)) : wt, r, oneMate(c, M))
   const rows = picks.map(p => ({ name: p.name, team: teamOf(c, p), v: (p.attrs.bounce + p.attrs.finishing) / 2, bounce: p.attrs.bounce, fin: p.attrs.finishing, me: false }))
   const at = Math.floor(r() * DUNK_FIELD)
   rows.splice(at, 0, meRow(c, { v: dunkV(c), bounce: gradeVal(c, 'bounce'), fin: gradeVal(c, 'finishing') }))
