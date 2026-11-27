@@ -11,9 +11,13 @@ import { launch, sleep } from '../rail-audit/cdp.mjs'
 const args = process.argv.slice(2)
 const arg = (k, d) => args.find(x => x.startsWith(`--${k}=`))?.slice(k.length + 3) ?? d
 const OUT = arg('out', '/tmp/bt12-shots'), SITE = arg('site', 'http://127.0.0.1:5231')
+// --size=koth: King of the Hill's lobby (three spots: two scripted players); --server / --stub go to lobby-live.mjs
+const SIZE = arg('size', '1'), KOTH = SIZE === 'koth'
+const TAG = KOTH ? 'KING OF THE HILL' : '1V1'
+const pass = args.filter(x => /^--(server|stub)=/.test(x))
 mkdirSync(OUT, { recursive: true })
 const preload = `(() => { const s = WebSocket.prototype.send; WebSocket.prototype.send = function (d) {
-  try { const m = JSON.parse(d); if (m && m.t === 'build') { m.done = true; m.filled = 8; d = JSON.stringify(m) } } catch {}
+  try { const m = JSON.parse(d); if (m && m.t === 'build' && window.__shotDone) { m.done = true; m.filled = 8; d = JSON.stringify(m) } } catch {}
   return s.call(this, d) } })()`
 const b = await launch({ width: 390, height: 844, mobile: true, dpr: 2, preload })
 const shot = async name => { const png = await b.screenshot(); writeFileSync(`${OUT}/${name}.png`, png); console.log(`shot ${OUT}/${name}.png`) }
@@ -22,15 +26,20 @@ const waitFor = async (expr, secs) => { for (let i = 0; i < secs * 4; i++) { if 
 
 await b.goto(`${SITE}/bucket?bthub=1`)
 await sleep(4000)
-await click(`[...document.querySelectorAll('button[role=radio]')].find(x => /1V1/.test(x.textContent))`)
+await click(`[...document.querySelectorAll('button[role=radio]')].find(x => new RegExp('^' + ${JSON.stringify(TAG)}).test(x.textContent.trim()))`)
 await sleep(500)
-console.log('join', await click(`[...document.querySelectorAll('button')].find(x => /JOIN 1V1 LOBBY/.test(x.textContent))`))
+console.log('join', await click(`[...document.querySelectorAll('button')].find(x => x.textContent.includes(${JSON.stringify(`JOIN ${TAG} LOBBY`)}))`))
 await waitFor(`!!document.querySelector('.btl-seat-half')`, 15)
 await sleep(800)
 await click(`document.querySelector('.btl-seat-half')`)
 await sleep(1200)
 await shot('1-lobby')
-const bot = spawn(process.execPath, ['scripts/btlive/lobby-live.mjs', '--size=1', '--only=1', '--secs=600'], { stdio: 'inherit' })
+const bot = spawn(process.execPath, ['scripts/btlive/lobby-live.mjs', `--size=${SIZE}`, KOTH ? '--only=1,2' : '--only=1', '--secs=600', ...pass], { stdio: 'inherit' })
+// the build page, as it opens (then the build goes in done, as it stands)
+console.log('build page', await waitFor(`/blacktop\\/spin/.test(location.pathname) || !!document.querySelector('.bt-hud')`, 60))
+await sleep(2500)
+await shot('1b-build')
+await b.evaluate('window.__shotDone = true')
 console.log('in the game', await waitFor(`!!document.querySelector('.btlv-game')`, 60))
 await sleep(9000)
 await shot('2-game')
