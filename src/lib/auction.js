@@ -38,6 +38,9 @@ export const POS_INFO = {
   bucket: [{ pos: 'guard', tag: 'GUARD', name: 'Guard' }, { pos: 'big', tag: 'BIG', name: 'Big' }],
   soccer: [{ pos: 'st', tag: 'ST', name: 'Striker' }],
 }
+// (college: the same positions)
+POS_INFO.cfb = POS_INFO.nfl
+POS_INFO.cbb = POS_INFO.bucket
 export const posInfo = (sport, pos) => POS_INFO[sport]?.find(o => o.pos === pos) ?? null
 
 // a slot's name in full on every auction screen (Salary Cap's board shortens a few for its column heads)
@@ -49,7 +52,7 @@ const LOOKS = {}
 export const addAuctionLook = (sport, look) => { LOOKS[sport] = look }
 export function auctionKit(sport, pos) {
   const k = auctionCoreKit(sport, pos)
-  if (LOOKS[k.sport]) { const L = LOOKS[k.sport]; return { ...k, ...L, label: L.label, attrLabel: fullLabel(k.attrLabel) } }
+  if (LOOKS[k.sport]) { const L = typeof LOOKS[k.sport] === 'function' ? LOOKS[k.sport](k.pos) : LOOKS[k.sport]; return { ...k, ...L, label: L.label, attrLabel: fullLabel(k.attrLabel) } }
   const S = SPORT[k.sport]
   // the lot's card: his photo the way Salary Cap finds it (the headshot list, else the pool's own headshot; no photo,
   // the app draws his team's jersey, the website shows the team's logo), on his team's colour
@@ -67,10 +70,15 @@ export function auctionKit(sport, pos) {
 
 // One queue a sport: the room draws the position (lib/auctionCore auctionPosFor). The kit is the room's once it's
 // known, the sport's first position until then
+// (the app's sport, or the college one it joined: join('cfb') / join('cbb'), owner 11-27. A college kit is added
+// by lib/collegeAuctionUi.js, which the lobby imports before it joins)
 export function useAuction({ enabled, user, sport }) {
   const [match, setMatch] = useState(null)           // { code, seed, created, sport, pos, anyPos, types, bidSecs, reset, players }
+  const [active, setActive] = useState(sport)        // the queue joined: the app's sport or its college one
+  const activeRef = useRef(sport); activeRef.current = active
+  useEffect(() => { setActive(sport) }, [sport])
   const roomPos = match?.pos ?? null
-  const kit = useMemo(() => auctionKit(sport, roomPos ?? AUCTION_POS[sport]?.[0]), [sport, roomPos])
+  const kit = useMemo(() => auctionKit(active, roomPos ?? AUCTION_POS[active]?.[0]), [active, roomPos])
   const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
   // an auction this device left mid-way (reload, the app killed): book the forfeit it was
   useEffect(() => {
@@ -112,23 +120,25 @@ export function useAuction({ enabled, user, sport }) {
   }, [leave])
   const enterRoom = useCallback((code, players) => {
     qRef.current?.close(); qRef.current = null
-    setMatch({ code, players, sport: kit.sport, pos: null, types: null }); setPhase('auction'); booked.current = null
-    markEntered({ kind: 'auction', code, sport: kit.sport, pos: AUCTION_ANY, of: players.length })
+    setMatch({ code, players, sport: activeRef.current, pos: null, types: null }); setPhase('auction'); booked.current = null
+    markEntered({ kind: 'auction', code, sport: activeRef.current, pos: AUCTION_ANY, of: players.length })
     roomRef.current = liveSocket(`/auction/room/${code}`, () => ({ t: 'hello', vid: me.vid }), onRoom, setLink)
   }, [kit, me.vid, onRoom])
 
-  const join = useCallback(() => {
+  const join = useCallback((which = activeRef.current) => {
     if (!enabled) return
+    if (!AUCTION_POS[which]) which = sport
     if (!claimLive('auction')) { setPhase('busy'); return }
     closeAll()
+    setActive(which)
     setPhase('queue'); setMatch(null); setSt(null); setQueue([]); setStartsAt(null)
-    qRef.current = liveSocket(`/auction/q?sport=${kit.sport}&pos=${AUCTION_ANY}`, () => ({ t: 'hello', ...me }), msg => {
+    qRef.current = liveSocket(`/auction/q?sport=${which}&pos=${AUCTION_ANY}`, () => ({ t: 'hello', ...me }), msg => {
       if (msg.t === 'queue') { setQueue(msg.list ?? []); setStartsAt(msg.startsIn == null ? null : Date.now() + msg.startsIn) }
       else if (msg.t === 'match' && msg.players?.some(p => p.vid === me.vid)) enterRoom(msg.code, msg.players)
     }, setLink)
-  }, [enabled, kit, me, enterRoom])
+  }, [enabled, sport, me, enterRoom])
   const fillNow = useCallback(() => qRef.current?.send({ t: 'fill' }), [])
-  const retry = useCallback(() => { closeAll(); join() }, [join])
+  const retry = useCallback(() => { closeAll(); join(activeRef.current) }, [join])
 
   // the clock the screens read (the bidding bar, going once / twice)
   useEffect(() => {

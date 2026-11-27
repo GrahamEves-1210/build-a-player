@@ -8678,3 +8678,17 @@ button.au-paddle:focus-visible { outline: 2px solid var(--au-amber); outline-off
 .au-q-acts { display: grid; gap: 8px; }
 .ag-btn.au-q-leave { min-height: 50px; font-size: 19px; letter-spacing: 2px; border-radius: 10px; }
 @media (min-width: 1024px) { .au-hub-body.au-q { display: flex; align-items: stretch; } }
+
+/* ═══ TRAIT AUCTION, college (owner 11-27): the same room in a varsity key. Old gold for the accent, a crimson
+   varsity letter block reading COLLEGE, the header band striped like a letter jacket's cuff; the cards wear the
+   schools' own colours (lib/collegeAuctionUi.js) ═══ */
+.au-varsity { display: inline-block; align-self: flex-start; margin: 8px 0 -2px; padding: 4px 10px 2px; border-radius: 3px; background: #b3202f; color: #fff; font-family: var(--ag-display); font-weight: 400; font-size: 17px; line-height: 1; letter-spacing: 2.5px; box-shadow: inset 0 0 0 2px #b3202f, inset 0 0 0 3.5px rgba(255,255,255,.85); }
+.au-varsity--sm { margin: 0 8px 0 0; padding: 3px 7px 1px; font-size: 13px; letter-spacing: 1.8px; vertical-align: 4px; box-shadow: inset 0 0 0 1.5px #b3202f, inset 0 0 0 2.5px rgba(255,255,255,.85); }
+.au-screen.is-college { --au-amber: #d9b44a; --au-amber-hi: #ecd07e; --au-amber-lo: #a8862c; --au-line-hi: rgba(217,180,74,.55); --btn-start: #ecd07e; --btn-end: #d9b44a; --ag-grad: #d9b44a; --ag-a1: #d9b44a; }
+.au-screen.is-college .au-hub-stage { border-bottom: 0; box-shadow: inset 0 -3px 0 #d9b44a, inset 0 -6px 0 #0a0f1c, inset 0 -9px 0 #b3202f; }
+/* the lobby's second way in: a step down from FIND AN AUCTION, outlined in the college gold */
+.au-hub-col { display: grid; gap: 8px; }
+.ag-btn.au-hub-college { min-height: 50px; gap: 10px; font-size: 19px; letter-spacing: 2px; border-radius: 10px; color: #ecd07e; background: var(--au-panel); box-shadow: inset 0 0 0 1.5px #d9b44a; }
+.ag-btn.au-hub-college .au-varsity--sm { margin: 0; vertical-align: 0; }
+.ag-btn.au-hub-college:disabled { opacity: .6; }
+.ag-btn.au-hub-college .au-varsity--sm { align-self: center; }

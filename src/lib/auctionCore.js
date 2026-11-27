@@ -31,7 +31,8 @@ export const FILLER_VAL = 3         // a slot nobody won by the end: a free agen
 
 // Football: QB, RB or WR (each on its Salary Cap board's five slots); basketball: guard or big; soccer: the striker
 const GUARDS = new Set(NBA_GUARD_PLAYERS.map(x => x.name)), BIGS = new Set(NBA_BIG_PLAYERS.map(x => x.name))
-export const AUCTION_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'], soccer: ['st'] }
+// (college, owner 11-27: 'cfb' and 'cbb', College Football's and College Basketball's pools: lib/collegeAuction.js)
+export const AUCTION_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'], soccer: ['st'], cfb: ['qb', 'rb', 'wr'], cbb: ['guard', 'big'] }
 // One queue a sport (owner 11-26): nobody picks the position. When the room fills, its seed draws it, so every seat
 // gets the same one and any phone can check the server's word (posOk). The queue asks for pos 'any'; a phone from
 // before this asks for its own position and gets a room at that position, as it always did.
@@ -54,7 +55,7 @@ const ADDED_KITS = {}
 export const addAuctionKit = (sport, make) => { ADDED_KITS[sport] = make }
 export function auctionCoreKit(sport, pos) {
   if (ADDED_KITS[sport]) return ADDED_KITS[sport](pos)
-  if (!AUCTION_POS[sport] || sport === 'soccer') throw new Error(`auction: no kit for ${sport}`)
+  if (!AUCTION_POS[sport] || !['nfl', 'bucket'].includes(sport)) throw new Error(`auction: no kit for ${sport}`)
   const bucket = sport === 'bucket'
   const p = bucket ? (pos === 'big' ? 'big' : 'guard') : AUCTION_POS.nfl.includes(pos) ? pos : 'qb'
   const fb = bucket ? null : FB_SAL[p]

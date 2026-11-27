@@ -7,6 +7,14 @@ import {
   auctionPosFor, posOk, drawCard, markCloser, stillBuilding, setGradeTilt, GRADE_TILT,
 } from '../../src/lib/auctionCore.js'
 import '../../src/lib/soccerAuction.js'   // (soccer's kit: the striker)
+import '../../src/lib/collegeAuction.js'   // (college football and basketball's kits: 'cfb', 'cbb')
+import { calcCFBOVR } from '../../src/utils/cfbSimulation.js'
+import { calcCBBOVR } from '../../src/utils/cbbSimulation.js'
+import { collegeOVR } from '../../src/utils/cfbOvr.js'
+import { CFB_QBS, CFB_RBS, CFB_WRS, CFB_QB_TYPES, CFB_RB_TYPES, CFB_WR_TYPES } from '../../src/data/cfb-players.js'
+import { CFB_LEGEND_QBS, CFB_LEGEND_RBS, CFB_LEGEND_WRS } from '../../src/data/cfb-legends.js'
+import { CBB_GUARDS, CBB_BIGS, CBB_GUARD_TYPES, CBB_BIG_TYPES } from '../../src/data/cbb-players.js'
+import { CBB_LEGEND_GUARDS, CBB_LEGEND_BIGS } from '../../src/data/cbb-legends.js'
 import { seeded } from '../../src/lib/rng.js'
 import { calcOVR, calcOVRRB, calcOVRWR } from '../../src/utils/simulation.js'
 import { calcBucketOVR } from '../../src/utils/bucketSimulation.js'
@@ -145,9 +153,17 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
   const lines = []
   for (const k of Object.keys(even)) {
     const a = even[k], b = tilt[k]
-    ok(b.lot - a.lot > 0.8 && b.lot - a.lot < 1.6, `${k}: lots ${(b.lot - a.lot).toFixed(2)} grades better, not about one`)
-    ok(b.draw - a.draw > 0.8 && b.draw - a.draw < 1.6, `${k}: the draw ${(b.draw - a.draw).toFixed(2)} grades better, not about one`)
-    ok(b.top > a.top && b.low > 0.1, `${k}: S/A more often, C and below still there`)
+    // (college: its pools already run a grade higher (an even draw averages B), so the same lean lifts them less;
+    // what counts there is that it leans and the average card sits at B- or better)
+    const col = /^c[fb]b-/.test(k)
+    if (col) {
+      ok(b.lot - a.lot > 0.3 && b.lot >= 7, `${k}: lots ${(b.lot - a.lot).toFixed(2)} grades better, average ${b.lot.toFixed(2)}`)
+      ok(b.draw - a.draw > 0.3, `${k}: the draw ${(b.draw - a.draw).toFixed(2)} grades better`)
+    } else {
+      ok(b.lot - a.lot > 0.8 && b.lot - a.lot < 1.6, `${k}: lots ${(b.lot - a.lot).toFixed(2)} grades better, not about one`)
+      ok(b.draw - a.draw > 0.8 && b.draw - a.draw < 1.6, `${k}: the draw ${(b.draw - a.draw).toFixed(2)} grades better, not about one`)
+    }
+    ok(b.top > a.top && b.low > (col ? 0.05 : 0.1), `${k}: S/A more often, C and below still there`)
     const f = x => `${x.toFixed(2)} ${G[Math.round(x)]}`
     lines.push(`  ${k.padEnd(13)} lot ${f(a.lot)} → ${f(b.lot)} · draw ${f(a.draw)} → ${f(b.draw)} · A/S ${Math.round(a.top * 100)}% → ${Math.round(b.top * 100)}% · C+ and below ${Math.round(a.low * 100)}% → ${Math.round(b.low * 100)}%`)
   }
@@ -161,8 +177,17 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
     'nfl-qb': (b, ex) => calcOVR(b, FB_SAL.qb.types, ex), 'nfl-rb': (b, ex) => calcOVRRB(b, FB_SAL.rb.types, ex), 'nfl-wr': (b, ex) => calcOVRWR(b, FB_SAL.wr.types, ex),
     'bucket-guard': (b, ex) => calcBucketOVR(b, GUARD_TYPES, 'guard', ex), 'bucket-big': (b, ex) => calcBucketOVR(b, BIG_TYPES, 'big', ex),
     'soccer-st': (b, ex) => calcSoccerOVR(b, SOCCER_TYPES, ex),
+    // college: the College Football / College Basketball modes' own overall (calcCFBOVR, calcCBBOVR: the pro formula
+    // through collegeOVR's curve); unrounded, the curve's step read off the whole number as the mode does
+    'cfb-qb': (b, ex) => (ex ? cex(calcOVR(b, CFB_QB_TYPES, true)) : calcCFBOVR(b, CFB_QB_TYPES, 'qb')),
+    'cfb-rb': (b, ex) => (ex ? cex(calcOVRRB(b, CFB_RB_TYPES, true)) : calcCFBOVR(b, CFB_RB_TYPES, 'rb')),
+    'cfb-wr': (b, ex) => (ex ? cex(calcOVRWR(b, CFB_WR_TYPES, true)) : calcCFBOVR(b, CFB_WR_TYPES, 'wr')),
+    'cbb-guard': (b, ex) => (ex ? cex(calcBucketOVR(b, CBB_GUARD_TYPES, 'guard', true)) : calcCBBOVR(b, CBB_GUARD_TYPES, 'guard')),
+    'cbb-big': (b, ex) => (ex ? cex(calcBucketOVR(b, CBB_BIG_TYPES, 'big', true)) : calcCBBOVR(b, CBB_BIG_TYPES, 'big')),
   }
   const ties = {}
+  // (cex: College Football's curve on an unrounded number, as lib/collegeAuction.js does it)
+  function cex(raw) { return Math.min(99, raw + (collegeOVR(Math.round(raw)) - Math.round(raw))) }
   for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list) {
     const kit = auctionCoreKit(sport, pos), real = REAL[`${sport}-${pos}`]
     const r = seeded(`ovr-${sport}-${pos}`)
@@ -183,6 +208,21 @@ for (const [sport, list] of Object.entries(AUCTION_POS)) for (const pos of list)
     ties[`${sport}-${pos}`] = `${Math.round(wholeTies / pairs * 100)}% → ${Math.round(decTies / pairs * 100)}%`
   }
   stats.tiesWholeToDecimal = ties
+}
+
+// College: each position's pool is that position's college players and Legends only (a QB room never deals a
+// receiver), everyone in it rated, and big enough for a full three-seat auction with the draw
+{
+  const LISTS = { 'cfb-qb': [CFB_QBS, CFB_LEGEND_QBS], 'cfb-rb': [CFB_RBS, CFB_LEGEND_RBS], 'cfb-wr': [CFB_WRS, CFB_LEGEND_WRS], 'cbb-guard': [CBB_GUARDS, CBB_LEGEND_GUARDS], 'cbb-big': [CBB_BIGS, CBB_LEGEND_BIGS] }
+  const sizes = {}
+  for (const [k, lists] of Object.entries(LISTS)) {
+    const [sport, pos] = k.split('-'), kit = auctionCoreKit(sport, pos)
+    const names = new Set(lists.flat().map(p => p.name))
+    ok(kit.pool.length > 60 && kit.pool.every(p => names.has(p.name)), `${k}: the pool is the position's own college players and Legends (${kit.pool.length})`)
+    ok(new Set(kit.pool.map(p => p.name)).size === kit.pool.length, `${k}: one row a player`)
+    sizes[k] = kit.pool.length
+  }
+  stats.collegePools = sizes
 }
 
 // The tie order: OVR to one decimal, then money left, then whoever filled his build first, then the seat
