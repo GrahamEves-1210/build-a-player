@@ -42,7 +42,7 @@ const ALIAS = { 'career/saves': 'career-intro', '': 'splash', ranks: 'leaderboar
 
 // The five dock pages, Depth Chart and Career (its hub and saves, not its spin: the rail would sit on the spin) run
 // the left rail (lib/ads.js DOCK_UNITS); every other page runs the corner video and the bottom rail
-const LEFT_RAIL = new Set(['splash', 'leaderboard', 'career', 'career-intro'])   // (/home and /career only: owner 11-27)
+const LEFT_RAIL = new Set(['splash', 'leaderboard', 'career', 'career-intro', 'sim'])   // (/home, /career and /simulate: owner 11-27)
 const LEFT_SCREENS = new Set(['daily', 'shop'])
 // the dock's pages: moving among them never reloads the rails (rampPage soft)
 const SOFT = new Set(['splash', 'leaderboard', 'profile'])
