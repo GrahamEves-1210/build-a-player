@@ -192,6 +192,9 @@ export class AuctionRoom {
       if (st.L.out.includes(vid) || st.stage === 'done') return
       st.L = { ...st.L, out: [...st.L.out, vid] }
       if (st.high?.vid === vid) st.high = null
+      // the last bidder left in the room: the auction's his, now (owner 11-27: an auto win). The ones who quit are
+      // forfeits, ranked under him whatever their builds
+      if (this.m.players.filter(p => !st.L.out.includes(p.vid)).length <= 1) return this.finish()
       this.broadcast(); this.maybeSettle()
       if (st.stage === 'draw') return
       if (auctionOver(st.L, this.m, st.n) && st.stage !== 'lot') this.finish()

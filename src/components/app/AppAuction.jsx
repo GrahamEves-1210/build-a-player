@@ -212,7 +212,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
             <b className="au-podium-place">{meR ? ord(meR.place) : '—'}</b>
             <span className="au-podium-who">
               <span className="au-podium-name"><NameTag name={me.name} self /></span>
-              {meR && <span className="au-podium-ovr"><b>{ovr1(meR.ovr)}</b> OVR · ${meR.left} LEFT{meR.place === 1 ? ' · BEST BUILD IN THE ROOM' : ` · OF ${au.ranked.length}`}</span>}
+              {meR && <span className="au-podium-ovr"><b>{ovr1(meR.ovr)}</b> OVR · ${meR.left} LEFT{meR.place === 1 ? (au.ranked.every(p => p === meR || p.vid === meR.vid || p.forfeit) ? ' · THE OTHERS LEFT' : ' · BEST BUILD IN THE ROOM') : ` · OF ${au.ranked.length}`}</span>}
             </span>
           </div>
           {meR && <span className="au-podium-pay gain"><XpIco /> +{xp} <span className="coin-ico coin-ico--sm" /> +{coins}</span>}
