@@ -10,7 +10,10 @@
 //
 // One picture fills every slot a photo used to: media queries inside the SVG pick the card, the square card or the
 // small tile by the slot's own size.
-import { NFL_KITS } from './kitData'
+import { NFL_KITS } from './kitData.js'
+import { NBA_LOOKS, SOC_KITS } from './teamLooks.js'
+import { word } from './artType.js'
+import { badgeBody } from './teamBadge.js'
 
 const hex = c => {
   let s = String(c || '').trim().replace('#', '')
@@ -102,6 +105,12 @@ function kitFor(league, team, colors) {
     const k = NFL_KITS[team]
     return { ...k, badge: k.badge ?? [k.body, contrast(k.num, k.body) >= 2 ? k.num : '#ffffff'] }
   }
+  // the NBA's from the same hand-set colours as its badges (lib/teamLooks.js): the body, the number, its outline,
+  // the neck and armhole trim
+  if (league === 'nba' && NBA_LOOKS[team]) {
+    const k = NBA_LOOKS[team]
+    return { body: k.f, num: k.i, line: k.l, collar: k.r, sleeve: ['none'], badge: [k.f, k.i] }
+  }
   if (!colors || !colors[0]) return { body: '#5d6573', num: '#ffffff', line: null, collar: '#c4cad3', sleeve: ['stripes', '#c4cad3'], badge: null }
   const c = kitColors(colors[0], colors[1])
   const line = c.num === '#ffffff' && c.trim !== '#ffffff' && contrast(c.trim, c.body) >= 1.6 ? c.trim : null
@@ -184,6 +193,20 @@ const TANK = {
   num: [100, 128, 56, 92],
 }
 
+// a football club's shirt pattern (lib/teamLooks.js SOC_KITS), over the body, under the number
+function shirtPattern(pat) {
+  if (!pat) return ''
+  const [p, a, b] = pat
+  if (p === 'stripes') { let o = `<rect width="200" height="200" fill="${a}"/>`; for (let x = 15; x < 200; x += 30) o += `<rect x="${x}" y="0" width="15" height="200" fill="${b}"/>`; return o }
+  if (p === 'hoops') { let o = `<rect width="200" height="200" fill="${a}"/>`; for (let y = 40; y < 200; y += 32) o += `<rect x="0" y="${y}" width="200" height="16" fill="${b}"/>`; return o }
+  if (p === 'halves') return `<rect width="100" height="200" fill="${a}"/><rect x="100" width="100" height="200" fill="${b}"/>`
+  if (p === 'sash') return `<rect width="200" height="200" fill="${a}"/><path d="M30 20L62 20L190 170L190 200L160 200L30 50Z" fill="${b}"/>`
+  if (p === 'diag') return `<path d="M0 0H200L0 200Z" fill="${a}"/><path d="M200 0V200H0Z" fill="${b}"/>`
+  if (p === 'band') return `<rect width="200" height="200" fill="${a}"/><rect x="0" y="62" width="200" height="26" fill="${b}"/>`
+  if (p === 'centre') return `<rect width="200" height="200" fill="${a}"/><rect x="78" y="0" width="44" height="200" fill="#ffffff"/><rect x="85" y="0" width="30" height="200" fill="${b}"/>`
+  return ''
+}
+
 // u: this picture's id prefix; small: drawn 44px or under (no knit, no folds, a bigger number)
 function jersey(kit, number, tank, u, { small = false } = {}) {
   const S = tank ? TANK : TEE
@@ -209,10 +232,13 @@ function jersey(kit, number, tank, u, { small = false } = {}) {
     `<path d="${S.body}" fill="${kit.body}"/>`,
     `<g clip-path="url(#${u}b)">`,
     ...(S.panels ?? []).map(pn => `<path d="${pn}" fill="${shade(kit.body, pale ? 0.9 : 0.8)}"/>`),
+    shirtPattern(kit.pat),
   ]
   S.sleeves.forEach((sl, i) => out.push(`<clipPath id="${u}c${i}"><path d="${sl}"/></clipPath><g clip-path="url(#${u}c${i})">${sleeveTrim(kit, S.cuffs[i])}</g>`))
   // the number, sewn on: straight, centred, outlined in the trim
-  if (n) out.push(block(n, nx, ny + (small ? 3 : 0), small ? nh * 1.2 : nh, small ? nw * 1.15 : nw, { fill: kit.num, line: trim, lw: small ? 0.42 : 0.32, stem: 2 }))
+  // (a collegiate block made heavy, outlined in the trim the way it's sewn; a football club's rounder face)
+  if (n) out.push(word(kit.face ?? 'num', n, nx, ny + (small ? 3 : 0), small ? nh * 1.25 : nh * 1.06, small ? nw * 1.2 : nw * 1.04,
+    { fill: kit.num, bold: kit.face === 'soc' ? 1 : small ? 2.6 : 2.2, line: kit.pat ? (lum(kit.num) > 0.5 ? '#111111' : '#ffffff') : trim && dist(trim, kit.num) > 40 ? trim : shade(kit.body, 0.5), lw: small || kit.pat ? 5 : 3.6, track: kit.face === 'soc' ? 3 : 4, shadow: small ? 0 : 0.18, id: u + 'n' }))
   if (!small) out.push(`<rect x="0" y="0" width="200" height="200" fill="url(#${u}kn)"/>`)
   out.push(
     `<rect x="0" y="0" width="200" height="200" fill="url(#${u}lx)"/>`,
@@ -266,15 +292,15 @@ function labelL(t, x, y, h, fill, opacity = 1) {
 function card(kit, team, number, pos, tank, T, u) {
   const W = 276, H = 200
   return tile(W, H, 16, washOf(kit), T, u, [180, 104, 150]) +
-    (team ? labelL(team, 20, 36, 26, '#ffffff', 0.95) : '') +
-    (pos ? labelL(pos, 20, 66, 13, '#c4ccc9') : '') +
-    (T.name ? labelL(T.name, 20, 86, 11, T.line, T.a) : '') +
+    (kit.crest ? `<g transform="translate(12 14) scale(.56)">${kit.crest()}</g>` : team ? labelL(team, 20, 36, 26, '#ffffff', 0.95) : '') +
+    (pos ? labelL(pos, 20, kit.crest ? 86 : 66, 13, '#c4ccc9') : '') +
+    (T.name ? labelL(T.name, 20, kit.crest ? 106 : 86, 11, T.line, T.a) : '') +
     `<g transform="translate(80 6) scale(.97)">${jersey(kit, number, tank, u + 'j')}</g>`
 }
 function cardSquare(kit, team, number, pos, tank, T, u) {
   return tile(200, 200, 18, washOf(kit), T, u, [100, 86, 120]) +
     `<g transform="translate(26 8) scale(.74)">${jersey(kit, number, tank, u + 'j')}</g>` +
-    (team ? labelL(team, 18, 176, 20, '#ffffff', 0.95) : '') +
+    (kit.crest ? `<g transform="translate(10 148) scale(.46)">${kit.crest()}</g>` : team ? labelL(team, 18, 176, 20, '#ffffff', 0.95) : '') +
     (pos ? label(pos, 200 - 18 - 12, 176, 13, 44, '#c4ccc9') : '')
 }
 // a row's picture: the jersey in a small rounded tile
@@ -295,9 +321,13 @@ const STYLE = '<style>.sq,.sm,.xs{display:none}@media (max-aspect-ratio:6/5){.bi
 // A player. { league: 'nfl'|'nba'|'cfb'|'cbb'|'mlb'|'soc'|'nat', team: 'CIN', colors: [c1, c2], number: 9, pos: 'QB',
 //   rank: 0-3 (Common, Rare, Epic, Legend), size (height in px), variant: 'auto' | 'card' | 'square' | 'small' }
 export function jerseySvg({ league = 'nfl', team = '', colors, number = '', pos = '', rank = 0, size = 240, variant = 'auto' } = {}) {
-  const u = 'j' + (++seq).toString(36)
+  const u = 'j' + (++seq).toString(36) + '_'
   const tank = league === 'nba' || league === 'cbb'
   const kit = kitFor(league, team, colors)
+  if (league === 'soc' || league === 'nat') kit.face = 'soc'
+  if (league === 'soc' && SOC_KITS[team]) kit.pat = SOC_KITS[team]
+  // the team's badge in the card's corner (lib/teamBadge.js), where the team has colours to draw it in
+  if (team && (colors?.[0] || (league === 'nfl' && NFL_KITS[team]) || (league === 'nba' && NBA_LOOKS[team]))) kit.crest = () => badgeBody({ league, team, colors })
   const T = TIERS[Math.max(0, Math.min(3, rank | 0))]
   const w = Math.round(size * 276 / 200)
   const svg = (cls, vb, body) => `<svg class="${cls}" viewBox="${vb}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${body}</svg>`
@@ -314,22 +344,6 @@ export function jerseySvg({ league = 'nfl', team = '', colors, number = '', pos 
     svg('sq', '0 0 200 200', cardSquare(kit, team, number, pos, tank, T, u + 'q')) +
     svg('sm', '0 0 200 200', cardSmall(kit, number, tank, u + 's', false)) +
     svg('xs', '0 0 200 200', cardSmall(kit, number, tank, u + 'x', true)) + '</svg>'
-}
-
-// A team (a coach, a team row): its abbreviation on a small flat chip in its colour. A coach's chip carries HC
-// under it, small.
-export function teamMarkSvg({ league = 'nfl', team = '', colors, badge: chip = '', size = 200 } = {}) {
-  const t = String(team).toUpperCase()
-  const kit = kitFor(league, t, colors)
-  const [fill, ink0] = kit.badge ?? [kit.body ?? '#3a3f4a', '#ffffff']
-  const ink = contrast(ink0, fill) >= 3 ? ink0 : contrast('#ffffff', fill) >= 3 ? '#ffffff' : '#111111'
-  const y = chip ? 24 : 30, h = 40
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">` +
-    `<rect x="4" y="${y}" width="92" height="${h}" rx="10" fill="${fill}"/>` +
-    `<rect x="4.5" y="${y + 0.5}" width="91" height="${h - 1}" rx="9.5" fill="none" stroke="#fff" stroke-opacity="${lum(fill) < 0.04 ? 0.22 : 0.1}"/>` +
-    label(t, 50, y + h / 2, 22, 74, ink) +
-    (chip ? label(chip, 50, 82, 12, 40, '#c9d1cf') : '') +
-    '</svg>'
 }
 
 export const svgUri = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)

@@ -1,0 +1,98 @@
+// How each team's badge is coloured in the app (lib/teamBadge.js). Only colours and stripe orders taken from the
+// teams' real uniforms: no logo, no mascot, no wordmark, no helmet decal. A team's abbreviation does the naming.
+//
+// The NFL's and NBA's 62 are set by hand (the colours alone can't tell Houston from New England); every other team is
+// worked out from its two colours (data/jersey-index.json), with a few clubs given the kit pattern they're known by.
+//
+//   f field     r rim     i letters     l letters' outline     b stripe band (bottom to top, from the uniform's
+//   sleeves)    p pin line (a thin third colour inside the rim)
+export const NFL_LOOKS = {
+  ARI: { f: '#97233F', r: '#000000', i: '#FFFFFF', l: '#000000', b: ['#FFFFFF', '#000000'] },
+  ATL: { f: '#101820', r: '#A71930', i: '#FFFFFF', l: '#A71930', b: ['#A71930', '#FFFFFF', '#A71930'] },
+  BAL: { f: '#241773', r: '#9E7C0C', i: '#FFFFFF', l: '#000000', b: ['#000000', '#9E7C0C'] },
+  BUF: { f: '#00338D', r: '#C60C30', i: '#FFFFFF', l: '#C60C30', b: ['#FFFFFF', '#C60C30', '#FFFFFF'] },
+  CAR: { f: '#101820', r: '#0085CA', i: '#0085CA', l: '#FFFFFF', b: ['#0085CA', '#BFC0BF'] },
+  CHI: { f: '#0B162A', r: '#C83803', i: '#FFFFFF', l: '#C83803', b: ['#C83803', '#FFFFFF', '#C83803'] },
+  CIN: { f: '#FB4F14', r: '#000000', i: '#FFFFFF', l: '#000000', b: ['#000000', '#FFFFFF', '#000000'] },
+  CLE: { f: '#311D00', r: '#FF3C00', i: '#FF3C00', l: '#FFFFFF', b: ['#FF3C00', '#FFFFFF', '#FF3C00'] },
+  DAL: { f: '#041E42', r: '#869397', i: '#FFFFFF', l: '#003594', b: ['#003594', '#FFFFFF', '#003594'] },
+  DEN: { f: '#FB4F14', r: '#002244', i: '#002244', l: '#FFFFFF', b: ['#002244', '#FFFFFF'] },
+  DET: { f: '#0076B6', r: '#B0B7BC', i: '#FFFFFF', l: '#B0B7BC', b: ['#FFFFFF', '#B0B7BC'] },
+  GB: { f: '#203731', r: '#FFB612', i: '#FFB612', l: '#FFFFFF', b: ['#FFB612', '#FFFFFF', '#FFB612'] },
+  HOU: { f: '#03202F', r: '#A71930', i: '#FFFFFF', l: '#A71930', b: ['#FFFFFF', '#A71930'] },
+  IND: { f: '#002C5F', r: '#FFFFFF', i: '#FFFFFF', l: '#A2AAAD', b: ['#FFFFFF', '#002C5F', '#FFFFFF'] },
+  JAX: { f: '#006778', r: '#D7A22A', i: '#FFFFFF', l: '#101820', b: ['#D7A22A', '#101820'] },
+  KC: { f: '#E31837', r: '#FFB81C', i: '#FFFFFF', l: '#FFB81C', b: ['#FFFFFF', '#FFB81C', '#FFFFFF'] },
+  LV: { f: '#101820', r: '#A5ACAF', i: '#A5ACAF', l: '#FFFFFF', b: ['#A5ACAF'] },
+  LAC: { f: '#0080C6', r: '#FFC20E', i: '#FFFFFF', l: '#FFC20E', b: ['#FFC20E', '#FFFFFF'] },
+  LAR: { f: '#003594', r: '#FFA300', i: '#FFA300', l: '#FFFFFF', b: ['#FFA300', '#FFFFFF'] },
+  MIA: { f: '#008E97', r: '#FC4C02', i: '#FFFFFF', l: '#FC4C02', b: ['#FC4C02', '#FFFFFF'] },
+  MIN: { f: '#4F2683', r: '#FFC62F', i: '#FFFFFF', l: '#FFC62F', b: ['#FFC62F', '#FFFFFF'] },
+  NE: { f: '#002244', r: '#B0B7BC', i: '#FFFFFF', l: '#C60C30', b: ['#C60C30', '#FFFFFF', '#C60C30'] },
+  NO: { f: '#101820', r: '#D3BC8D', i: '#D3BC8D', l: '#FFFFFF', b: ['#D3BC8D'] },
+  NYG: { f: '#0B2265', r: '#A71930', i: '#FFFFFF', l: '#A71930', b: ['#A71930', '#A5ACAF'] },
+  NYJ: { f: '#125740', r: '#FFFFFF', i: '#FFFFFF', l: '#000000', b: ['#FFFFFF', '#000000', '#FFFFFF'] },
+  PHI: { f: '#004C54', r: '#A5ACAF', i: '#FFFFFF', l: '#000000', b: ['#000000', '#A5ACAF', '#000000'] },
+  PIT: { f: '#101820', r: '#FFB612', i: '#FFB612', l: '#FFFFFF', b: ['#FFB612', '#101820', '#FFB612'] },
+  SF: { f: '#AA0000', r: '#B3995D', i: '#FFFFFF', l: '#B3995D', b: ['#FFFFFF', '#000000', '#FFFFFF'] },
+  SEA: { f: '#002244', r: '#69BE28', i: '#FFFFFF', l: '#69BE28', b: ['#69BE28', '#A5ACAF'] },
+  TB: { f: '#D50A0A', r: '#34302B', i: '#FFFFFF', l: '#34302B', b: ['#34302B', '#FF7900', '#34302B'] },
+  TEN: { f: '#0C2340', r: '#4B92DB', i: '#FFFFFF', l: '#4B92DB', b: ['#4B92DB', '#C8102E'] },
+  WAS: { f: '#5A1414', r: '#FFB612', i: '#FFFFFF', l: '#FFB612', b: ['#FFB612', '#FFFFFF', '#FFB612'] },
+}
+
+// the NBA: a roundel, so a pin line instead of a band; k a pattern ('pin': pinstripes, 'diag': diagonal stripes)
+export const NBA_LOOKS = {
+  ATL: { f: '#E03A3E', r: '#26282A', i: '#FFFFFF', l: '#26282A', p: '#C1D32F' },
+  BOS: { f: '#007A33', r: '#FFFFFF', i: '#FFFFFF', l: '#BA9653', p: '#BA9653' },
+  BKN: { f: '#000000', r: '#FFFFFF', i: '#FFFFFF', l: '#777D84', p: '#777D84' },
+  CHA: { f: '#00788C', r: '#1D1160', i: '#FFFFFF', l: '#1D1160', p: '#A1A1A4', k: 'pin' },
+  CHI: { f: '#CE1141', r: '#000000', i: '#FFFFFF', l: '#000000', p: '#FFFFFF' },
+  CLE: { f: '#6F263D', r: '#FFB81C', i: '#FFFFFF', l: '#FFB81C', p: '#041E42' },
+  DAL: { f: '#00538C', r: '#B8C4CA', i: '#FFFFFF', l: '#002B5E', p: '#002B5E' },
+  DEN: { f: '#0E2240', r: '#FEC524', i: '#FEC524', l: '#8B2131', p: '#8B2131' },
+  DET: { f: '#1D42BA', r: '#C8102E', i: '#FFFFFF', l: '#C8102E', p: '#BEC0C2' },
+  GSW: { f: '#1D428A', r: '#FFC72C', i: '#FFC72C', l: '#FFFFFF', p: '#FFFFFF' },
+  HOU: { f: '#CE1141', r: '#C4CED4', i: '#FFFFFF', l: '#000000', p: '#000000' },
+  IND: { f: '#002D62', r: '#FDBB30', i: '#FDBB30', l: '#FFFFFF', p: '#BEC0C2' },
+  LAC: { f: '#C8102E', r: '#1D428A', i: '#FFFFFF', l: '#1D428A', p: '#FFFFFF' },
+  LAL: { f: '#552583', r: '#FDB927', i: '#FDB927', l: '#FFFFFF', p: '#FFFFFF' },
+  MEM: { f: '#12173F', r: '#5D76A9', i: '#FFFFFF', l: '#5D76A9', p: '#F5B112' },
+  MIA: { f: '#000000', r: '#98002E', i: '#FFFFFF', l: '#98002E', p: '#F9A01B' },
+  MIL: { f: '#00471B', r: '#EEE1C6', i: '#EEE1C6', l: '#0077C0', p: '#0077C0' },
+  MIN: { f: '#0C2340', r: '#78BE20', i: '#FFFFFF', l: '#236192', p: '#236192' },
+  NOP: { f: '#0C2340', r: '#85714D', i: '#FFFFFF', l: '#C8102E', p: '#C8102E' },
+  NYK: { f: '#006BB6', r: '#F58426', i: '#FFFFFF', l: '#F58426', p: '#BEC0C2' },
+  OKC: { f: '#007AC1', r: '#EF3B24', i: '#FFFFFF', l: '#002D62', p: '#FDBB30' },
+  ORL: { f: '#0077C0', r: '#000000', i: '#FFFFFF', l: '#000000', p: '#C4CED4', k: 'pin' },
+  PHI: { f: '#006BB6', r: '#ED174C', i: '#FFFFFF', l: '#ED174C', p: '#002B5C' },
+  PHX: { f: '#1D1160', r: '#E56020', i: '#FFFFFF', l: '#E56020', p: '#F9AD1B' },
+  POR: { f: '#000000', r: '#E03A3E', i: '#FFFFFF', l: '#E03A3E', p: '#FFFFFF', k: 'diag' },
+  SAC: { f: '#5A2D81', r: '#63727A', i: '#FFFFFF', l: '#000000', p: '#000000' },
+  SAS: { f: '#000000', r: '#C4CED4', i: '#C4CED4', l: '#FFFFFF', p: '#8A8D8F' },
+  TOR: { f: '#CE1141', r: '#B4975A', i: '#FFFFFF', l: '#000000', p: '#000000' },
+  UTA: { f: '#002B5C', r: '#F9A01B', i: '#FFFFFF', l: '#00471B', p: '#00471B' },
+  WAS: { f: '#002B5C', r: '#E31837', i: '#FFFFFF', l: '#E31837', p: '#C4CED4' },
+}
+
+// football clubs known by their kit's pattern (the shirt, not the crest): 'stripes' vertical, 'hoops' horizontal,
+// 'halves' split down the middle, 'sash' a diagonal band, 'diag' halves on the diagonal, 'band' a chest band,
+// 'centre' one wide stripe down the middle. c: the pattern's two colours, first the ground.
+export const SOC_KITS = {
+  BAR: ['stripes', '#A50044', '#004D98'], LEV: ['stripes', '#B4053F', '#014593'],
+  JUV: ['stripes', '#FFFFFF', '#000000'], NEW: ['stripes', '#FFFFFF', '#241F20'], UDI: ['stripes', '#FFFFFF', '#000000'],
+  ANG: ['stripes', '#FFFFFF', '#000000'], LSK: ['stripes', '#FFFFFF', '#000000'],
+  INT: ['stripes', '#010E80', '#000000'], ATA: ['stripes', '#1E71B8', '#000000'], CLB: ['stripes', '#0080C6', '#000000'],
+  MIL: ['stripes', '#FB090B', '#000000'], BOU: ['stripes', '#DA291C', '#000000'], NIC: ['stripes', '#C4161C', '#000000'],
+  ATM: ['stripes', '#FFFFFF', '#CB3524'], ATH: ['stripes', '#FFFFFF', '#EE2523'], SUN: ['stripes', '#FFFFFF', '#EB172B'],
+  BRE: ['stripes', '#FFFFFF', '#E30613'], PSV: ['stripes', '#FFFFFF', '#ED1C24'], MNZ: ['stripes', '#FFFFFF', '#E30613'],
+  FCP: ['stripes', '#FFFFFF', '#003C8F'], RSO: ['stripes', '#FFFFFF', '#0067B1'], RCD: ['stripes', '#FFFFFF', '#007FC8'],
+  ALA: ['stripes', '#FFFFFF', '#0761AF'], DEP: ['stripes', '#FFFFFF', '#1B5EA7'], BHA: ['stripes', '#FFFFFF', '#0057B8'],
+  BET: ['stripes', '#FFFFFF', '#0BB363'], SAS: ['stripes', '#000000', '#00A752'], CRY: ['stripes', '#C4122E', '#1B458F'],
+  BOL: ['stripes', '#A21C26', '#1A2F48'], FEN: ['stripes', '#163962', '#FFED00'], LEC: ['stripes', '#FFD400', '#D20F1E'],
+  HUL: ['stripes', '#F5A12D', '#000000'], SPO: ['hoops', '#FFFFFF', '#00805A'],
+  GEN: ['halves', '#BE1E2D', '#002D62'], CAG: ['halves', '#B41F37', '#002350'], GAL: ['halves', '#A90432', '#FDB912'],
+  FEY: ['halves', '#E30613', '#FFFFFF'], SLA: ['halves', '#FFFFFF', '#D7141A'], HAC: ['halves', '#80B4E3', '#00205B'],
+  RAY: ['sash', '#FFFFFF', '#E53027'], MON: ['diag', '#E7212C', '#FFFFFF'],
+  VFB: ['band', '#FFFFFF', '#E32219'], ELC: ['band', '#FFFFFF', '#05642C'], PSG: ['centre', '#004170', '#DA291C'],
+}

@@ -10,7 +10,8 @@
 // Drawn faces (Franchise's generated players, the generic silhouettes) aren't photos and are left alone.
 import INDEX from '../data/jersey-index.json'
 import { jerseySvg, svgUri } from './jerseyArt'
-import { jerseySvg as classicJersey, teamMarkSvg as classicMark } from './jerseyArtClassic'
+import { jerseySvg as classicJersey } from './jerseyArtClassic'
+import { teamBadgeSvg } from './teamBadge.js'
 import { numberFor } from './jerseyNumber'
 import { CLEAN } from './platform'
 
@@ -36,8 +37,9 @@ export function playerArt(key, folderHint, variant = 'auto', teamAs = null) {
   // (every jersey carries a number: lib/jerseyNumber.js picks one for his position when the index has none)
   return svgUri(jerseySvg({ league: lg, team, colors: colorsOf(lg, team), number: numberFor(key, pos, number, lg), pos, rank: +rank || 0, variant }))
 }
-// a team's mark: the slanted tag from before the redesign (owner 11-19: the flat chips read as rudimentary)
-const teamMark = classicMark
+// a team's mark: its badge (lib/teamBadge.js: an original crest per league in the team's colours and uniform stripes,
+// its abbreviation as the monogram; owner 11-27). A coach's carries HC on a plate.
+const teamMark = ({ league, team, colors, badge }) => teamBadgeSvg({ league, team, colors, chip: badge })
 
 // the build figure's red attribute cards keep the art from before the redesign (owner 11-19: he likes it there)
 const CLASSIC = '.cz-card'
