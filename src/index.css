@@ -17421,3 +17421,6 @@ html.ads-live-game [id^="pw-oop-bottom_rail"], html.ads-live-game [id^="pw-oop-l
   html.has-left-rail:not(.is-app) .ag-home,
   html.has-left-rail:not(.is-app) .ag-screen { left: var(--web-shift); }
 }
+/* a mini game keeps the left rail on wide desktops (lib/ads.js minigameOpen adds .mg-left; owner 11-27): every other unit stays hidden */
+html.ads-hidden.mg-left [id^="pw-oop-left_rail"],
+html.ads-hidden.mg-left [id^="pw-oop-left_rail"] * { display: block !important; }

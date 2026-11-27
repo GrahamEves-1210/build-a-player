@@ -392,8 +392,6 @@ function lookOf(key, base, pose) {
   return o
 }
 // (made on first use: dash.js and this file load each other's neighbours, so its SCOUT isn't there yet at load)
-const COACH_K = 1.76
-const coachOf = pose => lookOf('coach', { ...SCOUT, color: '#2a3540', skin: FOLK_SKIN[1], size: COACH_K }, pose)
 const counterOf = () => lookOf('counter', { ...SCOUT, skin: FOLK_SKIN[2], size: 1.3 }, null)
 const MATES = [276, 300, 324, 348], MATE_SKIN = [0, 3, 2, 4]
 
@@ -552,11 +550,7 @@ export function draw(ctx, g, view) {
   }
   ctx.restore()
 
-  // the man with the count, at the foot of the bench: his fist goes up for a big number and nothing else
-  const cy0 = F + 34 * U, ck = COACH_K
-  const cPose = verdict && big ? 'reach-r' : null
-  standAt(ctx, 324, cy0, coachOf(cPose))
-  clipboard(ctx, 324 + (cPose ? -8 : -7) * ck, cy0 + (cPose ? -17 : -19.5) * ck + 4, 1.3)
+  // (no man with a clipboard at the foot of the bench: he read as a little guy beside the lifter, owner 11-27)
 
   if (!quiet) g.dirt.draw(ctx, g.t, true)
   // the spotter, at him, as it slows

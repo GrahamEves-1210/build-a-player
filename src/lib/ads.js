@@ -276,10 +276,17 @@ export function minigameOpen({ url = true } = {}) {
     pageGen++
     const root = document.documentElement
     if (!root.classList.contains('ads-hidden')) { root.classList.add('ads-hidden'); hidHere = true }   // (the rail's room goes too)
+    // (the left rail stays on in a mini game, desktop ≥1500 only, never for ad-free players: it sits beside the game,
+    // owner 11-27. Everything else comes down)
+    const keepLeft = hidHere && wide(1500) && !noLeft && !liveGame
+    if (keepLeft) document.documentElement.classList.add('mg-left')
     Promise.resolve().then(() => serial(() => {
+      const slots = Object.entries(window.ramp?.settings?.slots ?? {})
+      const drop = slots.filter(([, sl]) => !(keepLeft && sl?.type === 'left_rail')).map(([name]) => name)
       let gone
-      try { gone = window.ramp.destroyUnits('all') } catch { gone = null }
+      try { gone = keepLeft ? (drop.length ? window.ramp.destroyUnits(drop) : null) : window.ramp.destroyUnits('all') } catch { gone = null }
       return Promise.resolve(gone).catch(() => {}).then(() => { const left = railSlots(); return left.length ? window.ramp.destroyUnits(left) : null })
+        .then(() => (keepLeft && !leftSlots().length && inGame ? window.ramp.spaAddAds([{ type: 'left_rail' }]) : null))
     }))
   }
   let closed = false
@@ -293,6 +300,7 @@ export function minigameOpen({ url = true } = {}) {
     adsBack = setTimeout(() => {
       if (games || !inGame) return
       inGame = false
+      document.documentElement.classList.remove('mg-left')
       const root = document.documentElement
       if (!hidHere) return   // an ad-free player: nothing to bring back
       hidHere = false
