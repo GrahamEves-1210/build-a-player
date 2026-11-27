@@ -64,10 +64,12 @@ function pattern(kind, look, u) {
     for (const c of look.b) { out.push(`<rect x="0" y="${f1(y)}" width="100" height="${f1(w)}" fill="${c}"/>`); y += w + gap }
   }
   if (kind === 'round') {
-    // the ball's seams, pressed into the field; and the team's own pattern
-    out.push(`<g fill="none" stroke="${shade(look.f, 0.62)}" stroke-width="1.6" opacity=".55"><path d="M8 50H92M50 8V92"/><path d="M22 18C34 34 34 66 22 82M78 18C66 34 66 66 78 82"/></g>`)
+    // the team's own pattern, then the ball's seams pressed into the field over it, so every roundel keeps its
+    // seams (owner 11-27: Portland's stripes had hidden them); on a black field the seams are a lighter grey, not
+    // a darker black that can't show (Portland, Brooklyn, Miami, San Antonio)
     if (look.k === 'pin') for (let x = 14; x < 90; x += 7) out.push(`<rect x="${x}" y="0" width="1.1" height="100" fill="${look.p}" opacity=".5"/>`)
     if (look.k === 'diag') for (let x = -40; x < 110; x += 13) out.push(`<path d="M${x} 100L${x + 50} 0H${x + 54}L${x + 4} 100Z" fill="${look.r}" opacity=".5"/>`)
+    out.push(`<g fill="none" stroke="${lum(look.f) < 0.03 ? mix(look.f, '#ffffff', 0.2) : shade(look.f, 0.62)}" stroke-width="1.6" opacity="${look.k ? 0.8 : 0.55}"><path d="M8 50H92M50 8V92"/><path d="M22 18C34 34 34 66 22 82M78 18C66 34 66 66 78 82"/></g>`)
   }
   if (kind === 'shield') {
     // a varsity chevron in the second colour, edged in the field's own shade
