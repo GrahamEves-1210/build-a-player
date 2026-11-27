@@ -4,7 +4,7 @@
 //
 // Messages are JSON, { t: type, ... }.
 //   device -> referee
-//     hello  { v (2: wire 2, below; none: wire 1), vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
+//     hello  { v (3: wire 3, 2: wire 2, below; none: wire 1), vid, name, pos: 'guard'|'big', build, look: { photo, faceCenter }, mode: '1v1'|'2v2'|'koth', humans, cpus }
 //                                                              take a seat (or take it back). The first one in sets the
 //                                                              mode; humans (dev): start before every seat has a person
 //     in     { k, mx, my, x, y, vx, vy, h, n: [a, b, m, st, jp], d: [[x, y, sp?], ...], rel: { sn, q } | null, sk, vk }
@@ -224,6 +224,40 @@ export function snapIn(m, hist) {
   BALL_F.forEach((f, j) => { b[f] = ball[j] })
   return { t: 's', k: m.k, ph: m.ph, pT: m.pT, po: m.po, pn: m.pn, cl: m.cl, sc: m.sc, gp: m.gp ? 1 : 0, w: m.w ?? null, nx: m.nx ?? null, call: m.call ?? null,
     kg: m.kg ?? null, si: m.si ?? -1, mc: m.mc ?? null, gn: m.gn, p: rows, b, e: m.e || [], a: m.a, st: m.st }
+}
+
+// ── wire 3 (2026-11-26): the other men nearly as they are now ──────────────────────────────────────────
+// A device that says hello with v: 3 gets wire 2's snapshots, and, the moment the referee hears another man's device,
+// that man's spot, his way and what his device has him doing, passed straight on (p): drawn only, never the game.
+// The referee still decides everything from its own ticks. His device sends every tick while he's moving (not every
+// other one), and the tick it draws the man with the ball at (vk) is what the referee rewinds to for a steal or a block.
+//   in (v 3) also { c: [act, actT, mv, bn, burst, hand, bdx, bdy, bs, sw, kind, three, read] }: how his device has him
+//                (sw: the swipes his device has shown; kind: his shot's, SHOT_KINDS, 0 none)
+//   p      { i, k, r, u, x, y, vx, vy, mx, my, c? }   man i's device said so (its message k); r: the referee's clock then (ticks,
+//          to the hundredth); u: about how long his message took to get to the referee (ms, half his round trip)
+export const WIRE3 = 3
+export const ACTS = ['free', 'gather', 'follow', 'jump', 'land', 'fake', 'frozen', 'down']
+export const SHOT_KINDS = [null, 'jumper', 'layup', 'dunk', 'hook', 'fade']
+const int = (v, lo, hi) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, Math.round(+v))) : lo)
+// the device: how it has its own man, for the others' screens
+export const cosOf = (p, sw) => [ACTS.indexOf(p.act), p.actT | 0, p.mv | 0, p.bn | 0, Math.round((p.burst || 0) * 100) / 100, p.hand || 1, r2(p.bdx || 0), r2(p.bdy || 0), r2(p.bs || 0), sw,
+  p.shot ? SHOT_KINDS.indexOf(p.shot.kind) : 0, p.shot?.three ? 1 : 0, p.shot?.read ?? 0]
+// the referee: what goes on to the others from man i's input m (only numbers that make sense; null: nothing to pass on)
+export function relayOf(i, m, r, u) {
+  if (!Number.isFinite(+m.x) || !Number.isFinite(+m.y)) return null
+  const o = { t: 'p', i, k: m.k, r: Math.round(r * 100) / 100, u: int(u, 0, 2000), x: r2(num(m.x, -5, 61)), y: r2(num(m.y, -5, 52)), vx: r2(num(m.vx, -30, 30)), vy: r2(num(m.vy, -30, 30)), mx: r2(num(m.mx, -1, 1)), my: r2(num(m.my, -1, 1)) }
+  const c = m.c
+  if (Array.isArray(c) && c.length >= 13) {
+    o.c = [int(c[0], 0, ACTS.length - 1), int(c[1], 0, 600), int(c[2], 0, 50), int(c[3], 0, 1e7), r2(num(c[4], 0, 200)), +c[5] < 0 ? -1 : 1, r2(num(c[6], -1, 1)), r2(num(c[7], -1, 1)), r2(num(c[8], -50, 50)),
+      int(c[9], 0, 1e7), int(c[10], 0, SHOT_KINDS.length - 1), c[11] ? 1 : 0, int(c[12], 0, 2)]
+  }
+  return o
+}
+// the device: man i as his own device has him (a relay's c), onto the state as it's drawn
+export function cosApply(p, c, ticks = 0) {
+  const act = ACTS[c[0]] ?? 'free'
+  p.act = act; p.actT = c[1] + ticks; p.mv = c[2]; p.bn = c[3]; p.burst = c[4]; p.hand = c[5]; p.bdx = c[6]; p.bdy = c[7]; p.bs = c[8]
+  return act
 }
 
 // what a release looks like on the wire: just the quality (the meter ran on the device)

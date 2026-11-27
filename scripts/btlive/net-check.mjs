@@ -9,7 +9,8 @@
 //   node_modules/.bin/esbuild scripts/btlive/net-check.mjs --bundle --platform=node --format=esm --outfile=/tmp/nc.mjs \
 //     --define:import.meta.env='{"DEV":false}' --loader:.json=json && node /tmp/nc.mjs
 import { BtLiveRoom } from '../../live/src/btlive.js'
-import { snapIn, snapOf, SEND_EVERY, WIRE, EVENT_KEEP, lerpAt } from '../../src/lib/btlive/proto.js'
+import { snapIn, snapOf, SEND_EVERY, WIRE, WIRE3, EVENT_KEEP, lerpAt } from '../../src/lib/btlive/proto.js'
+import { lagTicks } from '../../src/lib/btlive/lagcomp.js'
 
 let fails = 0
 const ok = (c, what) => { console.log(`${c ? 'ok  ' : 'FAIL'}  ${what}`); if (!c) fails++ }
@@ -111,6 +112,39 @@ for (const lastWire of [WIRE, null]) {
   ok(r.g.phase !== 'over' && dev[2].m.gn?.[r.seats.findIndex(x => x.vid === 'v0')], `${lastWire ? 'new' : 'old'} app: one QUIT, the game goes on and the others see him gone at once`)
   r.onMessage(ws[1], JSON.stringify({ t: 'quit' })); r.stop(); take()
   ok(r.g.phase === 'over' && dev[2].m.ph === 'over' && dev[2].final, `${lastWire ? 'new' : 'old'} app: the second QUIT ends it between ticks, and the last man's screen gets the final`)
+}
+
+// wire 3: a man's device speaks, and the referee passes his spot and what his device has him doing straight on to the
+// other wire 3 screens (never to his own, never to an older app), cleaned; and the tick his screen drew the man with
+// the ball at is what the referee rewinds to (capped), an older app keeping the round-trip rule
+{
+  const r = new BtLiveRoom(null, {})
+  const ws = [fakeWs(), fakeWs(), fakeWs(), fakeWs()], wires = [WIRE3, WIRE3, WIRE, null]
+  ws.forEach((w, i) => r.onMessage(w, JSON.stringify({ t: 'hello', ...(wires[i] ? { v: wires[i] } : {}), vid: `w${i}`, name: `P${i}`, pos: i % 2 ? 'big' : 'guard', build: {}, look: {}, mode: '2v2' })))
+  r.stop()
+  const g = r.g
+  while (g.phase !== 'live') r.tickOnce(Date.now())
+  const seatOf = vid => r.seats.findIndex(x => x.vid === vid)
+  ws.forEach(w => { w.got.length = 0 })
+  const a = seatOf('w0')
+  r.onMessage(ws[0], JSON.stringify({ t: 'in', k: 5, mx: 0.5, my: 0, x: 20.123, y: 900, vx: 99, vy: -3, h: 0, n: [0, 0, 0, 0, 0], sk: -1, vk: g.tick - 2,
+    c: [3, 4, 0, 0, 0, 1, 0, 0, 0, 2, 1, 0, 1] }))
+  const ps = ws.map(w => w.got.map(d => JSON.parse(d)).filter(m => m.t === 'p'))
+  const p = ps[1][0]
+  ok(ps[1].length === 1 && p.i === a && p.k === 5 && Number.isFinite(p.r), 'wire 3: his device speaks, the other wire 3 screen hears it at once (no tick waited for), with the referee\'s clock')
+  ok(!ps[0].length && !ps[2].length && !ps[3].length, '...never his own screen, a wire 2 screen or an old app')
+  ok(p.x === 20.12 && p.y === 52 && p.vx === 30 && p.vy === -3 && p.c?.[0] === 3 && p.c[9] === 2, `...cleaned: on the floor, a real speed, what his device has him doing (${JSON.stringify(p)})`)
+  r.onMessage(ws[0], JSON.stringify({ t: 'in', k: 4, x: 1, y: 1, n: [0, 0, 0, 0, 0] }))
+  ok(ws[1].got.map(d => JSON.parse(d)).filter(m => m.t === 'p').length === 1, '...an older message come late is not passed on')
+  r.tickOnce(Date.now())
+  const L = r.lag
+  const b = seatOf('w2')
+  if (L) {
+    ok(L.view[a] === 2 && lagTicks(L, a) === 2, `wire 3: the rewind is how far behind his screen had the man with the ball (${L.view[a]} ticks)`)
+    L.view[a] = 40
+    ok(lagTicks(L, a) === Math.round(150 / (1000 / 36)), '...never more than the cap (150 ms)')
+    ok(L.view[b] === -1, '...a wire 2 screen keeps the round-trip rule')
+  } else ok(false, 'the room keeps a lag history')
 }
 
 console.log(fails ? `\n${fails} FAILED` : '\nall ok')

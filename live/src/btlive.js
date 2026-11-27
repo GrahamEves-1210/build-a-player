@@ -30,7 +30,7 @@
 // Where the room is made: place.js (the queue's /init names a locationHint near its players).
 import { createGame, step, cpuInput, kothLeave, setLag, HZ, GUARD_KEYS, BIG_KEYS, MODES, modeKey } from '../../src/lib/btlive/index.js'
 import { lagNew, lagRtt, lagRecord } from '../../src/lib/btlive/lagcomp.js'
-import { seatNew, seatMsg, seatInput, snapOf, snapOf2, snapRows, SEND_EVERY, EVENT_KEEP, AWAY_MS, WIRE, SNAP_KEEP } from '../../src/lib/btlive/proto.js'
+import { seatNew, seatMsg, seatInput, snapOf, snapOf2, snapRows, relayOf, SEND_EVERY, EVENT_KEEP, AWAY_MS, WIRE, WIRE3, SNAP_KEEP } from '../../src/lib/btlive/proto.js'
 import { NBA_GUARD_PLAYERS } from '../../src/data/nba-guards.js'
 import { NBA_BIG_PLAYERS } from '../../src/data/nba-bigs.js'
 import { blacktopDelta } from '../../src/lib/rating.js'
@@ -184,7 +184,7 @@ export class BtLiveRoom {
     // the answer to the room's own probe (sp, below): the round trip as the room times it, what the rewind goes by.
     // An older app answers neither (no r, no spr): no rewind, the game as it was
     if (m.t === 'spr' && st && Number.isFinite(m.c) && m.c > 0 && m.c <= now) { st.rttOwn = true; this.rtt(st, Math.max(1, now - m.c)); return }
-    if (m.t === 'in' && st) { seatMsg(st.seat, m, now); return }
+    if (m.t === 'in' && st) { if (seatMsg(st.seat, m, now)) this.relay(ws, st, m, now); return }
     if (m.t === 'start' && !this.made && !this.g && this.seats.some(x => x.vid)) return this.begin()
     // a queue's game: he quit (QUIT on his device): out of it at once, the others play on (1v1 / 2v2: the CPU takes his
     // man; a side with nobody left on it has lost)
@@ -211,7 +211,7 @@ export class BtLiveRoom {
   }
   hello(ws, m) {
     const vid = str(m.vid, 64); if (!vid) return
-    ws.wire = m.v === WIRE ? WIRE : 1               // (wire 2: a snapshot every tick, each his own: broadcast)
+    ws.wire = m.v === WIRE3 ? WIRE3 : m.v === WIRE ? WIRE : 1   // (wire 2: a snapshot every tick, each his own: broadcast; 3: and relay)
     if (this.made) {
       // a queue's room: only its three, each with the key he queued with; his build, name and look are already here
       const st = this.seats.find(x => x.vid === vid)
@@ -329,6 +329,8 @@ export class BtLiveRoom {
       if (x.vid && !x.out) x.awayT = (x.awayT ?? 0) + 1
       return cpuInput(g, i, CPU_LEVEL)
     })
+    // (wire 3: the rewind for a man is how far behind his screen had the man with the ball, as it said: lagcomp.js)
+    if (L) this.seats.forEach((x, i) => { L.view[i] = x.ws?.wire === WIRE3 && x.seat.vk != null ? Math.max(0, g.tick - x.seat.vk) : -1 })
     step(g, inputs)
     if (L) lagRecord(L, g)
     // a queue's game: a man whose line has been gone 20 s in all has left it (the other two play it out)
@@ -368,6 +370,19 @@ export class BtLiveRoom {
     await bookVs(this.env, people.map(p => ({ uid: p.x.uid, result: out(p) ? 'forfeit' : won(p) ? 'win' : 'loss', position: p.x.pos, match_type: this.mode })))
     if (Object.keys(ratings).length) for (const [w] of this.conns) send(w, { t: 'rated', ratings })
   }
+  // wire 3: a man's device just spoke; his spot and what it has him doing go straight on to the other screens (drawn
+  // only: the game is the ticks'). r: the referee's clock now, u: about how long his message took
+  relay(from, st, m, now) {
+    const g = this.g
+    if (!g || g.phase !== 'live') return
+    let j = null
+    for (const [w] of this.conns) {
+      if (w === from || w.wire !== WIRE3) continue
+      j ??= JSON.stringify(relayOf(this.seats.indexOf(st), m, (now - this.t0) / STEP_MS, (st.rtt || 0) / 2))
+      if (j === 'null') return
+      try { w.send(j) } catch {}
+    }
+  }
   // ── the snapshots (proto.js): wire 2 every tick, each device's own (written against the newest one his device has
   // said it has); wire 1 (an old app) every SEND_EVERY ticks, one for all (old: this tick is one of those)
   broadcast(old = true) {
@@ -375,7 +390,7 @@ export class BtLiveRoom {
     if (this.histSeed !== this.seed) { this.hist = new Map(); this.histSeed = this.seed }
     let cur = this.hist.get(g.tick), one = null
     for (const [w, vid] of this.conns) {
-      if (w.wire === WIRE) {
+      if (w.wire >= WIRE) {
         // (a tick's rows are kept as first sent: a device that has that tick has those)
         if (!cur) {
           cur = snapRows(g, this.evq); this.hist.set(g.tick, cur)
