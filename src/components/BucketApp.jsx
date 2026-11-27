@@ -1261,7 +1261,8 @@ export default function BucketApp() {
     sandboxTainted.current = isBucketCustomMode
     // a reset starts the build over in the same mode: a Career or Squad build stays one
     // (it dropped to 'game', so the finished build offered a plain season, not the draft)
-    setPage(p => (p === 'career-build' || p === 'squad-build' ? p : 'game'))
+    // (and a Franchise build: Reset dropped it into the regular build, player report 11-27)
+    setPage(p => (p === 'career-build' || p === 'squad-build' || p === 'nbafranchise-build' ? p : 'game'))
     window.scrollTo({ top: 0, behavior: 'instant' })
     document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
