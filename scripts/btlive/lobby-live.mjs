@@ -1,4 +1,4 @@
-// BLACKTOP 1V1 / 2V2 online, played live, end to end against a real worker (wrangler dev, workerd): scripted
+// BLACKTOP 1V1 / 2V2 / KING OF THE HILL online, played live, end to end against a real worker (wrangler dev, workerd): scripted
 // players take the lobby's spots, spin their builds from their seats' own seeded spins (as the build page does), send
 // them, and when the room hands the game to Blacktop Live (final.live) each one plays it on the referee with a bot
 // (the CPU's own brain, cpuInput, on his copy of the state, applySnap: the inputs go up as a device's would). The
@@ -6,7 +6,7 @@
 // record a player, a forfeit for a man who quit.
 //   node scripts/btlive/lobby-live.mjs --stub=8824                     (prints the wrangler line to run)
 //   cd live && npx wrangler dev --port 8823 --var SUPABASE_URL:http://127.0.0.1:8824 --var SUPABASE_SERVICE_ROLE_KEY:svc
-//   node scripts/btlive/lobby-live.mjs --server=ws://127.0.0.1:8823 --stub=8824 --size=1 [--quit]
+//   node scripts/btlive/lobby-live.mjs --server=ws://127.0.0.1:8823 --stub=8824 --size=1|2|koth [--quit]
 import { createServer as viteServer } from 'vite'
 import http from 'node:http'
 import assert from 'node:assert/strict'
