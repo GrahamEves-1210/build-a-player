@@ -21,7 +21,7 @@ const SLUG = {
   splash: 'home', leaderboard: 'home', profile: 'profile',   // (Home, Daily, Shop and Ranks are all /home: owner 11-27)
   game: 'build', sim: 'simulate', salarycap: 'salary-cap', 'soon-salary': 'salary-cap', 'depth-chart': 'depth-chart',
   squad: 'squad', 'squad-build': 'squad/spin',
-  career: 'career', 'career-intro': 'career', 'career-build': 'career/spin',   // (the save slots are /career too: owner 11-27)
+  career: 'career', 'career-intro': 'career/saves', 'career-build': 'career/spin',
   franchise: 'franchise', 'franchise-build': 'franchise/spin', nbafranchise: 'franchise', 'nbafranchise-build': 'franchise/spin',
   cfb: 'college', cbb: 'college', auction: 'auction',
   blacktop: 'blacktop', 'blacktop-build': 'blacktop/spin', 'blacktop-game': 'blacktop/game', 'pvp-leaderboard': 'blacktop/ranks',
@@ -38,7 +38,7 @@ const SPORT_PAGE = {
   nfl: { college: 'cfb' },
 }
 // the addresses from before (and the plain ones people type)
-const ALIAS = { 'career/saves': 'career-intro', '': 'splash', ranks: 'leaderboard', leaderboard: 'leaderboard', simulate: 'sim', salary: 'salarycap', 'squad-build': 'squad-build', 'career-build': 'career-build' }
+const ALIAS = { '': 'splash', ranks: 'leaderboard', leaderboard: 'leaderboard', simulate: 'sim', salary: 'salarycap', 'squad-build': 'squad-build', 'career-build': 'career-build' }
 
 // The five dock pages, Depth Chart and Career (its hub and saves, not its spin: the rail would sit on the spin) run
 // the left rail (lib/ads.js DOCK_UNITS); every other page runs the corner video and the bottom rail
