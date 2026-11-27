@@ -22,7 +22,7 @@ const url = v => `${VITE}/bucket?btlive=1&btserver=${encodeURIComponent(WS)}&btr
 // the bot, on each page: plays (drives at the rim and shoots, flicks moves; on defense stays between his man and the
 // rim, swipes at varied distances, goes up at the release he sees) and writes down what it saw
 const BOT = `(() => {
-  const R = { own: [], drawn: [], snaps: 0, frames: 0, lat: { shot: [], move: [], steal: [], jump: [] }, taps: [], jumps: [], rels: [], b0: null, t0: 0, rk: [] }
+  const R = { mine: [], seen: [], own: [], drawn: [], snaps: 0, frames: 0, lat: { shot: [], move: [], steal: [], jump: [] }, taps: [], jumps: [], rels: [], b0: null, t0: 0, rk: [] }
   const reach = 3.9
   let lastTap = -1e9, lastFlick = -1e9, shootAt = 0, upAt = 0, jumpedFor = new Set(), pend = [], lastDraw = null, lastT = 0, lastSq = 0, wasLive = false
   const rim = { x: 28, y: 5.25 }
@@ -31,15 +31,23 @@ const BOT = `(() => {
     if (!eng || !eng.online) return requestAnimationFrame(frame)
     const s = eng.state, me = eng.me, o = 1 - me, P = s.players, p = P[me], q = P[o], now = performance.now(), wall = performance.timeOrigin + now
     const net = window.__btnet
-    if (!R.b0 && s.phase === 'live') { R.b0 = { bin: net.stats.bin, bout: net.stats.bout }; R.t0 = now }
+    if (!R.b0 && s.phase === 'live') { R.b0 = { bin: net.stats.bin, bout: net.stats.bout }; R.s0 = net.stats.sent; R.t0 = now }
     const dr = eng.drawn, live = s.phase === 'live'
     R.frames++
     R.own.push([wall, p.x, p.y]); R.drawn.push([wall, dr[o][0], dr[o][1]])
     const ni = eng.netInfo
     if (ni.rk != null && ni.k >= 0) R.rk.push(ni.k - ni.rk)
-    if (lastDraw && live && wasLive) { const d = Math.hypot(dr[o][0] - lastDraw[0], dr[o][1] - lastDraw[1]); if (d > 0.6 + 35 * (now - lastT) / 1000) R.snaps++ }
+    if (lastDraw && live && wasLive) { const d = Math.hypot(dr[o][0] - lastDraw[0], dr[o][1] - lastDraw[1]); if (d > 0.6 + 35 * (now - lastT) / 1000) { R.snaps++; (R.snapLog ??= []).push({ d: +d.toFixed(2), dt: Math.round(now - lastT), act: q.act, ph: s.phase, near: eng.near, ball: s.ball.st }) } }
     lastDraw = [dr[o][0], dr[o][1]]; lastT = now; wasLive = live
     // what was pressed, till his own screen shows it
+    {
+      const q = P[o], sw = eng.anim?.[o]?.swipe
+      if (sw && sw !== R.oSw) R.seen.push(['steal', wall]); R.oSw = sw
+      if (q.act === 'jump' && R.oAct !== 'jump') R.seen.push(['jump', wall])
+      if (q.act === 'gather' && R.oAct !== 'gather') R.seen.push(['shot', wall])
+      R.oAct = q.act
+      if (q.burst > 0 && !(R.oBu > 0)) R.seen.push(['move', wall]); R.oBu = q.burst
+    }
     for (const x of pend.splice(0)) { if (x.done()) R.lat[x.k].push(now - x.t); else if (now - x.t < 1500) pend.push(x) }
     // what the referee said happened, as it comes in
     for (const e of eng.evlog) {
@@ -65,8 +73,8 @@ const BOT = `(() => {
         const dx = rim.x - p.x, dy = rim.y - p.y, d = Math.hypot(dx, dy) || 1
         const w = Math.sin(now / 500) * 0.7
         eng.stick(dx / d - dy / d * w, dy / d + dx / d * w)
-        if (now - lastFlick > 1300 && p.act === 'free' && d > 12) { lastFlick = now; const a = Math.random() * 6.283; eng.flick(Math.cos(a), Math.sin(a)); const b0 = p.burst; pend.push({ k: 'move', t: now, done: () => eng.state.players[me].burst > 0 }) }
-        if (!shootAt && p.act === 'free' && d < 16 && now - lastFlick > 500 && Math.random() < 0.02) { shootAt = now; eng.press('a', true); pend.push({ k: 'shot', t: now, done: () => eng.state.players[me].act === 'gather' }) }
+        if (now - lastFlick > 1300 && p.act === 'free' && d > 12) { lastFlick = now; const a = Math.random() * 6.283; eng.flick(Math.cos(a), Math.sin(a)); R.mine.push(['move', wall]); const b0 = p.burst; pend.push({ k: 'move', t: now, done: () => eng.state.players[me].burst > 0 }) }
+        if (!shootAt && p.act === 'free' && d < 16 && now - lastFlick > 500 && Math.random() < 0.02) { shootAt = now; eng.press('a', true); R.mine.push(['shot', wall]); pend.push({ k: 'shot', t: now, done: () => eng.state.players[me].act === 'gather' }) }
       } else if (def) {
         const hx = dr[o][0], hy = dr[o][1]
         const tx = hx + (rim.x - hx) * 0.18, ty = hy + (rim.y - hy) * 0.18
@@ -77,12 +85,12 @@ const BOT = `(() => {
           lastTap = now
           const sw = eng.anim?.[me]?.swipe
           R.taps.push({ t: now, seen, srv: null })
-          eng.right(0, 1)
+          eng.right(0, 1); R.mine.push(['steal', wall])
           pend.push({ k: 'steal', t: now, done: () => { const a = eng.anim?.[me]?.swipe; return !!a && a !== sw } })
         }
         // up the moment the release shows on his screen (the render reaches the release's tick)
         for (const r of R.rels) if (!jumpedFor.has(r.k) && ni.rk >= r.k && ni.rk - r.k < 6 && p.act === 'free' && !upAt) {
-          jumpedFor.add(r.k); upAt = now; eng.press('a', true); R.jumps.push({ rel: r.k, srvK: null, seen: Math.hypot(p.x - hx, p.y - hy) })
+          jumpedFor.add(r.k); upAt = now; eng.press('a', true); R.mine.push(['jump', wall]); R.jumps.push({ rel: r.k, srvK: null, seen: Math.hypot(p.x - hx, p.y - hy) })
           pend.push({ k: 'jump', t: now, done: () => eng.state.players[me].act === 'jump' })
         }
       } else eng.stick(0, 0)
@@ -93,7 +101,7 @@ const BOT = `(() => {
   }
   requestAnimationFrame(frame)
   window.__botR = R
-  window.__botDone = () => { const n = window.__btnet, secs = (performance.now() - R.t0) / 1000; return { ...R, secs, perf: window.__btlive.perf(), bin: (n.stats.bin - R.b0.bin) / secs, bout: (n.stats.bout - R.b0.bout) / secs, rtt: n.stats.rtt } }
+  window.__botDone = () => { const n = window.__btnet, secs = (performance.now() - R.t0) / 1000; return { ...R, sentRate: (n.stats.sent - R.s0) / secs, secs, perf: window.__btlive.perf(), bin: (n.stats.bin - R.b0.bin) / secs, bout: (n.stats.bout - R.b0.bout) / secs, rtt: n.stats.rtt } }
 })()`
 
 const pages = []
@@ -113,6 +121,7 @@ while (Date.now() - t0 < SECS * 1000) {
   if (SHOTS) for (let i = 0; i < pages.length; i++) writeFileSync(`${SHOTS}/p${i}-${String(n).padStart(2, '0')}.jpg`, await pages[i].screenshot(null, 'jpeg'))
   n++
 }
+const errs = pages.map(c => c.errors.slice(0, 3))
 const res = await Promise.all(pages.map(c => c.evaluate('window.__botDone()')))
 for (const c of pages) await c.close()
 
@@ -136,13 +145,41 @@ const b0 = behind(res[0].own, res[1].drawn), b1 = behind(res[1].own, res[0].draw
 out.behindMs = [b0?.tau, b1?.tau]; out.fitErrFt = [b0?.err?.toFixed(2), b1?.err?.toFixed(2)]
 out.renderLagTicks = res.map(r => med(r.rk.map(x => x * 100)) / 100)
 const frames = res.reduce((a, r) => a + r.frames, 0), snaps = res.reduce((a, r) => a + r.snaps, 0)
+out.snapLog = res.map(r => r.snapLog ?? []).flat().slice(0, 8)
 out.snaps = `${snaps} in ${frames} frames (${(snaps / (frames / 60) * 60).toFixed(1)} a minute)`
 const taps = res.flatMap(r => r.taps).filter(t => t.srv != null)
 const seenIn = taps.filter(t => t.seen <= 3.9)
 out.steals = `${seenIn.filter(t => t.srv <= 3.9).length}/${seenIn.length} looked in reach and were; ${taps.filter(t => t.seen > 3.9 && t.srv <= 3.9).length}/${taps.filter(t => t.seen > 3.9).length} looked out and weren't; mean |seen-referee| ${(taps.reduce((a, t) => a + Math.abs(t.seen - t.srv), 0) / (taps.length || 1)).toFixed(2)} ft`
 const jumps = res.flatMap(r => r.jumps).filter(j => j.srvK != null)
 out.blocks = `${jumps.filter(j => j.srvK - j.rel <= 5).length}/${jumps.length} up in time on the referee (median ${med(jumps.map(j => j.srvK - j.rel))} ticks after the release, window 5)`
+// the other man's press to it showing on this screen: each press on one page, the first showing of the same kind on
+// the other page after it (within 1 s)
+const shown = {}
+for (const [a, b] of [[0, 1], [1, 0]]) for (const [kind, t] of res[a].mine) {
+  const hit = res[b].seen.find(([k2, t2]) => k2 === kind && t2 >= t && t2 - t < 1000)
+  if (hit) (shown[kind] ??= []).push(hit[1] - t)
+}
+out.oppInputShown = Object.fromEntries(Object.entries(shown).map(([k, v]) => [k, `${med(v)} ms (p95 ${p95(v)}, n ${v.length})`]))
+// the visual error: where this page draws the other man against where he is on his own device at the same moment;
+// all frames, and the worst in the 400 ms after each sharp change of direction (over 100 degrees within 150 ms, moving)
+function visErr(own, drawn) {
+  const at = (arr, t) => { let lo = 0, hi = arr.length - 1; if (t <= arr[0][0] || t >= arr[hi][0]) return null; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (arr[m][0] <= t) lo = m; else hi = m } const a = arr[lo], b = arr[hi], f = (t - a[0]) / (b[0] - a[0] || 1); return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f] }
+  const errs = drawn.map(d => { const q = at(own, d[0]); return q ? [d[0], Math.hypot(q[0] - d[1], q[1] - d[2])] : null }).filter(Boolean)
+  const turns = []
+  for (let i = 10; i < own.length - 10; i += 3) {
+    const a = own[i - 9], b = own[i], c = own[Math.min(own.length - 1, i + 9)]
+    const v1 = [b[1] - a[1], b[2] - a[2]], v2 = [c[1] - b[1], c[2] - b[2]], l1 = Math.hypot(...v1), l2 = Math.hypot(...v2)
+    if (l1 < 0.6 || l2 < 0.6 || c[0] - a[0] > 400) continue
+    if ((v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2) < -0.17 && (!turns.length || b[0] - turns.at(-1) > 500)) turns.push(b[0])
+  }
+  const peak = turns.map(t => Math.max(0, ...errs.filter(e => e[0] >= t && e[0] <= t + 400).map(e => e[1])))
+  const mean = errs.reduce((x, e) => x + e[1], 0) / (errs.length || 1)
+  return { mean: +mean.toFixed(2), turnPeak: peak.length ? +(peak.reduce((x, y) => x + y, 0) / peak.length).toFixed(2) : null, turns: peak.length }
+}
+out.visualErrFt = [visErr(res[0].own, res[1].drawn), visErr(res[1].own, res[0].drawn)]
 out.bytesPerSec = { down: res.map(r => Math.round(r.bin)), up: res.map(r => Math.round(r.bout)) }
+out.msgsUpPerSec = res.map(r => Math.round(r.sentRate))
 out.rtt = res.map(r => r.rtt)
+if (errs.some(e => e.length)) out.pageErrors = errs
 out.fps = res.map(r => Math.round(r.frames / r.secs)); out.frameWorkMs = res.map(r => r.perf.workAvg)
 console.log(JSON.stringify(out, null, 1))

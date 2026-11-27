@@ -17,6 +17,9 @@
 //   - a block: the defender's jump is judged at the point he was into it when he saw the release (his time in the air
 //     + the rewind), and a man who goes up just after the release has the rewind added to that window (T.blockAfter);
 //   - the CPU, and a seat whose device is quiet (the CPU plays it), get no rewind.
+//   - wire 3 (2026-11-26): a screen that draws the others nearly as they are now says which of the referee's ticks it
+//     had the man with the ball at (vk, proto.js); the rewind is then how far that is behind (view), the same cap,
+//     and a screen drawing him as he is now gets none.
 // It can't help a defender who was late on his own screen: the rewind is never more than his screen was behind, so
 // the handler is judged where he was at the earliest when the defender saw him, never earlier.
 import { HZ } from './tune.js'
@@ -30,7 +33,7 @@ const SMOOTH = 0.25              // each new round trip moves the estimate this 
 // one per game: the history ring, each man's last action and his smoothed round trip
 export function lagNew(n) {
   return { n, tick: new Int32Array(KEEP).fill(-1), pos: new Float64Array(KEEP * n * F), since: new Int32Array(n).fill(-1e9),
-    prev: Array.from({ length: n }, () => ({ act: null, mv: 0, hand: 0, burst: 0, has: false })), rtt: new Float64Array(n), on: new Uint8Array(n), phase: null, poss: null }
+    prev: Array.from({ length: n }, () => ({ act: null, mv: 0, hand: 0, burst: 0, has: false })), rtt: new Float64Array(n), on: new Uint8Array(n), view: new Int32Array(n).fill(-1), phase: null, poss: null }
 }
 // a round trip his device measured (ms): smoothed, a wild one (a hitch) only moves it part of the way
 export function lagRtt(L, i, ms) {
@@ -38,7 +41,12 @@ export function lagRtt(L, i, ms) {
   L.rtt[i] = L.rtt[i] ? L.rtt[i] + SMOOTH * (Math.min(ms, L.rtt[i] * 3 + 100) - L.rtt[i]) : ms
 }
 // how many ticks the referee rewinds for defender i (0: the CPU, a quiet seat, no round trip known)
-export const lagTicks = (L, i) => (L && L.on[i] && L.rtt[i] > 0 ? Math.round(Math.min(LAG_CAP_MS, L.rtt[i]) / STEP_MS) : 0)
+// (view: wire 3, the ticks his screen was behind when it last spoke; -1 not known)
+export const lagTicks = (L, i) => {
+  if (!L || !L.on[i]) return 0
+  if (L.view[i] >= 0) return Math.min(Math.round(LAG_CAP_MS / STEP_MS), L.view[i])
+  return L.rtt[i] > 0 ? Math.round(Math.min(LAG_CAP_MS, L.rtt[i]) / STEP_MS) : 0
+}
 
 // after every step: every man's spot this tick, and the tick of each one's last action
 export function lagRecord(L, s) {

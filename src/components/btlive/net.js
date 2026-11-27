@@ -4,7 +4,7 @@
 //   ?btserver=ws://localhost:8787   the referee (wrangler dev); never the deployed worker from here
 //   &btroom=TEST01                  the room code
 //   &btlag=150-400&btjit=60&btdrop=0.05   the harness (one way, each direction)
-import { WIRE } from '../../lib/btlive/proto.js'
+import { WIRE3 } from '../../lib/btlive/proto.js'
 
 export function openNet({ server, room, hello, lag = null, onMsg, onState }) {
   const L = lag || { lo: 0, hi: 0, jit: 0, drop: 0 }
@@ -13,11 +13,11 @@ export function openNet({ server, room, hello, lag = null, onMsg, onState }) {
   const stats = { sent: 0, got: 0, dropped: 0, rtt: 0, open: false, bin: 0, bout: 0 }   // (bin, bout: bytes heard and sent)
   const net = { stats, send, close, hello }
   // a message only gets dropped if it can be: inputs and snapshots carry everything since the last one; a hello can't
-  const droppable = t => t === 'in' || t === 's'
+  const droppable = t => t === 'in' || t === 's' || t === 'p'
   function connect() {
     if (dead) return
     const me = ws = new WebSocket(`${server.replace(/\/$/, '')}/btlive/room/${room}`)
-    me.onopen = () => { if (ws !== me) return; tries = 0; heard = performance.now(); stats.open = true; onState?.('open'); raw({ t: 'hello', v: WIRE, ...net.hello }) }
+    me.onopen = () => { if (ws !== me) return; tries = 0; heard = performance.now(); stats.open = true; onState?.('open'); raw({ t: 'hello', v: WIRE3, ...net.hello }) }
     me.onmessage = e => {
       if (ws !== me) return
       heard = performance.now(); stats.bin += e.data.length || 0
