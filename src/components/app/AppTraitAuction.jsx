@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { usePresence, fmtCount } from '../../lib/presence'
 import { useLiveCounts, searching } from '../../lib/liveCounts'
 import { XpIco } from './GainIcons'
@@ -83,11 +83,21 @@ export default function AppTraitAuction({ au, sport, onHome }) {
   const waiting = useLiveCounts(!live)
   const isBucket = sport === 'bucket'
   const sportKey = isBucket ? 'bucket' : sport === 'soccer' ? 'soccer' : 'nfl'
-  const sportName = { bucket: 'BASKETBALL', soccer: 'SOCCER', nfl: 'FOOTBALL' }[sportKey]
+  // the college auction (owner 11-27): College Football's or College Basketball's pools, its own queue; joined from
+  // its own button under FIND AN AUCTION. In it (queue, room, results) the screens wear the college accent
+  const collegeKey = { nfl: 'cfb', bucket: 'cbb' }[sportKey] ?? null
+  const isCollege = live && (au.kit.sport === 'cfb' || au.kit.sport === 'cbb')
+  const sportName = isCollege ? (au.kit.sport === 'cbb' ? 'COLLEGE BASKETBALL' : 'COLLEGE FOOTBALL') : { bucket: 'BASKETBALL', soccer: 'SOCCER', nfl: 'FOOTBALL' }[sportKey]
+  const [joining, setJoining] = useState(false)
+  const joinCollege = () => {
+    if (!collegeKey || joining) return
+    setJoining(true); sfx('tap')
+    import('../../lib/collegeAuctionUi').then(() => au.join(collegeKey)).finally(() => setJoining(false))
+  }
   // one queue a sport: the room draws the position (lib/auctionCore auctionPosFor); known once the room's open
   const positions = POS_INFO[sportKey]
   // (shown once the first card's up: before that the room is drawing it, AppAuction PosReveal)
-  const roomPos = au.match?.pos && au.st?.n > 0 ? posInfo(sportKey, au.match.pos) : null
+  const roomPos = au.match?.pos && au.st?.n > 0 ? posInfo(au.kit.sport, au.match.pos) : null
   const posName = roomPos?.tag ?? ''
   const prog = useProgress()
 
@@ -113,15 +123,17 @@ export default function AppTraitAuction({ au, sport, onHome }) {
   // same header; the body is the room filling (QueueBody)
   const inQueue = au.phase === 'queue'
   const nSearching = searching(waiting, `au:${sportKey}-${AUCTION_ANY}`)
+  const nCollege = collegeKey ? searching(waiting, `au:${collegeKey}-${AUCTION_ANY}`) : null
   if ((!live || inQueue) && au.phase !== 'busy') {
     return (
-      <div className={`ag-screen cp au-screen au-hub cp--${sportKey}${inQueue ? ' is-queue' : ''}`}>
+      <div className={`ag-screen cp au-screen au-hub cp--${sportKey}${inQueue ? ' is-queue' : ''}${isCollege ? ' is-college' : ''}`}>
         <header className="au-hub-stage">
           <div className="au-hub-in">
             <div className="au-hub-top">
-              <span className="au-hub-eyebrow">{sportName} · ONLINE · 2–3 PLAYERS</span>
+              <span className="au-hub-eyebrow">{isCollege ? `${sportName} · LEGENDS` : `${sportName} · ONLINE · 2–3 PLAYERS`}</span>
               <button className="ag-round-btn au-hub-x" onClick={() => { if (inQueue) au.leave(); onHome() }} aria-label="Home"><IconClose size={16} /></button>
             </div>
+            {isCollege && <span className="au-varsity" aria-hidden="true">COLLEGE</span>}
             <h1 className="au-hub-title">Trait{' '}<br />Auction</h1>
             <div className="au-hub-foot">
               {here > 0 && <span className="au-hub-on"><i aria-hidden="true" /><b>{fmtCount(here)}</b>PLAYING</span>}
@@ -149,7 +161,14 @@ export default function AppTraitAuction({ au, sport, onHome }) {
             </div>
             {/* how many are in the sport's queue right now, as Blacktop's hub shows it over each mode (hidden at none) */}
             {nSearching && <span className="au-hub-n"><i aria-hidden="true" />{nSearching} SEARCHING</span>}
-            <button className="ag-btn au-hub-go" onClick={() => au.join()}>FIND AN AUCTION <IconArrow size={18} /></button>
+            <button className="ag-btn au-hub-go" onClick={() => au.join(sportKey)}>FIND AN AUCTION <IconArrow size={18} /></button>
+            {/* the college auction: its own queue and count, a step down from the main button, in the college accent */}
+            {collegeKey && (
+              <div className="au-hub-col">
+                {nCollege && <span className="au-hub-n"><i aria-hidden="true" />{nCollege} SEARCHING</span>}
+                <button className="ag-btn au-hub-college" onClick={joinCollege} disabled={joining}><span className="au-varsity au-varsity--sm">COLLEGE</span>FIND A COLLEGE AUCTION <IconArrow size={16} /></button>
+              </div>
+            )}
             <AuctionRecord />
           </div>
           <div className="au-hub-side">
@@ -173,9 +192,9 @@ export default function AppTraitAuction({ au, sport, onHome }) {
   }
 
   return (
-    <div className={`ag-screen cp au-screen cp--${sportKey}${au.phase === 'auction' || au.phase === 'result' ? ' is-live' : ''}`}>
+    <div className={`ag-screen cp au-screen cp--${sportKey}${au.phase === 'auction' || au.phase === 'result' ? ' is-live' : ''}${isCollege ? ' is-college' : ''}`}>
       <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{sportName}{roomPos ? ` · ${roomPos.tag}` : ''}</span><h1 className="ag-h1">Trait Auction</h1></div>
+        <div><span className="ag-eyebrow">{sportName}{roomPos ? ` · ${roomPos.tag}` : ''}</span><h1 className="ag-h1">{isCollege && <span className="au-varsity au-varsity--sm">COLLEGE</span>}Trait Auction</h1></div>
         <button className="ag-round-btn" onClick={() => guardLeave(() => { if (au.phase === 'queue') au.leave(); onHome() })} aria-label="Home"><IconClose size={16} /></button>
       </div>
       {body}

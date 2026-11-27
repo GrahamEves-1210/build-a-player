@@ -16,7 +16,8 @@ import {
   AUCTION_POS, AUCTION_ANY, auctionPosFor, auctionCoreKit, freshLedger, canTop, minNext, maxBid, auctionOver, pickLot, takeLot, returnLot,
   finishedEarly, markCloser, stillBuilding, drawFor, applyDraw, rankAuction, lotEnd, spinOf,
 } from '../../src/lib/auctionCore.js'
-import '../../src/lib/soccerAuction.js'   // soccer's kit (the striker): added to the rules above
+import '../../src/lib/soccerAuction.js'
+import '../../src/lib/collegeAuction.js'   // college football and basketball's kits ('cfb', 'cbb')   // soccer's kit (the striker): added to the rules above
 import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
 import { competeDelta } from '../../src/lib/rating.js'
 import { bookRatings } from './rating.js'
