@@ -674,9 +674,12 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         <HudOnce user={user} />
         <div className="ag-brand">
           <img src="/bap-mark.webp" alt="" className="ag-brand-mark" draggable={false} />
-          <div className="ag-wordmark">
-            <Wordmark tail={isBucket ? <><i className="wm-cb">B</i><HoopU />CKET</> : null} />
-          </div>
+          {/* (the app: no text wordmark on Home, the mark in the bar is enough: owner 11-27) */}
+          {!IS_APP && (
+            <div className="ag-wordmark">
+              <Wordmark tail={isBucket ? <><i className="wm-cb">B</i><HoopU />CKET</> : null} />
+            </div>
+          )}
         </div>
 
         <div className="ag-sport-wrap">

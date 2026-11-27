@@ -8693,3 +8693,9 @@ button.au-paddle:focus-visible { outline: 2px solid var(--au-amber); outline-off
 .ag-btn.au-hub-college svg { color: #d9b44a; }
 @media (hover: hover) { .ag-btn.au-hub-college:hover { background: #1e2b47; } }
 .ag-btn.au-hub-college:disabled { opacity: .6; }
+/* the app's Home (owner 11-27): no wordmark, so the BAP mark is the logo: bigger, and the sport picker comes up under it */
+@media (max-width: 520px) {
+  html.is-app .ag-home .ag-brand .ag-brand-mark { height: 58px !important; top: 2px; }
+  html.is-app .ag-home .ag-brand { min-height: 0; margin: 0; padding: 0; gap: 0; }
+  html.is-app .ag-home .ag-sport-wrap { margin-top: -6px; }
+}
