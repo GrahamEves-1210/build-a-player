@@ -5,7 +5,10 @@ import { XpIco } from './GainIcons'
 import { COMPETE_REWARDS, useProgress } from '../../lib/progress'
 import { IconClose, IconArrow } from './icons'
 import { Form, TierChip } from './OnlineRecord'
-import { AUCTION_SIZE, BUDGET, AUCTION_ANY, auctionKit, POS_INFO, posInfo } from '../../lib/auction'
+import { AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BUDGET, AUCTION_ANY, auctionKit, POS_INFO, posInfo } from '../../lib/auction'
+import { sfx } from '../../lib/juice'
+import { LinkPill } from './OnlineRecord'
+import { NameTag, AvatarBadge, Entrance } from './NameTag'
 import { guardLeave } from '../../lib/liveLock'
 const AppAuction = lazy(() => import('./AppAuction'))
 
@@ -35,6 +38,40 @@ function AuctionRecord() {
       <span className="au-rec-n"><b>{c.wins ?? 0}</b><small>WINS</small></span>
       <span className="au-rec-n"><b>{avg}</b><small>AVG PLACE</small></span>
       <span className="au-rec-form"><Form items={c.recent ?? []} mode="compete" /></span>
+    </div>
+  )
+}
+
+// Finding an auction, under the lobby's header: one status line, the seats as plain rows, START WITH 2 when it
+// can, LEAVE. (Real players only: two start when the countdown runs out or either asks, three at once)
+const Pic = ({ p, me }) => <AvatarBadge name={p.name} cos={p.cos} self={p.vid === me} size={30} className="cp-avb" />
+function QueueBody({ au, sportName }) {
+  const mine = au.me.vid
+  const list = [...au.queue].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))
+  const seats = Array.from({ length: AUCTION_SIZE }, (_, i) => list[i] ?? null)
+  const n = Math.max(1, Math.min(list.length, AUCTION_SIZE))
+  const line = n >= AUCTION_SIZE ? 'Starting' : n < AUCTION_MIN ? 'Real players only · waiting for another bidder' : `Starts in ${Math.max(0, AUCTION_FILL_SECS - au.waited)}s with ${n} · or as soon as a third is in`
+  return (
+    <div className="au-hub-body au-q">
+      <div className="au-q-status">
+        <b>FINDING BIDDERS · {n} OF {AUCTION_SIZE}</b>
+        <span>{line}</span>
+        <LinkPill link={au.link} onRetry={au.retry} room={`${sportName} AUCTION`} />
+      </div>
+      <div className="au-q-seats" role="list" aria-label="Bidders">
+        {seats.map((p, i) => (
+          <div key={i} role="listitem" className={`au-q-seat ent-host${p ? '' : ' is-open'}${p?.vid === mine ? ' is-me' : ''}`}>
+            {p && <Entrance key={p.vid} cos={p.cos} />}
+            {p ? <Pic p={p} me={mine} /> : <span className="au-q-av" aria-hidden="true" />}
+            <span className="au-q-name">{p ? <NameTag name={p.name} cos={p.cos} self={p.vid === mine} /> : 'OPEN SEAT'}</span>
+            {p && <small>{p.vid === mine ? 'READY' : 'IN'}</small>}
+          </div>
+        ))}
+      </div>
+      <div className="au-q-acts">
+        {n >= AUCTION_MIN && n < AUCTION_SIZE && <button className="ag-btn au-hub-go" onClick={() => { sfx('tap'); au.fillNow() }}>START WITH {n}</button>}
+        <button className="ag-btn ag-btn--ghost au-q-leave" onClick={() => au.leave()}>LEAVE</button>
+      </div>
     </div>
   )
 }
@@ -72,15 +109,18 @@ export default function AppTraitAuction({ au, sport, onHome }) {
   const rating = prog.stats?.online?.rating ?? 800
 
   // the lobby: Blacktop's hub (AppBlacktop BlacktopHubView): the name big on a full-bleed header, the positions the
-  // room can draw, one button, the record on one line, the prizes and the rules under it
-  if (!live && au.phase !== 'busy') {
+  // room can draw, one button, the record on one line, the prizes and the rules under it. Finding an auction keeps the
+  // same header; the body is the room filling (QueueBody)
+  const inQueue = au.phase === 'queue'
+  const nSearching = searching(waiting, `au:${sportKey}-${AUCTION_ANY}`)
+  if ((!live || inQueue) && au.phase !== 'busy') {
     return (
-      <div className={`ag-screen cp au-screen au-hub cp--${sportKey}`}>
+      <div className={`ag-screen cp au-screen au-hub cp--${sportKey}${inQueue ? ' is-queue' : ''}`}>
         <header className="au-hub-stage">
           <div className="au-hub-in">
             <div className="au-hub-top">
               <span className="au-hub-eyebrow">{sportName} · ONLINE · 2–3 PLAYERS</span>
-              <button className="ag-round-btn au-hub-x" onClick={onHome} aria-label="Home"><IconClose size={16} /></button>
+              <button className="ag-round-btn au-hub-x" onClick={() => { if (inQueue) au.leave(); onHome() }} aria-label="Home"><IconClose size={16} /></button>
             </div>
             <h1 className="au-hub-title">Trait{' '}<br />Auction</h1>
             <div className="au-hub-foot">
@@ -92,7 +132,7 @@ export default function AppTraitAuction({ au, sport, onHome }) {
           </div>
           <GavelMark className="au-hub-gavel" />
         </header>
-        <div className="au-hub-body">
+        {inQueue ? <QueueBody au={au} sportName={sportName} /> : <div className="au-hub-body">
           <div className="au-hub-main">
             {/* what the auction is: every position the room can draw, with its five slots (nobody picks: one queue a sport) */}
             <div className="au-hub-sec"><span>{positions.length > 1 ? 'POSITION · DRAWN WHEN THE ROOM FILLS' : 'POSITION'}</span></div>
@@ -102,13 +142,14 @@ export default function AppTraitAuction({ au, sport, onHome }) {
                 return (
                   <div key={o.pos} className="au-hub-row">
                     <b className="au-hub-tag">{o.tag}</b>
-                    <span className="au-hub-line"><small>{o.name}</small>{k.types.map(t => k.attrLabel(t)).join(' · ')}</span>
+                    <span className="au-hub-line">{o.name.toUpperCase() !== o.tag && <small>{o.name}</small>}{k.types.map(t => k.attrLabel(t)).join(' · ')}</span>
                   </div>
                 )
               })}
             </div>
+            {/* how many are in the sport's queue right now, as Blacktop's hub shows it over each mode (hidden at none) */}
+            {nSearching && <span className="au-hub-n"><i aria-hidden="true" />{nSearching} SEARCHING</span>}
             <button className="ag-btn au-hub-go" onClick={() => au.join()}>FIND AN AUCTION <IconArrow size={18} /></button>
-            {searching(waiting, `au:${sportKey}-${AUCTION_ANY}`) && <span className="au-hub-wait"><i aria-hidden="true" />{searching(waiting, `au:${sportKey}-${AUCTION_ANY}`)} SEARCHING</span>}
             <AuctionRecord />
           </div>
           <div className="au-hub-side">
@@ -126,7 +167,7 @@ export default function AppTraitAuction({ au, sport, onHome }) {
               <li><b>{positions.length > 1 ? 4 : 3}</b>Fill first, the rest get random cards</li>
             </ol>
           </div>
-        </div>
+        </div>}
       </div>
     )
   }

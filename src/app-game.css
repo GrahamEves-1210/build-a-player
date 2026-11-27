@@ -8657,3 +8657,24 @@ button.au-paddle:focus-visible { outline: 2px solid var(--au-amber); outline-off
   .au-floor { gap: 8px; }
   .au-amt.is-none { display: none; }
 }
+
+/* ═══ TRAIT AUCTION: the queue under the lobby's header, and the lobby's searching count (owner 11-27) ═══ */
+/* the count over FIND AN AUCTION, as Blacktop's hub shows it over each mode (.btl-mode-n) */
+.au-hub-n { display: inline-flex; align-items: center; gap: 7px; margin-bottom: -6px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; line-height: 1; color: var(--au-muted); white-space: nowrap; }
+.au-hub-n i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: #35d07f; }
+/* finding an auction: one status line, the seats as plain rows, the actions */
+.au-hub-body.au-q { max-width: 640px; display: flex; flex-direction: column; gap: 16px; }
+.au-q-status { display: grid; justify-items: start; gap: 6px; }
+.au-q-status b { font-family: var(--ag-display); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .4px; color: var(--au-white); }
+.au-q-status > span { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.2px; color: var(--au-muted); text-transform: uppercase; }
+.au-q-seats { display: grid; border-top: 1px solid var(--au-line); }
+.au-q-seat { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 2px; border-bottom: 1px solid var(--au-line); }
+.au-q-seat.is-open { opacity: .5; }
+.au-q-av { width: 30px; height: 30px; border-radius: 8px; border: 1.5px dashed rgba(214,224,243,.35); }
+.au-q-name { flex: 1; min-width: 0; font-family: var(--ag-font); font-size: 19px; letter-spacing: 1.2px; color: var(--au-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-q-name .ntag { font: inherit; }
+.au-q-seat.is-me .au-q-name { color: var(--au-amber-hi); }
+.au-q-seat small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.4px; color: #35d07f; }
+.au-q-acts { display: grid; gap: 8px; }
+.ag-btn.au-q-leave { min-height: 50px; font-size: 19px; letter-spacing: 2px; border-radius: 10px; }
+@media (min-width: 1024px) { .au-hub-body.au-q { display: flex; align-items: stretch; } }
