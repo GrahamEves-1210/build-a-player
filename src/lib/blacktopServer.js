@@ -162,7 +162,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     setPhase('queue'); setWaited(0); setLobbyChat([]); setKicked(false); setSpots({}); setTables(null)
     // (bl: this phone plays the game live: King of the Hill's lobby only seats one that can)
     lobbyRef.current = liveSocket(sz === 1 ? '/lobby1' : sz === 2 ? '/lobby2' : sz === 'koth' ? '/lobbyk' : '/lobby', () => ({ t: 'hello', ...meRef.current, bl: 1 }), m => {
-      if (m.t === 'lobby') { setSpots(m.spots ?? {}); setTables(Array.isArray(m.tables) ? m.tables : null); setLobbyHere(m.here ?? []); return }
+      // (go: a full lobby's MATCH FOUND count, the ms left as the server sent it: when it runs out on this clock)
+      if (m.t === 'lobby') { const at = Date.now(); setSpots(m.spots ?? {}); setTables(Array.isArray(m.tables) ? m.tables.map(x => (x.go != null ? { ...x, goEnds: at + x.go } : x)) : null); setLobbyHere(m.here ?? []); return }
       // why: null (someone took it first), 'account' / 'device' (this account or device has a spot here already)
       if (m.t === 'bumped') { setBumped(m.why || true); setTimeout(() => setBumped(false), 3200); return }
       if (m.t === 'match') return enterRoom(m.code, m.players, !!m.players.filter(p => p.bot).length)
@@ -282,18 +283,21 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   const visibleChat = useMemo(() => (phase === 'queue' ? lobbyChat : chat.filter(m => m.all || m.team === myTeam)), [chat, lobbyChat, myTeam, phase])
   // the shapes the screens expect: the lobby's people with their spots, who holds each spot
   // every lobby (an older server sends only spots: one, table 1), each with who holds its spots; mine is the one I'm in
-  const lobbies = (tables ?? [{ id: 1, spots }]).map(x => ({ id: x.id, held: Object.fromEntries(Object.entries(x.spots ?? {}).filter(([, p]) => p)) }))
+  const lobbies = (tables ?? [{ id: 1, spots }]).map(x => ({ id: x.id, held: Object.fromEntries(Object.entries(x.spots ?? {}).filter(([, p]) => p)), goEnds: x.goEnds ?? null }))
   const myTable = lobbies.find(x => Object.values(x.held).some(p => p.vid === me.vid))?.id ?? null
   const mineL = lobbies.find(x => x.id === myTable) ?? lobbies.find(x => x.id === 1) ?? lobbies[0] ?? { held: {} }
   const slotOf = vid => Object.entries(mineL.held).find(([, p]) => p?.vid === vid)?.[0] ?? null
   const queue = lobbyHere.map(p => ({ ...p, slot: lobbies.flatMap(x => Object.entries(x.held)).find(([, q]) => q.vid === p.vid)?.[0] ?? null }))
   const held = mineL.held
+  // MATCH FOUND: my lobby is full and the server's three seconds are running (live/src/index.js Lobby.settle); the
+  // server makes the match when they're up, and LEAVE (seat(null)) calls it off for everyone at the table
+  const go = myTable != null && mineL.goEnds ? { table: myTable, ends: mineL.goEnds } : null
   const present = (match?.players ?? []).filter(p => here.includes(p.vid))
   const now = Date.now()
   const typers = Object.entries(typingFrom).filter(([vid, x]) => vid !== me.vid && now - x.ts < 3500 && (phase === 'queue' || match?.players.find(p => p.vid === vid)?.team === myTeam)).map(([, x]) => x.name)
   return {
     server: true,
-    phase, me, queue, waited, held, seated: Object.keys(held).length, mySlot: slotOf(me.vid), seat, bumped, link,
+    phase, me, queue, waited, held, seated: Object.keys(held).length, mySlot: slotOf(me.vid), seat, bumped, link, go,
     lobbies: lobbies.map(x => ({ ...x, seated: Object.keys(x.held).length })), myTable,
     size, slots: slotsFor(size), roomSize: size === 'koth' ? 3 : size * 2,
     retry: () => { closeAll(); join(false, sizeRef.current) }, canFill: false, join, practice: (sz = 3) => join(true, sz), testFill: (sz, mimic) => { lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos, mimic }) }, leave: exit, leaveLobby: leave,

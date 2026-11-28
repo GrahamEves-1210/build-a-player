@@ -161,8 +161,14 @@ export default {
 // seat it takes (no table) is table 1.
 // (not exported: a worker's main module may only export handlers and classes; the checks read Lobby.MAX_TABLES)
 const MAX_TABLES = 4
+// A table that fills doesn't tip off at once: MATCH FOUND, three seconds (2026-11-28, a player's ask: "make sure ur
+// playing the ppl u want"). The lobby holds the start; anyone at the table can back out in that time, and then the
+// count is off, his spot is open again and the rest wait on as before. Only a table still full when the three seconds
+// are up makes its match. (GO_MS 0: at once, as before; the older checks set it)
+const GO_MS = 3000
 export class Lobby {
   static MAX_TABLES = MAX_TABLES
+  static GO_MS = GO_MS
   constructor(state, env) {
     this.env = env
     this.conns = new Map()     // ws → player
@@ -170,7 +176,7 @@ export class Lobby {
     this.size = 3              // 3v3, or 2v2 (the /lobby2 one): set by the first request
   }
   get slots() { return slotsFor(this.size) }
-  T(n) { return (this.tables[n] ??= { spots: {}, held: {} }) }
+  T(n) { return (this.tables[n] ??= { spots: {}, held: {}, go: null }) }
   ids() { return Object.keys(this.tables).map(Number).sort((a, b) => a - b) }
   // table 1's spots (what an older app reads), kept for the checks that read lobby.spots
   get spots() { return this.T(1).spots }
@@ -204,6 +210,38 @@ export class Lobby {
   }
   taken(t) { return Object.keys(this.T(t).spots).length + this.liveHolds(t).length }
   full(t) { return this.slots.every(sl => this.T(t).spots[sl.id]) }
+  // every table's countdown as its spots now stand: a full table without one starts one (MATCH FOUND), one that's
+  // no longer full loses it. Run after anything that seats or unseats anyone, before the state goes out.
+  // (GO_MS 0: the full tables, to make their matches now)
+  settle() {
+    const now = []
+    for (const t of this.ids()) {
+      const T = this.T(t)
+      if (T.making) continue
+      if (this.full(t)) {
+        if (T.go) continue
+        if (Lobby.GO_MS <= 0) { now.push(t); continue }
+        // (who it's for: the count runs out on the same five, or nobody's sent anywhere)
+        const go = T.go = { ends: Date.now() + Lobby.GO_MS, who: this.slots.map(sl => T.spots[sl.id].vid).join() }
+        go.timer = setTimeout(() => this.tipOff(t, go), Lobby.GO_MS)
+      } else if (T.go) { clearTimeout(T.go.timer); T.go = null }
+    }
+    return now
+  }
+  // a table's three seconds are up: still full, with the same men in it, it makes its match
+  async tipOff(t, go) {
+    const T = this.T(t)
+    if (T.go !== go) return
+    T.go = null
+    if (!this.full(t) || this.slots.map(sl => T.spots[sl.id].vid).join() !== go.who) { this.settle(); this.broadcast(this.state()); return }
+    try { await this.makeMatch(t) } catch { this.settle(); this.broadcast(this.state()) }
+  }
+  // settle, the state to everyone, and any match due now
+  async changed() {
+    const now = this.settle()
+    this.broadcast(this.state())
+    for (const t of now) if (this.full(t)) await this.makeMatch(t)
+  }
   // the tables shown: every one someone is in (or held for), then one empty one (the lowest number free), at most
   // MAX_TABLES in all
   visible() {
@@ -266,7 +304,7 @@ export class Lobby {
   }
   state() {
     // (spots: table 1's, for an older app; tables: every table shown, in order)
-    return { t: 'lobby', size: this.size, spots: this.shown(1), tables: this.visible().map(id => ({ id, spots: this.shown(id) })), here: [...this.conns.values()].map(pub) }
+    return { t: 'lobby', size: this.size, spots: this.shown(1), tables: this.visible().map(id => ({ id, spots: this.shown(id), ...(this.T(id).go ? { go: Math.max(0, this.T(id).go.ends - Date.now()) } : {}) })), here: [...this.conns.values()].map(pub) }
   }
   broadcast(msg) {
     for (const ws of this.conns.keys()) send(ws, msg)
@@ -294,9 +332,7 @@ export class Lobby {
         const seated = this.allSpots().some(([, s]) => s.vid === p.vid)
         for (const tn of this.ids()) for (const hid of Object.keys(this.T(tn).held)) if (this.T(tn).held[hid].vid === p.vid) delete this.T(tn).held[hid]
         if (!seated && !this.clash(p)) this.T(t).spots[id] = { ...p, at: now, pos: h.pos }
-        this.broadcast(this.state())
-        if (this.full(t)) await this.makeMatch(t)
-        return
+        return this.changed()
       }
       this.broadcast(this.state())
       return
@@ -317,9 +353,7 @@ export class Lobby {
       // out of any spot, and any spot held for me, before the new one
       this.drop(me.vid)
       if (want) T.spots[want] = { ...me, at: Date.now(), pos: posFor(this.slots.find(sl => sl.id === want), m.pos) }
-      this.broadcast(this.state())
-      if (want && this.full(t)) await this.makeMatch(t)
-      return
+      return this.changed()
     }
     if (m.t === 'chat') {
       // a table's own chat: a man in a spot talks to his table; one not in any spot, to everyone
@@ -351,6 +385,7 @@ export class Lobby {
       await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: true, size: this.size, keys: { [me.vid]: me.key ?? null } }) })
       this.drop(me.vid)
       send(ws, { t: 'match', code, players })
+      this.settle()
       this.broadcast(this.state())
     }
   }
@@ -364,11 +399,13 @@ export class Lobby {
       const ids = [`v:${s.vid}`, s.uid && `u:${s.uid}`, ONE_PER_DEVICE && s.dev && `d:${s.dev}`].filter(Boolean)
       if (ids.some(k => seen.has(k))) { if (tn === t) dup.push(Object.keys(T.spots).find(id => T.spots[id] === s)) } else ids.forEach(k => seen.add(k))
     }
-    if (dup.length) { for (const id of dup) delete T.spots[id]; this.broadcast(this.state()); return }
+    if (dup.length) { for (const id of dup) delete T.spots[id]; this.settle(); this.broadcast(this.state()); return }
     const code = code6()
     const players = this.slots.map(sl => ({ ...pub(T.spots[sl.id]), pos: T.spots[sl.id].pos ?? posFor(sl, 'guard'), team: sl.team, slot: sl.id, bot: false }))
     const keys = Object.fromEntries(this.slots.map(sl => [T.spots[sl.id].vid, T.spots[sl.id].key ?? null]))
-    await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: false, size: this.size, keys, table: t }) })
+    // (its room being made: no new count for this table while the room's /init is out)
+    T.making = true
+    try { await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: false, size: this.size, keys, table: t }) }) } finally { T.making = false }
     const vids = new Set(players.map(p => p.vid))
     T.spots = {}
     for (const [ws, p] of this.conns) if (vids.has(p.vid)) send(ws, { t: 'match', code, players, table: t })
@@ -380,6 +417,7 @@ export class Lobby {
     // still connected somewhere else (a reconnect): keep the spot
     if ([...this.conns.values()].some(p => p.vid === me.vid)) return
     for (const t of this.ids()) for (const id of Object.keys(this.T(t).spots)) if (this.T(t).spots[id].vid === me.vid) delete this.T(t).spots[id]
+    this.settle()
     this.broadcast(this.state())
   }
 }

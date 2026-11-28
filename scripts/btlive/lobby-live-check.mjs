@@ -25,6 +25,7 @@ globalThis.fetch = async (url, init = {}) => {
 
 try {
   const { Room, Lobby, liveGrades } = await vite.ssrLoadModule('/live/src/index.js')
+  Lobby.GO_MS = 0   // (a full table tips off at once here: the three-second MATCH FOUND is lobby-tables-check's)
   const { BtLiveRoom } = await vite.ssrLoadModule('/live/src/btlive.js')
   const core = await vite.ssrLoadModule('/src/lib/blacktopCore.js')
   const { dealTeam, dealPlayer } = await vite.ssrLoadModule('/src/lib/seatSpin.js')
