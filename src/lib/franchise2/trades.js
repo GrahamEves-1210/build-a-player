@@ -467,12 +467,14 @@ export function counterOf(F, s, give, get, d) {
   }
   // one of his picks for a better one of his
   for (const k of gp) for (const k2 of mine) if (w(k2) > w(k) && w(k2) - w(k) <= lim) tries.push({ give: { pl: [...gl], pk: gp.map(x => (x === k ? k2 : x)) }, get })
-  // one of its picks for a later one of its own
-  const theirs = picksBy(F)[s].filter(k => !tp.includes(k))
-  for (const k of tp) for (const k2 of theirs) if (w(k2) < w(k) && w(k) - w(k2) <= lim) tries.push({ give, get: { pl: [...tl], pk: tp.map(x => (x === k ? k2 : x)) } })
+  // (what he asked for stays what he asked for: a counter never swaps a pick he wants for another of the team's (a
+  // player's report 11-28: he asked for the No. 1 pick, the counter sent next year's first in its place, he took it
+  // and never had the pick), and it never takes the main piece off its side. A team that won't move a piece asks for
+  // more, or says no. One of the lesser pieces can come off a bigger deal.)
   if (tl.length + tp.length >= 2) {
-    for (const id of tl) tries.push({ give, get: { pl: tl.filter(x => x !== id), pk: [...tp] } })
-    for (const k of tp) tries.push({ give, get: { pl: [...tl], pk: tp.filter(x => x !== k) } })
+    const tv = [...tl.map(id => valueOf(F, F.teams[s].r.find(p => p.i === id) ?? {})), ...tp.map(w)], main = Math.max(...tv)
+    tl.forEach((id, j) => { if (tv[j] < main) tries.push({ give, get: { pl: tl.filter(x => x !== id), pk: [...tp] } }) })
+    tp.forEach((k, j) => { if (tv[tl.length + j] < main) tries.push({ give, get: { pl: [...tl], pk: tp.filter(x => x !== k) } }) })
   }
   // (a counter never leaves him sending a higher pick than the best he gets back, when he didn't ask for that)
   const upside = x => { const a = Math.min(8, ...(x.give.pk ?? []).map(k => parsePick(k).r)), b = Math.min(8, ...(x.get.pk ?? []).map(k => parsePick(k).r)); return (x.get.pk ?? []).length > 0 && a < b }

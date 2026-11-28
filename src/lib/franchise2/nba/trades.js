@@ -833,9 +833,12 @@ export function counterOf(F, deal, d) {
     const i = pIdx(e), top = protFor(F, b, F.picks?.[i])
     if (top) tries.push({ ...deal, pb: pb.map((x, jj) => (jj === j ? { i, top } : x)) })
   })
+  // (one of the lesser pieces off its side; never the main piece the GM asked for: a player's report 11-28, football)
   if ((deal.gb ?? []).length + pb.length >= 2) {
-    for (const id of deal.gb ?? []) tries.push({ ...deal, gb: deal.gb.filter(x => x !== id) })
-    for (const e of pb) tries.push({ ...deal, pb: pb.filter(x => x !== e) })
+    const mv = (deal.gb ?? []).map(id => manValue(F, F.teams[b].r.find(p => p.i === id))), kv = pb.map(e => (e?.swap != null ? swapValue(F, b, a, e.swap) : pickValue(F, F.picks[pIdx(e)]).v))
+    const main = Math.max(...mv, ...kv)
+    ;(deal.gb ?? []).forEach((id, j) => { if (mv[j] < main) tries.push({ ...deal, gb: deal.gb.filter(x => x !== id) }) })
+    pb.forEach((e, j) => { if (kv[j] < main) tries.push({ ...deal, pb: pb.filter(x => x !== e) }) })
   }
   let best = null
   const base = gauge(F, deal)
