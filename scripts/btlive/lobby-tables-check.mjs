@@ -7,6 +7,10 @@
 //   - a squad running it back is held at the table it played from; chat stays in its own lobby; the "N playing"
 //     count is every lobby's spots
 //   - 1v1, 2v2 and King of the Hill
+//   - MATCH FOUND (Lobby.GO_MS, three seconds): a lobby that fills counts down first (every phone told, each lobby
+//     its own count) and makes its match only once the three seconds are up with the lobby still full; one man backs
+//     out (LEAVE, or his phone drops) in that time: the count is off, no match, his spot is open and the rest wait
+//     on; the spot taken again: a new count of its own, then the match. 1v1, 2v2 and King of the Hill
 // Run: node scripts/btlive/lobby-tables-check.mjs
 import { createServer } from 'vite'
 
@@ -15,6 +19,7 @@ let fails = 0
 const ok = (c, what) => { console.log(`${c ? 'ok  ' : 'FAIL'}  ${what}`); if (!c) fails++ }
 try {
   const { Lobby } = await vite.ssrLoadModule('/live/src/index.js')
+  Lobby.GO_MS = 0   // (a full table tips off at once here: the three-second MATCH FOUND is lobby-tables-check's)
   const MAX_TABLES = Lobby.MAX_TABLES
   const fakeWs = () => { const w = { got: [], send(d) { w.got.push(JSON.parse(d)) }, close() {} }; return w }
   function lobby(size) {
@@ -89,6 +94,50 @@ try {
     ok(X.shown() === '1:1 2:2 3:0', `King of the Hill: lobby 1 one in, lobby 2 two in, an empty lobby 3 (${X.shown()})`)
     await X.seat('d', 'k2', 2)
     ok(X.made[0]?.table === 2 && X.made[0].size === 'koth' && X.made[0].players.length === 3 && X.L.placeOf('a')?.t === 1, 'King of the Hill: lobby 2 fills, its own match of three; lobby 1 waits on')
+  }
+
+  // ── MATCH FOUND: three seconds, held by the lobby ──
+  Lobby.GO_MS = 3000
+  const wait = ms => new Promise(r => setTimeout(r, ms))
+  const goOf = (X, t) => X.L.state().tables.find(x => x.id === t)?.go ?? null
+  const lastGo = (w, t) => [...w.got].reverse().find(x => x.t === 'lobby')?.tables?.find(x => x.id === t)?.go ?? null
+  for (const [size, fill] of [[1, [['a', '0x', 'guard'], ['b', '1x', 'big']]], [2, [['a', '0g0', 'guard'], ['b', '0b', 'big'], ['c', '1g0', 'guard'], ['d', '1b', 'big']]], ['koth', [['a', 'k0', 'guard'], ['b', 'k1', 'big'], ['c', 'k2', 'guard']]]]) {
+    const tag = size === 'koth' ? 'King of the Hill' : `${size}v${size}`
+    const X = lobby(size)
+    for (const v of [...fill.map(f => f[0]), 'x', 'y']) await X.hello(v)
+    await X.seat('y', fill[0][1], 1, fill[0][2])   // (a man waiting in lobby 1: the count is lobby 2's alone)
+    for (const [v, slot, pos] of fill) await X.seat(v, slot, 2, pos)
+    ok(!X.made.length && goOf(X, 2) > 2500 && goOf(X, 1) == null, `${tag}: lobby 2 fills, MATCH FOUND: a count (${goOf(X, 2)} ms), no match yet; lobby 1 has none`)
+    ok(fill.every(([v]) => lastGo(X.ws[v], 2) > 2500) && lastGo(X.ws.x, 2) > 2500, `${tag}: every phone is told the count`)
+    await X.seat('x', fill[0][1], 2, fill[0][2])
+    ok(X.ws.x.got.at(-1)?.t === 'bumped' && X.L.placeOf('x') == null, `${tag}: a spot in a lobby counting down is taken: bumped`)
+    await wait(1500)
+    ok(!X.made.length, `${tag}: 1.5 s in, still no match`)
+    // one backs out: off, no match, his spot open, the rest still in
+    const [lv, lslot, lpos] = fill[fill.length - 1]
+    await X.seat(lv, null, 2)
+    ok(goOf(X, 2) == null && lastGo(X.ws.a, 2) == null, `${tag}: one backs out: the count is off, everyone told`)
+    ok(!X.L.state().tables.find(x => x.id === 2).spots[lslot] && fill.slice(0, -1).every(([v]) => X.L.placeOf(v)?.t === 2), `${tag}: his spot is open again, the rest wait on in lobby 2`)
+    await wait(2000)
+    ok(!X.made.length && !fill.some(([v]) => X.ws[v].got.some(m => m.t === 'match')), `${tag}: past the three seconds: no match, nobody sent to a game`)
+    // the spot taken again (by the man who wanted it): a new count, then the match
+    await X.seat('x', lslot, 2, lpos)
+    const t1 = Date.now()
+    ok(goOf(X, 2) > 2500 && !X.made.length, `${tag}: the spot taken again: a new count of its own (${goOf(X, 2)} ms)`)
+    while (!X.made.length && Date.now() - t1 < 4500) await wait(50)
+    const took = Date.now() - t1, who = [...fill.slice(0, -1).map(f => f[0]), 'x'].sort().join()
+    ok(X.made.length === 1 && took >= 2900 && took < 3600, `${tag}: the match once the three seconds are up (${took} ms)`)
+    ok(X.made[0]?.players.map(p => p.vid).sort().join() === who && X.made[0].table === 2, `${tag}: the match is the men in it when the count ran out (${X.made[0]?.players.map(p => p.vid).join()})`)
+    ok(X.ws.x.got.some(m => m.t === 'match') && !X.ws[lv].got.some(m => m.t === 'match') && X.L.placeOf('y')?.t === 1, `${tag}: they're sent to it; the man who left and lobby 1's man aren't`)
+    ok(goOf(X, 2) == null, `${tag}: after, no count left on the table`)
+    // his phone drops in the count: off as well
+    const Y = lobby(size)
+    for (const [v] of fill) await Y.hello(v)
+    for (const [v, slot, pos] of fill) await Y.seat(v, slot, 1, pos)
+    ok(goOf(Y, 1) > 0, `${tag}: (another lobby) full, counting`)
+    Y.L.onClose(Y.ws[fill[0][0]])
+    await wait(3300)
+    ok(goOf(Y, 1) == null && !Y.made.length, `${tag}: one man's phone drops in the count: off, no match`)
   }
 } catch (e) { fails++; console.log('FAIL', e.stack) }
 await vite.close()

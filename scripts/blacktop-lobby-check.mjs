@@ -31,6 +31,7 @@ globalThis.fetch = async (url, init = {}) => {
 
 try {
   const { Lobby, Room } = await vite.ssrLoadModule('/live/src/index.js')
+  Lobby.GO_MS = 0   // (a full table tips off at once here: the three-second MATCH FOUND is lobby-tables-check's)
   const { teamNames } = await vite.ssrLoadModule('/src/lib/blacktopCore.js')
 
   // one server: a lobby per size, a room per code, wired the way the Worker's bindings are

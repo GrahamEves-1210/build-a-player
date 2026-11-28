@@ -269,6 +269,65 @@ function LiveRow({ g, now, onWatch }) {
 }
 
 // ── Lobby: a matchup board filling up. Two squads facing each other, tap an open spot ──
+// MATCH FOUND: the lobby is full and the server holds the tip for three seconds (live/src/index.js Lobby.settle), so
+// everyone sees who he's about to play before the build loads. LEAVE takes him out of his spot: the count is off for
+// the whole table and the others wait on. The number is the server's; this only shows it.
+function MatchFound({ bt, held, slots, koth, onLeave }) {
+  const left = () => Math.max(0, Math.ceil((bt.go.ends - Date.now()) / 1000))
+  const [n, setN] = useState(left)
+  const ends = bt.go.ends
+  useEffect(() => {
+    const id = setInterval(() => setN(left()), 100)
+    return () => clearInterval(id)
+  }, [ends]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a tick a number (the found one a heavier hit), and the phone with it
+  const seen = useRef(null)
+  useEffect(() => {
+    if (seen.current === n) return
+    const first = seen.current == null
+    seen.current = n
+    if (n <= 0) return
+    sfx(first ? 'lock' : 'tick'); haptic(first ? 'medium' : 'light')
+  }, [n])
+  const sides = koth ? [0] : [0, 1]
+  const who = sl => held[sl.id]
+  const sideName = t => { const one = slots.filter(sl => sl.team === t).map(who).find(Boolean); return one ? `TEAM ${firstName(one.name)}` : t === 0 ? 'TEAM A' : 'TEAM B' }
+  return (
+    <BlacktopSheet label="Match found" title="MATCH FOUND" className="btl-sheet--found">
+      <div className="btl-found" role="timer" aria-live="assertive">
+        <div className="btl-found-count">
+          <small>{n > 0 ? 'TIP-OFF IN' : 'TIP-OFF'}</small>
+          <b key={n}>{n > 0 ? n : 'GO'}</b>
+        </div>
+        {/* the board's own sides and plates (one column in King of the Hill) */}
+        <div className={`btl-teams${koth ? ' is-koth' : ''}`}>
+          {sides.map(t => (
+            <div key={t} className={`btl-team bt-t${t}`}>
+              <span className="btl-team-name">{koth ? 'EVERY MAN FOR HIMSELF' : sideName(t)}</span>
+              {slots.filter(sl => koth || sl.team === t).map(sl => {
+                const h = who(sl); if (!h) return null
+                const me = h.vid === bt.me.vid
+                const pos = sl.pos === 'any' ? h.pos : sl.pos
+                return (
+                  <div key={sl.id} className={`btl-seat is-taken${me ? ' is-me' : ''}${pos === 'big' ? ' is-big' : ''}`}>
+                    <Av name={h.name} team={t} size={40} cos={h.cos} self={me} />
+                    <span className="btl-seat-txt">
+                      <span className="btl-seat-name"><NameTag name={h.name || 'Guest'} cos={h.cos} uid={h.uid ?? null} self={me} /></span>
+                      <span className="btl-seat-role">{pos === 'big' ? 'BIG' : 'GUARD'}</span>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+          {!koth && <span className="btl-vs" aria-hidden="true">VS</span>}
+        </div>
+        <button className="ag-btn btl-btn btl-btn--line btl-btn--warn" onClick={() => { sfx('back'); haptic('light'); onLeave() }}>LEAVE</button>
+      </div>
+    </BlacktopSheet>
+  )
+}
+
 export function BlacktopQueue({ bt, user, onBack }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [seenChat, setSeenChat] = useState(0)
@@ -416,7 +475,8 @@ export function BlacktopQueue({ bt, user, onBack }) {
         <OnlineRecord modes={[koth ? 'btk' : size === 1 ? 'bt1' : size === 2 ? 'bt2' : 'bt']} title={koth ? 'KING OF THE HILL RECORD' : `${size}V${size} RECORD`} />
 
       </div>
-      {chatOpen && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}
+      {chatOpen && !bt.go && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}
+      {bt.go && <MatchFound bt={bt} held={(boards.find(x => x.id === bt.go.table) ?? boards[0]).held} slots={SLOTS} koth={koth} onLeave={() => bt.seat(null)} />}
     </div>
   )
 }

@@ -488,3 +488,16 @@ html:is(.is-app, .app-look) .bt-av.is-bot.bt-av--t1 { --tc: var(--bt-t1); }
 .btl-board-label b { font-weight: 400; font-size: 17px; letter-spacing: 2px; color: var(--bt-text); }
 .btl-board-label small { font-size: 13px; letter-spacing: 1.6px; color: var(--bt-muted); }
 .btl-board-label small.is-mine { margin-left: auto; color: var(--bt-t0); }
+
+
+/* -- MATCH FOUND: the lobby is full, three seconds to see who is in before the build loads (MatchFound). The sides
+   and plates are the board's own (.btl-teams / .btl-seat); the count is the tip-off strip, bigger -- */
+.btl-found { display: flex; flex-direction: column; gap: 14px; padding-bottom: 4px; }
+.btl-found-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 72px; padding: 0 22px; color: #05070a; background: var(--bt-flood); clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
+.btl-found-count small { font-family: var(--bt-cap); font-size: 18px; letter-spacing: 2.4px; line-height: 1; }
+.btl-found-count b { font-family: var(--bt-num); font-weight: 400; font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .btl-found-count b { animation: btl-found-n var(--bt-med) var(--bt-snap) both; }
+}
+@keyframes btl-found-n { from { opacity: 0; transform: scale(1.4); } }
+.btl-found .btl-seat { min-height: 58px; margin-bottom: 0; }

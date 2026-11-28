@@ -4,6 +4,7 @@
 //   /bucket?btlobby=hub        the hub with live games, players searching and a notice (&empty=1: a quiet night)
 //   /bucket?btlobby=queue      the 3v3 lobby, partly filled, seated   (&size=1|2|3|koth, &taken=N: King of the Hill's spots taken, &open=1: not seated yet, &bumped=1, &link=local|connecting)
 //   /bucket?btlobby=full       the lobby with every spot taken (the tip-off state)   (&size=1|2|3)
+//   /bucket?btlobby=found      MATCH FOUND: the full lobby's three-second count (it starts over; LEAVE opens the spot)   (&size=1|2|koth)
 //   /bucket?btlobby=chat       the lobby chat with messages   (&empty=1, &rules=1: before the rules are agreed)
 //   /bucket?btlobby=teamchat   the team chat over a build (the squad strip)
 //   /bucket?btlobby=v1menu | v1host | v1search | v1found      the 1v1 lobby (VersusLobby's app look, redrawn here)
@@ -27,9 +28,12 @@ const person = (i, extra = {}) => ({ vid: `p-${i}`, name: PEOPLE[i].name, cos: P
 const buildOf = (types, n, base) => Object.fromEntries(types.map((t, j) => [t, j < n ? { val: Math.max(1, Math.min(12, base + ((j * 5) % 4) - 1)) } : null]))
 
 // a lobby that only lives on this page: tap a spot to take it, tap yours to leave it
-function useFakeLobby({ size, open, full, bumped, link, taken = null }) {
+function useFakeLobby({ size, open, full, bumped, link, taken = null, found = false }) {
   const SLOTS = slotsFor(size)
   const [mine, setMine] = useState(open ? null : SLOTS[0].id)
+  // (found: the count runs, and starts over when it's done, while the lobby's full)
+  const [goEnds, setGoEnds] = useState(() => Date.now() + 3000)
+  useEffect(() => { if (!found || !mine) return; const id = setInterval(() => setGoEnds(e => (Date.now() > e + 900 ? Date.now() + 3000 : e)), 200); return () => clearInterval(id) }, [found, mine])
   const [myPos, setMyPos] = useState('guard')
   const [chat, setChat] = useState(() => CHAT.slice(0, 3))
   const others = useMemo(() => {
@@ -45,7 +49,8 @@ function useFakeLobby({ size, open, full, bumped, link, taken = null }) {
   const held = { ...others, ...(mine && !others[mine] ? { [mine]: { ...ME, pos: SLOTS.find(s => s.id === mine)?.pos === 'any' ? myPos : SLOTS.find(s => s.id === mine)?.pos } } : {}) }
   return {
     slots: SLOTS, roomSize: SLOTS.length, size, held, me: ME, mySlot: mine && !others[mine] ? mine : null,
-    seat: (id, pos) => { setMine(id); if (pos) setMyPos(pos) },
+    go: found && mine && Object.keys(held).length === SLOTS.length ? { table: 1, ends: goEnds } : null,
+    seat: (id, pos) => { setMine(id); if (pos) setMyPos(pos); if (id) setGoEnds(Date.now() + 3000) },
     queue: [{ vid: 'w1' }, { vid: 'w2' }], chat, seated: Object.keys(held).length, waited: 47, link: link || 'live', retry: NO,
     bumped: !!bumped, leave: NO, leaveLobby: NO, typers: [], typing: NO,
     sendChat: t => { if (!t.trim()) return false; setChat(c => [...c, { id: `m${c.length}`, from: 'me', name: ME.name, text: t.trim(), ts: Date.now() }]); return true },
@@ -62,9 +67,9 @@ const CHAT = [
   { id: 'f', from: 'me', name: ME.name, text: 'bet', ts: T0 + 34000 },
 ]
 
-function Queue({ q, full }) {
+function Queue({ q, full, found = false }) {
   const size = q.get('size') === 'koth' ? 'koth' : Math.max(1, Math.min(3, Number(q.get('size')) || 3))
-  const bt = useFakeLobby({ size, open: q.has('open'), full, bumped: q.has('bumped'), link: q.get('link'), taken: q.has('taken') ? Number(q.get('taken')) : null })
+  const bt = useFakeLobby({ size, open: q.has('open'), full: full || found, found, bumped: q.has('bumped'), link: q.get('link'), taken: q.has('taken') ? Number(q.get('taken')) : null })
   return <BlacktopQueue bt={bt} user={null} onBack={NO} />
 }
 
@@ -165,7 +170,7 @@ export default function BlacktopLobbyLook({ look: first }) {
 }
 function Look({ look, q }) {
   const [notice, setNotice] = useState(q.has('empty') ? null : 'The build clock ran out before you finished. A CPU took your spot, and it counts as leaving the game.')
-  if (look === 'queue' || look === 'full') return <div className="btl-look"><Queue q={q} full={look === 'full'} /></div>
+  if (look === 'queue' || look === 'full' || look === 'found') return <div className="btl-look"><Queue key={look} q={q} full={look === 'full'} found={look === 'found'} /></div>
   if (look === 'chat' || look === 'teamchat') return <Chat q={q} team={look === 'teamchat'} />
   if (look.startsWith('v1') && look !== 'v1hud') return <V1 look={look} />
   if (['matchup', 'leave', 'oppleft', 'v1hud'].includes(look)) return <Sheets look={look} q={q} />
