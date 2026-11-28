@@ -31,6 +31,7 @@
 // (an old save without tm or fc: every man at his ask and his years, every offer Fair, as before)
 import { playWeek, makeEvent, intoPlayoffs, simPlayoffs, userAlive, finishMoment, REG_WEEKS } from './season'
 import { standings } from './standings'
+import { callWatch, callCheck } from './trades'
 import { DIV_OF, CONF_OF } from './schedule'
 import { rngOf, roll, r1, clamp } from './rng'
 import { autoScout, slateOf, attend, runCombine, interview, visitsLeft, consensus, rankMap, needsOf, openDraft, closeDraft, scoutsLeft, draftOrder } from './draft'
@@ -99,13 +100,14 @@ export function openStretch(F, k = stretchOf(F.wk ?? 0)) {
 // the stretch the season card shows: open, the right year (a save that lost its stretch gets the one it's in)
 export const stretchOk = F => !!F.lt && F.lt.y === F.year && F.lt.k != null && F.phase === 'season' && F.wk >= F.lt.w0 && (F.wk < F.lt.w1 || F.lt.ph !== 'card')
 // PLAY THE STRETCH: its weeks simmed, every game with its box score, then the recap
-export function lightPlay(F) {
+// (opts.calls: the stretch stops for a trade call, trades.js callCheck: the card stays up with the weeks left)
+export function lightPlay(F, opts = {}) {
   const L = F.lt
   if (!L || L.ph !== 'card' || F.phase !== 'season') return null
   if (F.ev) return { event: true }
   if (F.pend) lightSettle(F)
-  finishStretch(F)
-  return { recap: true }
+  const call = finishStretch(F, opts.calls ? callWatch(F) : null)
+  return call ? { call } : { recap: true }
 }
 // A save from before LIGHT stopped going into games: a game waiting on its moment is simmed to its final (the sim
 // plays the snap, as with the moments off), and a stretch that was on its big game goes on to its recap.
@@ -132,13 +134,19 @@ export function lightRound(F) {
   if (!userAlive(F)) { simPlayoffs(F); return { out: true, champ: F.po?.champ ?? null } }
   return playWeek(F, { moments: false })
 }
-function finishStretch(F) {
+function finishStretch(F, w = null) {
   const L = F.lt
   // (the scouts work every week, as they would in FULL: the bank never sits at its cap and each week's college slate
   // can be attended, owner 11-18)
-  for (let g = 0; g < REG_WEEKS && F.phase === 'season' && F.wk < L.w1; g++) { simWeek(F); autoScout(F) }
+  for (let g = 0; g < REG_WEEKS && F.phase === 'season' && F.wk < L.w1; g++) {
+    simWeek(F); autoScout(F)
+    // (a call partway through: the stretch waits on its card; a call in its last week shows over the recap)
+    const c = w && F.wk < L.w1 && F.phase === 'season' ? callCheck(F, w) : null
+    if (c) return c
+  }
   L.ph = 'recap'
   delete L.hs
+  return null
 }
 // The recap's button: the next stretch, or (after Week 18) the bracket; a team that missed it watches the rest.
 export function lightNext(F) {
@@ -152,11 +160,23 @@ export function lightNext(F) {
   return { playoffs: inIt }
 }
 // SIM TO THE PLAYOFFS: every week left, no moments, no calls (FULL's simWeeks), the scouts' days spent
-export function lightSimAll(F) {
+// (opts.calls: the run stops for a trade call, trades.js callCheck: the stretch it's in, open on its card)
+export function lightSimAll(F, opts = {}) {
   if (F.phase !== 'season') return
   F.ev = null
   if (!F.lt || F.lt.y !== F.year) F.lt = { y: F.year, k: stretchOf(F.wk), inj: [] }
-  for (let g = 0; g < REG_WEEKS + 1 && F.phase === 'season'; g++) { simWeek(F); autoScout(F) }
+  const w = opts.calls ? callWatch(F) : null
+  for (let g = 0; g < REG_WEEKS + 1 && F.phase === 'season'; g++) {
+    simWeek(F); autoScout(F)
+    const c = w && F.phase === 'season' ? callCheck(F, w) : null
+    if (c) {
+      // (the sim to the playoffs makes no front-office calls: the stretch opens without one)
+      if (F.lt.k !== stretchOf(F.wk) || F.lt.w0 == null) openStretch(F, stretchOf(F.wk))
+      F.ev = null
+      F.lt.ph = 'card'
+      return { call: c }
+    }
+  }
   F.lt.ph = 'done'
   delete F.lt.hs
 }

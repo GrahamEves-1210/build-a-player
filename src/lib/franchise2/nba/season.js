@@ -250,10 +250,36 @@ function endDay(F, { mine = null, news = [] } = {}) {
   return { mine, news }
 }
 // sim nights to a day (not playing it), no moments
-export function simTo(F, day) {
+// (watch: the run stops for a trade call, callCheck; watch.stop says which)
+export function simTo(F, day, watch = null) {
   let n = 0
-  while (F.phase === 'season' && F.day < day && n < 400) { playDay(F); n++ }
+  while (F.phase === 'season' && F.day < day && n < 400) {
+    playDay(F); n++
+    const c = watch && F.phase === 'season' ? callCheck(F, watch) : null
+    if (c) { watch.stop = c; break }
+  }
   return n
+}
+// A SIM RUN STOPS FOR A CALL (owner 11-28, a player's ask: "when another team sends a trade offer the simulation
+// should pause so I can review it"). A run of nights (sim a week, to the deadline, to the break, to the end; LIGHT's
+// stretch and its sim to the postseason) watches the GM's phone: callWatch when it starts, callCheck after every night.
+// It stops the morning a call comes in ('call'), and the day an offer it started with has to be answered ('answer':
+// its last day, trades.js offerNow), so a sim never lets one lapse that the GM hasn't had in front of him that day. A
+// run started on that last day plays on (he had it on the hub and simmed past it). The next game alone is not a run.
+//   watch: { k: the call standing when it started, last: it was already on its last day, stop }
+const callKey = o => (o ? `${o.s}-${o.d}-${o.y}-${o.deal?.ga?.[0]}` : null)
+const lastDay = (F, o) => (o.until != null ? Math.min(o.until, F.ddl ?? o.until) : null)
+export function callWatch(F) {
+  const o = F.phase === 'season' ? X.offerNow(F) : null
+  return { k: callKey(o), last: !!o && lastDay(F, o) != null && (F.day ?? 0) >= lastDay(F, o), stop: null }
+}
+// (the run's stop, or null: { why: 'call' | 'answer', s: the team on the phone })
+export function callCheck(F, w) {
+  const o = w ? X.offerNow(F) : null
+  if (!o) return null
+  if (callKey(o) !== w.k) return { why: 'call', s: o.s }
+  const ld = lastDay(F, o)
+  return !w.last && ld != null && (F.day ?? 0) >= ld ? { why: 'answer', s: o.s } : null
 }
 // sim to the night before the GM's next game, then play that night
 export function playNext(F, opts = {}) {

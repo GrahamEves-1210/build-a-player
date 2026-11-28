@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   TEAM, CONF_OF, CONF_NAME, DIV_OF, SHORTS, records, recText, pct, confOrder, gamesBack, streakText, nextMine, myGames, gameNo, dateText,
-  playNext, simTo, startPostseason, playPoNight, simPostseason, mySeries, myPoGame, seriesText, ROUND_NAME, closeSeason, teamOvr,
+  playNext, simTo, callWatch, startPostseason, playPoNight, simPostseason, mySeries, myPoGame, seriesText, ROUND_NAME, closeSeason, teamOvr,
   seasonText, CAP_SIM, nick, FINISH_TEXT, finishOf, nextStep, isLight, stretchOk, stretchOf, openStretch, lightSettle, lightPlay, lightSimAll,
   allStarStop, allStarOn, allStarDay, teamOfMan, manOf,
 } from '../../../lib/franchise2/nba'
@@ -35,6 +35,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   const [live, setLive] = useState(() => (F.pend && !light ? { pend: true } : null))
   const [teamView, setTeamView] = useState(null)
   const [run, setRun] = useState(null)   // (a stretch of nights being simmed, a few at a time: SimRun)
+  const [paused, setPaused] = useState(null)   // (a sim run that stopped for a trade call: season.js callCheck)
   const scroll = useRef(null)
   const t = TEAM[F.team]
   const R = records(F)
@@ -52,6 +53,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   const toTab = (id, view = null) => { setTeamView(view); if (tab !== id) { setTab(id); sfx('tap'); scroll.current?.scrollTo(0, 0) } }
   // PLAY: the GM's next game on screen (the scorebug, a moment if it comes, the final)
   const play = () => {
+    setPaused(null)
     const before = F.log.length
     const out = act(X => (X.phase === 'season' ? playNext(X, momentOpts(X)) : playPoNight(X, momentOpts(X))))
     sfx('whistle'); haptic('medium')
@@ -66,7 +68,7 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
   return (
     <div className="ag-screen f2 fk fk-root fh nb" style={fkVars(F.team)}>
       {live && <NbaGame F={F} act={act} start={live} owner={owner} onDone={() => setLive(null)} />}
-      {run && <SimRun F={F} act={act} run={run} onDone={() => { setRun(null); toTop() }} />}
+      {run && <SimRun F={F} act={act} run={run} onDone={c => { setRun(null); setPaused(c ?? null); toTop() }} />}
       <div ref={scroll} className="fh-scroll">
         <header className="fh-top">
           <span className="fh-top-logo"><TopLogo s={F.team} /></span>
@@ -89,8 +91,9 @@ export default function NbaHub({ F, act, owner, onHome, onSlots, onDelete, saveB
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
+          {tab === 'season' && <SimPaused F={F} c={paused} />}
           {tab === 'season' && <TradeCall F={F} act={act} onCounter={() => { act(X => { if (X.tof) X.tof.work = 1 }); toTab('team', 'trades') }} />}
-          {tab === 'season' && (off ? (light ? <LightOffseason F={F} act={act} owner={owner} onBuild={onBuild} /> : <NbaOffseason F={F} act={act} owner={owner} onBuild={onBuild} />) : <Season F={F} R={R} act={act} play={play} owner={owner} light={light} onSim={(to, label) => { setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
+          {tab === 'season' && (off ? (light ? <LightOffseason F={F} act={act} owner={owner} onBuild={onBuild} /> : <NbaOffseason F={F} act={act} owner={owner} onBuild={onBuild} />) : <Season F={F} R={R} act={act} play={play} owner={owner} light={light} onPause={c => { setPaused(c ?? null); if (c) toTop() }} onSim={(to, label) => { setPaused(null); setRun({ from: F.day, to, label }); sfx('flip') }} onTrades={() => toTab('team', 'trades')} />)}
           {tab === 'team' && <NbaTeam F={F} act={act} owner={owner} view={teamView} setView={setTeamView} />}
           {tab === 'league' && <NbaLeague F={F} act={act} owner={owner} />}
           {tab === 'history' && <NbaHistory F={F} owner={owner} onSlots={onSlots} onDelete={onDelete} />}
@@ -121,11 +124,12 @@ function LeagueTicker({ F }) {
 }
 
 // ── SEASON ───────────────────────────────────────────────────────────────────
-function Season({ F, R, act, play, owner, onTrades, onSim, light = false }) {
+function Season({ F, R, act, play, owner, onTrades, onSim, onPause, light = false }) {
   const ph = F.phase
   // (LIGHT: the stretch simmed to its recap, a postseason round simmed to its result: NbaLight.jsx; never a game on screen)
-  const lplay = () => { act(X => { lightPlay(X) }); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
-  const lsim = () => { act(X => { lightSimAll(X) }); sfx('flip') }
+  // (both stop for a trade call: the hub with the call on it, season.js callCheck)
+  const lplay = () => { const out = act(X => lightPlay(X, { calls: true })); onPause(out?.call); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
+  const lsim = () => { const out = act(X => lightSimAll(X, { calls: true })); onPause(out?.call); sfx('flip') }
   // (FULL: the All-Star break is a stop on the calendar: the days up to it, then the game on its Sunday)
   const asStop = !light ? allStarStop(F) : null
   const asPlay = () => { act(X => { simTo(X, allStarDay(X) + 1) }); sfx('whistle'); haptic('medium'); try { document.querySelector('.fh-scroll')?.scrollTo(0, 0) } catch { /* */ } }
@@ -160,13 +164,21 @@ function Season({ F, R, act, play, owner, onTrades, onSim, light = false }) {
   )
 }
 
+// A SIM THAT STOPPED FOR A CALL (season.js callCheck): the line over the call while it's still on the table
+function SimPaused({ F, c }) {
+  const o = c && F.phase === 'season' && F.tof ? CAP_SIM.offerNow({ ...F }) : null
+  if (!o || o.s !== c.s) return null
+  return <p className="fh-pause" role="status"><b>Sim paused</b><span>{c.why === 'answer' ? `The ${TEAM[o.s].nick} need an answer tonight` : `The ${TEAM[o.s].nick} are on the phone`}</span></p>
+}
+
 // A LEAGUE TEAM ON THE PHONE (trades.js cpuOffer): its offer for one of the GM's men, the way a front office puts it.
 // Accept (the trade goes through), decline (the wire says so), or counter (the trade screen with the offer loaded, to
 // work from). It stands a few days in the season, the summer's stop it came on.
 function TradeCall({ F, act, onCounter }) {
   const o = F.tof ? CAP_SIM.offerNow({ ...F }) : null
   const [done, setDone] = useState(null)
-  if (done) return <div className="nb-call is-done" style={fkVars(done.s)} role="status"><KLogo s={done.s} size={28} /><p>{NBA.teamWords(done.text)}</p><button type="button" className="nb-call-x" aria-label="Dismiss" onClick={() => { setDone(null); sfx('tap') }}><IconClose /></button></div>
+  // (the last answer's line until it's dismissed, or until the next call comes in: a new call is never hidden under it)
+  if (done && !o) return <div className="nb-call is-done" style={fkVars(done.s)} role="status"><KLogo s={done.s} size={28} /><p>{NBA.teamWords(done.text)}</p><button type="button" className="nb-call-x" aria-label="Dismiss" onClick={() => { setDone(null); sfx('tap') }}><IconClose /></button></div>
   if (!o) return null
   const answer = yes => {
     const r = act(X => { const r = CAP_SIM.answerOffer(X, yes); for (const x of r?.news ?? []) NBA.addNews(X, x); return r })
@@ -526,15 +538,17 @@ function ScoutRow({ F, act }) {
 
 // SIMMING: the nights played a few at a time, so the screen never locks: the date, the GM's record counting, a bar
 // to the end of the stretch, and STOP to pick it up from here (Reduce Motion: the same, it's not an animation)
+// (a league team's call stops it: the morning it comes in, or an offer's last day to answer, season.js callCheck)
 function SimRun({ F, act, run, onDone }) {
   const [, tick] = useState(0)
   const stop = useRef(false)
   useEffect(() => {
     let t
+    const w = act(X => callWatch(X), { save: false })
     const step = () => {
-      if (stop.current || F.phase !== 'season' || F.day >= run.to) { act(() => {}); onDone(); return }
+      if (stop.current || w?.stop || F.phase !== 'season' || F.day >= run.to) { act(() => {}); onDone(w?.stop ?? null); return }
       // (written to the save every 30 nights and when it stops, not every step)
-      act(X => { simTo(X, Math.min(run.to, X.day + 2)) }, { save: Math.floor((F.day + 2) / 30) > Math.floor(F.day / 30) })
+      act(X => { simTo(X, Math.min(run.to, X.day + 2), w) }, { save: Math.floor((F.day + 2) / 30) > Math.floor(F.day / 30) })
       tick(n => n + 1)
       t = setTimeout(step, 16)
     }

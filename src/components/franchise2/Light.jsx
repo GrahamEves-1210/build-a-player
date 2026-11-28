@@ -43,7 +43,9 @@ const yrs = y => `${y} ${y === 1 ? 'YR' : 'YRS'}`
 export function StretchCard({ F, play, simToEnd }) {
   const L = F.lt
   const R = recordsOf(F), S = standingsOf(F)
-  const sch = mySchedule(F).slice(L.w0, L.w1)
+  // (a stretch picked up partway, after a sim that stopped for a trade call: the weeks left of it)
+  const from = Math.max(L.w0, Math.min(F.wk, L.w1 - 1)), part = from > L.w0
+  const sch = mySchedule(F).slice(from, L.w1)
   const placeOf = s => { const d = DIV_OF[s], r = S.R?.[s]; return r && r.w + r.l + r.t > 0 ? `${ORD(S.div[d].indexOf(s) + 1)} ${d}` : d }
   return (
     <section className="fh-next lt-card">
@@ -63,9 +65,9 @@ export function StretchCard({ F, play, simToEnd }) {
           )
         })}
       </div>
-      <p className="fh-next-note">All six weeks are simmed. Every result comes with its box score.</p>
+      <p className="fh-next-note">{part ? `${L.w1 - from === 1 ? 'The last week' : `The last ${L.w1 - from} weeks`} of the stretch are simmed.` : 'All six weeks are simmed.'} Every result comes with its box score.</p>
       <div className="fh-go">
-        <Go onClick={play}>Play {stretchText(L.k)}</Go>
+        <Go onClick={play}>{part ? `Play Week${L.w1 - from > 1 ? `s ${from + 1}–${L.w1}` : ` ${L.w1}`}` : `Play ${stretchText(L.k)}`}</Go>
         {F.wk < REG_WEEKS - 1 && <button type="button" className="fh-textbtn" onClick={simToEnd}>Sim to the playoffs</button>}
       </div>
     </section>
