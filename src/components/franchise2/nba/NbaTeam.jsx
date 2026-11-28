@@ -11,6 +11,7 @@ import { hitOf } from '../../../lib/franchise2/nba/cap'
 import '../trades.css'
 import { Rotation, PlayerSheet } from './NbaRoster'
 import NbaStaffScreen, { NbaStaffStrip } from './NbaStaff'
+import NbaFinder, { newFinder } from './NbaFinder'
 
 // THE TEAM: the rotation (the order the coach plays them in: the first five start), the cap, the two-way men,
 // a man's page (his deal, his career, move him in the rotation, waive him) and trades.
@@ -91,6 +92,9 @@ function Trades({ F, act, onBack }) {
   const [side, setSide] = useState(w ? 1 : 0)
   const [ga, setGa] = useState(w?.ga ?? []), [gb, setGb] = useState(w?.gb ?? []), [pa, setPa] = useState(w?.pa ?? []), [pb, setPb] = useState(w?.pb ?? [])
   const [ans, setAns] = useState(null)
+  // (the trade finder, while it's up: NbaFinder.jsx; a deal opened from it comes back to it)
+  const [fs, setFs] = useState(null)
+  const [fman, setFman] = useState(null)
   // (the deal just done: each side's names, kept on the board after the selections clear)
   const [sent, setSent] = useState(null)
   // (the answer comes up where the GM is looking: on the deal board, which stays in view; a counter's terms and its
@@ -102,10 +106,27 @@ function Trades({ F, act, onBack }) {
   const chk = useMemo(() => (deal && any ? CAP_SIM.checkTrade(F, deal) : null), [F, them, ga, gb, pa, pb]) // eslint-disable-line react-hooks/exhaustive-deps
   const tog = (arr, set, v) => { set(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]); setAns(null); setSent(null); sfx('tap') }
   const reset = () => { setGa([]); setGb([]); setPa([]); setPb([]); setAns(null); setSent(null) }
+  const openDeal = d => { setThem(d.b); setSide(1); setGa(d.ga ?? []); setGb(d.gb ?? []); setPa(d.pa ?? []); setPb(d.pb ?? []); setAns(null); setSent(null); sfx('tap') }
+  if (!them && fs) {
+    return (
+      <div className="nb-trades">
+        <BackBar label="Trades" title="Trade finder" onBack={() => { setFs(null); sfx('back') }} />
+        <NbaFinder F={F} act={act} st={fs} set={setFs} onOpen={openDeal} onMan={setFman} />
+        {fman != null && <PlayerSheet F={F} act={act} id={fman} onClose={() => setFman(null)} />}
+      </div>
+    )
+  }
   if (!them) {
+    const W = CAP_SIM.tradeWindow(F)
     return (
       <div className="nb-trades">
         <BackBar label="Team" title="Trades" onBack={onBack} />
+        {W.open && (
+          <div className="tr-find" style={fkVars(F.team)}>
+            <button type="button" className="fh-row" onClick={() => { setFs(newFinder('shop')); sfx('tap') }}><span><small>Trade finder</small><b>Shop a player</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>
+            <button type="button" className="fh-row" onClick={() => { setFs(newFinder('find')); sfx('tap') }}><span><small>Trade finder</small><b>Find a player</b></span><i className="fh-row-go" aria-hidden="true">›</i></button>
+          </div>
+        )}
         <Chyron tone="ink" size="s" title="Pick a trade partner" />
         <div className="nb-wall">
           {SHORTS.filter(s => s !== F.team).map(s => <button key={s} type="button" className="fsu-tm" style={fkVars(s)} onClick={() => { setThem(s); setSide(1); sfx('tap') }} aria-label={TEAM[s].name}><KLogo s={s} size={40} /><small>{s}</small></button>)}
@@ -170,7 +191,7 @@ function Trades({ F, act, onBack }) {
   const myAfter = myPay - sum(F.team, ga) + sum(them, gb)
   return (
     <div className="nb-trades">
-      <BackBar label="Teams" title={`Trade with the ${TEAM[them].nick}`} onBack={() => { setThem(null); reset() }} />
+      <BackBar label={fs ? 'Trade finder' : 'Teams'} title={`Trade with the ${TEAM[them].nick}`} onBack={() => { setThem(null); reset() }} />
       <div className="nb-twith" style={fkVars(them)}>
         <KLogo s={them} size={36} />
         <span><small>{CAP_SIM.SIT_TEXT[sit]} · {CAP_SIM.OVER_TEXT[cs.over]}</small><b>{TEAM[them].name}</b><em>Payroll {money(cs.pay)}{cs.room > 0 ? ` · ${money(cs.room)} in cap room` : cs.over === 'cap' ? ` · ${money(cs.toTax)} under the tax` : cs.over === 'tax' ? ` · ${money(cs.toA1)} under the first apron` : cs.over === 'a1' ? ` · ${money(cs.toA2)} under the second apron` : ''}</em></span>

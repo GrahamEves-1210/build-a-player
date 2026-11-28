@@ -532,3 +532,7 @@ button.nb-sch-row:active { background: var(--fk-g3); }
 .nb-call.is-done { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
 .nb-call.is-done p { font-size: 14px; }
 .nb-call-x { width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: transparent; color: var(--fk-mute); cursor: pointer; }
+
+/* the NBA trade finder (NbaFinder.jsx): its two tabs and the show-more row fill the width */
+.nb-tf-seg button, .nb-tf-more button { flex: 1 1 0; }
+.nb-tf-pos button { height: 42px; font-size: 15px; }

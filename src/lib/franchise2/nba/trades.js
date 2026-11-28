@@ -457,7 +457,7 @@ function inValue(F, s, p, gone, sit) {
   if (s !== F.team && p.tx?.[3] != null && p.tx[1] === lyOf(F)) out = Math.min(out, p.tx[3] * 0.95)
   return out
 }
-function outValue(F, s, p, sit) {
+export function outValue(F, s, p, sit) {
   const room = rotationRoom(F, s, new Set())
   const at = room.filter(o => o > (p.o ?? 60)).length
   let m = 1
@@ -719,10 +719,10 @@ export function whyNot(F, s, p) {
 }
 
 // ── The league team's answer ─────────────────────────────────────────────────
-const dealsWith = (F, s) => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u && (d.a === s || d.b === s)).length
+export const dealsWith = (F, s) => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u && (d.a === s || d.b === s)).length
 const dealsAll = F => (F.trl ?? []).filter(d => d.ly === lyOf(F) && d.u).length
 const callKey = F => `${lyOf(F)}-${F.phase}-${F.phase === 'season' ? Math.floor((F.day ?? 0) / 7) : F.off?.step ?? ''}`
-const callsLeft = (F, s) => { const c = F.trc?.[s]; return c && c[0] === callKey(F) ? CALLS - c[1] : CALLS }
+export const callsLeft = (F, s) => { const c = F.trc?.[s]; return c && c[0] === callKey(F) ? CALLS - c[1] : CALLS }
 const marginOf = (F, s, out, user = true) => (user ? Math.max(4, out * 0.07) * (1 + 0.6 * dealsWith(F, s) + 0.1 * dealsAll(F)) : Math.max(2, out * 0.03))
 function resolve(F, deal) {
   const am = (deal.ga ?? []).map(id => F.teams[deal.a].r.find(p => p.i === id)).filter(Boolean)
