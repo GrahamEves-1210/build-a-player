@@ -52,6 +52,10 @@ html.is-app .fh.ag-screen { padding-bottom: calc(var(--app-bottom) - 12px); }
 .fh-next-h span { font-family: var(--fk-b); font-weight: 600; font-size: 15px; color: var(--fk-mute); }
 .fh-next-note { margin: 0; font-family: var(--fk-b); font-size: 16px; line-height: 1.35; color: var(--fk-text); }
 .fh-next.is-sb { background: linear-gradient(var(--fk-gold), var(--fk-gold)) left top / 100% 3px no-repeat, var(--fk-g1); }
+/* a sim run stopped for a trade call (Hub, NbaHub): the tag, then who's on the phone */
+.fh-pause { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-family: var(--fk-b); font-weight: 600; font-size: 15px; line-height: 1.25; color: #fff; }
+.fh-pause b { flex: none; padding: 3px 8px 2px; background: #fff; color: #0b0c0e; font-family: var(--fk-d); font-weight: 400; font-size: 15px; letter-spacing: .6px; text-transform: uppercase; }
+.fh-pause span { min-width: 0; }
 .fh-line { margin: 0; text-align: center; font-family: var(--fk-b); font-weight: 600; font-size: 16px; color: #fff; }
 .fh-go { display: grid; gap: 4px; }
 .fh-textbtn { justify-self: center; height: 40px; padding: 0 14px; border: 0; background: none; color: var(--fk-mute); font-family: var(--fk-b); font-weight: 600; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }

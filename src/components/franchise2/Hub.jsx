@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useEffect, useState } from 'react'
 import {
   TEAM, recText, strength, sideGrade, mySchedule, playWeek, simWeeks, chooseEvent, intoPlayoffs, simPlayoffs, userAlive, userBye,
   DIV_OF, ROUNDS, FINISH_TEXT, finishOf, REG_WEEKS, CONF_OF, CONFS,
-  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk, rulesOf, setRules, capSheet, tradeWindow, marketWindow,
+  lightPlay, lightSettle, lightRound, lightSimAll, openStretch, stretchOk, rulesOf, setRules, capSheet, tradeWindow, marketWindow, tradeOffers,
 } from '../../lib/franchise2'
 import { closeSeason, statLine } from '../../lib/franchise2/awards'
 import { fxList, lineOf, leagueWire } from '../../lib/franchise2/season'
@@ -74,6 +74,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   const [trophy, setTrophy] = useState(false)
   const [board, setBoard] = useState(false)
   const [teamGo, setTeamGo] = useState(null)   // (the Team tab opens on: 'trades' the offer note, 'finder' the trade finder, 'market' the free agents)
+  const [paused, setPaused] = useState(null)   // (a sim run that stopped for a trade call: trades.js callCheck)
   const scroll = useRef(null)
   const t = TEAM[F.team]
   const r = recordsOf(F)[F.team]
@@ -84,19 +85,27 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
   // (LIGHT: the stretch simmed to its recap, a playoff round simmed to its result: light.js; never a game on screen)
   const play = () => {
     if (F.pace === 'light') {
-      const out = act(X => (X.phase === 'playoffs' ? lightRound(X) : lightPlay(X)))
+      const out = act(X => (X.phase === 'playoffs' ? lightRound(X) : lightPlay(X, { calls: true })))
+      setPaused(out?.call ?? null)
       sfx(F.phase === 'playoffs' ? 'flip' : 'whistle'); haptic('medium')
       if (out?.champ && out.champ === F.team) setTrophy(true)
       try { scroll.current?.scrollTo(0, 0) } catch { /* (no scroll box) */ }
       return
     }
+    setPaused(null)
     const out = act(X => playWeek(X, momentOpts(X)))
     sfx('whistle'); haptic('medium')
     if (out?.pending) setLive({ pend: true })
     else if (out?.row) setLive({ row: out.row, news: out.news })
     else if (out?.champ && out.champ === F.team) setTrophy(true)
   }
-  const simToEnd = () => { act(X => (X.pace === 'light' ? lightSimAll(X) : simWeeks(X, {}))); sfx('flip') }
+  // (a run stops the week a league team calls, or an offer's last week to answer: the hub with the call on it)
+  const simToEnd = () => {
+    const out = act(X => (X.pace === 'light' ? lightSimAll(X, { calls: true }) : simWeeks(X, { calls: true })))
+    setPaused(out?.call ?? null); sfx('flip')
+    if (out?.call) try { scroll.current?.scrollTo(0, 0) } catch { /* (no scroll box) */ }
+  }
+  const pauseOn = paused && F.phase === 'season' && tradeWindow(F).open && tradeOffers(F).some(o => o.id === paused.id) ? paused : null
   const after = () => {
     setLive(null)
     if (F.phase === 'done' && F.po?.champ === F.team) setTrophy(true)
@@ -136,6 +145,7 @@ export default function Hub({ F, act, owner, onHome, onSlots, onDelete, onBuild 
           </div>
         </nav>
         <div className={`ag-screen-body fh-body fh-body--${tab}`}>
+          {tab === 'season' && pauseOn && <p className="fh-pause" role="status"><b>Sim paused</b><span>{pauseOn.why === 'answer' ? `The ${TEAM[pauseOn.s].nick} need an answer this week` : `The ${TEAM[pauseOn.s].nick} are on the phone`}</span></p>}
           {tab === 'season' && <TradeNotice F={F} onOpen={() => { setTeamGo('trades'); toTab('team') }} />}
           {tab === 'season' && (off
             ? <Offseason F={F} act={act} owner={owner} onBuild={onBuild} foot={F.stage !== 'draft' ? <><ScoutRow F={F} onBoard={() => { setBoard(true); sfx('tap') }} />{front}</> : null} />

@@ -640,6 +640,27 @@ export function answerOffer(F, id, yes) {
   if (!o || !yes) return { ok: !yes }
   return acceptDeal(F, o.s, o.give, o.get)
 }
+// A SIM RUN STOPS FOR A CALL (owner 11-28, a player's ask: "when another team sends a trade offer the simulation
+// should pause so I can review it"). A run of weeks (FULL's sim to the end, LIGHT's stretch and its sim to the
+// playoffs) watches the offers: callWatch when it starts, callCheck after every week. It stops the week a new offer
+// comes in ('call'), and the week an offer it started with is on its last week to answer ('answer'), so a sim never
+// lets one lapse that the GM hasn't had in front of him that week. A run started on that last week plays on (he had it
+// on the hub and simmed past it). One week at a time (PLAY WEEK) is not a run.
+//   watch: { ids: the offers standing when it started, last: the ones already on their last week }
+const lastWeek = (F, o) => F.phase === 'season' && o.exp != null && F.wk >= o.exp - 1
+export function callWatch(F) {
+  const list = tradeOffers(F)
+  return { ids: list.map(o => o.id), last: list.filter(o => lastWeek(F, o)).map(o => o.id) }
+}
+// (the run's stop, or null: { why: 'call' | 'answer', s: the team on the phone, id })
+export function callCheck(F, w) {
+  if (!w || !tradeWindow(F).open) return null
+  const list = tradeOffers(F)
+  const nu = list.find(o => !w.ids.includes(o.id))
+  if (nu) return { why: 'call', s: nu.s, id: nu.id }
+  const due = list.find(o => lastWeek(F, o) && !w.last.includes(o.id))
+  return due ? { why: 'answer', s: due.s, id: due.id } : null
+}
 // the best few picks of a team that add up to about `want` (its own value of them), never more than three
 export function picksFor(F, s, want, sit, avoid = []) {
   const pk = picksBy(F)[s].filter(k => !avoid.includes(k)).map(k => [k, pickWorth(F, k) * pickMod(sit)]).sort((a, b) => b[1] - a[1])

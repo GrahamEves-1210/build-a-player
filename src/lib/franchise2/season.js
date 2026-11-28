@@ -23,7 +23,7 @@ import { scoringSummary, whenOf } from './plays'
 import { injuryOf, addNews, logWeek } from './news'
 import { rollInjuries } from './injury'
 import { syncScouts } from './draft'
-import { tradeWeek, eventTrade, eventTradeOk } from './trades'
+import { tradeWeek, eventTrade, eventTradeOk, callWatch, callCheck } from './trades'
 import { restructureMine } from './market'
 import { streetDeal } from './street'
 
@@ -316,14 +316,18 @@ export const userBye = F => F.phase === 'playoffs' && F.po.rd === 0 && [F.po.see
 // the rest of the playoffs without the player's team (it's out): straight to the champion
 export function simPlayoffs(F) { while (F.phase === 'playoffs') playWeek(F, { moments: false }) }
 // SIM TO END (of the regular season): every week, no moments, no event cards (the front office lets them pass)
+// (opts.calls: the run stops for a trade call, trades.js callCheck; out.call says which)
 export function simWeeks(F, opts = {}) {
   const out = []
   if (F.ev) F.ev = null
+  const w = opts.calls ? callWatch(F) : null
   while (F.phase === 'season' && !F.pend) {
     const r = playWeek(F, { ...opts, moments: false })
     F.ev = null
     out.push(r)
     if (opts.until && F.wk >= opts.until) break
+    const c = w && F.phase === 'season' ? callCheck(F, w) : null
+    if (c) { out.call = c; break }
   }
   return out
 }

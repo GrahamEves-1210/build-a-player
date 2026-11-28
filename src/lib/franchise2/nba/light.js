@@ -31,7 +31,7 @@
 //   why?]], off: { id: { $, y, r } }, fc: { id: { s, y } } (an offer's price, Fair 0 or Strong 1, and its years),
 //   far: [{ i, n, s (where he signed, null: unsigned), $, y, k: 'won' | 'lost' | 'open' | 'cap' }], done }
 import { CONF_OF, DIV_OF, manOf, teamOfMan } from './league'
-import { records, confOrder, divOrder, playDay, simTo, startPostseason, playPoNight, simPostseason, finishMoment, alive } from './season'
+import { records, confOrder, divOrder, playDay, simTo, startPostseason, playPoNight, simPostseason, finishMoment, alive, callWatch, callCheck } from './season'
 import { dateText } from './schedule'
 import { nextStep, resignMine, tenderQO, faNext, campCheck } from './offseason'
 import { draftOrder, available, scout } from './draft'
@@ -102,12 +102,19 @@ export function lightSettle(F) {
   return true
 }
 // PLAY THE STRETCH: its nights simmed (every game, no moments), then the recap
-export function lightPlay(F) {
+// (opts.calls: the stretch stops for a trade call, season.js callCheck: the card stays up with the nights left)
+export function lightPlay(F, opts = {}) {
   const L = F.lt
   if (!L || L.ph !== 'card' || F.phase !== 'season') return null
   lightSettle(F)
   L.hs ??= hurtNow(F)
-  for (let g = 0; g < 400 && F.phase === 'season' && F.day < L.d1; g++) { playDay(F); noteHurt(F) }
+  const w = opts.calls ? callWatch(F) : null
+  for (let g = 0; g < 400 && F.phase === 'season' && F.day < L.d1; g++) {
+    playDay(F); noteHurt(F)
+    // (a call partway through: the stretch waits on its card; one on its last night shows over the recap)
+    const c = w && F.day < L.d1 && F.phase === 'season' ? callCheck(F, w) : null
+    if (c) return { call: c }
+  }
   L.ph = 'recap'
   delete L.hs
   return { recap: true }
@@ -124,13 +131,23 @@ export function lightNext(F) {
   return { postseason: true }
 }
 // SIM TO THE POSTSEASON: every night left, no moments (the hub's Season Over card starts the postseason)
-export function lightSimAll(F) {
+// (opts.calls: the run stops for a trade call, season.js callCheck: the stretch it's in, open on its card)
+export function lightSimAll(F, opts = {}) {
   if (F.phase !== 'season') return
   lightSettle(F)
   if (!F.lt || F.lt.y !== F.year || F.lt.k == null) openStretch(F)
   const L = F.lt
   L.hs ??= hurtNow(F)
-  for (let g = 0; g < 400 && F.phase === 'season'; g++) { playDay(F); noteHurt(F) }
+  const w = opts.calls ? callWatch(F) : null
+  for (let g = 0; g < 400 && F.phase === 'season'; g++) {
+    playDay(F); noteHurt(F)
+    const c = w && F.phase === 'season' ? callCheck(F, w) : null
+    if (c) {
+      if (L.k !== stretchOf(F)) openStretch(F, stretchOf(F))
+      F.lt.ph = 'card'
+      return { call: c }
+    }
+  }
   L.ph = 'done'
   delete L.hs
 }
